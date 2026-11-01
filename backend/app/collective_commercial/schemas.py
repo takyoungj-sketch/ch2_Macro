@@ -237,6 +237,8 @@ class CommercialPredictOptions(BaseModel):
     floor: Optional[ContinuousRange] = None
     max_floor: Optional[float] = None
     floor_mode: str = "relative"
+    floor_reference: Optional[str] = None
+    floor_reference_label: Optional[str] = None
     road_code: Optional[ContinuousRange] = None
     zone_types: list[str] = Field(default_factory=list)
     zone_type_reference: Optional[str] = None

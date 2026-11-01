@@ -260,3 +260,63 @@ def test_missing_floor_is_excluded_in_individual_and_grouped_modes():
         assert fit.n == 80
         first = engine.predict_regression(df, req, CollectiveRegressionPredictInputs(floor=1))
         assert first["y_hat"] == pytest.approx(50000, abs=1)
+
+
+def test_individual_floor_reference_is_named_on_the_coefficient():
+    df = pd.concat([
+        _block(0, 30, "A", 0, floor=2),
+        _block(30, 30, "A", 5000, floor=10),
+    ], ignore_index=True)
+    req = CollectiveRegressionRequest(
+        asset_type="apartment",
+        model_type="linear",
+        variables=_spec(floor=True, floor_mode="dummy"),
+    )
+    _model, _X, meta, fit = engine._run_regression_core(df, req)
+    assert meta.floor_reference_code == "floor_10"
+    assert fit.predict_options.floor_reference == "floor_10"
+    assert fit.predict_options.floor_reference_label == "10층"
+    second = next(c for c in fit.coefficients if c.name == "floor_2")
+    assert "10층 대비" in second.label
+    assert "10층 대비" in (second.effect_plain or "")
+
+
+def test_scale_comparison_uses_one_basis_for_both_models(monkeypatch):
+    seen = {"i": 0}
+
+    def fake_orig(y, pred, k):
+        seen["i"] += 1
+        return (1.0, 1.0, 1.0) if seen["i"] % 2 == 1 else (0.8, 9.0, 2.0)
+
+    def fake_cv(y, x, model_type, diagnostics=None, **kwargs):
+        if diagnostics is not None:
+            diagnostics.clear()
+            diagnostics.update(status="available", completed_folds=5, failures=[])
+        return (12.0, 3.0) if model_type == "linear" else (3.0, 1.0)
+
+    monkeypatch.setattr(engine, "_orig_scale_metrics", fake_orig)
+    monkeypatch.setattr(engine, "_cv_price_metrics", fake_cv)
+    y = pd.Series(np.linspace(100, 200, 40))
+    x = pd.DataFrame({"const": np.ones(40), "area": np.linspace(1, 2, 40)})
+    both = engine._build_model_comparison(y, x)
+    assert both is not None
+    assert both.metric_basis == "cv"
+    assert both.recommended == "log"
+
+    def fake_cv_linear_missing(y, x, model_type, diagnostics=None, **kwargs):
+        if diagnostics is not None:
+            diagnostics.clear()
+            failed = model_type == "linear"
+            diagnostics.update(
+                status="unavailable" if failed else "available",
+                completed_folds=0 if failed else 5,
+                failures=[],
+            )
+        return (None, None) if model_type == "linear" else (10.0, 1.0)
+
+    monkeypatch.setattr(engine, "_cv_price_metrics", fake_cv_linear_missing)
+    seen["i"] = 0
+    mixed = engine._build_model_comparison(y, x)
+    assert mixed is not None
+    assert mixed.metric_basis == "insample"
+    assert mixed.recommended == "linear"

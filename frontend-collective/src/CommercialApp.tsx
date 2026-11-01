@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -97,15 +97,12 @@ function buildRegionPeriodParams(
   return { window_years: windowYears };
 }
 
-const COMMERCIAL_REGION_KEY = "ch2.collective.commercial.region";
-
 export default function CommercialApp() {
   const qc = useQueryClient();
   const { entitled, narrow, requestPaid } = useProductAccess();
   const phone = useCollectivePhone();
   const portrait = useCollectivePortrait();
   const [pendingRegion, setPendingRegion] = useState<RegionNameHit | null>(null);
-  const restoredRegion = useRef(false);
   const [assetKinds, setAssetKinds] = useState<CommercialAssetKind[]>(["collective_shop"]);
   const assetType = useMemo(() => encodeCommercialAssetKinds(assetKinds), [assetKinds]);
   const [addr1, setAddr1] = useState("");
@@ -142,41 +139,6 @@ export default function CommercialApp() {
     if (leafList.length > 1) setLeafList(leafList.slice(0, 1));
   }, [phone, leafList]);
 
-  useEffect(() => {
-    if (!phone || !addr1) return;
-    try {
-      window.localStorage.setItem(
-        COMMERCIAL_REGION_KEY,
-        JSON.stringify({ addr1, addr2, leaf: leafList[0] ?? "" }),
-      );
-    } catch {
-      /* ignore */
-    }
-  }, [phone, addr1, addr2, leafList]);
-
-  useEffect(() => {
-    if (!phone || restoredRegion.current) return;
-    restoredRegion.current = true;
-    try {
-      const raw = window.localStorage.getItem(COMMERCIAL_REGION_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as { addr1?: string; addr2?: string; leaf?: string };
-      if (saved.addr1) setAddr1(saved.addr1);
-      if (saved.addr2) setAddr2(saved.addr2);
-      if (saved.leaf) setLeafList([saved.leaf]);
-      if (saved.addr1 && saved.addr2 && saved.leaf) {
-        setPendingRegion({
-          addr1: saved.addr1,
-          addr2: saved.addr2,
-          gu: "",
-          leaf: saved.leaf,
-          label: "",
-        });
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [phone]);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
   const [aiHint, setAiHint] = useState<string | null>(null);

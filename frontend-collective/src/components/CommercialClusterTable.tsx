@@ -13,6 +13,7 @@ import {
   type SortDir,
 } from "@ch2/stats-table-filter";
 import { commercialAssetTypeLabel, type CommercialClusterRow } from "../types";
+import { useCollectivePhone } from "../hooks/useCollectivePhone";
 import DualHorizontalScroll from "./DualHorizontalScroll";
 
 type ColKey = "asset_type" | "road" | "count" | "median" | "mean" | "ci" | "district";
@@ -108,6 +109,7 @@ export default function CommercialClusterTable({
   selectedKey?: string | null;
   onSelect: (row: CommercialClusterRow) => void;
 }) {
+  const phone = useCollectivePhone();
   const cols = useMemo(() => COLS.filter((c) => wide || !c.wideOnly), [wide]);
   const [sortKey, setSortKey] = useState<ColKey>("count");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -136,6 +138,9 @@ export default function CommercialClusterTable({
   }, [items]);
 
   const shown = useMemo(() => {
+    if (phone) {
+      return [...items].sort((a, b) => compareValues(sortValue(a, "count"), sortValue(b, "count"), "desc"));
+    }
     const visible = new Set(cols.map((c) => c.key));
     const rows = items.filter((row) => {
       for (const col of cols) {
@@ -155,7 +160,7 @@ export default function CommercialClusterTable({
     const dir = visible.has(sortKey) ? sortDir : "desc";
     rows.sort((a, b) => compareValues(sortValue(a, key), sortValue(b, key), dir));
     return rows;
-  }, [items, cols, texts, ranges, selects, sortKey, sortDir]);
+  }, [phone, items, cols, texts, ranges, selects, sortKey, sortDir]);
 
   const filterCount = cols.filter((c) => {
     if (c.kind === "text") return Boolean(texts[c.key]?.trim());
@@ -165,6 +170,7 @@ export default function CommercialClusterTable({
 
   return (
     <div className="card p-0 w-full">
+      {phone ? null : (
       <FilterStatusBar
         shown={shown.length}
         total={items.length}
@@ -180,6 +186,7 @@ export default function CommercialClusterTable({
           setSortDir("desc");
         }}
       />
+      )}
       <DualHorizontalScroll key={wide ? "wide" : "compact"}>
         <table className={clsx("data commercial-clusters-table", wide && "is-wide")}>
           <colgroup>
@@ -199,6 +206,7 @@ export default function CommercialClusterTable({
                     {col.label}
                     {col.glossary && <StatsGlossaryHelp termId={col.glossary} size="xs" />}
                   </span>
+                  {phone ? null : (
                   <SortButtons
                     active={sortKey === col.key}
                     dir={sortDir}
@@ -211,7 +219,8 @@ export default function CommercialClusterTable({
                       setSortDir("desc");
                     }}
                   />
-                  {col.kind === "range" && (
+                  )}
+                  {!phone && col.kind === "range" && (
                     <div className="mt-0.5 flex gap-0.5">
                       <input
                         type="text"
@@ -243,7 +252,7 @@ export default function CommercialClusterTable({
                       />
                     </div>
                   )}
-                  {col.kind === "text" && (
+                  {!phone && col.kind === "text" && (
                     <input
                       type="search"
                       placeholder="포함"
@@ -253,7 +262,7 @@ export default function CommercialClusterTable({
                       onChange={(e) => setTexts((prev) => ({ ...prev, [col.key]: e.target.value }))}
                     />
                   )}
-                  {col.kind === "select" && (
+                  {!phone && col.kind === "select" && (
                     <SelectFilter
                       values={typeValues}
                       included={selects[col.key]}
@@ -275,7 +284,7 @@ export default function CommercialClusterTable({
             {shown.length === 0 ? (
               <tr>
                 <td colSpan={cols.length} className="py-6 text-slate-400">
-                  표시할 도로가 없습니다. 필터를 조정하거나 초기화하세요.
+                  {phone ? "표시할 도로가 없습니다." : "표시할 도로가 없습니다. 필터를 조정하거나 초기화하세요."}
                 </td>
               </tr>
             ) : (

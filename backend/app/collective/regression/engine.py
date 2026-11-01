@@ -248,25 +248,25 @@ def _build_model_comparison(
 
     if not metrics:
         return None
-    basis = "cv" if any(v is not None for v in cv_mape.values()) else "insample"
-
-    def _mape_of(mt: str) -> float:
+    def _mape_of(mt: str, basis: str) -> float:
         m = metrics.get(mt)
         if not m:
             return float("inf")
-        return (
-            m.cv_mape
-            if m.cv_mape is not None
-            else m.mape
-            if m.mape is not None
-            else float("inf")
-        )
+        if basis == "cv" and m.cv_mape is not None:
+            return m.cv_mape
+        return m.mape if m.mape is not None else float("inf")
 
     if "log" in metrics and "linear" in metrics:
-        recommended = "log" if _mape_of("log") <= _mape_of("linear") else "linear"
+        basis = (
+            "cv"
+            if cv_mape.get("log") is not None and cv_mape.get("linear") is not None
+            else "insample"
+        )
+        recommended = "log" if _mape_of("log", basis) <= _mape_of("linear", basis) else "linear"
     else:
         recommended = next(iter(metrics))
-    stars, label = _confidence_rating(_mape_of(recommended), n)
+        basis = "cv" if cv_mape.get(recommended) is not None else "insample"
+    stars, label = _confidence_rating(_mape_of(recommended, basis), n)
     return ModelComparison(
         log=metrics.get("log"),
         linear=metrics.get("linear"),
@@ -590,6 +590,45 @@ def _categorical_floor_support(
     return (omitted[0] if len(omitted) == 1 else None), present
 
 
+def _shop_floor_labels() -> dict[str, str]:
+    from app.collective_commercial.floor_index_regression import SHOP_FLOOR_GROUPS
+
+    return {f"shop_{code}": label for label, code, _ in SHOP_FLOOR_GROUPS}
+
+
+def _floor_code_label(code: str) -> str:
+    """더미에서 뺀 층 코드의 화면 이름."""
+    for table in (
+        _REL_FLOOR_LABELS,
+        _GROUPED_FLOOR_LABELS,
+        _ROWHOUSE_FLOOR_LABELS,
+        _FACTORY_FLOOR_LABELS,
+        _shop_floor_labels(),
+    ):
+        if code in table:
+            return table[code]
+    if code.startswith("floor_"):
+        token = code[len("floor_"):]
+        if token.startswith("-"):
+            return f"지하 {token[1:]}층"
+        return f"{token}층"
+    return code
+
+
+def _with_floor_contrast(base: str, reference: str | None) -> str:
+    if reference:
+        return f"{base} ({_floor_code_label(reference)} 대비)"
+    return f"{base} (기준 대비)"
+
+
+def _set_floor_reference_option(opts, meta) -> None:
+    code = getattr(meta, "floor_reference_code", None)
+    if not code or not getattr(meta, "floor_dummy_cols", None):
+        return
+    opts.floor_reference = code
+    opts.floor_reference_label = _floor_code_label(code)
+
+
 def _labeled_floor_dummies(
     codes: pd.Series,
     label_map: dict[str, str],
@@ -604,9 +643,9 @@ def _labeled_floor_dummies(
     if missing.any() and not dummies.empty:
         dummies = dummies.astype(float)
         dummies.loc[missing, :] = np.nan
-    labels = {c: f"{label_map.get(c, c)} (기준 대비)" for c in dummies.columns}
     columns = list(dummies.columns)
     reference, trained = _categorical_floor_support(codes, columns, lambda value: str(value))
+    labels = {c: _with_floor_contrast(label_map.get(c, c), reference) for c in dummies.columns}
     return dummies, labels, columns, reference, trained
 
 
@@ -729,15 +768,13 @@ def _add_floor_columns(
 
     for c in dummies.columns:
         if c.startswith("floor_grp_"):
-            labels[c] = _GROUPED_FLOOR_LABELS.get(c, c) + " (기준 대비)"
+            base = _GROUPED_FLOOR_LABELS.get(c, c)
         elif c.startswith("floor_rel_"):
-            labels[c] = _REL_FLOOR_LABELS.get(c, c) + " (기준 대비)"
+            base = _REL_FLOOR_LABELS.get(c, c)
         else:
             token = c.replace("floor_", "", 1)
-            if token.startswith("-"):
-                labels[c] = f"지하 {token[1:]}층 (기준 대비)"
-            else:
-                labels[c] = f"층 {token} (기준 대비)"
+            base = f"지하 {token[1:]}층" if token.startswith("-") else f"{token}층"
+        labels[c] = _with_floor_contrast(base, reference)
     return dummies, labels, dummy_cols, reference, trained
 
 
@@ -1276,6 +1313,8 @@ def _meta_to_predict_options(meta: RegressionDesignMeta, req: CollectiveRegressi
         opts.asset_type_reference = meta.asset_type_reference
         refs = [meta.asset_type_reference] if meta.asset_type_reference else []
         opts.asset_types = refs + [c.replace("atype_", "", 1) for c in meta.asset_type_dummy_cols]
+
+    _set_floor_reference_option(opts, meta)
 
     if len(meta.building_counts) > 1:
         for bk, cnt in sorted(meta.building_counts.items(), key=lambda x: -x[1]):

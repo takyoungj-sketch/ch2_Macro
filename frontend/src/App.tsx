@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
@@ -21,34 +21,10 @@ import PaidAnalysisPanel from "./components/PaidAnalysisPanel";
 import PaidFilterTable from "./components/PaidFilterTable";
 import { setLandPickSingle } from "./regionPickMode";
 
-const MOBILE_REGION_KEY = "ch2.land.mobileRegion";
-
-function singleTier(tier: {
-  sido_codes: string[];
-  city_codes: string[];
-  sigungu_codes: string[];
-  eupmyeondong_codes: string[];
-  beopjungri_codes: string[];
-}): { level: string; code: string } | null {
-  const rows: [string, string[]][] = [
-    ["beopjungri", tier.beopjungri_codes],
-    ["eupmyeondong", tier.eupmyeondong_codes],
-    ["sigungu", tier.sigungu_codes],
-    ["city", tier.city_codes],
-    ["sido", tier.sido_codes],
-  ];
-  const total = rows.reduce((n, [, codes]) => n + codes.length, 0);
-  if (total !== 1) return null;
-  const hit = rows.find(([, codes]) => codes.length === 1);
-  if (!hit) return null;
-  return { level: hit[0], code: hit[1][0]! };
-}
-
 export default function App() {
   useLandDeepLink();
   const { entitled, narrow } = useProductAccess();
-  const restoredMobileRegion = useRef(false);
-  const { paidResultView, tierSelection, applyDeepLinkRegion } = useAppStore();
+  const { paidResultView, tierSelection } = useAppStore();
   const { data: regions = [] } = useQuery({
     queryKey: REGIONS_CATALOG_QUERY_KEY,
     queryFn: () => fetchRegions(),
@@ -62,31 +38,6 @@ export default function App() {
   useEffect(() => {
     setLandPickSingle(narrow);
   }, [narrow]);
-
-  useEffect(() => {
-    if (!narrow) return;
-    const saved = singleTier(tierSelection);
-    if (!saved) return;
-    try {
-      window.localStorage.setItem(MOBILE_REGION_KEY, JSON.stringify(saved));
-    } catch {
-      /* ignore */
-    }
-  }, [narrow, tierSelection]);
-
-  useEffect(() => {
-    if (!narrow || restoredMobileRegion.current) return;
-    restoredMobileRegion.current = true;
-    if (singleTier(useAppStore.getState().tierSelection)) return;
-    try {
-      const raw = window.localStorage.getItem(MOBILE_REGION_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as { level?: string; code?: string };
-      if (saved.level && saved.code) applyDeepLinkRegion(saved.level, saved.code);
-    } catch {
-      /* ignore */
-    }
-  }, [narrow, applyDeepLinkRegion]);
 
   useEffect(() => {
     const on = (e: Event) => {

@@ -393,6 +393,8 @@ class CollectivePredictOptions(BaseModel):
     floor: Optional[ContinuousRange] = None
     max_floor: Optional[float] = None
     floor_mode: str = "relative"
+    floor_reference: Optional[str] = None
+    floor_reference_label: Optional[str] = None
     dongs: list[str] = Field(default_factory=list)
     dong_reference: Optional[str] = None
     dong_options: list[DongOption] = Field(default_factory=list)

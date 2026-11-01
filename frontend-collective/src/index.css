@@ -62,7 +62,8 @@ body {
     color: rgb(148 163 184);
   }
   html.dark .text-slate-400 {
-    color: rgb(100 116 139);
+    /* 주거·비주거 공유. 다른 앱의 기본 dark:text-slate-400과 같은 색이다. */
+    color: rgb(148 163 184);
   }
   html.dark .text-sky-950 {
     color: rgb(186 230 253);

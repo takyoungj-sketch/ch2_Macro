@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 
 const PHONE_QUERY = "(max-width: 767px)";
+/** 가로로 돌린 휴대폰. 폭이 767을 넘어도 세로와 같은 화면을 쓴다. */
+const LANDSCAPE_PHONE_QUERY = "(max-height: 500px) and (max-width: 1024px) and (any-pointer: coarse)";
 /** 터치 태블릿. 가로로 눕힌 휴대폰(높이 500 이하)은 빼 둔다. */
 const TABLET_QUERY = "(min-width: 768px) and (max-width: 1366px) and (min-height: 501px) and (any-pointer: coarse)";
 const CHOICE_KEY = "ch2.layout";
@@ -72,7 +74,8 @@ export function useTabletChoiceBand(): boolean {
 
 export function useNarrowScreen(): boolean {
   const phone = useMediaQuery(PHONE_QUERY);
+  const landscapePhone = useMediaQuery(LANDSCAPE_PHONE_QUERY);
   const tablet = useTabletChoiceBand();
   const choice = useLayoutChoice();
-  return phone || (tablet && choice === "mobile");
+  return phone || landscapePhone || (tablet && choice === "mobile");
 }

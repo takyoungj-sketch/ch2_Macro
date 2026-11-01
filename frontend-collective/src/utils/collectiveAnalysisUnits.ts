@@ -1,4 +1,5 @@
 /** 집합 분석 scope 단위 — 교차 시군구 인접 복수용. 복합 `builtAnalysisUnits` 와 동일 모델. */
+import { isFlatSidoAddr2 } from "./flatSidoRegion";
 
 export type CollectiveAnalysisLevel = "eupmyeondong" | "beopjungri";
 
@@ -17,7 +18,7 @@ export type CollectiveAnalysisUnit = {
 export const MAX_COLLECTIVE_ANALYSIS_UNITS = 10;
 
 export function analysisUnitLabel(u: CollectiveAnalysisUnit): string {
-  const parent = (u.addr2 || "").trim();
+  const parent = isFlatSidoAddr2(u.addr2) ? u.addr1.trim() : (u.addr2 || "").trim();
   const name = (u.name || "").trim();
   if (u.level === "beopjungri" && u.eup) {
     const base = parent ? `${parent} ${u.eup} ${name}` : `${u.eup} ${name}`;

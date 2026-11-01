@@ -2,9 +2,18 @@
 
 import type { RegressionCoeff } from "../types";
 
+export function predictionErrorMessage(message: string): string {
+  return message.replace(
+    "이 조건은 계수가 한 값으로 정해지지 않아 예측하지 않습니다.",
+    "입력한 조건에서는 각 변수의 영향을 구분하기 어려워 추정값을 계산할 수 없습니다.",
+  );
+}
+
 export const EQUATION_SIG_P = 0.1;
 
 export function formatCoefValue(v: number): string {
+  if (!Number.isFinite(v)) return "—";
+  if (v !== 0 && Math.abs(v) < .00005) return v.toExponential(2);
   if (Math.abs(v) >= 100) {
     return v.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
   }

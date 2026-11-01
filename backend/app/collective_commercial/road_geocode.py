@@ -12,6 +12,7 @@ from typing import Any, Optional
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
+from app.flat_sido_region import is_flat_sido_addr2
 
 _LOG = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ def build_road_query(
 ) -> str:
     parts = [
         (addr1 or "").strip(),
-        (addr2 or "").strip(),
+        "" if is_flat_sido_addr2(addr2) else (addr2 or "").strip(),
         (addr3 or "").strip(),
         (addr4 or "").strip(),
         (road_name or "").strip(),

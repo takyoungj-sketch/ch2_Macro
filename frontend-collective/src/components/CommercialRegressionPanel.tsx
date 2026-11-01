@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { contentSignature } from "../../../shared/regression-ui/signature";
+import { reconcileListedInputs } from "../../../shared/regression-ui/inputs";
 import { useMutation } from "@tanstack/react-query";
 import { predictCommercialRegression, runCommercialCohortRegression, runCommercialRegression, predictCommercialCohortRegression } from "../api/commercialClient";
 import { buildCommercialRegressionContext } from "../api/aiContext";
@@ -13,6 +15,7 @@ import type {
 import type { CommercialModalScope } from "./CommercialClusterDetailModal";
 import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
 import type { FloorMode } from "../utils/collectiveRegressionTypes";
+import { predictionErrorMessage } from "../utils/collectiveRegressionFormat";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import {
   ESTIMATE_COPY,
@@ -35,7 +38,7 @@ import {
   regressionRunLabel,
 } from "../utils/analysisGates";
 import RegressionSampleHint from "./RegressionSampleHint";
-import CollectiveModelRecommend, { blocksMatch } from "./CollectiveModelRecommend";
+import CollectiveModelRecommend from "./CollectiveModelRecommend";
 
 function regionParams(scope: CommercialModalScope) {
   return scope.hasIntermediate
@@ -54,12 +57,16 @@ function regionParams(scope: CommercialModalScope) {
 
 function toResultsData(data: CommercialRegressionResponse) {
   return {
+    analysis: data.analysis,
     warnings: data.warnings,
     model_type: data.model_type ?? ("linear" as RegressionModelType),
     n: data.n,
     r_squared: data.r_squared,
     adj_r_squared: data.adj_r_squared,
     mape: data.mape,
+    in_sample_mape: data.in_sample_mape,
+    cv_mape: data.cv_mape,
+    metric_basis: data.metric_basis,
     f_p_value: data.f_p_value,
     significant_count: data.significant_count,
     equation: data.equation,
@@ -80,11 +87,6 @@ type CommercialVars = {
   contract_period: boolean;
 };
 
-function midRange(min?: number | null, max?: number | null): number | undefined {
-  if (min == null || max == null) return undefined;
-  return Math.round(((min + max) / 2) * 10) / 10;
-}
-
 function defaultCommercialPredictInputs(
   opts: CommercialPredictOptions | null | undefined,
   vars: CommercialVars,
@@ -92,7 +94,8 @@ function defaultCommercialPredictInputs(
 ): CommercialRegressionPredictInputs {
   if (!opts) return {};
   return {
-    road_code: !isShop && vars.road_code ? midRange(opts.road_code?.min, opts.road_code?.max) : undefined,
+    contract_period: opts.contract_period_reference ?? undefined,
+    road_code: undefined,
     zone_type: vars.zone_type ? opts.zone_type_reference ?? opts.zone_types?.[0] : undefined,
     building_use: vars.building_use ? opts.building_use_reference ?? opts.building_uses?.[0] : undefined,
     road_width_label: isShop && vars.road_width
@@ -120,6 +123,7 @@ function CommercialPredictPanel({
   setInputs,
   onPredict,
   pending,
+  disabled,
   result,
   error,
 }: {
@@ -131,16 +135,30 @@ function CommercialPredictPanel({
   setInputs: React.Dispatch<React.SetStateAction<CommercialRegressionPredictInputs>>;
   onPredict: () => void;
   pending: boolean;
+  disabled: boolean;
   result?: CommercialRegressionPredictResponse;
   error?: string;
 }) {
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/40 p-3 space-y-3">
-      <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">가정 시나리오 (참고)</p>
+      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">조건별 추정 · 거래금액</p>
       <p className="text-[10px] text-slate-500 dark:text-slate-400">
-        아래 조건에서 모형이 가리키는 금액 수준입니다. AVM·적정가가 아닙니다.
+        입력한 조건에서 모형이 추정한 금액입니다. 개별 물건의 적정가격을 뜻하지는 않습니다.
       </p>
+      <h4 className="text-sm font-medium">직접 입력할 조건</h4>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+        {opts.contract_periods && opts.contract_periods.length > 0 && (
+          <label className="space-y-0.5">
+            <span className="text-slate-500 dark:text-slate-400">거래시점(반기)</span>
+            <select className="w-full border rounded px-2 py-1 bg-white dark:bg-slate-900"
+              value={inputs.contract_period ?? opts.contract_period_reference ?? ""}
+              onChange={(e) => setInputs((p) => ({ ...p, contract_period: e.target.value }))}>
+              {opts.contract_periods.map((period) => (
+                <option key={period} value={period}>{period}{period === opts.contract_period_reference ? " (기준)" : ""}</option>
+              ))}
+            </select>
+          </label>
+        )}
         {vars.gross_area && opts.gross_area && (
           <label className="space-y-0.5">
             <span className="text-slate-500 dark:text-slate-400">연면적(㎡)</span>
@@ -248,20 +266,21 @@ function CommercialPredictPanel({
         )}
       </div>
 
-      <button type="button" className="btn btn-primary text-xs" disabled={pending} onClick={onPredict}>
-        {pending ? "계산 중…" : "시나리오 계산"}
+      <button type="button" className="btn btn-primary text-xs" disabled={pending || disabled} onClick={onPredict}>
+        {pending ? "계산 중…" : "추정값 계산"}
       </button>
 
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{predictionErrorMessage(error)}</p>}
 
       {result && (
         <div className="rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 space-y-2">
+          {result.applied_contract_period && <p className="text-xs">적용 거래시점: {result.applied_contract_period}</p>}
           <div>
             <span className="text-slate-500 dark:text-slate-400 text-[10px]">
               {ESTIMATE_COPY.valueLabel}
               {result.model_type ? ` · ${result.model_type === "log" ? "로그" : "선형"}` : ""}
             </span>
-            <div className="text-lg font-bold text-slate-800 dark:text-slate-100">{fmtInt(result.y_hat)}만원</div>
+            <div className="text-3xl font-bold tabular-nums text-indigo-700 dark:text-indigo-300">{fmtInt(result.y_hat)}만원</div>
             <StatisticalEstimateCaption compact />
             {result.unit_price_hat != null && (
               <div className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -270,12 +289,17 @@ function CommercialPredictPanel({
             )}
           </div>
           <div className="text-[11px] space-y-1.5 text-slate-700 dark:text-slate-300">
-            <StatisticalEstimateRangeRow kind="mean" compact>
+            <StatisticalEstimateRangeRow kind="mean">
               {fmtInt(result.ci_lower)} ~ {fmtInt(result.ci_upper)}만원
             </StatisticalEstimateRangeRow>
-            <StatisticalEstimateRangeRow kind="individual" compact>
-              {fmtInt(result.pi_lower)} ~ {fmtInt(result.pi_upper)}만원
-            </StatisticalEstimateRangeRow>
+            <details className="pt-2 text-xs">
+              <summary className="cursor-pointer text-slate-500 dark:text-slate-400">개별 거래 예측범위 보기</summary>
+              <div className="pt-2">
+                <StatisticalEstimateRangeRow kind="individual" compact>
+                  {fmtInt(result.pi_lower)} ~ {fmtInt(result.pi_upper)}만원
+                </StatisticalEstimateRangeRow>
+              </div>
+            </details>
           </div>
           {result.warnings.map((w) => (
             <p key={w} className="text-[10px] text-amber-700 dark:text-amber-300">
@@ -332,7 +356,6 @@ export default function CommercialRegressionPanel({
     () => (Object.keys(vars) as (keyof CommercialVars)[]).filter((key) => Boolean(vars[key])),
     [vars],
   );
-  const fittedSnap = useRef<{ type: RegressionModelType; blocks: string[] } | null>(null);
 
   const regressionBody = useMemo(
     () => ({
@@ -347,10 +370,11 @@ export default function CommercialRegressionPanel({
     [scope, analysisPeriod, excludeOutliers, modelType, vars, floorMode],
   );
 
+  const requestSignature = contentSignature({ body: regressionBody, keys, assetType: scope.assetType });
   const regM = useMutation({
-    mutationFn: () => {
-      fittedSnap.current = { type: modelType, blocks: selectedBlocks };
-      return useCohort
+    mutationFn: async () => {
+      const signature = requestSignature;
+      const data = await (useCohort
         ? runCommercialCohortRegression({
             cluster_keys: keys,
             asset_type:
@@ -359,18 +383,24 @@ export default function CommercialRegressionPanel({
                 : (scope.assetType as CommercialAssetType),
             ...regressionBody,
           })
-        : runCommercialRegression(clusterKey, regressionBody);
+        : runCommercialRegression(clusterKey, regressionBody));
+      return { ...data, requestSignature: signature };
     },
   });
 
+  const conditionsChanged = Boolean(regM.data && regM.data.requestSignature !== requestSignature);
+  const predictionSignature = contentSignature({ requestSignature, inputs: predictInputs, model: regM.data?.analysis?.model_signature });
   const predictM = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      if (conditionsChanged) throw new Error("분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.");
+      const signature = predictionSignature;
       const body = {
         ...regressionBody,
+        expected_model_signature: regM.data?.analysis?.model_signature,
         model_type: regM.data?.model_type ?? modelType,
         inputs: predictInputs,
       };
-      return useCohort
+      const data = await (useCohort
         ? predictCommercialCohortRegression({
             cluster_keys: keys,
             asset_type:
@@ -379,10 +409,14 @@ export default function CommercialRegressionPanel({
                 : (scope.assetType as CommercialAssetType),
             ...body,
           })
-        : predictCommercialRegression(clusterKey, body);
+        : predictCommercialRegression(clusterKey, body));
+      return { ...data, inputSignature: signature };
     },
   });
 
+  // 입력·적합 모형이 바뀌면 이전 요청의 오류와 진행 상태도 무효화한다.
+  const resetPrediction = predictM.reset;
+  useEffect(() => { resetPrediction(); }, [predictionSignature, resetPrediction]);
   const cohortKeySig = keys.join("|");
   useEffect(() => {
     regM.reset();
@@ -390,19 +424,28 @@ export default function CommercialRegressionPanel({
   }, [cohortKeySig]);
 
   useEffect(() => {
+    predictM.reset();
     if (regM.data?.predict_options) {
-      setPredictInputs(defaultCommercialPredictInputs(regM.data.predict_options, vars, isShop));
+      const defaults = defaultCommercialPredictInputs(regM.data.predict_options, vars, isShop);
+      const opts = regM.data.predict_options;
+      setPredictInputs(current => reconcileListedInputs(defaults, current, {
+        contract_period: opts.contract_periods ?? [], zone_type: opts.zone_types ?? [],
+        building_use: opts.building_uses ?? [], road_width_label: opts.road_width_labels ?? [],
+      }));
     }
-  }, [regM.data, vars, isShop]);
+  }, [regM.data]);
 
   const aiRegressionContext = useMemo(() => {
     if (!regM.data) return null;
-    return buildCommercialRegressionContext(regM.data, {
+    const context = buildCommercialRegressionContext(regM.data, {
       regionLabel: regM.data.display_label,
       assetType: isShop ? "collective_shop" : "collective_factory",
       cohort: useCohort,
     });
-  }, [regM.data, isShop, useCohort]);
+    context.facts = { ...context.facts, conditions_changed: conditionsChanged,
+      result_state: conditionsChanged ? "previous_conditions" : "current" };
+    return context;
+  }, [regM.data, isShop, useCohort, conditionsChanged]);
 
   const publishedAiContext = useMemo(
     () =>
@@ -555,11 +598,9 @@ export default function CommercialRegressionPanel({
           {(regM.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "회귀 실패"}
         </p>
       )}
-      {regM.data &&
-        fittedSnap.current &&
-        (modelType !== fittedSnap.current.type || !blocksMatch(selectedBlocks, fittedSnap.current.blocks)) && (
+      {regM.data && conditionsChanged && (
         <p className="text-[10px] text-amber-700 dark:text-amber-300">
-          변수 또는 척도가 바뀌었습니다. 아래 식과 시나리오는 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
+          분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.
         </p>
       )}
       {regM.data && (
@@ -580,7 +621,8 @@ export default function CommercialRegressionPanel({
           setInputs={setPredictInputs}
           onPredict={() => predictM.mutate()}
           pending={predictM.isPending}
-          result={predictM.data}
+          disabled={conditionsChanged || regM.isPending}
+          result={!conditionsChanged && !regM.isPending && predictM.data?.inputSignature === predictionSignature ? predictM.data : undefined}
           error={
             predictM.isError
               ? String(
@@ -592,7 +634,10 @@ export default function CommercialRegressionPanel({
         />
       )}
       {regM.data && (
-        <CollectiveModelRecommend
+        <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700">
+          <summary className="cursor-pointer text-sm font-medium">다른 변수 조합 비교 · 모형 추천</summary>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">현재 결과를 검토한 뒤, 다른 변수 조합이 궁금할 때 확인하세요. 후보를 적용해도 회귀를 다시 실행하기 전에는 결과가 바뀌지 않습니다.</p>
+          <div className="mt-3"><CollectiveModelRecommend
           candidates={regM.data.model_candidates}
           selectedType={modelType}
           selectedBlocks={selectedBlocks}
@@ -609,6 +654,8 @@ export default function CommercialRegressionPanel({
             });
           }}
         />
+          </div>
+        </details>
       )}
     </div>
   );

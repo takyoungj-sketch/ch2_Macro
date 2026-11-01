@@ -20,6 +20,7 @@ from app.collective.regression.engine import (
     fit_model_price_metrics,
     resolve_product_floor_mode,
     row_max_floors,
+    _set_floor_reference_option,
 )
 from app.collective.regression.presentation import enrich_regression_response
 from app.collective.schemas import ContinuousRange
@@ -308,6 +309,7 @@ def _meta_to_predict_options(
     if req.variables.road_width and meta.road_width_categories:
         opts.road_width_labels = meta.road_width_categories
         opts.road_width_reference = meta.road_width_reference
+    _set_floor_reference_option(opts, meta)
 
     return opts
 

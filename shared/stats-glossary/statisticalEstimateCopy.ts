@@ -16,11 +16,12 @@ export const ESTIMATE_COPY = {
 } as const;
 
 export function individualRangeLabel(subject: EstimateRangeSubject = "거래"): string {
+  if (subject === "단지") return "95% 단지 중앙단가 예측범위";
   return `95% 개별 ${subject} 예측범위`;
 }
 
 export function individualRangeHint(subject: EstimateRangeSubject = "거래"): string {
-  if (subject === "단지") return "개별 단지 가격의 변동까지 고려한 통계적 범위";
+  if (subject === "단지") return "동일 조건의 단지 기간 중앙단가 관측값의 변동을 고려한 통계적 범위";
   if (subject === "필지") return "개별 필지 가격의 변동까지 고려한 통계적 범위";
   return "개별 거래가격의 변동까지 고려한 통계적 범위";
 }

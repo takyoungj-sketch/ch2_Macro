@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { clampModalBox, centeredModalBox, fullscreenModalBox, modalViewport } from "../../../shared/ui-window/modalViewport";
+import { isForeignDialogEvent, useModalFocus } from "../../../shared/ui-window/modalFocus";
 import {
   MODAL_FONT_SCALE_STEPS,
   clampModalFontStep,
@@ -82,32 +84,11 @@ const RESIZE_HANDLES: { edge: ResizeEdge; className: string; cursor: string }[] 
 ];
 
 function clampBox(box: PanelBox, minW: number, minH: number): PanelBox {
-  const pad = 8;
-  const maxW = Math.max(minW, window.innerWidth - pad * 2);
-  const maxH = Math.max(minH, window.innerHeight - pad * 2);
-  let { x, y, w, h } = box;
-  w = Math.min(Math.max(minW, w), maxW);
-  h = Math.min(Math.max(minH, h), maxH);
-  const maxX = Math.max(pad, window.innerWidth - w - pad);
-  const maxY = Math.max(pad, window.innerHeight - h - pad);
-  x = Math.min(Math.max(pad, x), maxX);
-  y = Math.min(Math.max(pad, y), maxY);
-  return { x, y, w, h };
+  return clampModalBox(box, minW, minH);
 }
 
 function defaultCenteredBox(width: number, height: number, minW: number, minH: number): PanelBox {
-  const w = Math.min(Math.max(minW, width), window.innerWidth - 16);
-  const h = Math.min(Math.max(minH, height), window.innerHeight - 16);
-  return clampBox(
-    {
-      x: Math.round((window.innerWidth - w) / 2),
-      y: Math.round((window.innerHeight - h) / 2),
-      w,
-      h,
-    },
-    minW,
-    minH,
-  );
+  return centeredModalBox(width, height, minW, minH);
 }
 
 export default function DraggableModalShell({
@@ -129,7 +110,7 @@ export default function DraggableModalShell({
   minHeight = 240,
   zClassName = "z-50",
   backdropClassName = "bg-black/40",
-  usePortal = false,
+  usePortal = true,
   escapeCapture = false,
   bodyClassName = "flex-1 min-h-0 overflow-y-auto px-4 py-3",
 }: Props) {
@@ -141,6 +122,7 @@ export default function DraggableModalShell({
   const [fullscreen, setFullscreen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  useModalFocus(open && !minimized && !aiOpen, panelRef);
   const [fontStep, setFontStep] = useState(readStoredModalFontStep);
   const modalZoom = MODAL_FONT_SCALE_STEPS[clampModalFontStep(fontStep)];
   const fontPct = Math.round(modalZoom * 100);
@@ -173,24 +155,22 @@ export default function DraggableModalShell({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape" || e.defaultPrevented || isForeignDialogEvent(e, panelRef.current)) return;
       if (isAiChatOpen()) return;
       if (fullscreen) {
         e.preventDefault();
         e.stopPropagation();
         setFullscreen(false);
-        setBox((prev) => {
-          const rest = preFullscreenBoxRef.current;
-          preFullscreenBoxRef.current = null;
-          return rest ?? prev;
-        });
+        const rest = preFullscreenBoxRef.current;
+        preFullscreenBoxRef.current = null;
+        if (rest) setBox(clampBox(rest, minWidth, minHeight));
         return;
       }
       onClose();
     };
     window.addEventListener("keydown", onKey, escapeCapture);
     return () => window.removeEventListener("keydown", onKey, escapeCapture);
-  }, [open, onClose, escapeCapture, fullscreen]);
+  }, [open, onClose, escapeCapture, fullscreen, minWidth, minHeight]);
 
   useEffect(() => {
     if (!open) {
@@ -217,13 +197,7 @@ export default function DraggableModalShell({
   useEffect(() => {
     if (!open || !fullscreen) return;
     const syncFs = () => {
-      const pad = 8;
-      setBox({
-        x: pad,
-        y: pad,
-        w: Math.max(minWidth, window.innerWidth - pad * 2),
-        h: Math.max(minHeight, window.innerHeight - pad * 2),
-      });
+      setBox(fullscreenModalBox(minWidth, minHeight));
     };
     syncFs();
     window.addEventListener("resize", syncFs);
@@ -245,25 +219,18 @@ export default function DraggableModalShell({
   }, [box, minWidth, minHeight]);
 
   const toggleFullscreen = useCallback(() => {
-    setFullscreen((fs) => {
-      if (fs) {
-        const rest = preFullscreenBoxRef.current;
-        preFullscreenBoxRef.current = null;
-        if (rest) setBox(rest);
-        return false;
-      }
-      const current = box ?? ensureBoxFromDom();
-      if (current) preFullscreenBoxRef.current = current;
-      const pad = 8;
-      setBox({
-        x: pad,
-        y: pad,
-        w: Math.max(minWidth, window.innerWidth - pad * 2),
-        h: Math.max(minHeight, window.innerHeight - pad * 2),
-      });
-      return true;
-    });
-  }, [box, ensureBoxFromDom, minWidth, minHeight]);
+    if (fullscreen) {
+      const rest = preFullscreenBoxRef.current;
+      preFullscreenBoxRef.current = null;
+      if (rest) setBox(clampBox(rest, minWidth, minHeight));
+      setFullscreen(false);
+      return;
+    }
+    const current = box ?? ensureBoxFromDom();
+    if (current) preFullscreenBoxRef.current = current;
+    setBox(fullscreenModalBox(minWidth, minHeight));
+    setFullscreen(true);
+  }, [fullscreen, box, ensureBoxFromDom, minWidth, minHeight]);
 
   const beginDrag = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -415,7 +382,8 @@ export default function DraggableModalShell({
       ? minimizedStyle
       : {
           left: "50%",
-          top: "50%",
+          top: `calc(50% + ${modalViewport().headerHeight / 2}px)`,
+          maxHeight: `calc(100vh - ${modalViewport().headerHeight + 16}px)`,
           transform: "translate(-50%, -50%)",
         };
 
@@ -430,7 +398,7 @@ export default function DraggableModalShell({
       } ${minimized ? "bg-transparent" : backdropClassName}`}
       style={overlayStyle}
       role="dialog"
-      aria-modal="true"
+      aria-modal={!minimized && !aiOpen}
       aria-labelledby={titleId}
       onMouseDown={(e) => {
         if (fullscreen || aiOpen) return;
@@ -441,8 +409,13 @@ export default function DraggableModalShell({
     >
       <div
         ref={panelRef}
+        tabIndex={-1}
         data-fullscreen={fullscreen ? "true" : undefined}
-        className={`fixed modal-shell bg-white dark:bg-slate-800 shadow-xl pointer-events-auto ${
+        className={`fixed modal-shell shadow-xl pointer-events-auto ${
+          minimized
+            ? "!border-amber-700 !bg-amber-400 !text-black"
+            : "bg-white dark:bg-slate-800"
+        } ${
           fullscreen ? "rounded-none" : "rounded-xl"
         } ${box ? "" : maxWidthClass} ${
           box || minimized ? "" : "w-[calc(100%-2rem)] max-h-[85vh]"
@@ -454,7 +427,7 @@ export default function DraggableModalShell({
         <div
           className={`${
             minimized
-              ? "px-2.5 py-1"
+              ? "px-2.5 py-1 !border-b-0"
               : "px-4 py-3 border-b border-slate-200 dark:border-slate-700"
           } modal-header shrink-0 select-none touch-none ${
             fullscreen
@@ -486,7 +459,11 @@ export default function DraggableModalShell({
                 type="button"
                 aria-label={minimized ? "모달 복원" : "모달 최소화"}
                 title={minimized ? "모달 복원" : "모달 최소화"}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm leading-none px-1.5 py-0.5 shrink-0 cursor-pointer rounded border border-transparent hover:border-slate-200"
+                className={`text-sm leading-none px-1.5 py-0.5 shrink-0 cursor-pointer rounded border border-transparent ${
+                  minimized
+                    ? "!text-black hover:!text-black hover:!border-black"
+                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-200"
+                }`}
                 onClick={() => setMinimized((prev) => !prev)}
               >
                 {minimized ? "▣" : "−"}
@@ -541,14 +518,18 @@ export default function DraggableModalShell({
               <button
                 type="button"
                 aria-label="닫기"
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl leading-none px-1 shrink-0 cursor-pointer"
+                className={`text-xl leading-none px-1 shrink-0 cursor-pointer ${
+                  minimized
+                    ? "!text-black hover:!text-black"
+                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                }`}
                 onClick={onClose}
               >
                 ×
               </button>
             </div>
           </div>
-          {!minimized && headerExtra && <div className="mt-2 pointer-events-auto" data-no-drag>{headerExtra}</div>}
+          {!minimized && headerExtra && <div className="mt-2 pointer-events-auto max-h-[35vh] overflow-y-auto" data-no-drag>{headerExtra}</div>}
         </div>
 
         {!minimized && (

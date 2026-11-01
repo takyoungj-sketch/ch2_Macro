@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import bindparam, text
 from sqlalchemy.engine import Connection
+from app.flat_sido_region import is_flat_sido_addr2
 
 _GEOCODE_TABLES = frozenset({"collective_building_geocodes", "rent_building_geocodes"})
 
@@ -34,7 +35,8 @@ def build_building_query(
     jibun = _clean(jibun_address)
     road = _clean(road_address)
     hint = jibun or road
-    parts = [_clean(addr1), _clean(addr2), hint]
+    # 시군구가 없는 지역의 조회용 토큰은 실제 주소에 포함하지 않는다.
+    parts = [_clean(addr1), "" if is_flat_sido_addr2(addr2) else _clean(addr2), hint]
     return " ".join(p for p in parts if p)
 
 

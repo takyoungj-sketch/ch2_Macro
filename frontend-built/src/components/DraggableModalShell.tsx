@@ -411,7 +411,11 @@ export default function DraggableModalShell({
         ref={panelRef}
         tabIndex={-1}
         data-fullscreen={fullscreen ? "true" : undefined}
-        className={`fixed modal-shell bg-white dark:bg-slate-800 shadow-xl pointer-events-auto ${
+        className={`fixed modal-shell shadow-xl pointer-events-auto ${
+          minimized
+            ? "!border-amber-700 !bg-amber-400 !text-black"
+            : "bg-white dark:bg-slate-800"
+        } ${
           fullscreen ? "rounded-none" : "rounded-xl"
         } ${box ? "" : maxWidthClass} ${
           box || minimized ? "" : "w-[calc(100%-2rem)] max-h-[85vh]"
@@ -423,7 +427,7 @@ export default function DraggableModalShell({
         <div
           className={`${
             minimized
-              ? "px-2.5 py-1"
+              ? "px-2.5 py-1 !border-b-0"
               : "px-4 py-3 border-b border-slate-200 dark:border-slate-700"
           } modal-header shrink-0 select-none touch-none ${
             fullscreen
@@ -455,7 +459,11 @@ export default function DraggableModalShell({
                 type="button"
                 aria-label={minimized ? "모달 복원" : "모달 최소화"}
                 title={minimized ? "모달 복원" : "모달 최소화"}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm leading-none px-1.5 py-0.5 shrink-0 cursor-pointer rounded border border-transparent hover:border-slate-200"
+                className={`text-sm leading-none px-1.5 py-0.5 shrink-0 cursor-pointer rounded border border-transparent ${
+                  minimized
+                    ? "!text-black hover:!text-black hover:!border-black"
+                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-200"
+                }`}
                 onClick={() => setMinimized((prev) => !prev)}
               >
                 {minimized ? "▣" : "−"}
@@ -510,7 +518,11 @@ export default function DraggableModalShell({
               <button
                 type="button"
                 aria-label="닫기"
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl leading-none px-1 shrink-0 cursor-pointer"
+                className={`text-xl leading-none px-1 shrink-0 cursor-pointer ${
+                  minimized
+                    ? "!text-black hover:!text-black"
+                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                }`}
                 onClick={onClose}
               >
                 ×

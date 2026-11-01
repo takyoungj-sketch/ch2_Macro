@@ -175,7 +175,7 @@ def _preset_answers_residential_floor_index(
             "answer": (
                 "칸 n<15는 참고용입니다. 구간 n<5는 지수를 안 냅니다. "
                 "전체 n<50이면 탭을 막거나 실험 모드만 허용합니다. "
-                "회귀를 못 맞추면 기준 칸만 100이고 나머지 지수는 비웁니다. "
+                "회귀를 못 맞추거나 비교할 구간이 없으면 모든 지수를 비웁니다. 지수가 나온 결과에서만 기준 칸이 100입니다. "
                 "단지·도로·기간 안의 패턴이지 적정가나 인과가 아닙니다."
             ),
         },
@@ -407,6 +407,10 @@ def _cluster_scope_label(asset_type: str) -> str:
     return "도로(cluster)"
 
 
+def _indexes_published(raw: dict) -> bool:
+    return any(cell.get("index") is not None for cell in (raw.get("cells") or []))
+
+
 def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> list[str]:
     hints: list[str] = []
     n_reg = raw.get("n_regression") or 0
@@ -414,6 +418,14 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
     r2 = raw.get("r_squared")
     ref = raw.get("reference_floor") or "1층"
     reg_ref = raw.get("regression_reference_floor")
+
+    if not _indexes_published(raw):
+        hints.append(
+            f"비교할 구간이 부족해 모든 지수를 내지 않았습니다. 평균 열은 원자료입니다 (n={n_total})."
+        )
+        for w in raw.get("warnings") or []:
+            hints.append(f"⚠ {w}")
+        return hints
 
     if raw.get("method") == "regression_semilog":
         if n_reg:
@@ -451,7 +463,7 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
             hints.append(hint + ".")
     elif raw.get("method") == "reference_only":
         hints.append(
-            f"회귀를 맞출 표본이 부족해 기준({ref})만 100으로 두고 나머지 지수는 비웠습니다. "
+            f"기준({ref})만 100이고 나머지 지수는 비었습니다. "
             f"평균 열은 원자료입니다 (n={n_total})."
         )
     else:
@@ -655,14 +667,21 @@ def build_residential_floor_index_explain(
     scope_label = "상품군 cluster" if is_factory else ("도로 cluster" if is_cluster else "단지(또는 코호트)")
     area_label = "연면적" if is_cluster else "전용면적"
     spec_prefix = "cluster" if is_cluster else "residential"
-    method = raw.get("method") or "regression_semilog"
+    published = _indexes_published(raw)
+    empty_indexes = "비교할 구간이 부족해 지수를 내지 않았습니다. "
     if dim == "floor":
+        screen = f"화면 기준은 {ref}=100%입니다. " if published else empty_indexes
         how_summary = (
             f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)입니다. "
-            f"층 구간은 {floor_mode_label}이고, 화면 기준은 {ref}=100%입니다. "
+            f"층 구간은 {floor_mode_label}이고, {screen}"
             f"{area_label}·연식·거래시점을 통제한 뒤 층만 비교합니다."
         )
     elif dim == "area":
+        area_basis = (
+            f"기준은 {ref}=100% (표본 {area_label} 중앙값 칸)입니다. "
+            if published
+            else empty_indexes
+        )
         how_summary = (
             f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)입니다. "
             + (
@@ -674,15 +693,18 @@ def build_residential_floor_index_explain(
                     else f"{area_label}을 30㎡로 반올림한 면적형입니다. "
                 )
             )
-            + f"기준은 {ref}=100% (표본 {area_label} 중앙값 칸)입니다. 면적은 구간 더미로만 넣고 연속 ln(면적)은 빼습니다."
+            + area_basis
+            + "면적은 구간 더미로만 넣고 연속 ln(면적)은 빼습니다."
         )
     else:
         how_summary = (
             f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)로 "
-            f"{ref}=100% 기준 {dim_title} 상대 지수를 냅니다."
+            + (
+                f"{ref}=100% 기준 {dim_title} 상대 지수를 냅니다."
+                if published
+                else f"비교할 구간이 부족해 {dim_title} 지수를 내지 않았습니다."
+            )
         )
-    if method == "reference_only":
-        how_summary += " 이번 결과는 회귀 표본이 부족해 기준 칸만 100이고 나머지 지수는 비었습니다."
 
     return {
         "spec_id": f"{spec_prefix}_floor_index_regression_{dim}_v2",
@@ -702,22 +724,33 @@ def build_residential_floor_index_explain(
             + " + Σ γ_g·D_g"
         ),
         "index_rule": (
-            f"지수_g = exp(β_g − β_화면기준) × 100. 화면 기준은 {ref}=100이고, 신뢰구간·p도 그 대비입니다."
-            if dim == "floor"
+            "비교할 구간이 부족해 지수를 내지 않았습니다."
+            if not published
             else (
-                f"지수_g = exp(γ_g) × 100. 기준 {ref}=100% (면적 구간 더미, ln(면적) 미포함)."
-                if dim == "area"
-                else f"지수_g = exp(γ_g) × 100. 기준 {ref}=100%."
+                f"지수_g = exp(β_g − β_화면기준) × 100. 화면 기준은 {ref}=100이고, 신뢰구간·p도 그 대비입니다."
+                if dim == "floor"
+                else (
+                    f"지수_g = exp(γ_g) × 100. 기준 {ref}=100% (면적 구간 더미, ln(면적) 미포함)."
+                    if dim == "area"
+                    else f"지수_g = exp(γ_g) × 100. 기준 {ref}=100%."
+                )
             )
         ),
         "reference": ref,
         "floor_groups": floor_lines,
         "controls": controls_h,
-        "interpretation": [
-            "표의 ‘평균’은 그 칸 원자료 평균, ‘지수’는 면적·연식·시점을 맞춘 뒤의 상대 %입니다. 둘이 어긋날 수 있습니다.",
-            f"100보다 낮으면 기준({ref})보다 ㎡당 단가가 낮은 패턴입니다.",
-            "95% CI는 화면 기준과의 계수 차이에 대한 HC3 강건표준오차입니다. 지수·신뢰구간·p의 기준은 같습니다. 기준 칸의 p는 없습니다.",
-        ],
+        "interpretation": (
+            [
+                "표의 ‘평균’은 그 칸 원자료 평균입니다.",
+                "비교할 구간이 부족해 모든 지수가 비어 있습니다. 기준 100은 지수가 나온 결과에만 있습니다.",
+            ]
+            if not published
+            else [
+                "표의 ‘평균’은 그 칸 원자료 평균, ‘지수’는 면적·연식·시점을 맞춘 뒤의 상대 %입니다. 둘이 어긋날 수 있습니다.",
+                f"100보다 낮으면 기준({ref})보다 ㎡당 단가가 낮은 패턴입니다.",
+                "95% CI는 화면 기준과의 계수 차이에 대한 HC3 강건표준오차입니다. 지수·신뢰구간·p의 기준은 같습니다. 기준 칸의 p는 없습니다.",
+            ]
+        ),
         "limitations": (
             [
                 "도로·상품군 cluster·기간 안 패턴 — 인과·적정가 아님",

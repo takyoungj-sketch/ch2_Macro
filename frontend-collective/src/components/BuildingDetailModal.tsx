@@ -514,6 +514,8 @@ export default function BuildingDetailModal({
     if (narrow) setPanel("trend");
   }, [narrow]);
   const [cohortExtra, setCohortExtra] = useState<string[]>([]);
+  const [cohortPickerOpen, setCohortPickerOpen] = useState(false);
+  const [cohortSearch, setCohortSearch] = useState("");
   const [cohortRunKeys, setCohortRunKeys] = useState<string[]>([]);
   const [cohortRunByPanel, setCohortRunByPanel] = useState<Partial<Record<PanelMode, number>>>({});
   const [histScope, setHistScope] = useState<"all" | "single">("all");
@@ -560,6 +562,10 @@ export default function BuildingDetailModal({
     () => peerBuildings.filter((b) => b.building_key !== row.building_key && !cohortExtra.includes(b.building_key)),
     [peerBuildings, row.building_key, cohortExtra],
   );
+  const filteredPeerOptions = useMemo(() => {
+    const query = cohortSearch.trim().toLocaleLowerCase("ko-KR");
+    return query ? peerOptions.filter(building => building.display_name.toLocaleLowerCase("ko-KR").includes(query)) : peerOptions;
+  }, [peerOptions, cohortSearch]);
 
   const rollingQ = useQuery({
     queryKey: ["b-rolling", row.building_key, windowYears],
@@ -720,6 +726,8 @@ export default function BuildingDetailModal({
     setTxExportError(null);
     setHistScope("all");
     setCohortExtra([]);
+    setCohortPickerOpen(false);
+    setCohortSearch("");
     setCohortRunKeys([]);
     setCohortRunByPanel({});
     setCohortChartMetric("mean");
@@ -904,79 +912,63 @@ export default function BuildingDetailModal({
           </div>
           )}
           {(() => {
+            if (!narrow && panel === "floor_index") return null;
             const help = collectiveModalPanelHelp(narrow ? "trend" : panel);
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
           {!narrow && peerBuildings.length > 0 && panel !== "danji" && (
-            <div className="mt-2 rounded border border-indigo-300 dark:border-indigo-400/70 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-2 text-xs">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-indigo-950 dark:text-indigo-100">분석 코호트</span>
-                <span className="text-slate-700 dark:text-slate-200">
-                  {cohortKeys.length === 1 ? "단일 단지" : `${cohortKeys.length}개 단지`}
-                </span>
-                {canRunCohort && panel !== "regression" && (
-                  <button
-                    type="button"
-                    className="ml-auto px-2 py-0.5 rounded bg-indigo-700 text-white text-xs font-semibold hover:bg-indigo-800 disabled:opacity-50"
-                    title="현재 탭 기준 실시간 통합 분석"
-                    onClick={runCohortAnalysis}
-                  >
-                    통합분석
-                  </button>
-                )}
-                {canRunCohort && panel === "regression" && (
-                  <span className="ml-auto text-slate-600">변수를 고른 뒤 아래 「회귀 실행」</span>
-                )}
-              </div>
-              {cohortStale && panel !== "regression" && (
-                <p className="mt-1 text-amber-700">코호트가 변경되었습니다. 「통합분석」을 다시 실행하세요.</p>
-              )}
-              {cohortKeys.length >= MAX_COHORT_BUILDINGS && (
-                <p className="mt-1 text-slate-500">최대 {MAX_COHORT_BUILDINGS}개 단지까지 포함할 수 있습니다.</p>
-              )}
-              {cohortExtra.length > 0 && (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {cohortExtra.map((k) => {
-                    const label = peerBuildings.find((b) => b.building_key === k)?.display_name ?? k.slice(0, 8);
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        className="px-2 py-1 rounded bg-white border border-indigo-200 text-indigo-800 text-sm font-medium"
-                        onClick={() => setCohortExtra((prev) => prev.filter((x) => x !== k))}
-                        title="코호트에서 제거"
-                      >
-                        {label} ×
-                      </button>
-                    );
-                  })}
+            <details open={cohortPickerOpen} onToggle={event => { if (event.target === event.currentTarget) setCohortPickerOpen(event.currentTarget.open); }} className="mt-2 rounded border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm dark:border-indigo-400/70 dark:bg-indigo-950/60">
+              <summary className="cursor-pointer font-semibold text-indigo-950 dark:text-indigo-100">통합분석(인근 단지를 추가해 분석에 활용할 수 있습니다.){cohortExtra.length > 0 && ` · 추가 ${cohortExtra.length}개`}</summary>
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-3 text-slate-800 dark:text-slate-100">
+                  <span className="py-1 font-semibold">기준단지</span>
+                  <span className="py-1">{row.display_name}</span>
+                  <span className="py-1 font-semibold">추가단지</span>
+                  <div className="flex flex-wrap items-start gap-2">
+                    <div className="flex flex-1 flex-wrap gap-1">
+                      {cohortExtra.map(key => {
+                        const label = peerBuildings.find(building => building.building_key === key)?.display_name ?? "선택한 단지";
+                        return <button key={key} type="button" className="rounded border border-indigo-300 bg-white px-2 py-1 text-sm font-medium text-indigo-950 dark:border-indigo-400 dark:bg-slate-900 dark:text-indigo-100"
+                          aria-label={`${label} 추가 단지에서 제외`} title="추가 단지에서 제외" onClick={() => setCohortExtra(previous => previous.filter(item => item !== key))}>{label} ×</button>;
+                      })}
+                    </div>
+                  </div>
                 </div>
-              )}
-              {peerOptions.length > 0 && (
-                <label className="mt-2 flex flex-wrap items-center gap-2 text-slate-800 dark:text-slate-100">
-                  <span className="shrink-0 text-sm font-semibold text-indigo-950 dark:text-indigo-50">
-                    + 인근단지 추가
-                  </span>
-                  <select
-                    className="text-sm font-medium border-2 border-indigo-400 dark:border-indigo-300 rounded px-2 py-1.5 min-w-[14rem] max-w-full w-[min(100%,22rem)] bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                    defaultValue=""
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v) addToCohort(v);
-                      e.target.value = "";
-                    }}
+                {cohortKeys.length >= MAX_COHORT_BUILDINGS && <p className="text-sm text-slate-600 dark:text-slate-300">현재 단지를 포함해 최대 {MAX_COHORT_BUILDINGS}개 단지까지 분석할 수 있습니다.</p>}
+                {cohortStale && panel !== "regression" && <p className="text-sm text-amber-700 dark:text-amber-300">추가 단지가 변경됐습니다. 「통합분석」을 다시 실행해 주세요.</p>}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <select id="cohort-add-building" value="" aria-label="추가단지 선택"
+                      disabled={cohortKeys.length >= MAX_COHORT_BUILDINGS || filteredPeerOptions.length === 0}
+                      className="max-w-full w-56 rounded border border-indigo-300 bg-white px-2 py-1 text-sm text-slate-800 dark:border-indigo-400 dark:bg-slate-900 dark:text-slate-100 disabled:opacity-50"
+                      onChange={event => { if (event.target.value) { addToCohort(event.target.value); setCohortSearch(""); } }}>
+                      <option value="">{filteredPeerOptions.length > 0 ? "추가할 단지 선택…" : peerOptions.length > 0 ? "검색 결과가 없습니다" : "추가 가능한 단지가 없습니다"}</option>
+                      {filteredPeerOptions.map(building => <option key={building.building_key} value={building.building_key}>{building.display_name}{(building.jibun_address || building.road_address || building.address) ? ` · ${building.jibun_address || building.road_address || building.address}` : ""}</option>)}
+                    </select>
+                    <input type="search" aria-label="추가할 단지명 검색" placeholder="단지명 검색" value={cohortSearch}
+                      onChange={event => setCohortSearch(event.target.value)}
+                      onKeyDown={event => {
+                        if (event.key === "Enter" && !event.nativeEvent.isComposing && filteredPeerOptions.length === 1 && cohortKeys.length < MAX_COHORT_BUILDINGS) {
+                          event.preventDefault();
+                          addToCohort(filteredPeerOptions[0].building_key);
+                          setCohortSearch("");
+                        }
+                      }}
+                      className="w-44 max-w-full rounded border border-indigo-300 bg-white px-2 py-1 text-sm text-slate-800 dark:border-indigo-400 dark:bg-slate-900 dark:text-slate-100" />
+                  </div>
+                  {canRunCohort && (panel === "regression" ? <span className="ml-auto text-slate-700 dark:text-slate-200">변수를 고른 뒤 아래 「회귀 실행」</span> : <button type="button" className="ml-auto rounded bg-indigo-700 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-800" title="현재 탭 기준 실시간 통합 분석" onClick={runCohortAnalysis}>통합분석</button>)}
+                </div>
+                {cohortSearch.trim() && <div aria-label="단지명 검색 결과" className="max-h-40 overflow-auto rounded border border-indigo-300 bg-white dark:border-indigo-400 dark:bg-slate-900">
+                  {filteredPeerOptions.length > 0 ? filteredPeerOptions.map(building => <button key={building.building_key} type="button"
                     disabled={cohortKeys.length >= MAX_COHORT_BUILDINGS}
-                  >
-                    <option value="">선택…</option>
-                    {peerOptions.slice(0, 80).map((b) => (
-                      <option key={b.building_key} value={b.building_key}>
-                        {b.display_name} (n={b.count})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </div>
+                    className="block w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-indigo-50 disabled:opacity-50 dark:text-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => { addToCohort(building.building_key); setCohortSearch(""); }}>
+                    {building.display_name}<span className="ml-2 text-xs text-slate-500 dark:text-slate-400">{building.jibun_address || building.road_address || building.address}</span>
+                    <span className="ml-2 text-xs text-indigo-700 dark:text-indigo-300">추가</span>
+                  </button>) : <p role="status" className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">현재 조회된 단지 중 검색 결과가 없습니다.</p>}
+                </div>}
+              </div>
+            </details>
           )}
         </>
       }

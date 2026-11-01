@@ -13,14 +13,12 @@ function useMedia(query: string): boolean {
   return on;
 }
 
-/** 세로 휴대폰과, 가로로 돌린 휴대폰. 가로 폭이 767을 넘어도 휴대폰 화면으로 본다. */
-const PHONE = "(max-width: 767px), (max-height: 500px) and (max-width: 1024px)";
+/** 세로 휴대폰. 가로로 돌린 휴대폰은 폭이 767을 넘어 이 조건에 안 든다. */
 const PORTRAIT = "(orientation: portrait) and (max-width: 767px)";
 
+/** 헤더와 같은 화면 판정. 가로 휴대폰도 모바일이다. */
 export function useCollectivePhone(): boolean {
-  const hardwarePhone = useMedia(PHONE);
-  const narrow = useNarrowScreen();
-  return hardwarePhone || narrow;
+  return useNarrowScreen();
 }
 
 export function useCollectivePortrait(): boolean {

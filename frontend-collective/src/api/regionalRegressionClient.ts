@@ -12,6 +12,7 @@ export type RegionalRegressionVariables = {
 };
 
 export type RegionalRegressionRunRequest = {
+  evaluation_region_addrs?: string[];
   addr1: string;
   addr2: string;
   addr3_list?: string[];
@@ -81,6 +82,8 @@ export type BlockContribution = {
 };
 
 export type FittedBuildingRow = {
+  transaction_n?: number | null;
+  address?: string | null;
   building_key: string;
   display_name: string;
   y: number;
@@ -107,6 +110,19 @@ export type NewBuildAge0Gap = {
 };
 
 export type RegionalRegressionRunResponse = {
+  extension_comparison?: {
+    status: "available" | "unavailable";
+    reason?: string | null;
+    evaluation_n: number;
+    fit_before_n: number;
+    fit_after_n: number;
+    mape_before?: number | null;
+    mape_after?: number | null;
+    evaluation_signature?: string | null;
+    role: "selection_validation";
+  } | null;
+  analysis?: import("../../../shared/regression-ui/types").RegressionAnalysisContext | null;
+  model_adj_r_squared?: number | null;
   n: number;
   model_type: "linear" | "log";
   weight_mode?: "equal" | "tx";
@@ -141,6 +157,8 @@ export type RegionalRegressionRunResponse = {
   scope_label?: string | null;
   newbuild_age0_gap?: NewBuildAge0Gap | null;
   model_candidates?: Array<{
+    validation?: import("../../../shared/regression-ui/types").RegressionValidationContext | null;
+    comparison?: import("../../../shared/regression-ui/types").RegressionComparisonContext | null;
     rank: number;
     purpose?: "predictive" | "explanatory";
     blocks: string[];
@@ -213,7 +231,7 @@ export async function runRegionalRegression(
 }
 
 export async function predictRegionalRegression(
-  body: RegionalRegressionRunRequest & { inputs: RegionalRegressionPredictInputs },
+  body: RegionalRegressionRunRequest & { inputs: RegionalRegressionPredictInputs; expected_model_signature?: string },
 ): Promise<RegionalRegressionPredictResponse> {
   const { data } = await api.post<RegionalRegressionPredictResponse>(
     "/analysis/regional-regression/predict",

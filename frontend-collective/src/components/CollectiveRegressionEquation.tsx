@@ -23,18 +23,25 @@ export default function CollectiveRegressionEquation({
   modelType,
   equation,
   timeReference,
+  targetLabel = "금액",
+  targetUnit = "만원",
+  prominent = false,
 }: {
   coefficients: RegressionCoeff[];
   modelType: RegressionModelType;
   equation?: string;
   timeReference?: string | null;
+  targetLabel?: string;
+  targetUnit?: string;
+  prominent?: boolean;
 }) {
+  const equationClass = prominent ? "text-base font-bold leading-relaxed break-words text-amber-700 dark:text-yellow-300" : "text-sm font-mono leading-relaxed break-words text-slate-800 dark:text-slate-100";
   const [showAll, setShowAll] = useState(false);
-  const dep = modelType === "log" ? "log(금액)" : "금액(만원)";
+  const dep = modelType === "log" ? `log(${targetLabel})` : `${targetLabel}(${targetUnit})`;
   const intercept = coefficients.find((c) => c.name === "const");
 
   if (!intercept && equation) {
-    return <p className="text-sm font-mono leading-relaxed break-words text-slate-800 dark:text-slate-100">{equation}</p>;
+    return <p className={equationClass}>{equation}</p>;
   }
   if (!intercept) {
     return <p className="text-sm text-slate-500 dark:text-slate-400">{dep} = —</p>;
@@ -52,7 +59,7 @@ export default function CollectiveRegressionEquation({
 
   return (
     <div className="space-y-1">
-      <p className="text-sm font-mono leading-relaxed break-words text-slate-800 dark:text-slate-100">
+      <p className={equationClass}>
         <span>
           {dep} = {formatCoefValue(intercept.coef)}
         </span>
@@ -64,10 +71,10 @@ export default function CollectiveRegressionEquation({
           return (
             <span
               key={c.name}
-              className={clsx(faded && "opacity-40", significant && !faded && "font-semibold")}
+              className={clsx(faded && "text-slate-600 dark:text-slate-300", significant && !faded && "font-semibold")}
             >
               {" "}
-              {sign} {mag}·{shortDisplayLabel(c.label)}
+              {sign} {mag}·{prominent ? `(${shortDisplayLabel(c.label)})` : shortDisplayLabel(c.label)}
             </span>
           );
         })}
@@ -81,11 +88,11 @@ export default function CollectiveRegressionEquation({
 
       {visibleTime.length > 0 && (
         <div className="space-y-0.5">
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             거래시점
             {timeReference ? ` · 기준 ${timeReference} (최다 반기)` : " · 기준은 거래 최다 반기"}
           </p>
-          <p className="text-sm font-mono leading-relaxed break-words text-slate-800 dark:text-slate-100">
+          <p className={equationClass}>
             {visibleTime.map((c, i) => {
               const sign = c.coef >= 0 ? "+" : "−";
               const mag = formatCoefValue(Math.abs(c.coef));
@@ -94,7 +101,7 @@ export default function CollectiveRegressionEquation({
               return (
                 <span
                   key={c.name}
-                  className={clsx(faded && "opacity-40", significant && !faded && "font-semibold")}
+                  className={clsx(faded && "text-slate-600 dark:text-slate-300", significant && !faded && "font-semibold")}
                 >
                   {i > 0 ? " · " : ""}
                   {timeCode(c)} {sign}
@@ -109,16 +116,16 @@ export default function CollectiveRegressionEquation({
       {hiddenCount > 0 && (
         <button
           type="button"
-          className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline underline-offset-2"
+          className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline underline-offset-2"
           onClick={() => setShowAll((v) => !v)}
         >
           {showAll ? "유의변수만 보기" : "전체보기"}
         </button>
       )}
 
-      <p className="text-[10px] text-slate-400 dark:text-slate-500">
+      <p className="text-xs text-slate-500 dark:text-slate-400">
         회귀식 유의 기준 p&lt;{EQUATION_SIG_P}
-        {!showAll && hiddenCount > 0 ? " · 기본은 유의 변수만" : showAll ? " · 비유의는 흐림" : ""}
+        {!showAll && hiddenCount > 0 ? " · 기본은 유의 계수만" : showAll ? " · 비유의 계수는 보통 굵기" : ""}
       </p>
     </div>
   );

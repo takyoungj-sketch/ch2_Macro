@@ -529,7 +529,8 @@ export default function CollectiveRegionMapHub({
   const roadMapPointsQ = useQuery({
     queryKey: [
       "collective-commercial-road-map-points",
-      roadCandidates.map((road) => road.clusterKey).join(","),
+      "address-v2",
+      roadCandidates.map(road => [road.clusterKey, road.label, road.addr1, road.addr2, road.roadName, road.addr3, road.addr4]),
     ],
     queryFn: () =>
       fetchCommercialRoadMapPoints(
@@ -580,7 +581,8 @@ export default function CollectiveRegionMapHub({
   const buildingMapPointsQ = useQuery({
     queryKey: [
       "collective-building-map-points",
-      buildingCandidates.map((b) => b.buildingKey).join(","),
+      "address-v2",
+      buildingCandidates.map(b => [b.buildingKey, b.label, b.addr1, b.addr2, b.jibunAddress, b.roadAddress]),
     ],
     queryFn: () =>
       fetchCollectiveBuildingMapPoints(
@@ -878,7 +880,7 @@ export default function CollectiveRegionMapHub({
         el,
         lng: point.longitude,
         lat: point.latitude,
-        minZoom: 14.5,
+        minZoom: 0,
       });
     }
 
@@ -893,7 +895,7 @@ export default function CollectiveRegionMapHub({
         el,
         lng: point.longitude,
         lat: point.latitude,
-        minZoom: 14.5,
+        minZoom: 0,
       });
     }
 
@@ -901,7 +903,8 @@ export default function CollectiveRegionMapHub({
       const w = map.getCanvas().clientWidth;
       const h = map.getCanvas().clientHeight;
       const zoom = map.getZoom();
-      for (const { el, lng, lat, minZoom } of nodes.values()) {
+      const occupied: Array<{ left: number; right: number; top: number; bottom: number }> = [];
+      for (const [key, { el, lng, lat, minZoom }] of nodes.entries()) {
         if (zoom < minZoom) {
           el.style.display = "none";
           continue;
@@ -910,6 +913,17 @@ export default function CollectiveRegionMapHub({
         const visible = p.x >= -48 && p.y >= -24 && p.x <= w + 48 && p.y <= h + 24;
         el.style.display = visible ? "" : "none";
         if (!visible) continue;
+        // 지역 배율에서도 이름을 표시하고, 겹치는 건물·도로명만 줄인다.
+        if (key.startsWith("building:") || key.startsWith("road:")) {
+          const halfWidth = el.offsetWidth / 2 + 3;
+          const halfHeight = el.offsetHeight / 2 + 3;
+          const box = { left: p.x - halfWidth, right: p.x + halfWidth, top: p.y - halfHeight, bottom: p.y + halfHeight };
+          if (occupied.some(other => box.left < other.right && box.right > other.left && box.top < other.bottom && box.bottom > other.top)) {
+            el.style.display = "none";
+            continue;
+          }
+          occupied.push(box);
+        }
         el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`;
       }
     };

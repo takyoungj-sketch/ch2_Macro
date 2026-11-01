@@ -396,6 +396,8 @@ export interface CommercialPredictOptions {
   floor?: ContinuousRange | null;
   max_floor?: number | null;
   floor_mode?: string;
+  floor_reference?: string | null;
+  floor_reference_label?: string | null;
   road_code?: ContinuousRange | null;
   zone_types?: string[];
   zone_type_reference?: string | null;
@@ -552,6 +554,8 @@ export interface CollectivePredictOptions {
   floor?: ContinuousRange | null;
   max_floor?: number | null;
   floor_mode?: string;
+  floor_reference?: string | null;
+  floor_reference_label?: string | null;
   dongs?: string[];
   dong_reference?: string | null;
   dong_options?: DongOption[];

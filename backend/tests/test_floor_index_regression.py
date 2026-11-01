@@ -2,6 +2,7 @@
 
 import pandas as pd
 
+from app.collective.analysis_explain import build_residential_floor_index_explain
 from app.collective.floor_index_regression import compute_residential_floor_index_regression
 
 
@@ -410,3 +411,32 @@ def test_rowhouse_basement_stays_out_of_the_above_ground_bands():
     )
     assert _cell(raw, "1층")["count_raw"] == 16
     assert "지하" not in {c["label"] for c in raw["cells"]}
+
+
+def test_explain_follows_whether_an_index_was_published():
+    one_floor = _base_rows(60, floor=[4] * 60, unit_price=[100.0] * 60)
+    empty = compute_residential_floor_index_regression(
+        one_floor, asset_type="apartment", dimension="floor", floor_mode="dummy"
+    )
+    empty_explain = build_residential_floor_index_explain(raw=empty, asset_type="apartment")
+    assert empty["method"] == "reference_only"
+    assert all(cell["index"] is None for cell in empty["cells"])
+    assert "지수를 내지 않았습니다" in empty_explain["summary"]
+    assert "기준 칸만 100" not in empty_explain["summary"]
+    assert "기준 100은 지수가 나온" in " ".join(empty_explain["interpretation"])
+    assert any("모든 지수" in hint for hint in empty_explain["interpretation_hints"])
+
+    two = pd.concat(
+        [
+            _base_rows(40, floor=[1] * 40, unit_price=[100.0] * 40),
+            _base_rows(40, floor=[2] * 40, unit_price=[120.0] * 40),
+        ],
+        ignore_index=True,
+    )
+    published = compute_residential_floor_index_regression(
+        two, asset_type="apartment", dimension="floor", floor_mode="dummy"
+    )
+    published_explain = build_residential_floor_index_explain(raw=published, asset_type="apartment")
+    assert any(cell["index"] == 100.0 for cell in published["cells"])
+    assert "100%" in published_explain["summary"]
+    assert "지수를 내지 않았습니다" not in published_explain["summary"]
