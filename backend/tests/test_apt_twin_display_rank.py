@@ -7,8 +7,11 @@ import pandas as pd
 from app.collective.regional_regression.apt_twin_lab import (
     PRICE_DIST_COLS,
     STRUCT_COLS,
+    _match_product_anchor,
+    _profile_public_row,
     rank_display_twins,
 )
+from app.flat_sido_region import FLAT_SIDO_ADDR2_TOKEN
 
 
 def _row(**overrides: float) -> dict[str, float]:
@@ -32,6 +35,62 @@ def test_price_order_inside_structural_shortlist_and_keep_five():
         index=["A", "B", "C", "D", "E", "F", "G"],
     )
     assert rank_display_twins(frame, "A", keep=5) == ["G", "F", "E", "D", "C"]
+
+
+def test_flat_sido_public_addr_uses_lookup_token():
+    profiles = pd.DataFrame(
+        [{
+            "addr1": "세종특별자치시",
+            "addr2": "",
+            "addr4": "조치원읍",
+            "label": "",
+            "n_complexes": 30,
+        }],
+        index=["36110101"],
+    )
+    row = _profile_public_row(profiles, "36110101", rank=None)
+    assert row["addr2"] == FLAT_SIDO_ADDR2_TOKEN
+    assert row["region_addr"] == f"세종특별자치시|{FLAT_SIDO_ADDR2_TOKEN}|조치원읍"
+    assert FLAT_SIDO_ADDR2_TOKEN not in row["label"]
+    assert "조치원읍" in row["label"]
+    assert _match_product_anchor(
+        profiles, addr1="세종특별자치시", addr2=row["addr2"], addr4="조치원읍", region_code="",
+    ) == "36110101"
+    assert _match_product_anchor(
+        profiles, addr1="세종특별자치시", addr2="세종특별자치시", addr4="조치원읍", region_code="",
+    ) == "36110101"
+
+
+def test_named_sigungu_public_addr_stays_literal():
+    profiles = pd.DataFrame(
+        [{
+            "addr1": "서울특별시",
+            "addr2": "강남구",
+            "addr4": "삼성동",
+            "label": "서울특별시 강남구 삼성동",
+            "n_complexes": 40,
+        }],
+        index=["11680101"],
+    )
+    row = _profile_public_row(profiles, "11680101", rank=1)
+    assert row["addr2"] == "강남구"
+    assert row["region_addr"] == "서울특별시|강남구|삼성동"
+
+
+def test_ri_code_uses_parent_eup_for_ranking():
+    profiles = pd.DataFrame(
+        [{
+            "addr1": "충청북도",
+            "addr2": "청주시",
+            "addr4": "가경동",
+            "label": "가경동",
+            "n_complexes": 20,
+        }],
+        index=["43111103"],
+    )
+    assert _match_product_anchor(
+        profiles, addr1="충청북도", addr2="청주시", addr4="가경리", region_code="4311110300",
+    ) == "43111103"
 
 
 def test_anchor_is_not_listed():

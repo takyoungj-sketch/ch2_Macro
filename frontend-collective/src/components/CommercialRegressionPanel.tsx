@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { contentSignature } from "../../../shared/regression-ui/signature";
 import { reconcileListedInputs } from "../../../shared/regression-ui/inputs";
 import { useMutation } from "@tanstack/react-query";
@@ -139,6 +139,16 @@ function CommercialPredictPanel({
   result?: CommercialRegressionPredictResponse;
   error?: string;
 }) {
+  const needsRoadWidth = Boolean(!isShop && vars.road_code && opts.road_code && inputs.road_code == null);
+  const hasPropertyConditions = Boolean(opts.zone_types?.length || opts.building_uses?.length || opts.road_width_labels?.length || (!isShop && opts.road_code));
+  const [propertyInputsOpen, setPropertyInputsOpen] = useState(needsRoadWidth);
+  const [attempted, setAttempted] = useState(false);
+  const propertySummary = [
+    vars.zone_type && (inputs.zone_type ?? opts.zone_type_reference),
+    vars.building_use && (inputs.building_use ?? opts.building_use_reference),
+    isShop && vars.road_width && (inputs.road_width_label ?? opts.road_width_reference),
+    !isShop && vars.road_code && inputs.road_code != null && `도로폭 ${inputs.road_code}m`,
+  ].filter(Boolean).join(" · ");
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/40 p-3 space-y-3">
       <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">조건별 추정 · 거래금액</p>
@@ -200,6 +210,13 @@ function CommercialPredictPanel({
             />
           </label>
         )}
+
+      </div>
+
+      {hasPropertyConditions && <details className="rounded border border-slate-300 px-3 py-2 dark:border-slate-600" open={propertyInputsOpen} onToggle={event => { if (event.target === event.currentTarget) setPropertyInputsOpen(event.currentTarget.open); }}>
+        <summary className="cursor-pointer text-sm font-medium">용도·도로 조건{needsRoadWidth ? " · 도로폭 입력 필요" : " · 확인·변경"}</summary>
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">현재 모형에 포함된 조건만 표시합니다. 다른 조건의 거래를 살펴보려면 값을 변경하세요.</p>
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         {!isShop && vars.road_code && opts.road_code && (
           <label className="space-y-0.5">
             <span className="text-slate-500 dark:text-slate-400">도로폭(m)</span>
@@ -264,13 +281,20 @@ function CommercialPredictPanel({
             </select>
           </label>
         )}
-      </div>
+        </div>
+      </details>}
+      {hasPropertyConditions && propertySummary && <p className="text-xs text-slate-600 dark:text-slate-300">선택 조건: {propertySummary}</p>}
 
-      <button type="button" className="btn btn-primary text-xs" disabled={pending || disabled} onClick={onPredict}>
+      <button type="button" className="btn btn-primary text-xs" disabled={pending || disabled} onClick={() => {
+        setAttempted(true);
+        if (needsRoadWidth) { setPropertyInputsOpen(true); return; }
+        onPredict();
+      }}>
         {pending ? "계산 중…" : "추정값 계산"}
       </button>
 
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{predictionErrorMessage(error)}</p>}
+      {attempted && needsRoadWidth && <p role="alert" className="text-xs text-amber-700 dark:text-amber-300">「용도·도로 조건」에서 도로폭을 입력해 주세요.</p>}
+      {error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{predictionErrorMessage(error)}</p>}
 
       {result && (
         <div className="rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 space-y-2">
@@ -337,6 +361,7 @@ export default function CommercialRegressionPanel({
   const keys = useCohort ? cohortKeys! : [clusterKey];
   const canRun = useCohort || canRunRegression(count);
   const recommended = useCohort || isRegressionRecommended(count);
+  const resultRef = useRef<HTMLDivElement>(null);
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [floorMode, setFloorMode] = useState<FloorMode>(isShop ? "shop" : "factory");
   const [floorAdvanced, setFloorAdvanced] = useState(false);
@@ -372,8 +397,9 @@ export default function CommercialRegressionPanel({
 
   const requestSignature = contentSignature({ body: regressionBody, keys, assetType: scope.assetType });
   const regM = useMutation({
-    mutationFn: async () => {
-      const signature = requestSignature;
+    mutationFn: async (override: typeof regressionBody | void) => {
+      const body = override ?? regressionBody;
+      const signature = contentSignature({ body, keys, assetType: scope.assetType });
       const data = await (useCohort
         ? runCommercialCohortRegression({
             cluster_keys: keys,
@@ -381,9 +407,9 @@ export default function CommercialRegressionPanel({
               scope.assetType === "all" || scope.assetType.includes(",")
                 ? undefined
                 : (scope.assetType as CommercialAssetType),
-            ...regressionBody,
+            ...body,
           })
-        : runCommercialRegression(clusterKey, regressionBody));
+        : runCommercialRegression(clusterKey, body));
       return { ...data, requestSignature: signature };
     },
   });
@@ -502,9 +528,8 @@ export default function CommercialRegressionPanel({
       </div>
 
       {useCohort && (
-        <p className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded px-2 py-1.5">
-          {keys.length}개 cluster 통합. 변수를 고른 뒤 「
-          {regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행"}」을 누르세요.
+        <p className="rounded border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200">
+          {keys.length}개 도로의 거래를 함께 분석합니다. 기본 조건과 용도·도로 변수를 선택한 뒤 회귀를 실행하세요.
         </p>
       )}
 
@@ -517,7 +542,7 @@ export default function CommercialRegressionPanel({
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        {varOptions.map(([key, label]) => (
+        {varOptions.filter(([key]) => !["zone_type", "building_use", "road_width", "road_code"].includes(key)).map(([key, label]) => (
           <label key={key} className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -540,6 +565,16 @@ export default function CommercialRegressionPanel({
           </span>
         </label>
       </div>
+
+      <details className="rounded border border-slate-300 px-2.5 py-2 dark:border-slate-500">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-100">용도·도로 변수 · {varOptions.filter(([key]) => ["zone_type", "building_use", "road_width", "road_code"].includes(key) && vars[key as keyof CommercialVars]).length}개 선택</summary>
+        <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">같은 도로 안에서도 거래마다 용도와 도로조건이 다를 수 있습니다. 필요한 변수만 선택하세요.</p>
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+          {varOptions.filter(([key]) => ["zone_type", "building_use", "road_width", "road_code"].includes(key)).map(([key, label]) => <label key={key} className="flex items-center gap-2">
+            <input type="checkbox" checked={vars[key as keyof CommercialVars]} onChange={event => setVars(current => ({ ...current, [key]: event.target.checked }))} />{label}
+          </label>)}
+        </div>
+      </details>
 
       {vars.floor && (
         <div className="text-xs space-y-1">
@@ -604,11 +639,13 @@ export default function CommercialRegressionPanel({
         </p>
       )}
       {regM.data && (
+        <div ref={resultRef} tabIndex={-1} aria-label="회귀 결과" >
         <CollectiveRegressionResults
           data={toResultsData(regM.data)}
           modelType={modelType}
           logNote="금액만 로그입니다. 연면적은 그대로입니다."
         />
+        </div>
       )}
 
       {regM.data?.predict_options && (
@@ -636,22 +673,32 @@ export default function CommercialRegressionPanel({
       {regM.data && (
         <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700">
           <summary className="cursor-pointer text-sm font-medium">다른 변수 조합 비교 · 모형 추천</summary>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">현재 결과를 검토한 뒤, 다른 변수 조합이 궁금할 때 확인하세요. 후보를 적용해도 회귀를 다시 실행하기 전에는 결과가 바뀌지 않습니다.</p>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">후보를 선택하고 ‘후보 설정 반영’을 누르면 해당 설정으로 회귀를 실행합니다.</p>
           <div className="mt-3"><CollectiveModelRecommend
           candidates={regM.data.model_candidates}
           selectedType={modelType}
           selectedBlocks={selectedBlocks}
           selectionN={regM.data.n}
-          datasetNote="이 도로와 추가한 cluster의 거래만 사용합니다."
+          datasetNote="이 도로와 추가한 도로의 거래만 사용합니다."
+          applyRunsRegression
+          applyPending={regM.isPending}
+          applyDisabled={!canRun}
+          applyNote="후보 비교와 재적합 결과는 사용 표본이 달라 수치가 달라질 수 있습니다. 분석이 끝나면 회귀 결과로 이동합니다." 
           onAdopt={(pick) => {
-            setModelType(pick.modelType);
-            setVars((prev) => {
-              const next = { ...prev };
-              (Object.keys(next) as (keyof CommercialVars)[]).forEach((key) => {
-                next[key] = pick.blocks.includes(key);
-              });
-              return next;
+            if (regM.isPending || !canRun) return;
+            const nextVars = { ...vars };
+            (Object.keys(nextVars) as (keyof CommercialVars)[]).forEach(key => {
+              nextVars[key] = pick.blocks.includes(key);
             });
+            const nextBody = { ...regressionBody, model_type: pick.modelType, variables: { ...nextVars, floor_mode: floorMode } };
+            setModelType(pick.modelType);
+            setVars(nextVars);
+            setPredictInputs({});
+            predictM.reset();
+            regM.mutate(nextBody, { onSuccess: () => requestAnimationFrame(() => {
+              resultRef.current?.focus({ preventScroll: true });
+              resultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+            }) });
           }}
         />
           </div>

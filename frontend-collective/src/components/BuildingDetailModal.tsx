@@ -1,3 +1,4 @@
+import { loadYearlyComparisons } from "../utils/trendComparison";
 import TargetPicker from "../../../shared/regression-ui/TargetPicker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
@@ -664,14 +665,8 @@ export default function BuildingDetailModal({
   }, [presaleCatalogQ.data, presaleOverlay]);
 
   const presaleOverlayQ = useQuery({
-    queryKey: ["presale-overlay-year", row.building_key, presaleOverlay.map((p) => p.key)],
-    queryFn: async () =>
-      Promise.all(
-        presaleOverlay.map(async (p) => {
-          const data = await fetchBuildingYearlyStats(p.key);
-          return { ...data, display_name: `비교 분양권 · ${p.name || data.display_name}` };
-        }),
-      ),
+    queryKey: ["presale-overlay-year-v2", row.building_key, presaleOverlay.map((p) => p.key)],
+    queryFn: () => loadYearlyComparisons(presaleOverlay.map(p => ({ key: p.key, label: `비교 분양권 · ${p.name}` })), fetchBuildingYearlyStats),
     enabled:
       cohortRunForPanel("long_term") === 0 &&
       presaleOverlay.length > 0 &&
@@ -679,17 +674,8 @@ export default function BuildingDetailModal({
   });
 
   const typeSiblingOverlayQ = useQuery({
-    queryKey: ["type-sib-year", row.building_key, typeSiblings.map((s) => s.building_key)],
-    queryFn: async () =>
-      Promise.all(
-        typeSiblings.map(async (s) => {
-          const data = await fetchBuildingYearlyStats(s.building_key);
-          return {
-            ...data,
-            display_name: `${assetTypeLabel(s.asset_type)} · ${s.display_name || data.display_name}`,
-          };
-        }),
-      ),
+    queryKey: ["type-sib-year-v2", row.building_key, typeSiblings.map((s) => s.building_key)],
+    queryFn: () => loadYearlyComparisons(typeSiblings.map(s => ({ key: s.building_key, label: `${assetTypeLabel(s.asset_type)} · ${s.display_name}` })), fetchBuildingYearlyStats),
     enabled:
       cohortRunForPanel("long_term") === 0 &&
       typeSiblings.length > 0 &&
@@ -697,7 +683,7 @@ export default function BuildingDetailModal({
   });
 
   const overlayLongTermSeries = useMemo(() => {
-    const extra = [...(typeSiblingOverlayQ.data ?? []), ...(presaleOverlayQ.data ?? [])];
+    const extra = [...(typeSiblingOverlayQ.data?.series ?? []), ...(presaleOverlayQ.data?.series ?? [])];
     if (!longTermYearQ.data || extra.length === 0) return null;
     return [
       yearlyResponseToTrendSeries(longTermYearQ.data),
@@ -1101,10 +1087,7 @@ export default function BuildingDetailModal({
             <>
               {canAttachPresaleAnnual && !longTermCohortActive && (
                 <div className="mb-2 rounded border border-slate-200 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-800/40 px-2 py-1.5 text-[10px] space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">확인된 과거 분양권</span>
-                    <span className="text-slate-500">확인된 과거 분양권 없음</span>
-                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">과거 분양권은 자동으로 연결하지 않습니다. 같은 법정동에서 비교할 분양권을 직접 선택해 주세요.</p>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-slate-700 dark:text-slate-200">분양권 직접 검색</span>
                     <span className="text-slate-500">
@@ -1193,6 +1176,9 @@ export default function BuildingDetailModal({
                   onPriceMetricChange={setLongTermMetric}
                 />
               )}
+              {!longTermCohortActive && (presaleOverlayQ.isFetching || typeSiblingOverlayQ.isFetching) && <p className="text-xs text-slate-400">비교 자료를 불러오는 중입니다. 본단지 자료는 그대로 표시합니다.</p>}
+              {!longTermCohortActive && ((presaleOverlayQ.data?.failed.length ?? 0) + (typeSiblingOverlayQ.data?.failed.length ?? 0) > 0) && <p role="status" className="text-xs text-amber-700 dark:text-amber-300">불러오지 못한 비교 자료: {[...(presaleOverlayQ.data?.failed ?? []), ...(typeSiblingOverlayQ.data?.failed ?? [])].join(", ")}. 다른 자료는 계속 표시합니다. <button type="button" className="underline" onClick={() => { if (presaleOverlay.length) void presaleOverlayQ.refetch(); if (typeSiblings.length) void typeSiblingOverlayQ.refetch(); }}>다시 불러오기</button></p>}
+              {!longTermCohortActive && longTermYearQ.isError && <p role="alert" className="text-xs text-amber-700 dark:text-amber-300">본단지의 연도별 자료를 불러오지 못했습니다.</p>}
               {!longTermCohortActive && overlayLongTermSeries && (
                 <CohortTrendPanel
                   series={overlayLongTermSeries}
@@ -1217,19 +1203,13 @@ export default function BuildingDetailModal({
                   combineSeries={presaleOverlay.length === 0}
                 />
               )}
-              {!longTermCohortActive &&
-                !overlayLongTermSeries &&
-                (presaleOverlay.length > 0 || typeSiblings.length > 0) &&
-                (longTermYearQ.isLoading || presaleOverlayQ.isLoading || typeSiblingOverlayQ.isLoading) && (
-                <p className="text-xs text-slate-400 text-center py-6">유형별·분양권 연도별 집계 중…</p>
-              )}
-              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !typeSiblings.length && longTermYearQ.isLoading && (
+              {!longTermCohortActive && !overlayLongTermSeries && longTermYearQ.isLoading && (
                 <p className="text-xs text-slate-400 text-center py-6">연도별 집계 중…</p>
               )}
-              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !typeSiblings.length && !longTermYearQ.isLoading && longTermYears.length === 0 && (
+              {!longTermCohortActive && !overlayLongTermSeries && !longTermYearQ.isLoading && !longTermYearQ.isError && longTermYears.length === 0 && (
                 <p className="text-xs text-slate-400 text-center py-6">표시할 연도별 데이터가 없습니다.</p>
               )}
-              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !typeSiblings.length && longTermYears.length > 0 && (
+              {!longTermCohortActive && !overlayLongTermSeries && longTermYears.length > 0 && (
                 <>
                   {longTermYears.some((p) => p.year < 2021) && (
                     <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-1">

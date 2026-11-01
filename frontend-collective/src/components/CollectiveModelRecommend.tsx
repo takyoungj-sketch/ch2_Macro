@@ -137,6 +137,9 @@ export default function CollectiveModelRecommend({
   blockLabels,
   samplePhrase = "선택한 거래에서",
   outcomeNoun = "금액",
+  applyRunsRegression = false,
+  applyPending = false,
+  applyDisabled = false,
   applyNote = "후보를 적용하면 변수와 척도 설정이 바뀝니다. 회귀를 다시 실행해야 결과와 추정에 반영됩니다.",
 }: {
   candidates?: ScaleSearchCandidate[] | null;
@@ -149,15 +152,19 @@ export default function CollectiveModelRecommend({
   samplePhrase?: string;
   outcomeNoun?: string;
   applyNote?: string;
+  applyRunsRegression?: boolean;
+  applyPending?: boolean;
+  applyDisabled?: boolean;
 }) {
   const rows = candidates ?? [];
   const labels = { ...BLOCK_LABEL, ...blockLabels };
   const tabs = rows.length ? tabsFor(rows, labels, samplePhrase, outcomeNoun) : [];
   const [tabId, setTabId] = useState("predictive");
   const purpose = tabId === "explanatory" ? "explanatory" : "predictive";
-  const chosen = rows
-    .filter((row) => (row.purpose ?? "predictive") === purpose)
-    .sort((a, b) => a.rank - b.rank)[0];
+  const [selectedKeys, setSelectedKeys] = useState<Record<string, string>>({});
+  const purposeRows = rows.filter((row) => (row.purpose ?? "predictive") === purpose).sort((a, b) => a.rank - b.rank);
+  const candidateKey = (row: ScaleSearchCandidate) => `${row.purpose ?? "predictive"}-${row.rank}-${row.model_type}`;
+  const chosen = (applyRunsRegression ? purposeRows.find(row => candidateKey(row) === selectedKeys[purpose]) : undefined) ?? purposeRows[0];
   const already = Boolean(
     chosen && chosen.model_type === selectedType && blocksMatch(chosen.blocks, selectedBlocks),
   );
@@ -180,14 +187,17 @@ export default function CollectiveModelRecommend({
         tabs={tabs}
         defaultTabId="predictive"
         onTabChange={setTabId}
+        selectedRowKey={chosen ? candidateKey(chosen) : undefined}
+        onRowSelect={applyRunsRegression ? key => setSelectedKeys(prev => ({ ...prev, [purpose]: key })) : undefined}
+        selectionDisabled={applyPending}
         headerExtra={
           <button
             type="button"
             className="btn btn-primary text-[11px] ml-auto"
-            disabled={already}
+            disabled={applyRunsRegression ? applyPending || applyDisabled : already}
             onClick={() => onAdopt({ modelType: chosen.model_type, blocks: chosen.blocks })}
           >
-            {already ? "설정에 반영됨 · 다시 분석해야 적용됩니다" : "이 후보 적용"}
+            {applyRunsRegression ? (applyPending ? "회귀 실행 중…" : "후보 설정 반영") : already ? "설정에 반영됨 · 다시 분석해야 적용됩니다" : "이 후보 적용"}
           </button>
         }
       />

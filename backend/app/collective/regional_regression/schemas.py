@@ -147,7 +147,7 @@ class RegionalModelCandidate(BaseModel):
 
 
 class RegionalExtensionComparison(BaseModel):
-    status: Literal["available", "unavailable"]
+    status: Literal["available", "partial", "unavailable"]
     reason: Optional[str] = None
     evaluation_n: int = 0
     fit_before_n: int = 0

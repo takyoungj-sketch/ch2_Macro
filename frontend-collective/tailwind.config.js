@@ -2,6 +2,7 @@ export default {
   darkMode: "class",
   content: [
     "../shared/regression-ui/**/*.{ts,tsx}",
+    "../shared/model-recommend/**/*.{ts,tsx}",
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
     "../shared/macro-shell/**/*.{js,ts,jsx,tsx}",

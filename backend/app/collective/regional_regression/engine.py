@@ -1371,9 +1371,26 @@ def _extension_comparison(work: pd.DataFrame, req: RegionalRegressionRunRequest)
         role="selection_validation", split=dict(hold=observation_signature(base.loc[hold], observation_unit="complex")))
     if not proof.evaluation_signature:
         return RegionalExtensionComparison(status="unavailable", reason="평가 대상 단지를 식별할 정보가 없습니다.")
-    return RegionalExtensionComparison(status="available", evaluation_n=len(hold), fit_before_n=before["n"],
+    status, reason = _extension_limit(before, after)
+    return RegionalExtensionComparison(status=status, reason=reason, evaluation_n=len(hold), fit_before_n=before["n"],
         fit_after_n=after["n"], mape_before=before["hold_mape"], mape_after=after["hold_mape"],
         evaluation_signature=proof.evaluation_signature)
+
+
+def _extension_limit(before: dict, after: dict) -> tuple[str, str | None]:
+    """부분 검증은 오차를 유지하고, 정상 제공으로 올리지 않는다."""
+    reasons: list[str] = []
+    for fit in (before, after):
+        validation = fit.get("validation") or {}
+        if validation.get("status") != "partial":
+            continue
+        reason = validation.get("reason")
+        text = str(reason) if reason else "검증에 학습하지 않은 범주가 있어 비교가 제한됩니다."
+        if text not in reasons:
+            reasons.append(text)
+    if not reasons:
+        return "available", None
+    return "partial", " ".join(reasons)
 
 
 def _regional_vars(blocks: list[str]) -> RegionalRegressionVariables:
@@ -1498,9 +1515,12 @@ def suggest_regional_regression(
 
     def pred_key(row: dict):
         hold = row.get("hold_mape")
-        if hold is not None:
+        status = (row.get("validation") or {}).get("status")
+        if hold is not None and status == "available":
             return (0, float(hold), len(row["blocks"]), mape_of(row), tuple(row["blocks"]), row["model_type"])
-        return (1, mape_of(row), len(row["blocks"]), tuple(row["blocks"]), row["model_type"])
+        if hold is not None and status == "partial":
+            return (1, float(hold), len(row["blocks"]), mape_of(row), tuple(row["blocks"]), row["model_type"])
+        return (2, mape_of(row), len(row["blocks"]), tuple(row["blocks"]), row["model_type"])
 
     def expl_key(row: dict):
         adj = row.get("adj_r_squared")
@@ -1763,7 +1783,7 @@ def run_regional_regression(
     rows = rows[:FITTED_CAP]
 
     blocks = _block_contrib(
-        work, train_idx, hold_idx, v, req.model_type, req.weight_mode, core_hold=fitted.get("hold_mape"),
+        work, train_idx, hold_idx, v, req.model_type, req.weight_mode,
         region_levels=region_levels or None, region_ref=region_ref,
     )
     age0_gap = _newbuild_age0_gap(work, x, fitted, model_type=req.model_type)
@@ -1838,7 +1858,6 @@ def _block_contrib(
     model_type: ModelType,
     weight_mode: WeightMode,
     *,
-    core_hold: float | None,
     region_levels: list[str] | None = None,
     region_ref: str | None = None,
 ) -> list[BlockContribution]:
@@ -1865,17 +1884,18 @@ def _block_contrib(
         hold_idx=hold_idx,
         category_support=core_support,
     )
+    core_hold = None
     if fit_core and fit_core.get("computable"):
+        core_hold = fit_core.get("hold_mape")
         out.append(
             BlockContribution(
                 block="core",
                 label="규모·연식·주차",
                 weak=False,
-                hold_mape=fit_core.get("hold_mape"),
+                hold_mape=core_hold,
                 in_sample_mape=fit_core.get("mape"),
             )
         )
-        core_hold = fit_core.get("hold_mape")
 
     for key, label, flag, weak, base_note in (
         (
@@ -1986,7 +2006,7 @@ def predict_regional(
         value = getattr(inputs, name)
         if value is None or not np.isfinite(value):
             raise ValueError(f"{LABELS.get(name, name)} 값을 입력해 주세요.")
-        if value < 0 or (name in ("households", "assessed_land_price") and value == 0):
+        if value < 0 or (name in ("households", "max_floor", "assessed_land_price") and value == 0):
             raise ValueError(f"{LABELS.get(name, name)} 값의 범위를 확인해 주세요.")
     for name, allowed, label in (("structure_group", struct_levels, "구조"),
             ("builder_group", builder_levels, "건설사"),

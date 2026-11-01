@@ -728,14 +728,20 @@ def _national_profiles(conn: Connection) -> tuple[pd.DataFrame, dict[str, Any]]:
     return profiles, meta
 
 
+def _public_addr2(raw: object) -> tuple[str, str]:
+    """빈 시군구는 조회 토큰으로 낸다. 화면 이름에는 토큰을 넣지 않는다."""
+    addr2 = str(raw or "").strip()
+    if addr2 in {"", "nan", "None"}:
+        return FLAT_SIDO_ADDR2_TOKEN, ""
+    return addr2, addr2
+
+
 def _profile_public_row(profiles: pd.DataFrame, region_id: str, *, rank: int | None) -> dict[str, Any]:
     row = profiles.loc[region_id]
     addr1 = str(row.addr1).strip()
-    addr2 = str(row.addr2).strip()
+    addr2, label_addr2 = _public_addr2(row.addr2)
     addr4 = str(row.addr4).strip()
-    if addr2 in {"", "nan", "None"}:
-        addr2 = addr1
-    label = str(row.label).strip() or " ".join(part for part in (addr1, addr2, addr4) if part)
+    label = str(row.label).strip() or " ".join(part for part in (addr1, label_addr2, addr4) if part)
     return {
         "rank": rank,
         "label": label,
@@ -759,12 +765,15 @@ def _match_product_anchor(
     if len(code) >= 8 and code[:8].isdigit() and code[:8] in profiles.index:
         return code[:8]
     a1, a2, a4 = addr1.strip(), addr2.strip(), addr4.strip()
-    if a2 == FLAT_SIDO_ADDR2_TOKEN:
-        hit = profiles.index[(profiles["addr1"] == a1) & (profiles["addr4"] == a4)]
+    stored = profiles["addr2"].fillna("").astype(str).str.strip()
+    flat = stored.isin(["", "nan", "None"])
+    flat_hit = profiles.index[(profiles["addr1"] == a1) & (profiles["addr4"] == a4) & flat]
+    if a2 in {"", FLAT_SIDO_ADDR2_TOKEN}:
+        hit = flat_hit
     else:
-        hit = profiles.index[
-            (profiles["addr1"] == a1) & (profiles["addr2"] == a2) & (profiles["addr4"] == a4)
-        ]
+        hit = profiles.index[(profiles["addr1"] == a1) & (stored == a2) & (profiles["addr4"] == a4)]
+        if len(hit) == 0 and a2 == a1:
+            hit = flat_hit
     if len(hit) == 0:
         raise RuntimeError("이 읍면동의 아파트 재고로 쌍둥이 순위를 만들지 못했습니다. 거래와 핵심 변수가 있는 단지가 필요합니다.")
     if len(hit) > 1:

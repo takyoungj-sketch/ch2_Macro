@@ -691,7 +691,7 @@ export default function App() {
                 setRegionalOpen(true);
               }}
             >
-              지역회귀
+              지역회귀(신규예측)
             </button>
             )}
             </>

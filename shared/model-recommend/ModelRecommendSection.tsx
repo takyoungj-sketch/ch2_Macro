@@ -46,6 +46,9 @@ export type ModelRecommendSectionProps = {
   headerExtra?: ReactNode;
   className?: string;
   onTabChange?: (id: string) => void;
+  selectedRowKey?: string;
+  onRowSelect?: (key: string) => void;
+  selectionDisabled?: boolean;
 };
 
 /**
@@ -61,6 +64,9 @@ export default function ModelRecommendSection({
   headerExtra,
   className = "",
   onTabChange,
+  selectedRowKey,
+  onRowSelect,
+  selectionDisabled,
 }: ModelRecommendSectionProps) {
   const initial =
     defaultTabId && tabs.some((t) => t.id === defaultTabId)
@@ -134,8 +140,14 @@ export default function ModelRecommendSection({
                   key={row.key}
                   className="rounded border border-indigo-100 bg-white px-2 py-1 dark:border-indigo-900/60 dark:bg-slate-900/60"
                 >
-                  <div className="text-slate-800 dark:text-slate-100">{row.primary}</div>
-                  <div className="text-[11px] text-slate-500 tabular-nums">{row.metrics}</div>
+                  {onRowSelect ? <button type="button" className={`w-full rounded p-2 text-left ${selectedRowKey === row.key ? "ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-950/40" : "hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                    aria-pressed={selectedRowKey === row.key} disabled={selectionDisabled} onClick={() => onRowSelect(row.key)}>
+                    <span className="block font-medium text-slate-800 dark:text-slate-100">{selectedRowKey === row.key ? "선택됨 · " : ""}{row.primary}</span>
+                    <span className="block text-xs text-slate-500 tabular-nums">{row.metrics}</span>
+                  </button> : <>
+                    <div className="text-slate-800 dark:text-slate-100">{row.primary}</div>
+                    <div className="text-[11px] text-slate-500 tabular-nums">{row.metrics}</div>
+                  </>}
                 </div>
               ))
             )}

@@ -111,7 +111,7 @@ export type NewBuildAge0Gap = {
 
 export type RegionalRegressionRunResponse = {
   extension_comparison?: {
-    status: "available" | "unavailable";
+    status: "available" | "partial" | "unavailable";
     reason?: string | null;
     evaluation_n: number;
     fit_before_n: number;

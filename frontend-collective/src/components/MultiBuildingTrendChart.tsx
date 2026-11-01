@@ -1,3 +1,4 @@
+import { consecutiveTrendSegments, trendAxisOrders } from "../utils/trendComparison";
 import { useId } from "react";
 import clsx from "clsx";
 
@@ -56,17 +57,22 @@ function finiteNum(v: number | null | undefined): v is number {
 }
 
 function quartileBands(
-  ordered: { x: number; lo?: number | null; hi?: number | null }[],
+  ordered: { x: number; xOrder: number; lo?: number | null; hi?: number | null }[],
   yOf: (v: number) => number,
 ): { fill: string; lo: string; hi: string }[] {
   const segs: { x: number; lo: number; hi: number }[][] = [];
   let cur: { x: number; lo: number; hi: number }[] = [];
+  let previousOrder = Number.NaN;
   for (const p of ordered) {
-    if (finiteNum(p.lo) && finiteNum(p.hi)) cur.push({ x: p.x, lo: p.lo, hi: p.hi });
+    if (finiteNum(p.lo) && finiteNum(p.hi)) {
+      if (cur.length && p.xOrder !== previousOrder + 1) { segs.push(cur); cur = []; }
+      cur.push({ x: p.x, lo: p.lo, hi: p.hi });
+    }
     else if (cur.length) {
       segs.push(cur);
       cur = [];
     }
+    previousOrder = p.xOrder;
   }
   if (cur.length) segs.push(cur);
   return segs
@@ -96,17 +102,19 @@ export default function MultiBuildingTrendChart({
   series,
   metric = "mean",
   showQuartiles = false,
+  annual = false,
 }: {
   series: TrendSeries[];
   metric?: CohortTrendMetric;
   /** 중앙값 모드에서 25%·75% 띠. 기본은 끔 */
   showQuartiles?: boolean;
+  annual?: boolean;
 }) {
   const clipId = useId().replace(/:/g, "");
   const active = series.filter((s) => s.points.some((p) => metricValue(p, metric) != null));
   if (active.length === 0) return null;
 
-  const allXOrders = [...new Set(active.flatMap((s) => s.points.map((p) => p.xOrder)))].sort((a, b) => a - b);
+  const allXOrders = trendAxisOrders(active.flatMap(s => s.points.map(p => p.xOrder)), annual);
   const xLabelByOrder = new Map<number, string>();
   for (const s of active) {
     for (const p of s.points) {
@@ -202,22 +210,18 @@ export default function MultiBuildingTrendChart({
           const color = s.color ?? SERIES_COLORS[idx % SERIES_COLORS.length];
           const quartileColor = QUARTILE_COLORS[idx % QUARTILE_COLORS.length];
           const rows = s.points.filter((p) => metricValue(p, metric) != null);
-          const linePoints = rows
-            .map((r) => `${xAt(r.xOrder).toFixed(1)},${yVal(Number(metricValue(r, metric))).toFixed(1)}`)
-            .join(" ");
+          const segments = consecutiveTrendSegments(rows);
           const bands = showBand
               ? quartileBands(
                   [...s.points]
                     .sort((a, b) => a.xOrder - b.xOrder)
-                    .map((p) => ({ x: xAt(p.xOrder), lo: p.p25, hi: p.p75 })),
+                    .map((p) => ({ x: xAt(p.xOrder), xOrder: p.xOrder, lo: p.p25, hi: p.p75 })),
                   yVal,
                 )
               : [];
           return (
             <g key={s.label}>
-              {rows.length > 1 && (
-                <polyline fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" points={linePoints} />
-              )}
+              {segments.filter(segment => segment.length > 1).map((segment, i) => <polyline key={i} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" points={segment.map(r => `${xAt(r.xOrder).toFixed(1)},${yVal(Number(metricValue(r, metric))).toFixed(1)}`).join(" ")} />)}
               <g clipPath={`url(#${clipId})`}>
                 {bands.map((b, bi) => (
                   <g key={`${s.label}-band-${bi}`}>

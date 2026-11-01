@@ -26,6 +26,8 @@ export default function CollectiveRegressionEquation({
   targetLabel = "금액",
   targetUnit = "만원",
   prominent = false,
+  coefficientOrder,
+  showTechnicalNote = true,
 }: {
   coefficients: RegressionCoeff[];
   modelType: RegressionModelType;
@@ -34,6 +36,8 @@ export default function CollectiveRegressionEquation({
   targetLabel?: string;
   targetUnit?: string;
   prominent?: boolean;
+  coefficientOrder?: readonly string[];
+  showTechnicalNote?: boolean;
 }) {
   const equationClass = prominent ? "text-base font-bold leading-relaxed break-words text-amber-700 dark:text-yellow-300" : "text-sm font-mono leading-relaxed break-words text-slate-800 dark:text-slate-100";
   const [showAll, setShowAll] = useState(false);
@@ -49,11 +53,11 @@ export default function CollectiveRegressionEquation({
 
   const others = coefficients.filter((c) => c.name !== "const" && !isTimeCoef(c));
   const time = coefficients.filter(isTimeCoef).sort((a, b) => a.name.localeCompare(b.name));
-  const sig = sortCoefficientsByVariableOrder(others.filter((c) => isEquationSignificant(c.p)));
-  const nonsig = sortCoefficientsByVariableOrder(others.filter((c) => !isEquationSignificant(c.p)));
+  const sig = sortCoefficientsByVariableOrder(others.filter((c) => isEquationSignificant(c.p)), coefficientOrder);
+  const nonsig = sortCoefficientsByVariableOrder(others.filter((c) => !isEquationSignificant(c.p)), coefficientOrder);
   const sigTime = time.filter((c) => isEquationSignificant(c.p));
   const nonsigTime = time.filter((c) => !isEquationSignificant(c.p));
-  const visible = showAll ? [...sig, ...nonsig] : sig;
+  const visible = showAll ? (coefficientOrder ? sortCoefficientsByVariableOrder([...sig, ...nonsig], coefficientOrder) : [...sig, ...nonsig]) : sig;
   const visibleTime = showAll ? [...sigTime, ...nonsigTime] : sigTime;
   const hiddenCount = nonsig.length + nonsigTime.length;
 
@@ -123,10 +127,10 @@ export default function CollectiveRegressionEquation({
         </button>
       )}
 
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+      {showTechnicalNote && <p className="text-xs text-slate-500 dark:text-slate-400">
         회귀식 유의 기준 p&lt;{EQUATION_SIG_P}
         {!showAll && hiddenCount > 0 ? " · 기본은 유의 계수만" : showAll ? " · 비유의 계수는 보통 굵기" : ""}
-      </p>
+      </p>}
     </div>
   );
 }

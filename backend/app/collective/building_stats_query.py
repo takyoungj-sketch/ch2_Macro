@@ -14,6 +14,7 @@ from app.collective.asset_scope import (
     normalize_asset_type as _scope_normalize_asset_type,
 )
 from app.collective.address import legal_dong, split_building_addresses
+from app.flat_sido_region import FLAT_SIDO_ADDR2_TOKEN, apply_addr2_scope
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.filters import apply_region_filters
 from app.collective.schemas import AnalysisFeatures, BuildingStatsRow
@@ -614,14 +615,19 @@ def list_sigungu_presale_catalog(
     src = building_addr_meta(conn, building_key)
     if src is None:
         return None
-    if not src.get("addr1") or not src.get("addr2"):
+    if not src.get("addr1"):
         return src, []
     if not _table_exists(conn, "public.collective_building_annual_stats"):
         return src, []
 
+    scope_clauses: list[str] = []
+    scope_params: dict[str, Any] = {"bk": building_key}
+    apply_addr2_scope(scope_clauses, scope_params, addr1=src["addr1"],
+                      addr2=str(src.get("addr2") or "").strip() or FLAT_SIDO_ADDR2_TOKEN)
+    scope_sql = " AND ".join(scope_clauses)
     rows = conn.execute(
         text(
-            """
+            f"""
             SELECT building_key,
                    MAX(display_name) AS display_name,
                    MAX(addr3) AS addr3,
@@ -631,13 +637,12 @@ def list_sigungu_presale_catalog(
                    SUM(count)::int AS total_count
             FROM collective_building_annual_stats
             WHERE asset_type = 'presale'
-              AND addr1 = :a1
-              AND addr2 = :a2
+              AND {scope_sql}
               AND building_key <> :bk
             GROUP BY building_key
             """
         ),
-        {"a1": src["addr1"], "a2": src["addr2"], "bk": building_key},
+        scope_params,
     ).mappings().all()
 
     src_dong = legal_dong(src.get("addr3"), src.get("addr4"))

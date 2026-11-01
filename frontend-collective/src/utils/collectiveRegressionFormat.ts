@@ -95,8 +95,13 @@ export function compareCoefficientOrder(a: RegressionCoeff, b: RegressionCoeff):
   return 0;
 }
 
-export function sortCoefficientsByVariableOrder(coefficients: RegressionCoeff[]): RegressionCoeff[] {
-  return [...coefficients].sort(compareCoefficientOrder);
+export function sortCoefficientsByVariableOrder(coefficients: RegressionCoeff[], order?: readonly string[]): RegressionCoeff[] {
+  const rank = (name: string) => {
+    if (name === "const") return -1;
+    const index = order?.findIndex(key => key.endsWith("_") ? name.startsWith(key) : name === key) ?? -1;
+    return index < 0 ? (order?.length ?? 0) : index;
+  };
+  return [...coefficients].sort((a, b) => order ? rank(a.name) - rank(b.name) || compareCoefficientOrder(a, b) : compareCoefficientOrder(a, b));
 }
 
 export function countSignificantCoefficients(coefficients: RegressionCoeff[]): number {

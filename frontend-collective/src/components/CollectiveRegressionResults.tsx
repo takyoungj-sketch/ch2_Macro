@@ -24,15 +24,15 @@ import CollectiveRegressionEquation from "./CollectiveRegressionEquation";
 import ZoneCaution from "./ZoneCaution";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 
-function EffectsTable({ coefficients }: { coefficients: RegressionCoeff[] }) {
+export function EffectsTable({ coefficients, coefficientOrder }: { coefficients: RegressionCoeff[]; coefficientOrder?: readonly string[] }) {
   const [feOpen, setFeOpen] = useState(false);
   const intercept = coefficients.find((c) => c.name === "const");
   const main = useMemo(
     () =>
       sortCoefficientsByVariableOrder(
-        coefficients.filter((c) => c.name !== "const" && !c.name.startsWith("bld_")),
+        coefficients.filter((c) => c.name !== "const" && !c.name.startsWith("bld_")), coefficientOrder,
       ),
-    [coefficients],
+    [coefficients, coefficientOrder],
   );
   const fe = useMemo(
     () => sortCoefficientsByVariableOrder(coefficients.filter((c) => c.name.startsWith("bld_"))),

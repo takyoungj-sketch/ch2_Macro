@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { contentSignature } from "../../../shared/regression-ui/signature";
 import { reconcileListedInputs } from "../../../shared/regression-ui/inputs";
 import type { RegressionSampleGroup } from "../../../shared/regression-ui/types";
@@ -474,6 +474,7 @@ export default function BuildingRegressionPanel({
   countRecent?: number | null;
   gateMessages?: string[];
 }) {
+  const resultRef = useRef<HTMLDivElement>(null);
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [floorAdvanced, setFloorAdvanced] = useState(false);
   const [modelType, setModelType] = useState<RegressionModelType>("linear");
@@ -528,11 +529,12 @@ export default function BuildingRegressionPanel({
   );
 
   const requestSignature = contentSignature({ body: regressionBody, keys });
-  const runRegression = async () => {
-    const signature = requestSignature;
+  const runRegression = async (override: typeof regressionBody | void) => {
+    const body = override ?? regressionBody;
+    const signature = contentSignature({ body, keys });
     const data = await (useCohort
-      ? runCohortRegression({ building_keys: keys, ...regressionBody })
-      : runBuildingRegression(buildingKey, regressionBody));
+      ? runCohortRegression({ building_keys: keys, ...body })
+      : runBuildingRegression(buildingKey, body));
     return { ...data, requestSignature: signature };
   };
 
@@ -810,11 +812,13 @@ export default function BuildingRegressionPanel({
         </p>
       )}
       {regM.data && (
+        <div ref={resultRef} tabIndex={-1} aria-label="회귀 결과" >
         <CollectiveRegressionResults
           data={regM.data}
           modelType={modelType}
           logNote="금액만 로그입니다. 전용면적은 그대로입니다."
         />
+        </div>
       )}
 
       {regM.data?.predict_options && (
@@ -843,22 +847,32 @@ export default function BuildingRegressionPanel({
       {regM.data && (
         <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700">
           <summary className="cursor-pointer text-sm font-medium">다른 변수 조합 비교 · 모형 추천</summary>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">현재 결과를 검토한 뒤, 다른 변수 조합이 궁금할 때 확인하세요. 후보를 적용해도 회귀를 다시 실행하기 전에는 결과가 바뀌지 않습니다.</p>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">후보를 선택하고 ‘후보 설정 반영’을 누르면 해당 설정으로 회귀를 실행합니다.</p>
           <div className="mt-3"><CollectiveModelRecommend
           candidates={regM.data.model_candidates}
           selectedType={modelType}
           selectedBlocks={selectedBlocks}
           selectionN={regM.data.n}
           datasetNote="지금 연 건물과 추가한 단지의 거래만 사용합니다."
+          applyRunsRegression
+          applyPending={regM.isPending}
+          applyDisabled={!canRun}
+          applyNote="후보 비교와 재적합 결과는 사용 표본이 달라 수치가 달라질 수 있습니다. 분석이 끝나면 회귀 결과로 이동합니다." 
           onAdopt={(pick) => {
-            setModelType(pick.modelType);
-            setVars((prev) => {
-              const next = { ...prev };
-              (Object.keys(next) as (keyof RegressionVars)[]).forEach((key) => {
-                next[key] = pick.blocks.includes(key);
-              });
-              return next;
+            if (regM.isPending || !canRun) return;
+            const nextVars = { ...vars };
+            (Object.keys(nextVars) as (keyof RegressionVars)[]).forEach(key => {
+              nextVars[key] = pick.blocks.includes(key);
             });
+            const nextBody = { ...regressionBody, model_type: pick.modelType, variables: { ...nextVars, floor_mode: floorMode } };
+            setModelType(pick.modelType);
+            setVars(nextVars);
+            setPredictInputs({});
+            predictM.reset();
+            regM.mutate(nextBody, { onSuccess: () => requestAnimationFrame(() => {
+              resultRef.current?.focus({ preventScroll: true });
+              resultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+            }) });
           }}
         />
           </div>

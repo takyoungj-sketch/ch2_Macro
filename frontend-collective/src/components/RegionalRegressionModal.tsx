@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AnalysisSummary, { primaryCaution } from "../../../shared/regression-ui/AnalysisSummary";
-import { DetailAnalysis, SummaryHeading } from "../../../shared/regression-ui/ReadingLayout";
+import { DetailAnalysis } from "../../../shared/regression-ui/ReadingLayout";
 import ValidationStatus from "../../../shared/regression-ui/ValidationStatus";
 import { contentSignature } from "../../../shared/regression-ui/signature";
-import { formatProbability, formatStatistic } from "../../../shared/regression-ui/format";
+import { formatProbability } from "../../../shared/regression-ui/format";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { buildRegionalRegressionContext } from "../api/aiContext";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -23,22 +23,22 @@ import {
 } from "../api/regionalRegressionClient";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import CollectiveRegressionEquation from "./CollectiveRegressionEquation";
-import ZoneCaution from "./ZoneCaution";
+import { EffectsTable } from "./CollectiveRegressionResults";
 import CollectiveModelRecommend from "./CollectiveModelRecommend";
 import DraggableModalShell from "./DraggableModalShell";
 import {
-  ESTIMATE_COPY,
   MetricWithHelp,
-  StatisticalEstimateCaption,
-  StatisticalEstimateDisclaimer,
+  StatsGlossaryHelp,
   StatisticalEstimateRangeRow,
 } from "@ch2/stats-glossary";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { ASSET_LABELS } from "../types";
 import { parseResidentialAssetKinds } from "../utils/residentialAssetTypes";
 import { countSignificantCoefficients } from "../utils/collectiveRegressionFormat";
-import { APT_TWIN_REGION_HELP } from "../utils/residentialAnalysisHelp";
+import { APT_TWIN_REGION_HELP, RESIDENTIAL_REGIONAL_REGRESSION_HELP, RESIDENTIAL_REGIONAL_ESTIMATE_HELP, REGIONAL_SETTINGS_HELP } from "../utils/residentialAnalysisHelp";
 import { FLAT_SIDO_ADDR2_TOKEN } from "../utils/flatSidoRegion";
+import { regionalPredictionCategories } from "../utils/regionalPredictionCategories";
+import { regionalTwinNotice } from "../utils/regionalTwinNotice";
 
 type Props = {
   addr1: string;
@@ -57,6 +57,16 @@ type Props = {
 function regressionKinds(assetType: string) {
   return parseResidentialAssetKinds(assetType).filter((k) => k !== "presale");
 }
+
+const REGIONAL_RESULT_HELP = {
+  spec_id: "regional.result.reading", spec_version: "1", title: "지역회귀 결과 읽기",
+  summary: "선택한 단지 자료에서 계산한 적합도와 검증 오차입니다.",
+  interpretation: ["결정계수와 조정 R²는 현재 모형의 척도에서 표시합니다. 로그 모형에서는 로그 단가 기준입니다.", "학습 MAPE는 적합 단지에서 계산합니다. 분리 검증 MAPE는 학습에서 제외한 단지의 오차이며, 교차검증 CV-MAPE와 다릅니다.", "회귀식은 절편과 p<0.1인 항을 표시합니다. 전체보기에서는 유의하지 않은 항도 확인할 수 있습니다. 추정값은 전체 적합 모형으로 계산합니다.", "단가만 로그를 적용하며 세대수·연식 등 설명변수는 원래 단위를 유지합니다. 범주형 계수는 표시한 기준 범주와 비교합니다. 가상단지는 표시된 기준 지역을 적용합니다."],
+  limitations: ["산출되지 않은 지표는 —로 표시합니다. 검증 상태와 현재 표본의 해석 제한을 함께 확인해 주세요."],
+};
+
+const REGIONAL_COEFFICIENT_ORDER = ["households", "max_floor", "building_age", "parking_per_household", "assessed_land_price", "atype_", "struct_", "builder_", "region_"];
+const REGIONAL_VAR_LABELS: Record<string, string> = { households: "세대수", max_floor: "최고층", building_age: "연식", parking: "세대당 주차", structure: "구조", builder: "시공사", asset_type_dummy: "유형", assessed_land_price: "개별공시지가", region_dummy: "지역" };
 
 const VIRTUAL_KEY = "__virtual__";
 
@@ -83,16 +93,13 @@ const CORE_VARS: Array<[keyof RegionalRegressionVariables, string]> = [
   ["max_floor", "최고층"],
   ["building_age", "연식"],
   ["parking", "세대당 주차"],
+  ["assessed_land_price", "개별공시지가"],
+  ["asset_type_dummy", "유형별 차이"],
 ];
-const WEAK_VARS: Array<[keyof RegionalRegressionVariables, string, string]> = [
-  ["structure", "구조", "결측은 미상 더미 · 실측에서 예측 개선 없음"],
-  ["builder", "시공사", "결측은 미상 더미 · 단지를 빼지 않음"],
+const ADDITIONAL_VARS: Array<[keyof RegionalRegressionVariables, string, string]> = [
+  ["structure", "구조", "단지의 구조·시공사에 따른 단가 차이를 분석합니다. 효과는 지역과 표본에 따라 다를 수 있습니다."],
+  ["builder", "시공사", "단지의 구조·시공사에 따른 단가 차이를 분석합니다. 효과는 지역과 표본에 따라 다를 수 있습니다."],
 ];
-const LAND_VAR: [keyof RegionalRegressionVariables, string] = [
-  "assessed_land_price",
-  "개별공시지가",
-];
-
 const MIN_TX_OPTIONS = [5, 3, 2] as const;
 type MinTx = (typeof MIN_TX_OPTIONS)[number];
 
@@ -258,7 +265,7 @@ function splitAddrKey(key: string): { addr1: string; addr2: string; addr4: strin
   return { addr1: parts[0], addr2: parts[1] ?? "", addr4: parts[2] };
 }
 
-/** 순위 기준 읍면동을 앞에 두고, 이미 고른 읍면동과 체크한 쌍둥이를 중복 없이 붙인다. */
+/** 고른 지역과 체크한 쌍둥이를 중복 없이 붙인다. 순위만의 상위 읍·면은 식에 넣지 않는다. */
 export function twinPoolRegionAddrs(selected: string[], anchor: string, twins: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -268,8 +275,10 @@ export function twinPoolRegionAddrs(selected: string[], anchor: string, twins: s
     seen.add(key);
     out.push(key);
   };
-  push(anchor);
-  for (const key of selected) push(key);
+  const selectedKeys = selected.map((key) => key.trim()).filter(Boolean);
+  const anchorKey = anchor.trim();
+  if (selectedKeys.length === 0 || selectedKeys.includes(anchorKey)) push(anchorKey);
+  for (const key of selectedKeys) push(key);
   for (const key of twins) push(key);
   return out;
 }
@@ -294,10 +303,17 @@ function TwinRegionPanel(props: {
   onToggle: (regionAddr: string) => void;
   regionDummy: boolean;
   onRegionDummy: (on: boolean) => void;
-  canRun: boolean;
-  pending: boolean;
-  onRun: () => void;
+  rankScopeNote: string;
+  onAddNeighbors: () => void;
+  onRetry: () => void;
 }) {
+  const notice = regionalTwinNotice({
+    loading: props.scopeLoading || props.listLoading,
+    error: props.scopeError || props.listError,
+    scopeEmpty: props.choices.length === 0 && props.scopeAnchors.length === 0,
+    hasAnchor: Boolean(props.anchorLabel),
+    hasTwins: props.twins.length > 0,
+  });
   return (
     <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
       <div className="flex flex-wrap items-center gap-1">
@@ -305,7 +321,7 @@ function TwinRegionPanel(props: {
         <AnalysisHelpPanel explain={APT_TWIN_REGION_HELP} />
       </div>
       <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
-        기준 읍면동의 아파트 재고 구성과 아파트 가격분포로 1위부터 5위까지 골랐습니다.
+        기준 읍면동의 아파트 재고 구성과 가격분포를 비교해 최대 5곳을 제시합니다.
         {props.asOfLabel ? ` 목록 기준은 ${props.asOfLabel}의 3년 창입니다.` : " 목록은 최근 3년 창입니다."}
         {props.windowYears === 3
           ? " 식의 통계 창도 3년입니다."
@@ -348,7 +364,7 @@ function TwinRegionPanel(props: {
             onChange={(e) => props.onScopeKey(e.target.value)}
             disabled={props.scopeLoading || props.scopeAnchors.length === 0}
           >
-            {props.scopeAnchors.length === 0 && <option value="">읍면동을 찾는 중…</option>}
+            {props.scopeAnchors.length === 0 && <option value="">{props.scopeLoading ? "읍면동을 찾는 중…" : "선택 가능한 기준 지역이 없습니다"}</option>}
             {props.scopeAnchors.map((row) => (
               <option key={row.region_addr} value={row.region_addr}>
                 {row.label}
@@ -357,8 +373,16 @@ function TwinRegionPanel(props: {
           </select>
         </label>
       )}
-      {props.scopeError && <p className="text-red-600">{props.scopeError}</p>}
-      {props.listError && <p className="text-red-600">{props.listError}</p>}
+      {notice && <div role={notice.kind === "error" ? "alert" : "status"} className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2 text-sm text-slate-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-slate-100">
+        <p className="font-semibold">{notice.title}</p>
+        <p className="leading-relaxed">{notice.reason}</p>
+        {notice.kind === "insufficient" ? <>
+          <p className="leading-relaxed">지도에서 인접지역을 추가하고 통계분석을 다시 실행한 뒤, 지역회귀의 기본회귀 탭에서 분석해 보세요. 실제 분석 단지 수와 검증 오차를 함께 확인해 주세요.</p>
+          <p className="text-xs text-slate-600 dark:text-slate-300">쌍둥이 선정은 3년·거래 5건 이상과 필수 특성 정보 기준을 사용합니다. 위 회귀의 기간·변수·최소 거래수를 바꿔도 선정 기준은 달라지지 않습니다.</p>
+          <button type="button" className="btn btn-primary" onClick={props.onAddNeighbors}>지도로 돌아가 인접지역 추가</button>
+          {props.listError && <details className="text-xs text-slate-600 dark:text-slate-300"><summary className="cursor-pointer">상세 사유</summary><p className="mt-1">{props.listError}</p></details>}
+        </> : <button type="button" className="btn" onClick={props.onRetry}>다시 불러오기</button>}
+      </div>}
       {props.listLoading && (
         <p className="text-[11px] text-slate-500">전국 아파트 단지를 읽어 순위를 계산하고 있습니다.</p>
       )}
@@ -398,9 +422,6 @@ function TwinRegionPanel(props: {
           </table>
         </div>
       )}
-      {!props.listLoading && !props.listError && props.anchorLabel && props.twins.length === 0 && (
-        <p className="text-[11px] text-slate-500">가격분포로 남길 아파트 후보가 없습니다.</p>
-      )}
       <label className="flex items-start gap-1.5">
         <input
           type="checkbox"
@@ -416,25 +437,25 @@ function TwinRegionPanel(props: {
           </span>
         </span>
       </label>
-      <button type="button" className="btn btn-primary" disabled={!props.canRun || props.pending} onClick={props.onRun}>
-        {props.pending ? "적합 중…" : "통합회귀 실행"}
-      </button>
+      {props.rankScopeNote && (
+        <p className="text-xs text-amber-800 dark:text-amber-300 leading-snug">{props.rankScopeNote}</p>
+      )}
     </section>
   );
 }
 
 export default function RegionalRegressionModal(props: Props) {
+  const resultSummaryRef = useRef<HTMLElement>(null);
   const kinds = regressionKinds(props.assetType);
-  const unified = kinds.length >= 2;
   const [vars, setVars] = useState<RegionalRegressionVariables>({
     households: true,
     max_floor: true,
     building_age: true,
-    parking: !unified,
+    parking: true,
     structure: false,
     builder: false,
-    asset_type_dummy: unified,
-    assessed_land_price: false,
+    asset_type_dummy: true,
+    assessed_land_price: true,
   });
   const [modelType, setModelType] = useState<"linear" | "log">("log");
   const [weightMode, setWeightMode] = useState<"equal" | "tx">("equal");
@@ -528,6 +549,11 @@ export default function RegionalRegressionModal(props: Props) {
     staleTime: 10 * 60 * 1000,
   });
   const anchorAddr = twinQ.data?.anchor?.region_addr ?? "";
+  const selectedRegionKeys = choices.map((choice) => choice.key);
+  const rankScopeNote =
+    anchorAddr && selectedRegionKeys.length > 0 && !selectedRegionKeys.includes(anchorAddr)
+      ? `쌍둥이 순위는 ${twinQ.data?.anchor?.label || "상위 읍·면"} 기준입니다. 식에는 선택한 지역과 체크한 쌍둥이만 들어갑니다.`
+      : "";
   useEffect(() => {
     setChecked([]);
   }, [anchorAddr]);
@@ -570,12 +596,13 @@ export default function RegionalRegressionModal(props: Props) {
   const currentRequest = effectiveTab === "twin" ? twinRequest : body;
   const data = runShown.data;
   const conditionsChanged = Boolean(data && data.requestSignature !== contentSignature(currentRequest));
-  const predictionSignature = contentSignature({ request: currentRequest, inputs, model: data?.analysis?.model_signature });
+  const modelInputs = useMemo(() => regionalPredictionCategories(inputs, data?.predict_options), [inputs, data?.predict_options]);
+  const predictionSignature = contentSignature({ request: currentRequest, inputs: modelInputs, model: data?.analysis?.model_signature });
   const predM = useMutation({
     mutationFn: async (req: RegionalRegressionRunRequest) => {
       if (conditionsChanged) throw new Error("분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.");
       const signature = predictionSignature;
-      return { ...await predictRegionalRegression({ ...req, inputs, expected_model_signature: data?.analysis?.model_signature }), inputSignature: signature };
+      return { ...await predictRegionalRegression({ ...req, inputs: modelInputs, expected_model_signature: data?.analysis?.model_signature }), inputSignature: signature };
     },
   });
   // 입력·적합 모형이 바뀌면 이전 요청의 오류와 진행 상태도 무효화한다.
@@ -584,6 +611,11 @@ export default function RegionalRegressionModal(props: Props) {
   const currentPrediction = !conditionsChanged && !runShown.isPending
     && predM.data?.inputSignature === predictionSignature ? predM.data : undefined;
   const picked = pickKey !== VIRTUAL_KEY ? data?.fitted.find((r) => fittedKey(r) === pickKey) : undefined;
+  const loadedInputs = picked ? regionalPredictionCategories(inputsFromFitted(picked), data?.predict_options) : undefined;
+  const editedLabels = loadedInputs ? ([
+    ["households", "세대수"], ["max_floor", "최고층"], ["building_age", "연식"], ["parking_per_household", "세대당 주차"],
+    ["assessed_land_price", "개별공시지가"], ["structure_group", "구조"], ["builder_group", "시공사"], ["asset_type", "유형"],
+  ] as const).filter(([key]) => (modelInputs[key] ?? null) !== (loadedInputs[key] ?? null)).map(([, label]) => label) : [];
   const regionalAiContext = useMemo(() => {
     const regionLabel = data?.scope_label ?? [props.addr1, props.addr2].filter(Boolean).join(" ");
     if (!data) {
@@ -621,7 +653,7 @@ export default function RegionalRegressionModal(props: Props) {
     const row = data?.fitted.find((r) => fittedKey(r) === key);
     if (!row) return;
     setPickKey(key);
-    setInputs(inputsFromFitted(row));
+    setInputs(regionalPredictionCategories(inputsFromFitted(row), data?.predict_options));
     predM.reset();
   }
 
@@ -630,8 +662,9 @@ export default function RegionalRegressionModal(props: Props) {
       open
       onClose={props.onClose}
       titleId="regional-regression-title"
-      title="지역회귀"
-      subtitle={`한 행 = 단지 · 값이 있으면 출처와 무관하게 포함 · 거래 ${minTx}건 미만은 제외`}
+      title="지역회귀(신규예측)"
+      headerActions={<AnalysisHelpPanel explain={RESIDENTIAL_REGIONAL_REGRESSION_HELP} />}
+      subtitle={`단지별 중앙단가 분석 · 최소 거래 ${minTx}건`}
       allowFullscreen
       allowFontScale
       resizable
@@ -645,10 +678,12 @@ export default function RegionalRegressionModal(props: Props) {
         {conditionsChanged && <p className="text-xs text-amber-700 dark:text-amber-300" role="status">
           분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.
         </p>}
-        <p className="text-[11px] text-slate-500">
+        <div className="flex items-start justify-between gap-2">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           {data?.scope_label ?? `${props.addr1} · ${props.addr2} · ${props.windowYears}년 창`}
           {data?.as_of_month ? ` · 기준 ${data.as_of_month.slice(0, 7)}` : ""}
         </p>
+        </div>
 
         {showTwin && (
           <div className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5" role="tablist">
@@ -678,150 +713,6 @@ export default function RegionalRegressionModal(props: Props) {
             </button>
             ))}
           </div>
-        )}
-
-        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-          <p className="text-xs font-semibold">1. 변수 선택</p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-            {CORE_VARS.map(([key, label]) => (
-              <label
-                key={key}
-                className="flex items-center gap-1"
-                title={
-                  key === "parking"
-                    ? "표제부 단지에는 주차 값이 없어 켜면 빠집니다"
-                    : undefined
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={vars[key]}
-                  onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-700">
-            {WEAK_VARS.map(([key, label, hint]) => (
-              <label key={key} className="flex items-center gap-1" title={hint}>
-                <input
-                  type="checkbox"
-                  checked={vars[key]}
-                  onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
-                />
-                {label}
-                <span className="text-[10px] text-amber-700 dark:text-amber-400">약한 변수</span>
-              </label>
-            ))}
-          </div>
-          {unified && (
-            <label className="flex items-center gap-1 pt-1" title="기준은 아파트(있으면). 계수는 같은 규모·연식에서 아파트 대비 단가 수준입니다.">
-              <input
-                type="checkbox"
-                checked={vars.asset_type_dummy}
-                onChange={(e) => setVars((v) => ({ ...v, asset_type_dummy: e.target.checked }))}
-              />
-              유형 더미
-              <span className="text-[10px] text-slate-500">기준 아파트 · 교차항 없음</span>
-            </label>
-          )}
-          <label
-            className="flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-700"
-            title="기본 통계에 연결된 최신 대표 필지의 개별공시지가(원/㎡)를 원값으로 사용합니다."
-          >
-            <input
-              type="checkbox"
-              checked={vars[LAND_VAR[0]]}
-              onChange={(e) => setVars((v) => ({ ...v, [LAND_VAR[0]]: e.target.checked }))}
-            />
-            {LAND_VAR[1]}
-            <span className="text-[10px] text-slate-500">최신 대표 필지 · 원값</span>
-          </label>
-        </section>
-
-        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
-          <p className="text-xs font-semibold">2. 회귀모형 선택</p>
-          <label className="flex items-center gap-1.5">
-            <input type="radio" checked={modelType === "linear"} onChange={() => setModelType("linear")} />
-            선형 — 단가(만원/㎡) ~ 변수
-          </label>
-          <label className="flex items-center gap-1.5">
-            <input type="radio" checked={modelType === "log"} onChange={() => setModelType("log")} />
-            log — log(단가) ~ 변수 (% 해석)
-            <span className="text-[10px] text-slate-500">단가만 로그. 세대수·연식 등 변수는 그대로.</span>
-          </label>
-        </section>
-
-        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
-          <p className="text-xs font-semibold">3. 결측치 처리</p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">선택한 범주형 변수에 적용</p>
-          <label className="flex items-center gap-1.5">
-            <input
-              type="radio"
-              checked={categoricalMissing === "keep_unknown"}
-              onChange={() => setCategoricalMissing("keep_unknown")}
-            />
-            미상 범주 유지 (기본값)
-          </label>
-          <label className="flex items-center gap-1.5">
-            <input
-              type="radio"
-              checked={categoricalMissing === "drop"}
-              onChange={() => setCategoricalMissing("drop")}
-            />
-            결측 단지 제외
-          </label>
-        </section>
-
-        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
-          <p className="text-xs font-semibold">4. 관측치 처리</p>
-          <p className="text-[11px] text-slate-600 dark:text-slate-300">
-            최소 거래수 — 창 중앙값을 단지 시세로 보기 어려운 단지를 제외합니다. 기본은 5건입니다.
-          </p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {MIN_TX_OPTIONS.map((n) => (
-              <label key={n} className="flex items-center gap-1.5">
-                <input type="radio" checked={minTx === n} onChange={() => setMinTx(n)} />
-                {n}건 미만 제외{n === 5 ? " (기본)" : ""}
-              </label>
-            ))}
-          </div>
-          {minTx < 5 && (
-            <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-snug">
-              {minTx}건까지 넣으면 시세가 얇은 단지가 들어갑니다. 거래수 가중을 권합니다.
-            </p>
-          )}
-          <p className="text-[11px] text-slate-600 dark:text-slate-300">
-            세대수·층·연식·주차·공시지가에 값이 없으면 그 단지는 숫자 결측으로 빠집니다. 구조·시공사 결측은 위의 결측치 처리를 따릅니다.
-          </p>
-          <label className="flex items-center gap-1.5">
-            <input type="radio" checked={weightMode === "equal"} onChange={() => setWeightMode("equal")} />
-            단지 균등
-          </label>
-          <label className="flex items-center gap-1.5">
-            <input type="radio" checked={weightMode === "tx"} onChange={() => setWeightMode("tx")} />
-            거래수 가중
-          </label>
-          <p className="text-[10px] text-slate-500 leading-snug">
-            거래수 가중은 거래가 많은 단지의 대표가격에 더 높은 신뢰도를 부여합니다.
-          </p>
-        </section>
-
-        {effectiveTab === "local" && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={runM.isPending}
-            onClick={() => {
-              setPickKey(VIRTUAL_KEY);
-              setInputs(emptyPredictInputs());
-              predM.reset();
-              runM.mutate(body);
-            }}
-          >
-            {runM.isPending ? "적합 중…" : "회귀 실행"}
-          </button>
         )}
 
         {effectiveTab === "twin" && (
@@ -868,16 +759,141 @@ export default function RegionalRegressionModal(props: Props) {
             }
             regionDummy={regionDummy}
             onRegionDummy={setRegionDummy}
-            canRun={twinRequest != null}
-            pending={twinRun.isPending}
-            onRun={() => {
+            rankScopeNote={rankScopeNote}
+            onAddNeighbors={props.onClose}
+            onRetry={() => {
+              if (choices.length === 0) void scopeQ.refetch();
+              if (twinQueryArgs) void twinQ.refetch();
+            }}
+          />
+        )}
+
+        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
+          <div className="flex items-center gap-2"><p className="text-sm font-semibold">1. 변수 선택</p><AnalysisHelpPanel explain={REGIONAL_SETTINGS_HELP.variables} /></div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+            {CORE_VARS.map(([key, label]) => (
+              <label
+                key={key}
+                className="flex items-center gap-1"
+                title={
+                  key === "parking"
+                    ? "주차 정보가 없는 단지는 이 변수를 선택하면 제외될 수 있습니다."
+                    : undefined
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={vars[key]}
+                  onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-700">
+            {ADDITIONAL_VARS.map(([key, label, hint]) => (
+              <label key={key} className="flex items-center gap-1" title={hint}>
+                <input
+                  type="checkbox"
+                  checked={vars[key]}
+                  onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
+                />
+                {label}
+              </label>
+            ))}
+            <AnalysisHelpPanel explain={REGIONAL_SETTINGS_HELP.structureBuilder} />
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
+          <div className="flex items-center gap-2"><p className="text-sm font-semibold">2. 회귀모형 선택</p><AnalysisHelpPanel explain={REGIONAL_SETTINGS_HELP.model} /></div>
+          <label className="flex items-center gap-1.5">
+            <input type="radio" checked={modelType === "linear"} onChange={() => setModelType("linear")} />
+            선형회귀
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input type="radio" checked={modelType === "log"} onChange={() => setModelType("log")} />
+            로그회귀 (log)
+            
+          </label>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
+          <div className="flex items-center gap-2"><p className="text-sm font-semibold">3. 결측치 처리</p><AnalysisHelpPanel explain={REGIONAL_SETTINGS_HELP.missing} /></div>
+          
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              checked={categoricalMissing === "keep_unknown"}
+              onChange={() => setCategoricalMissing("keep_unknown")}
+            />
+            미상 범주 유지 (기본값)
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              checked={categoricalMissing === "drop"}
+              onChange={() => setCategoricalMissing("drop")}
+            />
+            결측 단지 제외
+          </label>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
+          <div className="flex items-center gap-2"><p className="text-sm font-semibold">4. 표본 및 가중치</p><AnalysisHelpPanel explain={REGIONAL_SETTINGS_HELP.sample} /></div>
+          <p className="font-medium">단지별 최소 거래 수</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {MIN_TX_OPTIONS.map((n) => (
+              <label key={n} className="flex items-center gap-1.5">
+                <input type="radio" checked={minTx === n} onChange={() => setMinTx(n)} />
+                {n}건 미만 제외{n === 5 ? " (기본)" : ""}
+              </label>
+            ))}
+          </div>
+          {minTx < 5 && (
+            <p className="text-xs text-amber-800 dark:text-amber-300 leading-snug">
+              거래가 {minTx}건인 단지까지 포함합니다. 중앙단가가 불안정할 수 있어 거래수 가중을 권합니다.
+            </p>
+          )}
+          <p className="pt-1 font-medium">가중치</p>
+          <label className="flex items-center gap-1.5">
+            <input type="radio" checked={weightMode === "equal"} onChange={() => setWeightMode("equal")} />
+            단지 균등
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input type="radio" checked={weightMode === "tx"} onChange={() => setWeightMode("tx")} />
+            거래수 가중
+          </label>
+
+        </section>
+
+        {effectiveTab === "local" && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={runM.isPending}
+            onClick={() => {
+              setPickKey(VIRTUAL_KEY);
+              setInputs(emptyPredictInputs());
+              predM.reset();
+              runM.mutate(body);
+            }}
+          >
+            {runM.isPending ? "적합 중…" : "회귀 실행"}
+          </button>
+        )}
+
+        {effectiveTab === "twin" && (
+          <button type="button" className="btn btn-primary" disabled={!twinRequest || twinRun.isPending}
+            onClick={() => {
               if (!twinRequest) return;
               setPickKey(VIRTUAL_KEY);
               setInputs(emptyPredictInputs());
               predM.reset();
               twinRun.mutate(twinRequest);
-            }}
-          />
+            }}>
+            {twinRun.isPending ? "적합 중…" : "통합회귀 실행"}
+          </button>
         )}
 
         {runShown.isError && (
@@ -889,11 +905,7 @@ export default function RegionalRegressionModal(props: Props) {
 
         {data && (
           <>
-            {data.warnings.map((w) => (
-              <p key={w} className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
-                {w}
-              </p>
-            ))}
+
 
             {data.n < 20 && (
               <LowSampleHint
@@ -915,66 +927,81 @@ export default function RegionalRegressionModal(props: Props) {
               />
             )}
 
-            <section className="space-y-2" aria-label="결과 요약">
-              <SummaryHeading />
-              <p className="text-[11px] text-slate-600 dark:text-slate-300">추정 대상은 단지 중앙단가입니다. 아래 학습 수는 거래 건수가 아니라 단지 수입니다.</p>
-              {primaryCaution(data.analysis) && (
-                <p className="text-[11px] leading-snug text-amber-800 dark:text-amber-300">{primaryCaution(data.analysis)}</p>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                <MetricWithHelp label={data.model_type === "log" ? "R² (로그)" : "R²"} termId="r_squared" value={fmtFixed(data.r_squared)} />
-                <MetricWithHelp label={data.model_type === "log" ? "조정 R² (로그)" : "조정 R²"} termId="adj_r_squared" value={fmtFixed(data.model_adj_r_squared)} />
-                <MetricWithHelp
-                  label="학습 MAPE"
-                  termId="mape"
-                  value={data.mape != null ? `${fmt(data.mape, 1)}%` : "—"}
-                  title="학습 표본에서 계산한 오차. 교차검증 CV-MAPE가 아닙니다."
-                />
-                <div>
-                  <div className="text-[10px] text-slate-500">유의 계수 (p&lt;0.1, 절편 제외)</div>
-                  <div className="tabular-nums">{countSignificantCoefficients(data.coefficients)}개</div>
-                </div>
-                <MetricWithHelp label="F p" termId="f_p_value" value={formatProbability(data.f_p_value)} />
-                <MetricWithHelp
-                  label="학습 n"
-                  termId="fit_n"
-                  value={data.n.toLocaleString("ko-KR")}
-                  title="최종 분석 표본 중 학습에 쓴 단지입니다. 분리 검증 단지는 탈락 표본이 아닙니다."
-                />
-                <div>
-                  <div className="text-[10px] text-slate-500">분리 검증 단지 수</div>
-                  <div className="tabular-nums">
-                    {data.sample.n_hold > 0 ? data.sample.n_hold.toLocaleString("ko-KR") : "—"}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-500">분리 검증 MAPE</div>
-                  <div className="tabular-nums">{data.hold_mape != null ? `${fmt(data.hold_mape, 1)}%` : "—"}</div>
-                </div>
-                {data.weight_mode === "tx" && data.n_effective != null && (
-                  <div>
-                    <div className="text-[10px] text-slate-500">유효 단지</div>
-                    <div className="tabular-nums">{fmt(data.n_effective, 1)}</div>
-                  </div>
-                )}
+            <section ref={resultSummaryRef} tabIndex={-1} className="card space-y-3" aria-label="결과 요약">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">결과 요약</h3>
+                <span className="flex items-center gap-1 text-sm font-medium">학습·적합 {data.n.toLocaleString("ko-KR")}곳 <StatsGlossaryHelp termId="fit_n" size="xs" /></span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">단지 중앙단가(만원/㎡) · 분석 대상 {(data.sample.n_analysis?.toLocaleString("ko-KR") ?? "—")}곳 · 학습 {data.sample.n_fit.toLocaleString("ko-KR")}곳 · 검증 {data.sample.n_hold > 0 ? `${data.sample.n_hold.toLocaleString("ko-KR")}곳` : "미제공"}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: data.model_type === "log" ? "결정계수 R² (로그)" : "결정계수 R²", term: "r_squared", value: fmtFixed(data.r_squared, 3) },
+                  { label: data.model_type === "log" ? "조정 R² (로그)" : "조정 R²", term: "adj_r_squared", value: fmtFixed(data.model_adj_r_squared, 3) },
+                  { label: "학습 MAPE", term: "mape", value: data.mape != null ? `${fmtFixed(data.mape, 2)}%` : "—" },
+                  { label: "분리 검증 MAPE", term: "hold", value: data.hold_mape != null ? `${fmtFixed(data.hold_mape, 2)}%` : "—" },
+                ].map(metric => <div key={metric.term} className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-3 dark:border-slate-700 dark:bg-slate-900/40">
+                  <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">{metric.label}{metric.term === "hold" ? <AnalysisHelpPanel explain={REGIONAL_RESULT_HELP} /> : <StatsGlossaryHelp termId={metric.term} size="xs" />}</div>
+                  <p className="mt-2 text-xl font-semibold tabular-nums text-slate-900 dark:text-slate-100">{metric.value}</p>
+                </div>)}
               </div>
               <ValidationStatus report={data.analysis?.metrics.find(metric => metric.role !== "training")?.validation} />
+            {(data.equation || data.coefficients.length > 0) && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm font-semibold">회귀식 <AnalysisHelpPanel explain={REGIONAL_RESULT_HELP} /></div>
+                <CollectiveRegressionEquation
+                  targetLabel="단지 중앙단가" targetUnit="만원/㎡"
+                  coefficients={data.coefficients}
+                  modelType={data.model_type}
+                  equation={data.equation ?? undefined}
+                  prominent coefficientOrder={REGIONAL_COEFFICIENT_ORDER} showTechnicalNote={false}
+                />
+                <p className="text-xs text-slate-500">
+                  적합: {data.weight_mode === "tx" ? "거래수 가중" : "단지 균등"}
+                  {data.model_type === "log" ? " · log 단가" : " · 선형 단가"}
+                </p>
+                <ReferenceCategoriesLine refs={data.reference_categories} />
+              </div>
+            )}
+              {primaryCaution(data.analysis) && <p role="status" className="border-l-2 border-amber-500 pl-3 text-xs leading-relaxed text-amber-800 dark:text-amber-200">{primaryCaution(data.analysis)}</p>}
+              {data.warnings.length > 0 && <div className="space-y-1 border-l-2 border-amber-500 pl-3 text-xs leading-relaxed text-amber-800 dark:text-amber-200">{[...new Set(data.warnings)].filter(w => w !== primaryCaution(data.analysis)).map(w => <p key={w}>{w}</p>)}</div>}
             </section>
 
             <DetailAnalysis>
-            <SampleFunnel sample={data.sample} />
+            {data.coefficients.length > 0 && <section className="space-y-2" aria-label="회귀계수 상세">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                <h4 className="text-sm font-semibold">회귀계수</h4>
+                <span className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">유의 계수 {countSignificantCoefficients(data.coefficients)}개 <AnalysisHelpPanel explain={REGIONAL_RESULT_HELP} /></span>
+              </div>
+              {data.analysis && <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                <p>실제 반영: {data.analysis.variables.filter(v => v.state === "included").map(v => REGIONAL_VAR_LABELS[v.name] ?? "추가 변수").join(" · ") || "없음"}</p>
+                {data.analysis.variables.some(v => v.state !== "included") && <p className="text-amber-800 dark:text-amber-300">선택했으나 제외: {data.analysis.variables.filter(v => v.state !== "included").map(v => `${REGIONAL_VAR_LABELS[v.name] ?? "추가 변수"} (${({ not_in_model: "모형에 미포함", constant: "값이 일정함", no_data: "자료 없음", missing_after_filter: "필터 후 자료 없음", not_identifiable: "효과 구분 어려움" } as Record<string, string>)[v.state] ?? "제외"})`).join(" · ")}</p>}
+              </div>}
+              <EffectsTable coefficients={data.coefficients} coefficientOrder={REGIONAL_COEFFICIENT_ORDER} />
+            </section>}
+
+            <details className="text-xs">
+              <summary className="cursor-pointer py-1 font-medium text-slate-600 dark:text-slate-300">분석에 사용한 자료와 표본</summary>
+              <div className="mt-2 space-y-3">
+                <SampleFunnel sample={data.sample} />
+                <AnalysisSummary analysis={data.analysis} />
+                {data.missing_treatment_label && <p>{data.missing_treatment_label}</p>}
+              </div>
+            </details>
             {data.extension_comparison && <section className="rounded border border-slate-200 dark:border-slate-600 p-3 space-y-1 text-xs">
               <p className="font-semibold">기존 지역의 같은 단지로 확장 전후 비교</p>
-              {data.extension_comparison.status === "available" ? <>
+              {data.extension_comparison.status === "available" || data.extension_comparison.status === "partial" ? <>
                 <p>검증 {data.extension_comparison.evaluation_n}곳 · 확장 전 학습 {data.extension_comparison.fit_before_n}곳 · 확장 후 학습 {data.extension_comparison.fit_after_n}곳</p>
                 <p>선정용 검증 MAPE: 확장 전 {fmt(data.extension_comparison.mape_before, 1)}% → 확장 후 {fmt(data.extension_comparison.mape_after, 1)}%</p>
+                {data.extension_comparison.status === "partial" && data.extension_comparison.reason && (
+                  <p className="text-amber-800 dark:text-amber-300">{data.extension_comparison.reason}</p>
+                )}
                 <p className="text-slate-500 dark:text-slate-400">양쪽 모두 같은 검증 단지를 학습에서 제외한 별도 비교입니다. 아래 전체 범위 모형의 분할과 다르며, 확장 선택에 참고하는 수치로 독립 확인 결과는 아닙니다.</p>
               </> : <p>{data.extension_comparison.reason ?? "동일 대상 비교를 제공하지 않습니다."}</p>}
             </section>}
-            <AnalysisSummary analysis={data.analysis} />
-
             {data.blocks.length > 0 && (
-              <div className="rounded-md border border-slate-200 dark:border-slate-600 overflow-hidden">
+              <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-600">
+                <summary className="cursor-pointer text-xs font-medium">추가 변수 비교</summary>
+                <div className="mt-2 overflow-auto">
                 <table className="data w-full text-[11px]">
                   <thead>
                     <tr>
@@ -1009,82 +1036,12 @@ export default function RegionalRegressionModal(props: Props) {
                       {b.note}
                     </p>
                   ))}
-              </div>
+              </div></details>
             )}
 
-            {data.missing_treatment_label && (
-              <p className="text-[11px] text-slate-500">{data.missing_treatment_label}</p>
-            )}
 
-            {data.equation && (
-              <div className="space-y-1">
-                <div className="text-xs font-semibold">회귀식과 계수</div>
-                <CollectiveRegressionEquation
-                  targetLabel="단지 중앙단가" targetUnit="만원/㎡"
-                  coefficients={data.coefficients}
-                  modelType={data.model_type}
-                  equation={data.equation}
-                />
-                {data.model_type === "log" && (
-                  <p className="text-[11px] leading-snug text-slate-500">
-                    단가만 로그입니다. 세대수·연식 등 변수는 그대로입니다.
-                  </p>
-                )}
-                <p className="text-[10px] text-slate-500">
-                  적합: {data.weight_mode === "tx" ? "거래수 가중" : "단지 균등"}
-                  {data.model_type === "log" ? " · log 단가" : " · 선형 단가"}
-                </p>
-                <ReferenceCategoriesLine refs={data.reference_categories} />
-              </div>
-            )}
 
-            {data.coefficients.length > 0 && (
-              <details>
-                <summary className="cursor-pointer text-slate-600 dark:text-slate-400 font-medium">
-                  계수 상세
-                </summary>
-                <div tabIndex={0} role="region" aria-label="회귀 계수 상세 표" className="table-wrap max-h-48 mt-1 overflow-auto">
-                  <table className="data w-full text-[11px]">
-                    <thead>
-                      <tr>
-                        <th className="text-left">변수</th>
-                        <th className="text-right">β</th>
-                        <th className="text-left">효과 해석</th>
-                        <th className="text-right">SE</th>
-                        <th className="text-right">t</th>
-                        <th className="text-right">p</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.coefficients.map((c) => (
-                        <tr key={c.name}>
-                          <td>{c.label}</td>
-                          <td className="text-right tabular-nums">{formatStatistic(c.coef, 4)}</td>
-                          <td>{c.effect_plain ?? "—"}</td>
-                          <td className="text-right tabular-nums">{formatStatistic(c.se)}</td>
-                          <td className="text-right tabular-nums">{formatStatistic(c.t)}</td>
-                          <td className="text-right tabular-nums">{formatProbability(c.p)}</td>
-                        </tr>
-                      ))}
-                      {referenceRows(data.reference_categories).map((r) => (
-                        <tr key={r.key} className="bg-slate-50 dark:bg-slate-800/40">
-                          <td>
-                            {r.label}
-                            <span className="ml-1 text-[10px] text-indigo-700 dark:text-indigo-300">기준</span>
-                          </td>
-                          <td className="text-right tabular-nums">—</td>
-                          <td>기준 범주입니다. 다른 {r.kind} 계수는 이 범주와의 차이입니다.</td>
-                          <td className="text-right tabular-nums">—</td>
-                          <td className="text-right tabular-nums">—</td>
-                          <td className="text-right tabular-nums">—</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            )}
-            {data.coefficients.length > 0 && <ZoneCaution />}
+
 
             {data.fitted.length > 0 && <details className="rounded border border-slate-200 dark:border-slate-600 p-2.5 text-xs">
               <summary className="cursor-pointer font-semibold">학습 단지별 거래수·적합 결과 ({data.fitted.length}/{data.n}곳 표시)</summary>
@@ -1101,13 +1058,21 @@ export default function RegionalRegressionModal(props: Props) {
               </div>
               <p className="mt-1">단가 단위: 만원/㎡. 적합값과의 차이는 학습 오차이며 검증 오차가 아닙니다.</p>
             </details>}
+            <details className="text-xs text-slate-600 dark:text-slate-300">
+              <summary className="cursor-pointer py-1">추가 통계정보</summary>
+              <p className="mt-2">F 검정 p값: {formatProbability(data.f_p_value)} <StatsGlossaryHelp termId="f_p_value" size="xs" /></p>
+              {data.weight_mode === "tx" && data.n_effective != null && <p className="mt-2">거래수 가중 · 유효 단지 {fmt(data.n_effective, 1)}곳</p>}
+            </details>
             </DetailAnalysis>
             {data.n >= 20 && (
               <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-                <p className="text-xs font-semibold">조건별 추정 · 단지 중앙단가 (만원/㎡)</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">조건별 추정 · 단지 중앙단가 (만원/㎡)</p>
+                  <AnalysisHelpPanel explain={RESIDENTIAL_REGIONAL_ESTIMATE_HELP} />
+                </div>
                 {data.fitted.length > 0 && (
                   <label className="block space-y-1">
-                    <span className="text-slate-500">예측 대상</span>
+                    <span className="text-slate-500">예측 대상 · 단지 정보 불러오기</span>
                     <select
                       className="input"
                       value={pickKey}
@@ -1119,7 +1084,7 @@ export default function RegionalRegressionModal(props: Props) {
                           {r.display_name}
                           {r.asset_type ? ` · ${ASSET_LABELS[r.asset_type as keyof typeof ASSET_LABELS] ?? r.asset_type}` : ""}
                           {" "}
-                          (단지 중앙값 {fmt(r.y, 0)} · 적합값 {fmt(r.y_hat, 0)}
+                          (기간 중앙단가 {fmt(r.y, 0)}
                           {r.ape != null ? ` · 오차 ${fmt(r.ape, 1)}%` : ""})
                         </option>
                       ))}
@@ -1127,17 +1092,14 @@ export default function RegionalRegressionModal(props: Props) {
                   </label>
                 )}
                 {pickKey === VIRTUAL_KEY && (
-                  <p className="text-[11px] text-slate-500">
-                    가상단지입니다. 세대수·최고층·연식 등을 직접 넣은 뒤 예측합니다.
-                  </p>
+                  <p className="text-sm text-slate-500">직접 입력한 조건으로 추정합니다.</p>
                 )}
                 {picked && (
-                  <p className="text-[11px] text-slate-500">
-                    단지 중앙값 {fmt(picked.y, 0)} · 적합값 {fmt(picked.y_hat, 0)}
-                    {picked.ape != null ? ` · 오차 ${fmt(picked.ape, 1)}%` : ""}
-                    {" "}
-                    · 아래 칸은 이 단지 값입니다. 바꿔서 what-if 할 수 있습니다.
-                  </p>
+                  <div className="space-y-1 rounded-md bg-slate-100 p-3 text-sm dark:bg-slate-800">
+                    <p>선택 기간의 거래 중앙단가 <strong className="tabular-nums">{fmt(picked.y, 0)}</strong> · 원래 조건의 모형 적합값 <strong className="tabular-nums">{fmt(picked.y_hat, 0)}</strong> 만원/㎡</p>
+                    <p className="text-slate-600 dark:text-slate-300">단지에서 불러온 값입니다. 아래 조건을 수정해 비교할 수 있습니다.</p>
+                    <p className={editedLabels.length ? "text-indigo-700 dark:text-indigo-300" : "text-slate-500"}>{editedLabels.length ? `직접 수정: ${editedLabels.join(" · ")}` : "직접 수정한 항목 없음"}</p>
+                  </div>
                 )}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <NumField
@@ -1177,7 +1139,7 @@ export default function RegionalRegressionModal(props: Props) {
                 {vars.structure && (data.predict_options.structure_group ?? []).length > 0 && (
                   <DummySelect
                     label="구조"
-                    value={inputs.structure_group ?? ""}
+                    value={modelInputs.structure_group ?? ""}
                     options={data.predict_options.structure_group ?? []}
                     reference={data.reference_categories?.structure_group}
                     onChange={(g) => setInputs((s) => ({ ...s, structure_group: g }))}
@@ -1186,10 +1148,11 @@ export default function RegionalRegressionModal(props: Props) {
                 {vars.builder && (data.predict_options.builder_group ?? []).length > 0 && (
                   <DummySelect
                     label="시공사"
-                    value={inputs.builder_group ?? ""}
+                    value={modelInputs.builder_group ?? ""}
                     options={data.predict_options.builder_group ?? []}
                     reference={data.reference_categories?.builder_group}
                     onChange={(g) => setInputs((s) => ({ ...s, builder_group: g }))}
+                    note={data.predict_options.builder_group?.length === 1 && data.predict_options.builder_group[0] === "기타" ? "표본이 적은 시공사를 묶어 분석하므로 ‘기타’만 선택할 수 있습니다." : undefined}
                   />
                 )}
                 {vars.asset_type_dummy && (data.predict_options.asset_type ?? []).length > 0 && (
@@ -1219,35 +1182,38 @@ export default function RegionalRegressionModal(props: Props) {
                     {currentPrediction && (
                   <div className="rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 space-y-2">
                     <div>
-                      <span className="text-slate-500 dark:text-slate-400 text-[10px]">
-                        {ESTIMATE_COPY.valueLabel}
+                      <span className="text-slate-500 dark:text-slate-400 text-xs">
+                        현재 입력 조건의 추정 중앙단가
                         {currentPrediction.model_type === "log" ? " · 로그" : " · 선형"}
                       </span>
-                      <div className="text-lg font-bold text-slate-800 dark:text-slate-100 tabular-nums">
+                      <div className="text-3xl font-bold text-indigo-700 dark:text-indigo-300 tabular-nums">
                         {fmt(currentPrediction.y_hat, 0)} {currentPrediction.unit}
                       </div>
-                      <StatisticalEstimateCaption compact />
+                      {pickKey === VIRTUAL_KEY && data.reference_categories?.region && (
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                          적용 지역: {data.reference_categories.region}. 지역 더미의 기준 절편입니다.
+                        </p>
+                      )}
+
                     </div>
                     {currentPrediction.ci_lower != null && currentPrediction.ci_upper != null && (
-                      <div className="text-[11px] space-y-1.5 text-slate-700 dark:text-slate-300">
-                        <StatisticalEstimateRangeRow kind="mean" compact>
+                      <div className="text-sm font-semibold space-y-1.5 text-slate-700 dark:text-slate-200">
+                        <StatisticalEstimateRangeRow kind="mean">
                           <span className="tabular-nums">
                             {fmt(currentPrediction.ci_lower, 0)} ~ {fmt(currentPrediction.ci_upper, 0)} {currentPrediction.unit}
                           </span>
                         </StatisticalEstimateRangeRow>
                         {currentPrediction.pi_lower != null && currentPrediction.pi_upper != null && (
-                          <StatisticalEstimateRangeRow kind="individual" subject="단지" compact>
+                          <details className="pt-2 text-xs"><summary className="cursor-pointer text-slate-500 dark:text-slate-400">단지 중앙단가 예측범위 보기</summary><div className="pt-2"><StatisticalEstimateRangeRow kind="individual" subject="단지" compact>
                             <span className="tabular-nums">
                               {fmt(currentPrediction.pi_lower, 0)} ~ {fmt(currentPrediction.pi_upper, 0)} {currentPrediction.unit}
                             </span>
-                          </StatisticalEstimateRangeRow>
+                          </StatisticalEstimateRangeRow></div></details>
                         )}
                       </div>
                     )}
-                    <StatisticalEstimateDisclaimer compact />
-                    <p className="text-[10px] text-slate-500">
-                      단일 정답이 아닙니다. 식을 바꿔 가며 비교하세요.
-                    </p>
+                    <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">이 결과는 AVM에 의한 가격평가가 아닌, 회귀모형의 통계적 참고값입니다.</p>
+
                     {vars.building_age && inputs.building_age != null && inputs.building_age <= 0 && (
                       <div className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 leading-snug">
                         <p>
@@ -1267,8 +1233,9 @@ export default function RegionalRegressionModal(props: Props) {
             )}
 
             {data.model_candidates && data.model_candidates.length > 0 && (
-              <>
-                <CollectiveModelRecommend
+              <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700">
+                <summary className="cursor-pointer text-sm font-medium">다른 변수 조합 비교 · 모형 추천</summary>
+                <div className="mt-3"><CollectiveModelRecommend
                   candidates={data.model_candidates}
                   selectedType={modelType}
                   selectedBlocks={selectedBlocks}
@@ -1279,7 +1246,10 @@ export default function RegionalRegressionModal(props: Props) {
                   }
                   samplePhrase="고른 지역의 단지에서"
                   outcomeNoun="단가"
-                  applyNote="적용은 위의 변수 체크와 선형·로그 선택을 바꿉니다. 식과 예측 단가는 회귀를 다시 실행해야 바뀝니다."
+                  applyRunsRegression
+                  applyPending={runShown.isPending}
+                  applyDisabled={effectiveTab === "twin" && !twinRequest}
+                  applyNote="후보를 선택한 뒤 ‘후보 설정 반영’을 누르면 설정을 바꾸고 회귀를 실행합니다. 완료 후 결과 요약에서 회귀식과 계수를 확인할 수 있습니다. 후보 비교와 재적합 결과는 사용 표본이 달라 수치가 달라질 수 있습니다."
                   blockLabels={{
                     households: "세대수",
                     max_floor: "최고층",
@@ -1289,17 +1259,25 @@ export default function RegionalRegressionModal(props: Props) {
                     asset_type_dummy: "유형",
                   }}
                   onAdopt={(pick) => {
-                    setModelType(pick.modelType);
-                    setVars((prev) => {
-                      const next = { ...prev };
-                      (Object.keys(next) as (keyof RegionalRegressionVariables)[]).forEach((key) => {
-                        next[key] = pick.blocks.includes(key);
-                      });
-                      return next;
+                    if (runShown.isPending || !currentRequest) return;
+                    const nextVars = { ...vars };
+                    (Object.keys(nextVars) as (keyof RegionalRegressionVariables)[]).forEach(key => {
+                      nextVars[key] = pick.blocks.includes(key);
                     });
+                    const nextRequest = { ...currentRequest, model_type: pick.modelType, variables: nextVars };
+                    setModelType(pick.modelType);
+                    setVars(nextVars);
+                    setPickKey(VIRTUAL_KEY);
+                    setInputs(emptyPredictInputs());
+                    predM.reset();
+                    runShown.mutate(nextRequest, { onSuccess: () => requestAnimationFrame(() => {
+                      resultSummaryRef.current?.focus({ preventScroll: true });
+                      resultSummaryRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+                    }) });
                   }}
                 />
-              </>
+                </div>
+              </details>
             )}
 
           </>
@@ -1533,14 +1511,9 @@ function ReferenceCategoriesLine({ refs }: { refs?: Record<string, string> }) {
   const parts = referenceRows(refs);
   if (!parts.length) return null;
   return (
-    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
       기준 범주: {parts.map((p) => `${p.kind}=${labelRef(refs?.[p.key])}`).join(" · ")}.
-      {refs?.region
-        ? " 지역 더미의 기준은 이 읍면동입니다. 다른 지역 계수는 이 절편 대비이고, 가상단지 예측도 이 절편을 씁니다."
-        : ""}
-      {parts.some((p) => p.key !== "region")
-        ? " 유형·시공사·구조 계수는 이 표본에서 가장 많은 범주 대비입니다."
-        : ""}
+
     </p>
   );
 }
@@ -1557,6 +1530,7 @@ function DummySelect({
   reference,
   optionLabel,
   onChange,
+  note,
 }: {
   label: string;
   value: string;
@@ -1564,6 +1538,7 @@ function DummySelect({
   reference?: string;
   optionLabel?: (g: string) => string;
   onChange: (g: string | null) => void;
+  note?: string;
 }) {
   const current = value || reference || "";
   const text = optionLabel ?? ((g: string) => g);
@@ -1591,6 +1566,7 @@ function DummySelect({
             </option>
           ))}
       </select>
+      {note && <span className="block text-xs text-slate-500 dark:text-slate-400">{note}</span>}
     </label>
   );
 }
