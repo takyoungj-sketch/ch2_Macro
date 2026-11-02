@@ -14,11 +14,14 @@ import RollingTrendChart from "./RollingTrendChart";
 type PanelMode = "conversion" | "rolling" | "transactions" | "regression";
 type RollingSeriesId = "jeonse" | "mixed_deposit" | "mixed_monthly" | "monthly";
 
+/** 회귀 탭은 성능 개선 후 다시 연다. */
+const SHOW_REGRESSION_TAB = false;
+
 const TABS: { id: PanelMode; label: string }[] = [
   { id: "conversion", label: "전환율" },
   { id: "rolling", label: "롤링 구간" },
   { id: "transactions", label: "거래 목록" },
-  { id: "regression", label: "회귀 분석" },
+  ...(SHOW_REGRESSION_TAB ? [{ id: "regression" as const, label: "회귀 분석" }] : []),
 ];
 
 const ROLLING_SERIES: { id: RollingSeriesId; label: string }[] = [
@@ -87,8 +90,9 @@ function MetricLine({ label, metric }: { label: string; metric: LeaseMetric }) {
         {fmtStat(metric.mean)}
       </p>
       <p className="text-[10px] text-slate-400 tabular-nums">
-        95% 신뢰구간{" "}
+        평균의 95% 신뢰구간{" "}
         {hasCi ? `${fmtStat(metric.ci_lower)} ~ ${fmtStat(metric.ci_upper)}` : "없음"}
+        {" "}<StatsGlossaryHelp termId="rent_mean_interval" size="xs" />
       </p>
     </div>
   );
@@ -312,6 +316,7 @@ export default function BuildingDetailModal({
               <h3 className="text-sm font-semibold">이 건물 거래</h3>
               <p className="text-[10px] text-slate-400">
                 {windowYears}년 창 · 원값 · 단위 만원/㎡ · 전환율 산식은 중앙값, 평균은 참고
+                {" "}<StatsGlossaryHelp termId="rent_analysis_scope" size="xs" />
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -363,7 +368,10 @@ export default function BuildingDetailModal({
           </section>
 
           <section className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-2">
-            <h3 className="text-sm font-semibold">인접·동일권 건물 추가</h3>
+            <h3 className="text-sm font-semibold inline-flex items-center gap-1">
+              인접·동일권 건물 추가
+              <StatsGlossaryHelp termId="rent_selection_pool" size="xs" />
+            </h3>
             <p className="text-[10px] text-slate-400">
               같은 목록에서 전환율이 계산되는 건물을 고르면 이 건물과 함께 단순평균합니다.
             </p>
@@ -479,6 +487,7 @@ export default function BuildingDetailModal({
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-[11px] text-slate-500">
                   원장 {txQ.data.total.toLocaleString("ko-KR")}건 · 보증금·월세 단위 만원
+                  {" "}<StatsGlossaryHelp termId="rent_analysis_scope" size="xs" />
                   {row.asset_type === "detached" ? (
                     <> · 단독은 단지명이 없어 읍·면·동+지번(가림) 묶음</>
                   ) : null}
@@ -490,7 +499,7 @@ export default function BuildingDetailModal({
         </div>
       )}
 
-      {panel === "regression" && (
+      {SHOW_REGRESSION_TAB && panel === "regression" && (
         <RentRegressionPanel
           buildingKey={row.building_key}
           extraKeys={extraKeys}

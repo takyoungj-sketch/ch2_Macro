@@ -596,6 +596,7 @@ export default function App() {
                     {scope.guList.length ? ` ${scope.guList.join(", ")}` : ""}
                     {scope.leafList.length ? ` ${scope.leafList.join(", ")}` : ""} ·{" "}
                     {buildingsQ.data.total}동 · {buildingsQ.data.stats_as_of_label} {scope.windowYears}년 창
+                    <StatsGlossaryHelp termId="rent_analysis_scope" size="xs" />
                     {appliedRateLabel && (
                       <span className="ml-2 inline-flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-300">
                         {appliedRateLabel}

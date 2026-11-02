@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { runRentRegression, type RentRegressionResult } from "../api/client";
 import ZoneCaution from "./ZoneCaution";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 
 function fmtPct(v: number | null | undefined) {
   if (v == null || !Number.isFinite(v)) return "—";
@@ -51,6 +52,7 @@ export default function RentRegressionPanel({
         전세 보증금(만원) 기준. 면적·층·연식이 보증금에 어떤 방향·크기로 작용하는지 탐색합니다.
         월세·반전세는 포함하지 않습니다. 표본 8건 이상.
         {keys.length > 1 ? ` 선택 ${keys.length}동 통합` : ""}
+        {" "}<StatsGlossaryHelp termId="rent_analysis_scope" size="xs" />
       </p>
       <div className="flex flex-wrap gap-3 text-xs">
         <label className="flex items-center gap-1.5">
