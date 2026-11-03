@@ -732,6 +732,33 @@ def _insight_07(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_13(context: AiContext) -> str:
+    facts = context.facts or {}
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 12번입니다. 파일 번호는 13번입니다. 같은 시군구, 용도지역, 도로폭에서 토지 단독거래 단가와 건부지 배분단가를 비교합니다.",
+        "주지표는 각 비교집단의 중앙값으로 만든 가격차이입니다. 양수는 토지 단독거래 단가가 높다는 뜻입니다.",
+    ]
+    if facts.get("period_start") and facts.get("period_end"):
+        lines.append(f"기간은 {facts.get('period_start')}부터 {facts.get('period_end')}까지입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 전국 887개 비교집단에서 토지 단독거래 단가가 높은 비율은 35.2%이고, 가격차이의 중앙값은 −12.8%입니다.",
+            "- −11.6%는 각 집단의 평균 단가로 만든 가격차이의 중앙값입니다. −12.8과 −11.6을 한 숫자로 부르지 않습니다.",
+            "- 거래수 가중은 토지 거래수와 건부지 거래수 중 적은 쪽입니다. 전국 가중 비율은 22.6%입니다.",
+            "- 주거지역 단독·다가구 363개 비교집단의 가격차이 중앙값은 +3.7%입니다.",
+            "- 토지는 지목 대만입니다. 토지 단독거래는 확인된 나지가 아닙니다. 배분단가는 추정치입니다.",
+            "- 건부감가가 없다고 말하지 않습니다. 결론은 유보입니다. 읍·면·동 10개 비교집단의 숫자를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "거래대상의 차이, 건물가액 추정오차, 집계방식의 한계가 있습니다. 화면의 「4. 분석의 한계」를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _insight_12(context: AiContext) -> str:
     lines = [
         "### 이 화면은",
@@ -854,6 +881,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight13":
+        return _insight_13(context)
     if panel == "Insight12":
         return _insight_12(context)
     if panel == "Insight11":
@@ -920,6 +949,13 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight13":
+        return [
+            "35.2%는 건부감가가 없다는 뜻인가요?",
+            "−12.8과 −11.6 중 어느 쪽인가요?",
+            "토지 단독거래는 나지인가요?",
+            "주거 단독은 왜 방향이 다른가요?",
         ]
     if panel == "Insight12":
         return [

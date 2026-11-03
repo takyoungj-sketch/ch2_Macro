@@ -535,6 +535,33 @@ def build_insight_macro_03(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_13(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 13 — 시·군·구 × 용도지역 × 도로폭의 토지 단독거래와 건부지 배분단가",
+        "전국 887칸, 중앙값 양수 35.2%, 차이 중앙 −12.8. 평균값 차이의 중앙은 −11.6.",
+        "주거지역 단독·다가구 363칸은 중앙값 양수 56.7%, 차이 중앙 +3.7.",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "토지 단독거래는 확인된 나지가 아닙니다. 배분단가는 추정치입니다.",
+            "중앙값으로 만든 가격차이 −12.8과 평균값으로 만든 가격차이 −11.6을 한 숫자로 부르지 않습니다.",
+            "건부감가가 없다고 말하지 않습니다. 결론은 유보입니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_13",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_insight_macro_12(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     summary = [
@@ -771,6 +798,8 @@ def build_bundle(context: AiContext) -> AiDiagnosticPack:
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight13" or bid == "insight_macro_13":
+        return build_insight_macro_13(context)
     if panel == "Insight12" or bid == "insight_macro_12":
         return build_insight_macro_12(context)
     if panel == "Insight11" or bid == "insight_macro_11":

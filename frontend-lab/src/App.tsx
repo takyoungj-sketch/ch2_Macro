@@ -26,6 +26,7 @@ import SangkwonAptYieldLab from "./components/SangkwonAptYieldLab";
 import AptTwinRegressionLab from "./components/AptTwinRegressionLab";
 import LandTwinLab from "./components/LandTwinLab";
 import LandLotUnmaskLab from "./components/LandLotUnmaskLab";
+import AllocGapLab from "./components/AllocGapLab";
 import Ai2ProtocolLab from "./components/Ai2ProtocolLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
@@ -55,6 +56,7 @@ export type LabTool =
   | "apt-twin"
   | "land-twin"
   | "land-unmask"
+  | "alloc-gap"
   | "ai2";
 export type TwinPane = "v2" | "mape" | "scope";
 
@@ -92,6 +94,7 @@ function readParams(): LabParams {
     t === "apt-twin" ||
     t === "land-twin" ||
     t === "land-unmask" ||
+    t === "alloc-gap" ||
     t === "ai2"
       ? t
       : null;
@@ -381,6 +384,14 @@ export default function App() {
     return (
       <LabChrome title="토지 마스킹 제거" whyIds={TOOL_WHY["land-unmask"] ?? []} onWhy={setWhy} onBack={back}>
         <LandLotUnmaskLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "alloc-gap") {
+    return (
+      <LabChrome title="토지 단독거래와 건부지 배분" whyIds={TOOL_WHY["alloc-gap"] ?? []} onWhy={setWhy} onBack={back}>
+        <AllocGapLab />
         {whyModal}
       </LabChrome>
     );

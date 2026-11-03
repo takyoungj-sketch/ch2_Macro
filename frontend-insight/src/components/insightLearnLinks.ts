@@ -57,6 +57,10 @@ export const INSIGHT_LEARN_BY_Q: Record<string, InsightLearnChapter[]> = {
     { slug: "correlation", label: "상관관계" },
     { slug: "reading-results", label: "통계 결과 읽기" },
   ],
+  "12": [
+    { slug: "quantiles", label: "분위수" },
+    { slug: "reading-results", label: "통계 결과 읽기" },
+  ],
 };
 
 export function insightLearnUrl(ch: InsightLearnChapter): string {

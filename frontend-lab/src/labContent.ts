@@ -172,5 +172,6 @@ export const TOOL_WHY: Record<string, string[]> = {
   "apt-twin": [],
   "land-twin": [],
   "land-unmask": [],
+  "alloc-gap": [],
   ai2: [],
 };

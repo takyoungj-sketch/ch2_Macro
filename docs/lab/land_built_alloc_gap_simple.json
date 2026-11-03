@@ -1,0 +1,876 @@
+{
+  "stage": "simple",
+  "as_of_month": "2026-10-01",
+  "period_start": "2021-11-01",
+  "period_end": "2026-10-31",
+  "min_n": 30,
+  "unit": "만원/㎡",
+  "notes": [
+    "토지 단독거래는 확인된 나지가 아니다.",
+    "건부지 가격은 배분 추정치다.",
+    "중앙값 차이와 평균값 차이는 분모가 각 통계량이다.",
+    "원가 하한은 배분단가를 높여 D를 작게 한다.",
+    "구 과반은 칸 수 기준이다. 양수 칸과 그 밖이 같으면 반반이다.",
+    "면적 비가 2배를 넘는 칸은 본표에 두고, 그 칸을 뺀 비율을 따로 둔다.",
+    "전남광주통합특별시의 구는 광역시 층, 그 안의 시·군은 시·군 층이다.",
+    "복합 용도지역은 원장이 비면 계약연도 용도지역으로 채운다. 단독·다가구는 원장이 비어 있다."
+  ],
+  "heungdeok_detached": [
+    {
+      "road": "8미만",
+      "n_land": 25,
+      "n_built_raw": 260,
+      "n_built_mid": 247,
+      "n_built_low": 250,
+      "n_built_high": 242,
+      "land_med": 109.4,
+      "land_mean": 105.4,
+      "built_med_low_cost": 72.2,
+      "built_med_mid": 68.2,
+      "built_med_high_cost": 65.7,
+      "built_mean_low_cost": 75.2,
+      "built_mean_mid": 71.3,
+      "built_mean_high_cost": 68.1,
+      "d_med_low_cost": 34.0,
+      "d_med_mid": 37.7,
+      "d_med_high_cost": 40.0,
+      "d_mean_low_cost": 28.7,
+      "d_mean_mid": 32.4,
+      "d_mean_high_cost": 35.4,
+      "area_med_ratio": 1.31,
+      "area_mean_ratio": 1.03,
+      "enters_table": false
+    },
+    {
+      "road": "12미만",
+      "n_land": 156,
+      "n_built_raw": 265,
+      "n_built_mid": 250,
+      "n_built_low": 259,
+      "n_built_high": 239,
+      "land_med": 112.1,
+      "land_mean": 116.7,
+      "built_med_low_cost": 83.0,
+      "built_med_mid": 77.4,
+      "built_med_high_cost": 73.5,
+      "built_mean_low_cost": 94.4,
+      "built_mean_mid": 88.5,
+      "built_mean_high_cost": 83.3,
+      "d_med_low_cost": 26.0,
+      "d_med_mid": 30.9,
+      "d_med_high_cost": 34.4,
+      "d_mean_low_cost": 19.1,
+      "d_mean_mid": 24.2,
+      "d_mean_high_cost": 28.7,
+      "area_med_ratio": 1.21,
+      "area_mean_ratio": 1.15,
+      "enters_table": true
+    },
+    {
+      "road": "25미만",
+      "n_land": 39,
+      "n_built_raw": 80,
+      "n_built_mid": 76,
+      "n_built_low": 78,
+      "n_built_high": 74,
+      "land_med": 167.3,
+      "land_mean": 181.9,
+      "built_med_low_cost": 110.9,
+      "built_med_mid": 108.0,
+      "built_med_high_cost": 105.0,
+      "built_mean_low_cost": 117.1,
+      "built_mean_mid": 111.8,
+      "built_mean_high_cost": 106.6,
+      "d_med_low_cost": 33.7,
+      "d_med_mid": 35.4,
+      "d_med_high_cost": 37.2,
+      "d_mean_low_cost": 35.6,
+      "d_mean_mid": 38.6,
+      "d_mean_high_cost": 41.4,
+      "area_med_ratio": 1.25,
+      "area_mean_ratio": 1.23,
+      "enters_table": true
+    },
+    {
+      "road": "25이상",
+      "n_land": 5,
+      "n_built_raw": 3,
+      "n_built_mid": 3,
+      "n_built_low": 3,
+      "n_built_high": 3,
+      "land_med": 142.6,
+      "land_mean": 138.6,
+      "built_med_low_cost": 187.3,
+      "built_med_mid": 176.9,
+      "built_med_high_cost": 169.3,
+      "built_mean_low_cost": 190.3,
+      "built_mean_mid": 179.5,
+      "built_mean_high_cost": 168.7,
+      "d_med_low_cost": -31.4,
+      "d_med_mid": -24.0,
+      "d_med_high_cost": -18.7,
+      "d_mean_low_cost": -37.3,
+      "d_mean_mid": -29.5,
+      "d_mean_high_cost": -21.7,
+      "area_med_ratio": 1.12,
+      "area_mean_ratio": 1.29,
+      "enters_table": false
+    }
+  ],
+  "heungdeok_all": [
+    {
+      "road": "8미만",
+      "n_land": 25,
+      "n_built_raw": 266,
+      "n_built_mid": 252,
+      "n_built_low": 255,
+      "n_built_high": 247,
+      "land_med": 109.4,
+      "land_mean": 105.4,
+      "built_med_low_cost": 72.1,
+      "built_med_mid": 68.1,
+      "built_med_high_cost": 65.6,
+      "built_mean_low_cost": 75.1,
+      "built_mean_mid": 71.2,
+      "built_mean_high_cost": 68.1,
+      "d_med_low_cost": 34.1,
+      "d_med_mid": 37.8,
+      "d_med_high_cost": 40.0,
+      "d_mean_low_cost": 28.8,
+      "d_mean_mid": 32.4,
+      "d_mean_high_cost": 35.5,
+      "area_med_ratio": 1.31,
+      "area_mean_ratio": 1.03,
+      "enters_table": false
+    },
+    {
+      "road": "12미만",
+      "n_land": 156,
+      "n_built_raw": 281,
+      "n_built_mid": 260,
+      "n_built_low": 271,
+      "n_built_high": 249,
+      "land_med": 112.1,
+      "land_mean": 116.7,
+      "built_med_low_cost": 83.1,
+      "built_med_mid": 78.4,
+      "built_med_high_cost": 74.1,
+      "built_mean_low_cost": 94.4,
+      "built_mean_mid": 89.1,
+      "built_mean_high_cost": 83.9,
+      "d_med_low_cost": 25.9,
+      "d_med_mid": 30.0,
+      "d_med_high_cost": 33.9,
+      "d_mean_low_cost": 19.1,
+      "d_mean_mid": 23.7,
+      "d_mean_high_cost": 28.1,
+      "area_med_ratio": 1.23,
+      "area_mean_ratio": 1.15,
+      "enters_table": true
+    },
+    {
+      "road": "25미만",
+      "n_land": 39,
+      "n_built_raw": 98,
+      "n_built_mid": 92,
+      "n_built_low": 94,
+      "n_built_high": 90,
+      "land_med": 167.3,
+      "land_mean": 181.9,
+      "built_med_low_cost": 112.5,
+      "built_med_mid": 108.7,
+      "built_med_high_cost": 104.9,
+      "built_mean_low_cost": 123.3,
+      "built_mean_mid": 117.5,
+      "built_mean_high_cost": 111.8,
+      "d_med_low_cost": 32.8,
+      "d_med_mid": 35.0,
+      "d_med_high_cost": 37.3,
+      "d_mean_low_cost": 32.2,
+      "d_mean_mid": 35.4,
+      "d_mean_high_cost": 38.5,
+      "area_med_ratio": 1.2,
+      "area_mean_ratio": 1.13,
+      "enters_table": true
+    },
+    {
+      "road": "25이상",
+      "n_land": 5,
+      "n_built_raw": 5,
+      "n_built_mid": 5,
+      "n_built_low": 5,
+      "n_built_high": 5,
+      "land_med": 142.6,
+      "land_mean": 138.6,
+      "built_med_low_cost": 199.1,
+      "built_med_mid": 190.5,
+      "built_med_high_cost": 181.9,
+      "built_mean_low_cost": 265.5,
+      "built_mean_mid": 255.1,
+      "built_mean_high_cost": 244.6,
+      "d_med_low_cost": -39.7,
+      "d_med_mid": -33.6,
+      "d_med_high_cost": -27.6,
+      "d_mean_low_cost": -91.5,
+      "d_mean_mid": -84.0,
+      "d_mean_high_cost": -76.5,
+      "area_med_ratio": 1.12,
+      "area_mean_ratio": 1.35,
+      "enters_table": false
+    }
+  ],
+  "national_all": {
+    "n_cells": 887,
+    "median": {
+      "n": 887,
+      "n_pos": 312,
+      "share": 35.2,
+      "share_w": 22.6,
+      "p25": -40.5,
+      "p50": -12.8,
+      "p75": 8.9
+    },
+    "mean": {
+      "n": 887,
+      "n_pos": 290,
+      "share": 32.7,
+      "share_w": 21.4,
+      "p25": -40.4,
+      "p50": -11.6,
+      "p75": 5.8
+    },
+    "sign_disagree": 124,
+    "tail_eligible": 881,
+    "tail_dropped": 6,
+    "all_three_positive_median": {
+      "n": 285,
+      "share": 32.3
+    },
+    "all_three_positive_mean": {
+      "n": 255,
+      "share": 28.9
+    },
+    "gu_median": {
+      "n_gu": 227,
+      "n_pos": 59,
+      "n_tie": 20,
+      "n_nonpos": 148,
+      "share": 26.0
+    },
+    "gu_mean": {
+      "n_gu": 227,
+      "n_pos": 54,
+      "n_tie": 22,
+      "n_nonpos": 151,
+      "share": 23.8
+    },
+    "area_ok_cells": 592,
+    "area_ok_median": {
+      "n": 592,
+      "n_pos": 212,
+      "share": 35.8,
+      "share_w": 21.6,
+      "p25": -42.7,
+      "p50": -13.2,
+      "p75": 9.9
+    },
+    "area_ok_mean": {
+      "n": 592,
+      "n_pos": 201,
+      "share": 34.0,
+      "share_w": 21.0,
+      "p25": -43.0,
+      "p50": -12.0,
+      "p75": 8.9
+    },
+    "by_stratum": {
+      "서울": {
+        "n_cells": 43,
+        "median": {
+          "n": 43,
+          "n_pos": 17,
+          "share": 39.5,
+          "share_w": 40.2,
+          "p25": -42.2,
+          "p50": -7.1,
+          "p75": 8.1
+        },
+        "mean": {
+          "n": 43,
+          "n_pos": 16,
+          "share": 37.2,
+          "share_w": 39.8,
+          "p25": -21.9,
+          "p50": -8.1,
+          "p75": 9.0
+        },
+        "sign_disagree": 5,
+        "tail_eligible": 43,
+        "tail_dropped": 0,
+        "all_three_positive_median": {
+          "n": 17,
+          "share": 39.5
+        },
+        "all_three_positive_mean": {
+          "n": 16,
+          "share": 37.2
+        },
+        "gu_median": {
+          "n_gu": 20,
+          "n_pos": 8,
+          "n_tie": 1,
+          "n_nonpos": 11,
+          "share": 40.0
+        },
+        "gu_mean": {
+          "n_gu": 20,
+          "n_pos": 8,
+          "n_tie": 2,
+          "n_nonpos": 10,
+          "share": 40.0
+        },
+        "area_ok_cells": 16,
+        "area_ok_median": {
+          "n": 16,
+          "n_pos": 10,
+          "share": 62.5,
+          "share_w": 71.4,
+          "p25": -13.7,
+          "p50": 8.1,
+          "p75": 12.9
+        },
+        "area_ok_mean": {
+          "n": 16,
+          "n_pos": 9,
+          "share": 56.2,
+          "share_w": 66.2,
+          "p25": -7.7,
+          "p50": 6.3,
+          "p75": 13.9
+        }
+      },
+      "광역시": {
+        "n_cells": 139,
+        "median": {
+          "n": 139,
+          "n_pos": 81,
+          "share": 58.3,
+          "share_w": 50.0,
+          "p25": -12.4,
+          "p50": 3.7,
+          "p75": 18.4
+        },
+        "mean": {
+          "n": 139,
+          "n_pos": 78,
+          "share": 56.1,
+          "share_w": 50.8,
+          "p25": -12.9,
+          "p50": 2.2,
+          "p75": 15.5
+        },
+        "sign_disagree": 23,
+        "tail_eligible": 139,
+        "tail_dropped": 0,
+        "all_three_positive_median": {
+          "n": 78,
+          "share": 56.1
+        },
+        "all_three_positive_mean": {
+          "n": 71,
+          "share": 51.1
+        },
+        "gu_median": {
+          "n_gu": 44,
+          "n_pos": 22,
+          "n_tie": 7,
+          "n_nonpos": 15,
+          "share": 50.0
+        },
+        "gu_mean": {
+          "n_gu": 44,
+          "n_pos": 24,
+          "n_tie": 8,
+          "n_nonpos": 12,
+          "share": 54.5
+        },
+        "area_ok_cells": 87,
+        "area_ok_median": {
+          "n": 87,
+          "n_pos": 56,
+          "share": 64.4,
+          "share_w": 53.7,
+          "p25": -5.1,
+          "p50": 6.7,
+          "p75": 24.6
+        },
+        "area_ok_mean": {
+          "n": 87,
+          "n_pos": 52,
+          "share": 59.8,
+          "share_w": 53.6,
+          "p25": -8.8,
+          "p50": 5.6,
+          "p75": 21.8
+        }
+      },
+      "시": {
+        "n_cells": 464,
+        "median": {
+          "n": 464,
+          "n_pos": 173,
+          "share": 37.3,
+          "share_w": 25.5,
+          "p25": -31.8,
+          "p50": -10.1,
+          "p75": 10.6
+        },
+        "mean": {
+          "n": 464,
+          "n_pos": 158,
+          "share": 34.1,
+          "share_w": 23.6,
+          "p25": -29.0,
+          "p50": -8.6,
+          "p75": 7.0
+        },
+        "sign_disagree": 77,
+        "tail_eligible": 463,
+        "tail_dropped": 1,
+        "all_three_positive_median": {
+          "n": 157,
+          "share": 33.9
+        },
+        "all_three_positive_mean": {
+          "n": 138,
+          "share": 29.8
+        },
+        "gu_median": {
+          "n_gu": 87,
+          "n_pos": 25,
+          "n_tie": 6,
+          "n_nonpos": 56,
+          "share": 28.7
+        },
+        "gu_mean": {
+          "n_gu": 87,
+          "n_pos": 20,
+          "n_tie": 6,
+          "n_nonpos": 61,
+          "share": 23.0
+        },
+        "area_ok_cells": 320,
+        "area_ok_median": {
+          "n": 320,
+          "n_pos": 121,
+          "share": 37.8,
+          "share_w": 26.1,
+          "p25": -32.5,
+          "p50": -9.7,
+          "p75": 11.9
+        },
+        "area_ok_mean": {
+          "n": 320,
+          "n_pos": 118,
+          "share": 36.9,
+          "share_w": 25.5,
+          "p25": -31.0,
+          "p50": -6.9,
+          "p75": 10.1
+        }
+      },
+      "군": {
+        "n_cells": 241,
+        "median": {
+          "n": 241,
+          "n_pos": 41,
+          "share": 17.0,
+          "share_w": 7.3,
+          "p25": -73.9,
+          "p50": -38.3,
+          "p75": -11.9
+        },
+        "mean": {
+          "n": 241,
+          "n_pos": 38,
+          "share": 15.8,
+          "share_w": 6.5,
+          "p25": -69.6,
+          "p50": -42.2,
+          "p75": -11.5
+        },
+        "sign_disagree": 19,
+        "tail_eligible": 236,
+        "tail_dropped": 5,
+        "all_three_positive_median": {
+          "n": 33,
+          "share": 14.0
+        },
+        "all_three_positive_mean": {
+          "n": 30,
+          "share": 12.7
+        },
+        "gu_median": {
+          "n_gu": 76,
+          "n_pos": 4,
+          "n_tie": 6,
+          "n_nonpos": 66,
+          "share": 5.3
+        },
+        "gu_mean": {
+          "n_gu": 76,
+          "n_pos": 2,
+          "n_tie": 6,
+          "n_nonpos": 68,
+          "share": 2.6
+        },
+        "area_ok_cells": 169,
+        "area_ok_median": {
+          "n": 169,
+          "n_pos": 25,
+          "share": 14.8,
+          "share_w": 5.6,
+          "p25": -75.5,
+          "p50": -40.9,
+          "p75": -15.1
+        },
+        "area_ok_mean": {
+          "n": 169,
+          "n_pos": 22,
+          "share": 13.0,
+          "share_w": 4.9,
+          "p25": -69.6,
+          "p50": -44.9,
+          "p75": -18.6
+        }
+      }
+    }
+  },
+  "national_detached_residential": {
+    "n_cells": 363,
+    "median": {
+      "n": 363,
+      "n_pos": 206,
+      "share": 56.7,
+      "share_w": 55.0,
+      "p25": -19.0,
+      "p50": 3.7,
+      "p75": 21.5
+    },
+    "mean": {
+      "n": 363,
+      "n_pos": 198,
+      "share": 54.5,
+      "share_w": 52.9,
+      "p25": -14.9,
+      "p50": 4.0,
+      "p75": 21.2
+    },
+    "sign_disagree": 60,
+    "tail_eligible": 355,
+    "tail_dropped": 8,
+    "all_three_positive_median": {
+      "n": 184,
+      "share": 51.8
+    },
+    "all_three_positive_mean": {
+      "n": 184,
+      "share": 51.8
+    },
+    "gu_median": {
+      "n_gu": 184,
+      "n_pos": 81,
+      "n_tie": 29,
+      "n_nonpos": 74,
+      "share": 44.0
+    },
+    "gu_mean": {
+      "n_gu": 184,
+      "n_pos": 84,
+      "n_tie": 19,
+      "n_nonpos": 81,
+      "share": 45.7
+    },
+    "area_ok_cells": 293,
+    "area_ok_median": {
+      "n": 293,
+      "n_pos": 170,
+      "share": 58.0,
+      "share_w": 56.4,
+      "p25": -16.7,
+      "p50": 4.7,
+      "p75": 22.9
+    },
+    "area_ok_mean": {
+      "n": 293,
+      "n_pos": 165,
+      "share": 56.3,
+      "share_w": 55.5,
+      "p25": -13.3,
+      "p50": 4.9,
+      "p75": 22.0
+    },
+    "by_stratum": {
+      "서울": {
+        "n_cells": 29,
+        "median": {
+          "n": 29,
+          "n_pos": 14,
+          "share": 48.3,
+          "share_w": 44.8,
+          "p25": -30.4,
+          "p50": -7.2,
+          "p75": 11.0
+        },
+        "mean": {
+          "n": 29,
+          "n_pos": 13,
+          "share": 44.8,
+          "share_w": 44.6,
+          "p25": -18.2,
+          "p50": -3.8,
+          "p75": 10.6
+        },
+        "sign_disagree": 5,
+        "tail_eligible": 29,
+        "tail_dropped": 0,
+        "all_three_positive_median": {
+          "n": 13,
+          "share": 44.8
+        },
+        "all_three_positive_mean": {
+          "n": 13,
+          "share": 44.8
+        },
+        "gu_median": {
+          "n_gu": 20,
+          "n_pos": 10,
+          "n_tie": 1,
+          "n_nonpos": 9,
+          "share": 50.0
+        },
+        "gu_mean": {
+          "n_gu": 20,
+          "n_pos": 9,
+          "n_tie": 2,
+          "n_nonpos": 9,
+          "share": 45.0
+        },
+        "area_ok_cells": 14,
+        "area_ok_median": {
+          "n": 14,
+          "n_pos": 11,
+          "share": 78.6,
+          "share_w": 83.3,
+          "p25": 1.3,
+          "p50": 10.1,
+          "p75": 12.7
+        },
+        "area_ok_mean": {
+          "n": 14,
+          "n_pos": 10,
+          "share": 71.4,
+          "share_w": 77.5,
+          "p25": -2.3,
+          "p50": 9.8,
+          "p75": 15.7
+        }
+      },
+      "광역시": {
+        "n_cells": 88,
+        "median": {
+          "n": 88,
+          "n_pos": 65,
+          "share": 73.9,
+          "share_w": 72.9,
+          "p25": -0.1,
+          "p50": 12.9,
+          "p75": 27.8
+        },
+        "mean": {
+          "n": 88,
+          "n_pos": 68,
+          "share": 77.3,
+          "share_w": 73.7,
+          "p25": 2.8,
+          "p50": 12.4,
+          "p75": 27.1
+        },
+        "sign_disagree": 17,
+        "tail_eligible": 87,
+        "tail_dropped": 1,
+        "all_three_positive_median": {
+          "n": 61,
+          "share": 70.1
+        },
+        "all_three_positive_mean": {
+          "n": 66,
+          "share": 75.9
+        },
+        "gu_median": {
+          "n_gu": 37,
+          "n_pos": 28,
+          "n_tie": 5,
+          "n_nonpos": 4,
+          "share": 75.7
+        },
+        "gu_mean": {
+          "n_gu": 37,
+          "n_pos": 31,
+          "n_tie": 4,
+          "n_nonpos": 2,
+          "share": 83.8
+        },
+        "area_ok_cells": 64,
+        "area_ok_median": {
+          "n": 64,
+          "n_pos": 48,
+          "share": 75.0,
+          "share_w": 76.4,
+          "p25": 1.4,
+          "p50": 13.7,
+          "p75": 30.1
+        },
+        "area_ok_mean": {
+          "n": 64,
+          "n_pos": 51,
+          "share": 79.7,
+          "share_w": 79.8,
+          "p25": 3.9,
+          "p50": 13.9,
+          "p75": 30.8
+        }
+      },
+      "시": {
+        "n_cells": 193,
+        "median": {
+          "n": 193,
+          "n_pos": 109,
+          "share": 56.5,
+          "share_w": 54.3,
+          "p25": -16.7,
+          "p50": 3.3,
+          "p75": 23.5
+        },
+        "mean": {
+          "n": 193,
+          "n_pos": 103,
+          "share": 53.4,
+          "share_w": 52.1,
+          "p25": -14.5,
+          "p50": 4.0,
+          "p75": 21.5
+        },
+        "sign_disagree": 32,
+        "tail_eligible": 190,
+        "tail_dropped": 3,
+        "all_three_positive_median": {
+          "n": 96,
+          "share": 50.5
+        },
+        "all_three_positive_mean": {
+          "n": 94,
+          "share": 49.5
+        },
+        "gu_median": {
+          "n_gu": 80,
+          "n_pos": 30,
+          "n_tie": 20,
+          "n_nonpos": 30,
+          "share": 37.5
+        },
+        "gu_mean": {
+          "n_gu": 80,
+          "n_pos": 33,
+          "n_tie": 11,
+          "n_nonpos": 36,
+          "share": 41.2
+        },
+        "area_ok_cells": 173,
+        "area_ok_median": {
+          "n": 173,
+          "n_pos": 96,
+          "share": 55.5,
+          "share_w": 53.0,
+          "p25": -18.2,
+          "p50": 2.7,
+          "p75": 23.2
+        },
+        "area_ok_mean": {
+          "n": 173,
+          "n_pos": 92,
+          "share": 53.2,
+          "share_w": 52.6,
+          "p25": -14.7,
+          "p50": 3.8,
+          "p75": 21.3
+        }
+      },
+      "군": {
+        "n_cells": 53,
+        "median": {
+          "n": 53,
+          "n_pos": 18,
+          "share": 34.0,
+          "share_w": 32.2,
+          "p25": -38.0,
+          "p50": -13.2,
+          "p75": 9.4
+        },
+        "mean": {
+          "n": 53,
+          "n_pos": 14,
+          "share": 26.4,
+          "share_w": 23.8,
+          "p25": -29.9,
+          "p50": -15.2,
+          "p75": 2.4
+        },
+        "sign_disagree": 6,
+        "tail_eligible": 49,
+        "tail_dropped": 4,
+        "all_three_positive_median": {
+          "n": 14,
+          "share": 28.6
+        },
+        "all_three_positive_mean": {
+          "n": 11,
+          "share": 22.4
+        },
+        "gu_median": {
+          "n_gu": 47,
+          "n_pos": 13,
+          "n_tie": 3,
+          "n_nonpos": 31,
+          "share": 27.7
+        },
+        "gu_mean": {
+          "n_gu": 47,
+          "n_pos": 11,
+          "n_tie": 2,
+          "n_nonpos": 34,
+          "share": 23.4
+        },
+        "area_ok_cells": 42,
+        "area_ok_median": {
+          "n": 42,
+          "n_pos": 15,
+          "share": 35.7,
+          "share_w": 33.2,
+          "p25": -46.4,
+          "p50": -11.9,
+          "p75": 9.6
+        },
+        "area_ok_mean": {
+          "n": 42,
+          "n_pos": 12,
+          "share": 28.6,
+          "share_w": 24.2,
+          "p25": -29.4,
+          "p50": -11.1,
+          "p75": 3.7
+        }
+      }
+    }
+  }
+}

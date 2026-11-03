@@ -11,6 +11,7 @@ export const INSIGHT_ORDER: { q: string; panel: string }[] = [
   { q: "9", panel: "Insight08" },
   { q: "10", panel: "Insight03" },
   { q: "11", panel: "Insight10" },
+  { q: "12", panel: "Insight13" },
 ];
 
 export function insightPanel(q: string | null): string {

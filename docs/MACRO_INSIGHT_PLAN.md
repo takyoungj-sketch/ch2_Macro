@@ -1,7 +1,7 @@
 # Macro Insight — 공개 FAQ 창 (구상)
 
 > **작성:** 2026-09-05 · **개정:** 2026-09-25  
-> **상태:** 구상+1·2·3·4·5·6·7·8·10·11·12번 본문 공개. 창 `/insight/` · 게이트웨이 6번째 카드. FAQ #9·#16은 초안. **결정 카드 없음.**  
+> **상태:** 구상+1·2·3·4·5·6·7·8·10·11·12·13번 본문 공개. 창 `/insight/` · 게이트웨이 6번째 카드. FAQ #9·#16은 초안. **결정 카드 없음.**  
 > **성격:** 공개 게이트웨이 6번째 문. 창 안은 **FAQ 질문 목록**. 본문은 (A) 선별한 **실험 기록**(결론이 아님. 추가 실험이 붙을 수 있음)과 (B) CH2 Macro **기능 예시·설명**이다.  
 > **관련:**  
 > [CH2_CONSTITUTION.md](./CH2_CONSTITUTION.md) ·  
@@ -13,6 +13,8 @@
 > D-055 · D-058 · D-073 · [`REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](./REGIONAL_PROFILE_POST_MVP_BACKLOG.md) Phase G ·  
 > [`lab/G3_TIMESERIES_LAB.md`](lab/G3_TIMESERIES_LAB.md) ·  
 > [`lab/MACRO_ANNUAL_SCALE_LAB.md`](lab/MACRO_ANNUAL_SCALE_LAB.md) ·  
+> [`lab/LAND_BUILT_ALLOC_GAP_LAB.md`](lab/LAND_BUILT_ALLOC_GAP_LAB.md) (1·2차 랩, 미공개) ·  
+> [`lab/LAND_BUILT_ALLOC_GAP_SIMPLE_LAB.md`](lab/LAND_BUILT_ALLOC_GAP_SIMPLE_LAB.md) (공개 요약 `/insight/?q=12`) ·  
 > [`STATS_LEARN_PLAN.md`](./STATS_LEARN_PLAN.md) (Learn ↔ Insight·Macro `?` 연동) ·  
 > 1번 본문 [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) ·  
 > 2번 본문 [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) ·  
@@ -117,7 +119,7 @@
 
 ## 3.1 질문 목록 초안 (번호는 초안, 확정 아님)
 
-지금 공개 목록은 1번부터 11번까지다. 2026-09-27에 화면 번호를 다시 매겼다. 파일명 `MACRO_INSIGHT_0N`의 숫자는 예전 번호이고, 화면 `?q=`가 지금 번호다. 층 지수 산출 방법 초안과 #16은 목록에 없다.
+지금 공개 목록은 1번부터 12번까지다. 2026-09-27에 화면 번호를 다시 매겼다. 파일명 `MACRO_INSIGHT_0N`의 숫자는 예전 번호이고, 화면 `?q=`가 지금 번호다. 층 지수 산출 방법 초안과 #16은 목록에 없다.
 
 ### #1 부동산 거래와 금리, 유동성과의 관계
 
@@ -195,6 +197,13 @@
 - **한 결:** #11의 전국 비교와 다른 문이다. 유형을 평균하지 않음. 인과·우열을 말하지 않음.
 - **지금:** `/insight/?q=5`. 관리자 전체 표는 `?tool=sangkwon-apt`.
 
+### #13 토지 단독거래가격과 건부지 배분단가의 차이
+
+- **결:** 실험 기록 · 본문 [`MACRO_INSIGHT_13.md`](./MACRO_INSIGHT_13.md) · 랩 [`lab/LAND_BUILT_ALLOC_GAP_SIMPLE_LAB.md`](./lab/LAND_BUILT_ALLOC_GAP_SIMPLE_LAB.md)
+- **들어가면:** 상단 카드 세 개 → 1. 결론 요약 → 2. 연구 배경 및 실험방법 → 3. 분석 결과(① 전국 887개 ② 지역 규모, 평균·가중은 상세 ③ 주거지역 단독·다가구) → 4. 분석의 한계 세 가지 → 5. 결론 유보 → CH2 Macro에서 확인하기. 주지표는 중앙값. 거래수 가중은 양쪽 중 적은 거래수. 읍·면·동 10개 비교집단과 흥덕구 도로별 표는 공개 본문에 없음.
+- **한 결:** 건부감가가 일반적으로 있다거나 없다는 문장이 아니다. 나지도 아니고, 배분은 추정치다. 제품 배분 식은 바꾸지 않음. 앞선 읍·면·동 짝 맞춤은 [`lab/LAND_BUILT_ALLOC_GAP_LAB.md`](./lab/LAND_BUILT_ALLOC_GAP_LAB.md). 관리자 `?tool=alloc-gap`.
+- **지금:** `/insight/?q=12`.
+
 ### #9 층별효용지수는 어떤 식으로 산출되나?
 
 - **결:** 기능 예시 (집합)
@@ -246,6 +255,7 @@
 - G3 **공개 r 표** — 1번 구현은 [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md). 화면은 아직 비움. 연·월 합 대조는 한계에 남김
 - 관리자 전용 도구 그 자체(검증로봇, 전환율 연구 원장, 대장DB, AI 사용량). Twin **거리 랩 전체**도 아님. #16은 제품 Twin 경로 + 선별 실험만
 - 신규아파트·시공사·연식=0 랩 — 제품 식이 바뀌기 전에는 기능 예시 번호로 올리지 않음
+- 토지 단독거래와 건부지 배분단가의 읍·면·동 1·2차와 흥덕구 도로별 표 — [`lab/LAND_BUILT_ALLOC_GAP_LAB.md`](lab/LAND_BUILT_ALLOC_GAP_LAB.md). 공개 본문에 없음. 관리자 `?tool=alloc-gap`. 전국 요약은 #13 `/insight/?q=12`
 
 ---
 

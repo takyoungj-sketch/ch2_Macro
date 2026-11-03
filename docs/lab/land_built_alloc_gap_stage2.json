@@ -1,0 +1,292 @@
+{
+  "stage": 2,
+  "period_start": "2021-11-01",
+  "period_end": "2026-10-31",
+  "caliper": "같은 연도, 같은 도로구간, 면적·공시지가 각각 1.5배 이내",
+  "formula": "ln(㎡당 가격) = 절편 + LandOnly + ln(대지면적) + 도로 + 연도",
+  "pct_meaning": "100(exp(beta)-1)은 배분단가 대비 토지 단독거래가 높은 비율이다. 1차 D는 토지 단독거래 대비라 분모가 다르다.",
+  "notes": [
+    "토지 단독거래는 확인된 나지가 아니다.",
+    "개별공시지가는 맞춤 키이고 원인 계수가 아니다.",
+    "칸 안에서는 지역과 용도지역이 같아 더미를 넣지 않았다.",
+    "부호가 원가 하한·기준·상한에서 갈리면 유보한다."
+  ],
+  "cells": [
+    {
+      "sido": "서울특별시",
+      "sigungu": "강남구",
+      "emd": "역삼동",
+      "zone": "2주",
+      "stage1_d_mid": -47.9,
+      "stage1_verdict": "원가 폭 밖에 남음",
+      "n_land_in_cell": 36,
+      "n_built_in_cell": 68,
+      "n_land_with_road": 35,
+      "n_built_with_road": 68,
+      "assessed_coverage_land": 0.343,
+      "assessed_coverage_built": 1.0,
+      "assessed_used": false,
+      "assessed_median_land_won": 9540000.0,
+      "assessed_median_built_won": 10570000.0,
+      "assessed_unit_note": "둘 다 원/㎡",
+      "n_pairs": 18,
+      "matched_d": {
+        "mid": -26.9,
+        "low_cost": -27.7,
+        "high_cost": -25.9
+      },
+      "models": {
+        "mid": {
+          "status": "estimated",
+          "n": 36,
+          "n_land": 18,
+          "n_built": 18,
+          "k": 7,
+          "cov": "HC3",
+          "beta_land_only": -0.2745,
+          "pct_vs_allocated": -24.0,
+          "ci95": [
+            -49.4,
+            1.4
+          ],
+          "includes_zero": true,
+          "n_pairs": 18
+        },
+        "low_cost": {
+          "status": "estimated",
+          "n": 36,
+          "n_land": 18,
+          "n_built": 18,
+          "k": 7,
+          "cov": "HC3",
+          "beta_land_only": -0.28,
+          "pct_vs_allocated": -24.4,
+          "ci95": [
+            -49.7,
+            0.8
+          ],
+          "includes_zero": true,
+          "n_pairs": 18
+        },
+        "high_cost": {
+          "status": "estimated",
+          "n": 36,
+          "n_land": 18,
+          "n_built": 18,
+          "k": 7,
+          "cov": "HC3",
+          "beta_land_only": -0.269,
+          "pct_vs_allocated": -23.6,
+          "ci95": [
+            -49.2,
+            2.0
+          ],
+          "includes_zero": true,
+          "n_pairs": 18
+        }
+      },
+      "verdict": "맞춤 뒤 표본으로 구분되지 않음"
+    },
+    {
+      "sido": "대전광역시",
+      "sigungu": "유성구",
+      "emd": "봉명동",
+      "zone": "일상",
+      "stage1_d_mid": 29.9,
+      "stage1_verdict": "원가 폭 밖에 남음",
+      "n_land_in_cell": 48,
+      "n_built_in_cell": 41,
+      "n_land_with_road": 48,
+      "n_built_with_road": 41,
+      "assessed_coverage_land": 0.667,
+      "assessed_coverage_built": 1.0,
+      "assessed_used": false,
+      "assessed_median_land_won": 3314500.0,
+      "assessed_median_built_won": 2385000.0,
+      "assessed_unit_note": "둘 다 원/㎡",
+      "n_pairs": 7,
+      "matched_d": {
+        "mid": -4.0,
+        "low_cost": -5.8,
+        "high_cost": -0.2
+      },
+      "models": {
+        "mid": {
+          "status": "맞춤 표본이 작다",
+          "n": 14,
+          "n_pairs": 7
+        },
+        "low_cost": {
+          "status": "맞춤 표본이 작다",
+          "n": 14,
+          "n_pairs": 7
+        },
+        "high_cost": {
+          "status": "맞춤 표본이 작다",
+          "n": 14,
+          "n_pairs": 7
+        }
+      },
+      "verdict": "맞춤 표본이 작다"
+    },
+    {
+      "sido": "대전광역시",
+      "sigungu": "대덕구",
+      "emd": "오정동",
+      "zone": "2주",
+      "stage1_d_mid": -12.6,
+      "stage1_verdict": "원가 폭 밖에 남음",
+      "n_land_in_cell": 38,
+      "n_built_in_cell": 81,
+      "n_land_with_road": 36,
+      "n_built_with_road": 81,
+      "assessed_coverage_land": 0.778,
+      "assessed_coverage_built": 0.988,
+      "assessed_used": true,
+      "assessed_median_land_won": 773150.0,
+      "assessed_median_built_won": 1001500.0,
+      "assessed_unit_note": "둘 다 원/㎡",
+      "n_pairs": 9,
+      "matched_d": {
+        "mid": -12.3,
+        "low_cost": -13.3,
+        "high_cost": -11.2
+      },
+      "models": {
+        "mid": {
+          "status": "맞춤 표본이 작다",
+          "n": 18,
+          "n_pairs": 9
+        },
+        "low_cost": {
+          "status": "맞춤 표본이 작다",
+          "n": 18,
+          "n_pairs": 9
+        },
+        "high_cost": {
+          "status": "맞춤 표본이 작다",
+          "n": 18,
+          "n_pairs": 9
+        }
+      },
+      "verdict": "맞춤 표본이 작다"
+    },
+    {
+      "sido": "경상북도",
+      "sigungu": "안동시",
+      "emd": "태화동",
+      "zone": "2주",
+      "stage1_d_mid": -34.8,
+      "stage1_verdict": "원가 폭 밖에 남음",
+      "n_land_in_cell": 44,
+      "n_built_in_cell": 43,
+      "n_land_with_road": 43,
+      "n_built_with_road": 43,
+      "assessed_coverage_land": 0.233,
+      "assessed_coverage_built": 1.0,
+      "assessed_used": false,
+      "assessed_median_land_won": 344200.0,
+      "assessed_median_built_won": 409900.0,
+      "assessed_unit_note": "둘 다 원/㎡",
+      "n_pairs": 13,
+      "matched_d": {
+        "mid": 9.1,
+        "low_cost": 4.5,
+        "high_cost": 13.6
+      },
+      "models": {
+        "mid": {
+          "status": "맞춤 표본이 작다",
+          "n": 26,
+          "n_pairs": 13
+        },
+        "low_cost": {
+          "status": "맞춤 표본이 작다",
+          "n": 26,
+          "n_pairs": 13
+        },
+        "high_cost": {
+          "status": "맞춤 표본이 작다",
+          "n": 26,
+          "n_pairs": 13
+        }
+      },
+      "verdict": "맞춤 표본이 작다"
+    },
+    {
+      "sido": "부산광역시",
+      "sigungu": "기장군",
+      "emd": "기장읍",
+      "zone": "2주",
+      "stage1_d_mid": -33.8,
+      "stage1_verdict": "원가 폭 밖에 남음",
+      "n_land_in_cell": 52,
+      "n_built_in_cell": 55,
+      "n_land_with_road": 46,
+      "n_built_with_road": 55,
+      "assessed_coverage_land": 0.674,
+      "assessed_coverage_built": 1.0,
+      "assessed_used": false,
+      "assessed_median_land_won": 1090000.0,
+      "assessed_median_built_won": 1270000.0,
+      "assessed_unit_note": "둘 다 원/㎡",
+      "n_pairs": 19,
+      "matched_d": {
+        "mid": 5.8,
+        "low_cost": 0.8,
+        "high_cost": 10.4
+      },
+      "models": {
+        "mid": {
+          "status": "estimated",
+          "n": 38,
+          "n_land": 19,
+          "n_built": 19,
+          "k": 9,
+          "cov": "HC3",
+          "beta_land_only": 0.0743,
+          "pct_vs_allocated": 7.7,
+          "ci95": [
+            -21.0,
+            36.4
+          ],
+          "includes_zero": true,
+          "n_pairs": 19
+        },
+        "low_cost": {
+          "status": "estimated",
+          "n": 38,
+          "n_land": 19,
+          "n_built": 19,
+          "k": 9,
+          "cov": "HC3",
+          "beta_land_only": 0.034,
+          "pct_vs_allocated": 3.5,
+          "ci95": [
+            -22.9,
+            29.8
+          ],
+          "includes_zero": true,
+          "n_pairs": 19
+        },
+        "high_cost": {
+          "status": "estimated",
+          "n": 38,
+          "n_land": 19,
+          "n_built": 19,
+          "k": 9,
+          "cov": "HC3",
+          "beta_land_only": 0.1177,
+          "pct_vs_allocated": 12.5,
+          "ci95": [
+            -19.1,
+            44.1
+          ],
+          "includes_zero": true,
+          "n_pairs": 19
+        }
+      },
+      "verdict": "맞춤 뒤 표본으로 구분되지 않음"
+    }
+  ]
+}

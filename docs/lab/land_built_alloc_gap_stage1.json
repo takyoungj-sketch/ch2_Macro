@@ -1,0 +1,890 @@
+{
+  "stage": 1,
+  "as_of_month": "2026-10-01",
+  "period_start": "2021-11-01",
+  "period_end": "2026-10-31",
+  "unit": "만원/㎡",
+  "min_n": 20,
+  "bootstrap": 2000,
+  "seed": 20261103,
+  "matched_cells": 342,
+  "empty_strata": [],
+  "qualifying_by_stratum": {
+    "읍·면": 170,
+    "그 외 시": 50,
+    "서울": 48,
+    "광역시": 45,
+    "경기·인천": 29
+  },
+  "notes": [
+    "토지 단독거래는 확인된 나지가 아니다.",
+    "건부지 가격은 기준 재조달원가로 배분한 추정치다.",
+    "d_low_cost는 재조달원가 하한, d_high_cost는 재조달원가 상한이다.",
+    "부트스트랩 구간은 기준 원가의 표본 불확실성만 담는다.",
+    "도로조건 표기는 토지와 복합의 코드가 달라 1차에서 통제한 비교로 쓰지 않았다."
+  ],
+  "cells": [
+    {
+      "stratum": "서울",
+      "sido": "서울특별시",
+      "sigungu": "강남구",
+      "emd": "역삼동",
+      "zone": "2주",
+      "n_land": 36,
+      "n_built": 68,
+      "n_built_low_cost": 68,
+      "n_built_high_cost": 68,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 36,
+        "p25": 119.2,
+        "p50": 199.4,
+        "p75": 274.1
+      },
+      "built_area": {
+        "n": 68,
+        "p25": 200.2,
+        "p50": 246.2,
+        "p75": 285.6
+      },
+      "area_ratio": 1.23,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 36,
+        "p25": 1810.0,
+        "p50": 2403.6,
+        "p75": 2784.6
+      },
+      "built_mid": {
+        "n": 68,
+        "p25": 3059.4,
+        "p50": 3556.0,
+        "p75": 4311.5
+      },
+      "built_low_cost": {
+        "n": 68,
+        "p25": 3070.4,
+        "p50": 3578.0,
+        "p75": 4344.5
+      },
+      "built_high_cost": {
+        "n": 68,
+        "p25": 3048.4,
+        "p50": 3533.9,
+        "p75": 4276.8
+      },
+      "d_low_cost": -48.9,
+      "d_mid": -47.9,
+      "d_high_cost": -47.0,
+      "bootstrap95_mid": {
+        "low": -78.5,
+        "high": -34.6,
+        "includes_zero": false
+      },
+      "iqr_overlap": 0.0,
+      "land_inside_built_iqr": 0.194,
+      "built_inside_land_iqr": 0.118,
+      "area_bands": [
+        {
+          "band": "100~200㎡",
+          "n_land": 10,
+          "n_built": 16,
+          "land_p50": 2509.5,
+          "built_p50": 3201.8,
+          "d_mid": -27.6
+        },
+        {
+          "band": "200~300㎡",
+          "n_land": 11,
+          "n_built": 35,
+          "land_p50": 2563.1,
+          "built_p50": 3555.6,
+          "d_mid": -38.7
+        }
+      ],
+      "land_roads": {
+        "8미만": 23,
+        "12미만": 10,
+        "25미만": 2,
+        "-": 1
+      },
+      "built_roads": {
+        "8m미만": 50,
+        "12m미만": 13,
+        "25m미만": 5
+      },
+      "road_controlled": false,
+      "verdict": "원가 폭 밖에 남음"
+    },
+    {
+      "stratum": "서울",
+      "sido": "서울특별시",
+      "sigungu": "강남구",
+      "emd": "논현동",
+      "zone": "3주",
+      "n_land": 31,
+      "n_built": 106,
+      "n_built_low_cost": 106,
+      "n_built_high_cost": 106,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 31,
+        "p25": 173.2,
+        "p50": 290.1,
+        "p75": 515.7
+      },
+      "built_area": {
+        "n": 106,
+        "p25": 230.5,
+        "p50": 297.1,
+        "p75": 492.2
+      },
+      "area_ratio": 1.02,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 31,
+        "p25": 3143.6,
+        "p50": 4352.8,
+        "p75": 5608.7
+      },
+      "built_mid": {
+        "n": 106,
+        "p25": 3739.8,
+        "p50": 4411.7,
+        "p75": 5823.9
+      },
+      "built_low_cost": {
+        "n": 106,
+        "p25": 3774.3,
+        "p50": 4432.4,
+        "p75": 5852.2
+      },
+      "built_high_cost": {
+        "n": 106,
+        "p25": 3710.5,
+        "p50": 4397.0,
+        "p75": 5795.6
+      },
+      "d_low_cost": -1.8,
+      "d_mid": -1.4,
+      "d_high_cost": -1.0,
+      "bootstrap95_mid": {
+        "low": -39.4,
+        "high": 19.4,
+        "includes_zero": true
+      },
+      "iqr_overlap": 0.822,
+      "land_inside_built_iqr": 0.387,
+      "built_inside_land_iqr": 0.642,
+      "area_bands": [],
+      "land_roads": {
+        "8미만": 15,
+        "12미만": 6,
+        "25이상": 5,
+        "25미만": 3,
+        "-": 2
+      },
+      "built_roads": {
+        "8m미만": 39,
+        "25m이상": 35,
+        "25m미만": 21,
+        "12m미만": 11
+      },
+      "road_controlled": false,
+      "verdict": "표본으로 구분되지 않음"
+    },
+    {
+      "stratum": "경기·인천",
+      "sido": "인천광역시",
+      "sigungu": "미추홀구",
+      "emd": "도화동",
+      "zone": "일상",
+      "n_land": 39,
+      "n_built": 25,
+      "n_built_low_cost": 25,
+      "n_built_high_cost": 25,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 39,
+        "p25": 29.5,
+        "p50": 143.6,
+        "p75": 216.5
+      },
+      "built_area": {
+        "n": 25,
+        "p25": 23.0,
+        "p50": 121.0,
+        "p75": 245.0
+      },
+      "area_ratio": 1.19,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 39,
+        "p25": 346.7,
+        "p50": 423.4,
+        "p75": 653.2
+      },
+      "built_mid": {
+        "n": 25,
+        "p25": 285.9,
+        "p50": 380.4,
+        "p75": 465.1
+      },
+      "built_low_cost": {
+        "n": 25,
+        "p25": 293.9,
+        "p50": 392.3,
+        "p75": 470.9
+      },
+      "built_high_cost": {
+        "n": 25,
+        "p25": 279.4,
+        "p50": 375.0,
+        "p75": 459.2
+      },
+      "d_low_cost": 7.3,
+      "d_mid": 10.1,
+      "d_high_cost": 11.4,
+      "bootstrap95_mid": {
+        "low": -8.2,
+        "high": 32.2,
+        "includes_zero": true
+      },
+      "iqr_overlap": 0.487,
+      "land_inside_built_iqr": 0.385,
+      "built_inside_land_iqr": 0.52,
+      "area_bands": [
+        {
+          "band": "100㎡ 미만",
+          "n_land": 16,
+          "n_built": 12,
+          "land_p50": 390.9,
+          "built_p50": 398.3,
+          "d_mid": -1.9
+        }
+      ],
+      "land_roads": {
+        "25이상": 24,
+        "8미만": 13,
+        "25미만": 2
+      },
+      "built_roads": {
+        "8m미만": 14,
+        "25m이상": 6,
+        "12m미만": 3,
+        "25m미만": 2
+      },
+      "road_controlled": false,
+      "verdict": "표본으로 구분되지 않음"
+    },
+    {
+      "stratum": "경기·인천",
+      "sido": "경기도",
+      "sigungu": "구리시",
+      "emd": "수택동",
+      "zone": "일상",
+      "n_land": 20,
+      "n_built": 34,
+      "n_built_low_cost": 34,
+      "n_built_high_cost": 34,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 20,
+        "p25": 91.5,
+        "p50": 161.1,
+        "p75": 228.4
+      },
+      "built_area": {
+        "n": 34,
+        "p25": 125.6,
+        "p50": 186.4,
+        "p75": 326.9
+      },
+      "area_ratio": 1.16,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 20,
+        "p25": 782.7,
+        "p50": 1398.3,
+        "p75": 1564.7
+      },
+      "built_mid": {
+        "n": 34,
+        "p25": 994.8,
+        "p50": 1202.2,
+        "p75": 1718.7
+      },
+      "built_low_cost": {
+        "n": 34,
+        "p25": 1004.8,
+        "p50": 1212.3,
+        "p75": 1745.4
+      },
+      "built_high_cost": {
+        "n": 34,
+        "p25": 974.6,
+        "p50": 1192.1,
+        "p75": 1691.9
+      },
+      "d_low_cost": 13.3,
+      "d_mid": 14.0,
+      "d_high_cost": 14.7,
+      "bootstrap95_mid": {
+        "low": -17.9,
+        "high": 30.0,
+        "includes_zero": true
+      },
+      "iqr_overlap": 0.757,
+      "land_inside_built_iqr": 0.45,
+      "built_inside_land_iqr": 0.588,
+      "area_bands": [],
+      "land_roads": {
+        "12미만": 11,
+        "8미만": 7,
+        "25미만": 2
+      },
+      "built_roads": {
+        "25m미만": 12,
+        "8m미만": 10,
+        "12m미만": 9,
+        "25m이상": 3
+      },
+      "road_controlled": false,
+      "verdict": "표본으로 구분되지 않음"
+    },
+    {
+      "stratum": "광역시",
+      "sido": "대전광역시",
+      "sigungu": "유성구",
+      "emd": "봉명동",
+      "zone": "일상",
+      "n_land": 48,
+      "n_built": 41,
+      "n_built_low_cost": 41,
+      "n_built_high_cost": 41,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 48,
+        "p25": 141.2,
+        "p50": 372.9,
+        "p75": 675.9
+      },
+      "built_area": {
+        "n": 41,
+        "p25": 264.1,
+        "p50": 476.8,
+        "p75": 651.2
+      },
+      "area_ratio": 1.28,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 48,
+        "p25": 394.6,
+        "p50": 680.4,
+        "p75": 1013.6
+      },
+      "built_mid": {
+        "n": 41,
+        "p25": 364.1,
+        "p50": 477.2,
+        "p75": 610.6
+      },
+      "built_low_cost": {
+        "n": 41,
+        "p25": 383.1,
+        "p50": 496.7,
+        "p75": 628.2
+      },
+      "built_high_cost": {
+        "n": 41,
+        "p25": 354.4,
+        "p50": 457.6,
+        "p75": 593.1
+      },
+      "d_low_cost": 27.0,
+      "d_mid": 29.9,
+      "d_high_cost": 32.7,
+      "bootstrap95_mid": {
+        "low": 5.1,
+        "high": 52.7,
+        "includes_zero": false
+      },
+      "iqr_overlap": 0.499,
+      "land_inside_built_iqr": 0.312,
+      "built_inside_land_iqr": 0.634,
+      "area_bands": [
+        {
+          "band": "300~500㎡",
+          "n_land": 10,
+          "n_built": 11,
+          "land_p50": 586.8,
+          "built_p50": 529.3,
+          "d_mid": 9.8
+        },
+        {
+          "band": "500㎡ 이상",
+          "n_land": 17,
+          "n_built": 18,
+          "land_p50": 1080.9,
+          "built_p50": 470.1,
+          "d_mid": 56.5
+        }
+      ],
+      "land_roads": {
+        "12미만": 22,
+        "25미만": 20,
+        "25이상": 4,
+        "8미만": 2
+      },
+      "built_roads": {
+        "12m미만": 23,
+        "25m이상": 10,
+        "25m미만": 4,
+        "8m미만": 4
+      },
+      "road_controlled": false,
+      "verdict": "원가 폭 밖에 남음"
+    },
+    {
+      "stratum": "광역시",
+      "sido": "대전광역시",
+      "sigungu": "대덕구",
+      "emd": "오정동",
+      "zone": "2주",
+      "n_land": 38,
+      "n_built": 81,
+      "n_built_low_cost": 81,
+      "n_built_high_cost": 81,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 38,
+        "p25": 145.6,
+        "p50": 178.7,
+        "p75": 288.6
+      },
+      "built_area": {
+        "n": 81,
+        "p25": 205.0,
+        "p50": 318.0,
+        "p75": 428.0
+      },
+      "area_ratio": 1.78,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 38,
+        "p25": 126.8,
+        "p50": 176.1,
+        "p75": 201.6
+      },
+      "built_mid": {
+        "n": 81,
+        "p25": 171.2,
+        "p50": 198.2,
+        "p75": 241.7
+      },
+      "built_low_cost": {
+        "n": 81,
+        "p25": 172.4,
+        "p50": 205.0,
+        "p75": 245.4
+      },
+      "built_high_cost": {
+        "n": 81,
+        "p25": 170.0,
+        "p50": 196.5,
+        "p75": 238.4
+      },
+      "d_low_cost": -16.4,
+      "d_mid": -12.6,
+      "d_high_cost": -11.6,
+      "bootstrap95_mid": {
+        "low": -32.4,
+        "high": -6.1,
+        "includes_zero": false
+      },
+      "iqr_overlap": 0.418,
+      "land_inside_built_iqr": 0.368,
+      "built_inside_land_iqr": 0.457,
+      "area_bands": [
+        {
+          "band": "100~200㎡",
+          "n_land": 18,
+          "n_built": 18,
+          "land_p50": 168.1,
+          "built_p50": 178.5,
+          "d_mid": -6.2
+        }
+      ],
+      "land_roads": {
+        "12미만": 19,
+        "8미만": 11,
+        "25이상": 4,
+        "-": 2,
+        "25미만": 2
+      },
+      "built_roads": {
+        "12m미만": 48,
+        "25m미만": 22,
+        "25m이상": 8,
+        "8m미만": 3
+      },
+      "road_controlled": false,
+      "verdict": "원가 폭 밖에 남음"
+    },
+    {
+      "stratum": "그 외 시",
+      "sido": "충청남도",
+      "sigungu": "보령시",
+      "emd": "신흑동",
+      "zone": "계관",
+      "n_land": 69,
+      "n_built": 48,
+      "n_built_low_cost": 48,
+      "n_built_high_cost": 43,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 69,
+        "p25": 168.0,
+        "p50": 226.6,
+        "p75": 331.6
+      },
+      "built_area": {
+        "n": 48,
+        "p25": 227.9,
+        "p50": 345.0,
+        "p75": 514.4
+      },
+      "area_ratio": 1.52,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 69,
+        "p25": 37.7,
+        "p50": 83.1,
+        "p75": 137.0
+      },
+      "built_mid": {
+        "n": 48,
+        "p25": 30.2,
+        "p50": 57.3,
+        "p75": 103.0
+      },
+      "built_low_cost": {
+        "n": 48,
+        "p25": 38.8,
+        "p50": 68.6,
+        "p75": 114.8
+      },
+      "built_high_cost": {
+        "n": 43,
+        "p25": 24.6,
+        "p50": 54.0,
+        "p75": 104.4
+      },
+      "d_low_cost": 17.4,
+      "d_mid": 31.1,
+      "d_high_cost": 35.0,
+      "bootstrap95_mid": {
+        "low": -22.4,
+        "high": 51.1,
+        "includes_zero": true
+      },
+      "iqr_overlap": 0.759,
+      "land_inside_built_iqr": 0.435,
+      "built_inside_land_iqr": 0.521,
+      "area_bands": [
+        {
+          "band": "200~300㎡",
+          "n_land": 23,
+          "n_built": 17,
+          "land_p50": 111.2,
+          "built_p50": 43.9,
+          "d_mid": 60.5
+        },
+        {
+          "band": "300~500㎡",
+          "n_land": 18,
+          "n_built": 13,
+          "land_p50": 78.5,
+          "built_p50": 73.6,
+          "d_mid": 6.3
+        }
+      ],
+      "land_roads": {
+        "8미만": 41,
+        "12미만": 14,
+        "25미만": 12,
+        "25이상": 1,
+        "-": 1
+      },
+      "built_roads": {
+        "12m미만": 24,
+        "25m미만": 13,
+        "8m미만": 11
+      },
+      "road_controlled": false,
+      "verdict": "표본으로 구분되지 않음"
+    },
+    {
+      "stratum": "그 외 시",
+      "sido": "경상북도",
+      "sigungu": "안동시",
+      "emd": "태화동",
+      "zone": "2주",
+      "n_land": 44,
+      "n_built": 43,
+      "n_built_low_cost": 43,
+      "n_built_high_cost": 43,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 44,
+        "p25": 37.9,
+        "p50": 124.0,
+        "p75": 199.3
+      },
+      "built_area": {
+        "n": 43,
+        "p25": 130.6,
+        "p50": 167.8,
+        "p75": 204.3
+      },
+      "area_ratio": 1.35,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 44,
+        "p25": 38.4,
+        "p50": 51.9,
+        "p75": 62.7
+      },
+      "built_mid": {
+        "n": 43,
+        "p25": 46.5,
+        "p50": 69.9,
+        "p75": 100.7
+      },
+      "built_low_cost": {
+        "n": 43,
+        "p25": 51.3,
+        "p50": 70.7,
+        "p75": 104.0
+      },
+      "built_high_cost": {
+        "n": 43,
+        "p25": 41.7,
+        "p50": 68.2,
+        "p75": 97.1
+      },
+      "d_low_cost": -36.4,
+      "d_mid": -34.8,
+      "d_high_cost": -31.6,
+      "bootstrap95_mid": {
+        "low": -93.8,
+        "high": -3.7,
+        "includes_zero": false
+      },
+      "iqr_overlap": 0.411,
+      "land_inside_built_iqr": 0.523,
+      "built_inside_land_iqr": 0.279,
+      "area_bands": [
+        {
+          "band": "100~200㎡",
+          "n_land": 14,
+          "n_built": 28,
+          "land_p50": 45.0,
+          "built_p50": 62.2,
+          "d_mid": -38.1
+        }
+      ],
+      "land_roads": {
+        "8미만": 38,
+        "12미만": 2,
+        "25미만": 2,
+        "-": 1,
+        "25이상": 1
+      },
+      "built_roads": {
+        "8m미만": 14,
+        "12m미만": 13,
+        "25m미만": 12,
+        "25m이상": 4
+      },
+      "road_controlled": false,
+      "verdict": "원가 폭 밖에 남음"
+    },
+    {
+      "stratum": "읍·면",
+      "sido": "부산광역시",
+      "sigungu": "기장군",
+      "emd": "기장읍",
+      "zone": "2주",
+      "n_land": 52,
+      "n_built": 55,
+      "n_built_low_cost": 55,
+      "n_built_high_cost": 55,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 52,
+        "p25": 71.2,
+        "p50": 183.5,
+        "p75": 330.1
+      },
+      "built_area": {
+        "n": 55,
+        "p25": 243.7,
+        "p50": 323.7,
+        "p75": 448.9
+      },
+      "area_ratio": 1.76,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 52,
+        "p25": 112.6,
+        "p50": 145.2,
+        "p75": 195.2
+      },
+      "built_mid": {
+        "n": 55,
+        "p25": 146.8,
+        "p50": 194.2,
+        "p75": 265.1
+      },
+      "built_low_cost": {
+        "n": 55,
+        "p25": 155.9,
+        "p50": 195.6,
+        "p75": 267.5
+      },
+      "built_high_cost": {
+        "n": 55,
+        "p25": 140.2,
+        "p50": 189.6,
+        "p75": 262.7
+      },
+      "d_low_cost": -34.7,
+      "d_mid": -33.8,
+      "d_high_cost": -30.6,
+      "bootstrap95_mid": {
+        "low": -54.2,
+        "high": -4.8,
+        "includes_zero": false
+      },
+      "iqr_overlap": 0.482,
+      "land_inside_built_iqr": 0.346,
+      "built_inside_land_iqr": 0.364,
+      "area_bands": [
+        {
+          "band": "200~300㎡",
+          "n_land": 11,
+          "n_built": 12,
+          "land_p50": 164.9,
+          "built_p50": 195.8,
+          "d_mid": -18.7
+        }
+      ],
+      "land_roads": {
+        "12미만": 19,
+        "25미만": 14,
+        "8미만": 13,
+        "-": 6
+      },
+      "built_roads": {
+        "12m미만": 24,
+        "25m미만": 21,
+        "25m이상": 7,
+        "8m미만": 3
+      },
+      "road_controlled": false,
+      "verdict": "원가 폭 밖에 남음"
+    },
+    {
+      "stratum": "읍·면",
+      "sido": "경기도",
+      "sigungu": "가평군",
+      "emd": "가평읍",
+      "zone": "계관",
+      "n_land": 216,
+      "n_built": 44,
+      "n_built_low_cost": 44,
+      "n_built_high_cost": 43,
+      "envelope_share": 0.0,
+      "land_area": {
+        "n": 216,
+        "p25": 37.0,
+        "p50": 176.0,
+        "p75": 462.0
+      },
+      "built_area": {
+        "n": 44,
+        "p25": 236.8,
+        "p50": 336.5,
+        "p75": 751.5
+      },
+      "area_ratio": 1.91,
+      "area_reference_only": false,
+      "land_price": {
+        "n": 216,
+        "p25": 16.9,
+        "p50": 24.8,
+        "p75": 35.3
+      },
+      "built_mid": {
+        "n": 44,
+        "p25": 14.9,
+        "p50": 28.2,
+        "p75": 90.1
+      },
+      "built_low_cost": {
+        "n": 44,
+        "p25": 21.5,
+        "p50": 30.5,
+        "p75": 95.2
+      },
+      "built_high_cost": {
+        "n": 43,
+        "p25": 12.6,
+        "p50": 26.3,
+        "p75": 85.0
+      },
+      "d_low_cost": -23.3,
+      "d_mid": -13.8,
+      "d_high_cost": -6.1,
+      "bootstrap95_mid": {
+        "low": -129.8,
+        "high": 21.4,
+        "includes_zero": true
+      },
+      "iqr_overlap": 0.394,
+      "land_inside_built_iqr": 0.792,
+      "built_inside_land_iqr": 0.25,
+      "area_bands": [
+        {
+          "band": "200~300㎡",
+          "n_land": 21,
+          "n_built": 12,
+          "land_p50": 25.5,
+          "built_p50": 54.3,
+          "d_mid": -112.7
+        },
+        {
+          "band": "500㎡ 이상",
+          "n_land": 48,
+          "n_built": 18,
+          "land_p50": 27.8,
+          "built_p50": 27.5,
+          "d_mid": 1.1
+        }
+      ],
+      "land_roads": {
+        "8미만": 164,
+        "-": 26,
+        "12미만": 26
+      },
+      "built_roads": {
+        "8m미만": 31,
+        "12m미만": 10,
+        "25m미만": 3
+      },
+      "road_controlled": false,
+      "verdict": "표본으로 구분되지 않음"
+    }
+  ]
+}
