@@ -22,6 +22,7 @@ import {
 import type { AssetSelectorType, AssetType, DanjiAttributesResponse } from "../types";
 import { assetTypeLabel } from "../types";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
+import { structureGroupLabel } from "../utils/collectiveRegressionFormat";
 import BuildingRegressionPanel from "./BuildingRegressionPanel";
 import CohortTrendPanel from "./CohortTrendPanel";
 import CollectiveTransactionTable from "./CollectiveTransactionTable";
@@ -437,7 +438,7 @@ function DanjiAttributesPanel({
               <th className={DANJI_TH}>구조</th>
               <td className={DANJI_TD}>
                 {danjiText(structure?.raw)}
-                {structure?.group && <DanjiBadge label={structure.group} tone="slate" />}
+                {structure?.group && <DanjiBadge label={structureGroupLabel(structure.group)} tone="slate" />}
               </td>
             </tr>
             <tr>

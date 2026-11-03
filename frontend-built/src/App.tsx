@@ -329,7 +329,7 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     road_width_dummy: true,
     zone_type_dummy: true,
     building_use_dummy: true,
-    structure_dummy: true,
+    structure_dummy: false,
     assessed_land_price: false,
     asset_type_dummy: false,
     region_leaf_dummy: false,
@@ -341,7 +341,7 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     road_width_dummy: true,
     zone_type_dummy: true,
     building_use_dummy: true,
-    structure_dummy: true,
+    structure_dummy: false,
     assessed_land_price: false,
     asset_type_dummy: false,
     region_leaf_dummy: false,
@@ -353,7 +353,7 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     road_width_dummy: true,
     zone_type_dummy: true,
     building_use_dummy: true,
-    structure_dummy: true,
+    structure_dummy: false,
     assessed_land_price: false,
     asset_type_dummy: false,
     region_leaf_dummy: false,
@@ -367,7 +367,7 @@ const DEFAULT_VARS_MULTI: RegressionVariableSpec = {
   road_width_dummy: true,
   zone_type_dummy: true,
   building_use_dummy: true,
-    structure_dummy: true,
+    structure_dummy: false,
     assessed_land_price: false,
     asset_type_dummy: true,
     region_leaf_dummy: false,
@@ -550,13 +550,16 @@ export default function App() {
   const [enrich, setEnrich] = useState(false);
   const [categoricalMissing, setCategoricalMissing] = useState<"keep_unknown" | "drop">("keep_unknown");
   const [enrichConsentOpen, setEnrichConsentOpen] = useState(false);
+  const [pendingRegisterVar, setPendingRegisterVar] = useState<
+    "structure_dummy" | "assessed_land_price" | null
+  >(null);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
   /** 마지막 「통계분석」에 실제 쓰인 요청 — 선택만으로 결과 표시가 바뀌지 않게 */
   const [appliedBody, setAppliedBody] = useState<RegressionRunRequest | null>(null);
-  /** 대장보강이 꺼져 있으면 구조 더미는 쓸 수 없다 — 체크 표시·요청이 같은 값을 본다 */
+  /** 구조·개별공시지가를 켜기 전에는 요청에 넣지 않는다 */
   const effectiveVars = useMemo<RegressionVariableSpec>(
     () => (enrich ? vars : { ...vars, structure_dummy: false, assessed_land_price: false }),
     [vars, enrich],
@@ -591,6 +594,9 @@ export default function App() {
   useEffect(() => {
     setVars(defaultVarsForKinds(assetKinds));
     setSampleFilter(EMPTY_SAMPLE_FILTER);
+    setEnrich(false);
+    setEnrichConsentOpen(false);
+    setPendingRegisterVar(null);
   }, [assetType]);
 
   useEffect(() => {
@@ -1473,6 +1479,7 @@ export default function App() {
                 1. 변수 선택
                 <AnalysisHelpPanel explain={BUILT_VAR_SELECT_HELP} title="변수 선택 설명" />
               </p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">실거래 변수</p>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
                 {(
                   [
@@ -1485,8 +1492,6 @@ export default function App() {
                       "building_use_dummy",
                       isOnlyDetached(assetType) ? "주택유형 더미" : "건축물용도 더미",
                     ],
-                    ["structure_dummy", "구조 더미"],
-                    ["assessed_land_price", "개별공시지가"],
                     ...(isUnifiedAsset(assetType)
                       ? ([["asset_type_dummy", "유형 더미"]] as const)
                       : []),
@@ -1500,17 +1505,10 @@ export default function App() {
                       : []),
                   ] as const
                 ).map(([key, label]) => (
-                  <label
-                    key={key}
-                    className={clsx(
-                      "flex items-center gap-1",
-                      (key === "structure_dummy" || key === "assessed_land_price") && !enrich && "opacity-50",
-                    )}
-                  >
+                  <label key={key} className="flex items-center gap-1">
                     <input
                       type="checkbox"
                       checked={Boolean(effectiveVars[key as keyof RegressionVariableSpec])}
-                      disabled={(key === "structure_dummy" || key === "assessed_land_price") && !enrich}
                       onChange={(e) =>
                         setVars((v) => ({ ...v, [key]: e.target.checked }))
                       }
@@ -1518,6 +1516,42 @@ export default function App() {
                     {label}
                   </label>
                 ))}
+              </div>
+              <div className="border-t border-slate-200 dark:border-slate-600 pt-2 space-y-2">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">대장 변수</p>
+                <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
+                  {(
+                    [
+                      ["structure_dummy", "구조 더미"],
+                      ["assessed_land_price", "개별공시지가"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(vars[key]) && enrich}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            if (enrich) {
+                              setVars((v) => ({ ...v, [key]: true }));
+                              return;
+                            }
+                            setPendingRegisterVar(key);
+                            setEnrichConsentOpen(true);
+                            return;
+                          }
+                          setVars((v) => ({ ...v, [key]: false }));
+                          const otherOn =
+                            key === "structure_dummy"
+                              ? vars.assessed_land_price
+                              : vars.structure_dummy;
+                          if (!otherOn) setEnrich(false);
+                        }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
               </div>
             </section>
 
@@ -1613,22 +1647,6 @@ export default function App() {
                     }}
                   />
                   지분거래 포함
-                </label>
-              </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={enrich}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setEnrichConsentOpen(true);
-                        return;
-                      }
-                      setEnrich(false);
-                    }}
-                  />
-                  건축물대장 보강
                 </label>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
@@ -1934,8 +1952,16 @@ export default function App() {
       />
       <EnrichConsentModal
         open={enrichConsentOpen}
-        onCancel={() => setEnrichConsentOpen(false)}
+        onCancel={() => {
+          setPendingRegisterVar(null);
+          setEnrichConsentOpen(false);
+        }}
         onConfirm={() => {
+          if (pendingRegisterVar) {
+            const key = pendingRegisterVar;
+            setVars((v) => ({ ...v, [key]: true }));
+          }
+          setPendingRegisterVar(null);
           setEnrich(true);
           setEnrichConsentOpen(false);
         }}

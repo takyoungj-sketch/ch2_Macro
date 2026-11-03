@@ -10,6 +10,7 @@ import pandas as pd
 
 from app.built.asset_scope import apply_asset_type_filter, is_unified
 from app.regression_missing import treatment_label
+from app.structure_labels import structure_display
 from app.built.filters import (
     effective_addr3_list,
     effective_addr4_list,
@@ -564,7 +565,7 @@ def _coef_display_name(name: str, *, response_scale: ResponseScale = "linear") -
     if name.startswith("use_"):
         return name[4:]
     if name.startswith("struct_"):
-        return name[7:]
+        return structure_display(name[7:])
     if name.startswith("road_"):
         return name[5:]
     if name.startswith("atype_"):
@@ -1240,7 +1241,7 @@ def _input_to_x_row(
     if vars_spec.structure_dummy and meta.structure_groups:
         s = inp.structure_group or meta.structure_reference or meta.structure_groups[0]
         if s not in meta.structure_groups:
-            raise ValueError(f"구조 '{s}' — 모형에 없는 값입니다.")
+            raise ValueError(f"구조 '{structure_display(s)}' — 모형에 없는 값입니다.")
         for c in meta.feature_columns:
             if c.startswith("struct_"):
                 row[c] = 0.0

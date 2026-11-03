@@ -14,6 +14,7 @@ import statsmodels.api as sm
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from app.regression_contracts import build_analysis_context, observation_signature, signature
+from app.structure_labels import structure_display
 
 from app.collective.asset_scope import (
     RESIDENTIAL_ASSET_TYPES,
@@ -1029,7 +1030,7 @@ def _design(
                 continue
             col = f"struct_{lv}"
             x[col] = (raw == lv).astype(float)
-            labels[col] = f"구조 {lv} (기준 대비)"
+            labels[col] = f"구조 {structure_display(lv)} (기준 대비)"
             used += 1
         if used == 0:
             warnings.append("구조 범주가 한 종류뿐이라 더미를 넣지 않았습니다.")

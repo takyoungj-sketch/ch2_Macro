@@ -34,7 +34,7 @@ import {
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { ASSET_LABELS } from "../types";
 import { parseResidentialAssetKinds } from "../utils/residentialAssetTypes";
-import { countSignificantCoefficients } from "../utils/collectiveRegressionFormat";
+import { countSignificantCoefficients, structureGroupLabel } from "../utils/collectiveRegressionFormat";
 import { APT_TWIN_REGION_HELP, RESIDENTIAL_REGIONAL_REGRESSION_HELP, RESIDENTIAL_REGIONAL_ESTIMATE_HELP, REGIONAL_SETTINGS_HELP } from "../utils/residentialAnalysisHelp";
 import { FLAT_SIDO_ADDR2_TOKEN } from "../utils/flatSidoRegion";
 import { regionalPredictionCategories } from "../utils/regionalPredictionCategories";
@@ -1142,6 +1142,7 @@ export default function RegionalRegressionModal(props: Props) {
                     value={modelInputs.structure_group ?? ""}
                     options={data.predict_options.structure_group ?? []}
                     reference={data.reference_categories?.structure_group}
+                    optionLabel={structureGroupLabel}
                     onChange={(g) => setInputs((s) => ({ ...s, structure_group: g }))}
                   />
                 )}
@@ -1503,7 +1504,7 @@ function referenceRows(refs?: Record<string, string>) {
     .map(([key, kind]) => ({
       key,
       kind,
-      label: `${kind} ${labelRef(refs[key])}`,
+      label: `${kind} ${key === "structure_group" ? structureGroupLabel(refs[key]) : labelRef(refs[key])}`,
     }));
 }
 
@@ -1512,7 +1513,7 @@ function ReferenceCategoriesLine({ refs }: { refs?: Record<string, string> }) {
   if (!parts.length) return null;
   return (
     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-      기준 범주: {parts.map((p) => `${p.kind}=${labelRef(refs?.[p.key])}`).join(" · ")}.
+      기준 범주: {parts.map((p) => `${p.kind}=${p.key === "structure_group" ? structureGroupLabel(refs?.[p.key]) : labelRef(refs?.[p.key])}`).join(" · ")}.
 
     </p>
   );

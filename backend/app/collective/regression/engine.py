@@ -12,6 +12,7 @@ import pandas as pd
 import statsmodels.api as sm
 
 from app.collective.regression.presentation import enrich_regression_response
+from app.structure_labels import structure_display
 from app.collective.schemas import (
     BuildingFeOption,
     CollectivePredictOptions,
@@ -973,7 +974,7 @@ def _add_structure_dummies(
         col = f"struct_{lv}"
         work[col] = (raw == lv).astype(float)
         parts.append(work[[col]])
-        labels[col] = f"구조 {lv} (기준 대비)"
+        labels[col] = f"구조 {structure_display(lv)} (기준 대비)"
         dummy_cols.append(col)
     meta.structure_dummy_cols = dummy_cols
 

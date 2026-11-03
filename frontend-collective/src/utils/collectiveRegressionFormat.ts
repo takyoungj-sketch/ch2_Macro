@@ -33,18 +33,29 @@ export function isEquationSignificant(p: number | null | undefined): boolean {
   return p != null && p < EQUATION_SIG_P;
 }
 
+/** 구조 코드의 화면 표기. 요청값·더미 이름은 RC/SRC를 유지한다. */
+export function structureGroupLabel(value?: string | null): string {
+  const label = value?.trim() ?? "";
+  if (label === "RC") return "철콘";
+  if (label === "SRC") return "철골철콘";
+  return label;
+}
+
 /** 용도지역 제3종…(기준 대비) → 제3종… */
 export function shortDisplayLabel(label: string): string {
   let s = label.trim();
   s = s.replace(/\s*\(기준\s*대비\)\s*$/i, "");
   s = s.replace(/\s*\(최다\s*반기\s*대비\)\s*$/i, "");
   const prefixes = ["거래시점 ", "용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "];
+  let structure = false;
   for (const p of prefixes) {
     if (s.startsWith(p) && s.length > p.length) {
+      structure = p === "구조 ";
       s = s.slice(p.length).trim();
       break;
     }
   }
+  if (structure) s = structureGroupLabel(s);
   if (s.startsWith("층 ") && s.length > 2) {
     s = s.slice(2).trim();
   }

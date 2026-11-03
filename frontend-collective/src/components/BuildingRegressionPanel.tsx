@@ -44,7 +44,7 @@ import { buildCollectiveRegressionContext } from "../api/aiContext";
 import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
 import CollectiveModelRecommend from "./CollectiveModelRecommend";
 import type { FloorMode } from "../utils/collectiveRegressionTypes";
-import { predictionErrorMessage } from "../utils/collectiveRegressionFormat";
+import { predictionErrorMessage, structureGroupLabel } from "../utils/collectiveRegressionFormat";
 
 const ATTRIBUTE_LABELS = { households: "총 세대수", parking_per_household: "세대당 주차", assessed_land_price: "개별공시지가" } as const;
 const ATTRIBUTE_HELP = {
@@ -359,7 +359,7 @@ function PredictPanel({
             >
               {opts.structure_groups!.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {structureGroupLabel(d)}
                   {d === opts.structure_reference ? " (기준)" : ""}
                 </option>
               ))}

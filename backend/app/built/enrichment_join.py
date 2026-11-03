@@ -117,6 +117,7 @@ def wrap_tx_enrichment(
                c.canon AS zone_type_filled,
                c.canon AS zone_type_first,
                e.structure_group,
+               e.approve_year,
                e.assessed_land_price,
                e.assessed_land_price_year,
                {RECOVERED_LOT_SQL} AS recovered_lot,

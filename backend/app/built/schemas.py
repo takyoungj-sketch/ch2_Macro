@@ -59,6 +59,7 @@ class BuiltTransactionRow(BaseModel):
     is_partial_ownership: bool = False
     partial_ownership_label: Optional[str] = None
     structure_group: Optional[str] = None
+    approve_year: Optional[int] = None
     assessed_land_price: Optional[int] = None
     assessed_land_price_year: Optional[int] = None
     recovered_lot: Optional[str] = None

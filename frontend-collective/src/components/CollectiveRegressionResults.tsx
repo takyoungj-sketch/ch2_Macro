@@ -17,6 +17,7 @@ import {
   fmtDecimal,
   isEquationSignificant,
   shortDisplayLabel,
+  structureGroupLabel,
   sigRowClass,
   sortCoefficientsByVariableOrder,
 } from "../utils/collectiveRegressionFormat";
@@ -202,7 +203,7 @@ function ReferenceCategories({
     refs.push(["권리/주택유형", options.housing_subtype_reference]);
   }
   if ("structure_reference" in options && options.structure_reference) {
-    refs.push(["구조", options.structure_reference]);
+    refs.push(["구조", structureGroupLabel(options.structure_reference)]);
   }
   if ("asset_type_reference" in options && options.asset_type_reference) {
     refs.push(["유형", options.asset_type_reference]);

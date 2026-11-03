@@ -3,8 +3,9 @@ import clsx from "clsx";
 import type { AssetType, BuiltTransactionRow } from "../types";
 import { isOnlyDetached, isUnifiedAsset } from "../utils/assetTypes";
 import {
+  APPROVE_YEAR_MARK,
   builtTxAdminCols,
-  builtTxBuildingYear,
+  builtTxDisplayedYear,
   builtTxLotHoverTitle,
   builtTxSortValue,
   formatBuiltTxCell,
@@ -14,7 +15,13 @@ import {
   type BuiltTxSortKey,
 } from "../utils/builtTxDisplay";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import { AllocationCells } from "./AllocationUi";
 import { assessedPriceYearInfo, TRANSACTION_ZONE_HELP, TRANSACTION_ASSESSED_PRICE_HELP } from "../utils/builtTransactionHelp";
+import {
+  allocationSortValue,
+  type BandMap,
+  type RowOverride,
+} from "../utils/allocationCost";
 
 const PAGE_SIZE = 25;
 
@@ -34,10 +41,9 @@ const ASSET_LABELS: Record<string, string> = {
   detached: "단독",
 };
 
-function buildCols(assetType: AssetType, enrich: boolean): ColDef[] {
+function buildCols(assetType: AssetType, enrich: boolean, allocation: boolean): ColDef[] {
   const cols: ColDef[] = [
     { key: "contract_date", label: "계약일", filterType: "select" },
-    { key: "sido", label: "시도", filterType: "select" },
     { key: "sigungu", label: "시군구", filterType: "select" },
     { key: "gu_eup", label: "구·읍", filterType: "select" },
     { key: "dong_ri", label: "읍·면·동", filterType: "select" },
@@ -46,6 +52,9 @@ function buildCols(assetType: AssetType, enrich: boolean): ColDef[] {
     { key: "share", label: "지분", filterType: "select" },
     { key: "road_name", label: "도로명", filterType: "text", textPlaceholder: "검색" },
   ];
+  if (!allocation) {
+    cols.splice(1, 0, { key: "sido", label: "시도", filterType: "select" });
+  }
   if (isUnifiedAsset(assetType)) {
     cols.unshift({ key: "asset_type", label: "유형", filterType: "select" });
   }
@@ -66,6 +75,13 @@ function buildCols(assetType: AssetType, enrich: boolean): ColDef[] {
     { key: "building_year", label: "건축연도", align: "right", filterType: "sort-only" },
     { key: "road_width", label: "도로조건", filterType: "select" },
   );
+  if (allocation) {
+    cols.push(
+      { key: "alloc_cost", label: "신축원가", align: "right", filterType: "sort-only" },
+      { key: "alloc_life", label: "내용연수", align: "right", filterType: "sort-only" },
+      { key: "alloc_land", label: "토지 배분단가", align: "right", filterType: "sort-only" },
+    );
+  }
   return cols;
 }
 
@@ -240,13 +256,28 @@ export default function BuiltTransactionTable({
   assetType,
   truncated,
   enrich = false,
+  allocation = false,
+  bands,
+  rowOverrides,
+  onOpenAllocation,
+  activeRowId = null,
+  externalSelectFilters,
+  externalFilterToken = 0,
 }: {
   items: BuiltTransactionRow[];
   assetType: AssetType;
   truncated?: boolean;
   enrich?: boolean;
+  allocation?: boolean;
+  bands?: BandMap;
+  rowOverrides?: Record<number, RowOverride>;
+  onOpenAllocation?: (id: number) => void;
+  activeRowId?: number | null;
+  externalSelectFilters?: Partial<Record<BuiltTxSortKey, Set<string>>>;
+  /** 값이 바뀌면 externalSelectFilters를 목록 필터에 적용한다. */
+  externalFilterToken?: number;
 }) {
-  const COLS = useMemo(() => buildCols(assetType, enrich), [assetType, enrich]);
+  const COLS = useMemo(() => buildCols(assetType, enrich, allocation), [assetType, enrich, allocation]);
   const SELECT_COLS = useMemo(() => COLS.filter((c) => c.filterType === "select"), [COLS]);
   const TEXT_COLS = useMemo(() => COLS.filter((c) => c.filterType === "text"), [COLS]);
 
@@ -265,6 +296,18 @@ export default function BuiltTransactionTable({
     setSortKey("contract_date");
     setSortDir("desc");
   }, [items, assetType]);
+
+  useEffect(() => {
+    if (!externalFilterToken) return;
+    setSelectFilters(
+      externalSelectFilters
+        ? Object.fromEntries(Object.entries(externalSelectFilters).map(([key, value]) => [key, new Set(value)]))
+        : {},
+    );
+    setTextFilters({});
+    setPage(1);
+    setOpenFilterCol(null);
+  }, [externalFilterToken, externalSelectFilters]);
 
   useEffect(() => {
     if (!openFilterCol) return;
@@ -318,11 +361,18 @@ export default function BuiltTransactionTable({
       });
     }
 
-    rows.sort((a, b) =>
-      compareValues(builtTxSortValue(a, sortKey), builtTxSortValue(b, sortKey), sortDir),
-    );
+    const sortOf = (row: BuiltTransactionRow) => {
+      if (
+        bands &&
+        (sortKey === "alloc_cost" || sortKey === "alloc_life" || sortKey === "alloc_land")
+      ) {
+        return allocationSortValue(row, bands, rowOverrides?.[row.id], sortKey);
+      }
+      return builtTxSortValue(row, sortKey);
+    };
+    rows.sort((a, b) => compareValues(sortOf(a), sortOf(b), sortDir));
     return rows;
-  }, [items, SELECT_COLS, TEXT_COLS, selectFilters, textFilters, sortKey, sortDir]);
+  }, [items, SELECT_COLS, TEXT_COLS, selectFilters, textFilters, sortKey, sortDir, bands, rowOverrides]);
 
   const totalPages = Math.max(1, Math.ceil(processed.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -336,7 +386,12 @@ export default function BuiltTransactionTable({
     } else {
       setSortKey(key);
       setSortDir(
-        key === "contract_date" || key === "price" || key === "gross_area" || key === "land_area"
+        key === "contract_date" ||
+          key === "price" ||
+          key === "gross_area" ||
+          key === "land_area" ||
+          key === "alloc_cost" ||
+          key === "alloc_land"
           ? "desc"
           : "asc",
       );
@@ -412,7 +467,7 @@ export default function BuiltTransactionTable({
       </div>
 
       <div className="modal-table-wrap flex-1 min-h-[280px] overflow-x-auto overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-700">
-        <table className="w-full text-[11px] border-collapse min-w-[1100px] modal-inner-table">
+        <table className={clsx("w-full text-[11px] border-collapse modal-inner-table", allocation ? "min-w-[1280px]" : "min-w-[1100px]")}>
           <thead className="sticky top-0 z-10">
             <tr className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
               {COLS.map((col) => {
@@ -420,7 +475,15 @@ export default function BuiltTransactionTable({
                 return (
                   <th
                     key={col.key}
-                    style={col.key === "lot" ? { width: "2.25rem", maxWidth: "2.25rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" } : undefined}
+                    style={
+                      col.key === "lot"
+                        ? { width: "2.25rem", maxWidth: "2.25rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" }
+                        : col.key === "road_name"
+                          ? { width: "6.5rem", maxWidth: "6.5rem", minWidth: "6.5rem" }
+                          : col.key === "assessed_land_price"
+                            ? { width: "8.5rem", maxWidth: "8.5rem", minWidth: "8.5rem" }
+                            : undefined
+                    }
                     className={clsx(
                       "border px-1.5 py-1 font-medium align-top",
                       col.align === "right" ? "text-right" : "text-left",
@@ -434,7 +497,15 @@ export default function BuiltTransactionTable({
                         "flex items-center gap-0.5 w-full hover:text-slate-900 dark:hover:text-slate-100",
                         col.align === "right" ? "justify-end" : "justify-start",
                       )}
-                      title="클릭: 정렬"
+                      title={
+                        col.key === "alloc_cost"
+                          ? "만원/㎡. 클릭하면 정렬"
+                          : col.key === "alloc_life"
+                            ? "년. 클릭하면 정렬"
+                            : col.key === "alloc_land"
+                              ? "만원/㎡. 낮은 단가부터 높은 단가. 클릭하면 정렬"
+                              : "클릭: 정렬"
+                      }
                     >
                       <span>{col.label}</span>
                       {sortKey === col.key && (
@@ -575,10 +646,16 @@ export default function BuiltTransactionTable({
             ) : (
               pageRows.map((r) => {
                 const admin = builtTxAdminCols(r);
-                const byear = builtTxBuildingYear(r);
+                const shownYear = builtTxDisplayedYear(r);
                 const priceYearInfo = assessedPriceYearInfo(r);
                 return (
-                  <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                  <tr
+                    key={r.id}
+                    className={clsx(
+                      "hover:bg-slate-50/50 dark:hover:bg-slate-800/40",
+                      r.id === activeRowId && "bg-sky-200/90 hover:bg-sky-200/90 dark:bg-sky-800/60 dark:hover:bg-sky-800/60",
+                    )}
+                  >
                     {showAssetCol && (
                       <td className="border px-2 py-1 whitespace-nowrap">
                         {ASSET_LABELS[r.asset_type] ?? r.asset_type}
@@ -587,9 +664,11 @@ export default function BuiltTransactionTable({
                     <td className="border px-2 py-1 tabular-nums whitespace-nowrap">
                       {formatBuiltTxContractDate(r)}
                     </td>
-                    <td className="border px-2 py-1 max-w-[72px] truncate" title={admin.sido ?? undefined}>
-                      {formatBuiltTxCell(admin.sido)}
-                    </td>
+                    {!allocation && (
+                      <td className="border px-2 py-1 max-w-[72px] truncate" title={admin.sido ?? undefined}>
+                        {formatBuiltTxCell(admin.sido)}
+                      </td>
+                    )}
                     <td className="border px-2 py-1 max-w-[88px] truncate" title={admin.sigungu ?? undefined}>
                       {formatBuiltTxCell(admin.sigungu)}
                     </td>
@@ -613,7 +692,7 @@ export default function BuiltTransactionTable({
                     <td className="border px-2 py-1 whitespace-nowrap">
                       {r.is_partial_ownership ? "지분" : "—"}
                     </td>
-                    <td className="border px-2 py-1 max-w-[9rem] truncate" title={r.road_name ?? undefined}>
+                    <td className="border px-2 py-1 w-[6.5rem] max-w-[6.5rem] truncate" title={r.road_name ?? undefined}>
                       {formatBuiltTxCell(r.road_name)}
                     </td>
                     <td className="border px-2 py-1 whitespace-nowrap">
@@ -640,7 +719,7 @@ export default function BuiltTransactionTable({
                       </td>
                     )}
                     {enrich && (
-                      <td className="border px-2 py-1 text-right tabular-nums whitespace-nowrap" title={r.assessed_land_price == null ? undefined : priceYearInfo.title}>
+                      <td className="border px-2 py-1 w-[8.5rem] max-w-[8.5rem] text-right tabular-nums truncate" title={r.assessed_land_price == null ? undefined : priceYearInfo.title}>
                         {r.assessed_land_price == null
                           ? "—"
                           : `${fmtNum(r.assessed_land_price)}${priceYearInfo.suffix}`}
@@ -649,10 +728,30 @@ export default function BuiltTransactionTable({
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.price)}</td>
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.gross_area, 1)}</td>
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.land_area, 1)}</td>
-                    <td className="border px-2 py-1 text-right tabular-nums">{byear ?? "—"}</td>
+                    <td className="border px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                      {shownYear.year ?? "—"}
+                      {shownYear.substituted && (
+                        <span
+                          className="ml-0.5 cursor-help text-slate-500 dark:text-slate-300"
+                          title={APPROVE_YEAR_MARK}
+                          role="img"
+                          aria-label={APPROVE_YEAR_MARK}
+                        >
+                          †
+                        </span>
+                      )}
+                    </td>
                     <td className="border px-2 py-1 max-w-[8rem] truncate" title={r.road_width_label ?? undefined}>
                       {formatBuiltTxCell(r.road_width_label)}
                     </td>
+                    {allocation && bands && (
+                      <AllocationCells
+                        row={r}
+                        bands={bands}
+                        override={rowOverrides?.[r.id]}
+                        onOpen={(id) => onOpenAllocation?.(id)}
+                      />
+                    )}
                   </tr>
                 );
               })

@@ -5,6 +5,8 @@ from __future__ import annotations
 import math
 from typing import Literal, Sequence
 
+from app.structure_labels import structure_display
+
 ModelType = Literal["log", "linear"]
 
 EQUATION_SIG_P = 0.1
@@ -169,10 +171,14 @@ def short_display_label(label: str) -> str:
     for suffix in (" (최다 반기 대비)", "(최다 반기 대비)"):
         if s.endswith(suffix):
             s = s[: -len(suffix)].strip()
+    structure = False
     for prefix in ("거래시점 ", "용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "):
         if s.startswith(prefix) and len(s) > len(prefix):
+            structure = prefix == "구조 "
             s = s[len(prefix):].strip()
             break
+    if structure:
+        s = structure_display(s)
     if s.startswith("층 ") and len(s) > 2:
         s = s[2:].strip()
     return s or label

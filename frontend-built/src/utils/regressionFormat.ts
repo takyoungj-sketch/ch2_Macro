@@ -1,4 +1,5 @@
 import type { AssetType, PredictOptions, RegressionCoeff, ResponseScale } from "../types";
+import { structureGroupLabel } from "./builtTxDisplay";
 
 const COEF_LABELS: Record<string, string> = {
   const: "절편",
@@ -32,7 +33,7 @@ export function dummyReferenceRows(
   const items: Array<[string, string, string | null | undefined, (v: string) => string]> = [
     ["zone", "용도지역", opts.zone_reference, (v) => v],
     ["use", useKind, opts.building_use_reference, (v) => v],
-    ["struct", "구조", opts.structure_reference, (v) => v],
+    ["struct", "구조", opts.structure_reference, structureGroupLabel],
     ["road", "도로조건", opts.road_width_reference, (v) => v],
     ["atype", "유형", opts.asset_type_reference, formatAssetTypeLabel],
     ["loc", "지역", opts.region_reference, (v) => v],
@@ -49,7 +50,9 @@ function dummyReferenceDisplay(name: string, opts?: PredictOptions | null): stri
   if (!opts) return null;
   if (name.startsWith("zone_")) return opts.zone_reference ?? null;
   if (name.startsWith("use_")) return opts.building_use_reference ?? null;
-  if (name.startsWith("struct_")) return opts.structure_reference ?? null;
+  if (name.startsWith("struct_")) {
+    return opts.structure_reference ? structureGroupLabel(opts.structure_reference) : null;
+  }
   if (name.startsWith("road_")) return opts.road_width_reference ?? null;
   if (name.startsWith("atype_")) {
     return opts.asset_type_reference ? formatAssetTypeLabel(opts.asset_type_reference) : null;
@@ -78,7 +81,7 @@ export function formatCoefName(name: string, assetType?: AssetType, responseScal
     const prefix = assetType === "detached" ? "주택유형" : "건축물용도";
     return `${prefix}·${name.slice(4)}`;
   }
-  if (name.startsWith("struct_")) return `구조·${name.slice(7)}`;
+  if (name.startsWith("struct_")) return `구조·${structureGroupLabel(name.slice(7))}`;
   if (name.startsWith("road_")) return `도로조건·${name.slice(5)}`;
   if (name.startsWith("atype_")) {
     const key = name.slice(6);
@@ -100,7 +103,7 @@ export function shortCoefName(name: string, assetType?: AssetType, responseScale
   }
   if (name.startsWith("zone_")) return name.slice(5);
   if (name.startsWith("use_")) return name.slice(4);
-  if (name.startsWith("struct_")) return name.slice(7);
+  if (name.startsWith("struct_")) return structureGroupLabel(name.slice(7));
   if (name.startsWith("road_")) return name.slice(5);
   if (name.startsWith("atype_")) {
     const key = name.slice(6);

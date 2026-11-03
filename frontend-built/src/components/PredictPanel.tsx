@@ -18,6 +18,7 @@ import { buildBuiltPredictionContext } from "../api/aiClient";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { predictRegression } from "../api/client";
 import { isOnlyDetached } from "../utils/assetTypes";
+import { structureGroupLabel } from "../utils/builtTxDisplay";
 import { BUILT_PREDICTION_HELP } from "../utils/builtAnalysisHelp";
 import {
   assessmentForName,
@@ -422,7 +423,7 @@ export default function PredictPanel({
             >
               {(opts?.structure_groups ?? []).map((u) => (
                 <option key={u} value={u}>
-                  {u}
+                  {structureGroupLabel(u)}
                   {u === opts?.structure_reference ? " (기준)" : ""}
                 </option>
               ))}

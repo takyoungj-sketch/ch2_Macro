@@ -1,12 +1,27 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import clsx from "clsx";
 import {
   downloadBuiltTransactionsCsv,
   fetchAllBuiltTransactions,
   type TransactionQueryParams,
 } from "../api/client";
-import type { AssetType } from "../types";
+import type { AssetType, BuiltTransactionRow } from "../types";
+import { isOnlyDetached, isUnifiedAsset } from "../utils/assetTypes";
+import type { BuiltTxDrillDownFilters } from "../utils/builtTxAggregate";
+import {
+  defaultBands,
+  type BandMap,
+  type RowOverride,
+} from "../utils/allocationCost";
+import {
+  TRANSACTION_AGGREGATE_HELP,
+  TRANSACTION_CSV_HELP,
+} from "../utils/builtTransactionHelp";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import BuiltTransactionAggregate from "./BuiltTransactionAggregate";
 import BuiltTransactionTable from "./BuiltTransactionTable";
+import { AllocationDetailDialog, AllocationReferenceDialog } from "./AllocationUi";
 import DraggableModalShell from "./DraggableModalShell";
 
 async function txExportErrorMessage(err: unknown): Promise<string> {
@@ -50,9 +65,25 @@ export default function BuiltTransactionListModal({
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [defaultSize] = useState(defaultTxModalSize);
+  const [allocation, setAllocation] = useState(false);
+  const [bands, setBands] = useState<BandMap>(() => defaultBands());
+  const [rowOverrides, setRowOverrides] = useState<Record<number, RowOverride>>({});
+  const [refOpen, setRefOpen] = useState(false);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [txView, setTxView] = useState<"list" | "aggregate">("list");
+  const [externalFilters, setExternalFilters] = useState<BuiltTxDrillDownFilters | undefined>(undefined);
+  const [externalToken, setExternalToken] = useState(0);
 
   useEffect(() => {
     if (open) setExportError(null);
+    if (!open) {
+      setAllocation(false);
+      setRefOpen(false);
+      setDetailId(null);
+      setTxView("list");
+      setBands(defaultBands());
+      setRowOverrides({});
+    }
   }, [open, exportParams]);
 
   const txQ = useQuery({
@@ -64,6 +95,22 @@ export default function BuiltTransactionListModal({
   const total = txQ.data?.total ?? 0;
   const items = txQ.data?.items ?? [];
   const truncated = txQ.data?.truncated ?? false;
+
+  const detailRow: BuiltTransactionRow | null =
+    detailId == null ? null : items.find((row) => row.id === detailId) ?? null;
+
+  const patchOverride = (id: number, patch: RowOverride) => {
+    setRowOverrides((prev) => {
+      const next = { ...prev, [id]: { ...prev[id] } };
+      (Object.keys(patch) as (keyof RowOverride)[]).forEach((key) => {
+        const value = patch[key];
+        if (value == null) delete next[id][key];
+        else next[id][key] = value;
+      });
+      if (Object.keys(next[id]).length === 0) delete next[id];
+      return next;
+    });
+  };
 
   const handleExport = async () => {
     setExportLoading(true);
@@ -110,24 +157,109 @@ export default function BuiltTransactionListModal({
                   </span>
                 )}
               </p>
-              <button
-                type="button"
-                disabled={exportLoading || total === 0}
-                onClick={() => void handleExport()}
-                className="shrink-0 px-2.5 py-1 rounded border border-slate-200 text-[11px] font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {exportLoading ? "보내는 중…" : "CSV보내기"}
-              </button>
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                {items.length > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <div
+                      className="inline-flex rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-0.5"
+                      role="tablist"
+                      aria-label="거래 보기"
+                    >
+                      {(
+                        [
+                          ["list", "목록"],
+                          ["aggregate", "집계"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          role="tab"
+                          aria-selected={txView === id}
+                          className={clsx(
+                            "px-2 py-0.5 text-[11px] rounded transition-colors",
+                            txView === id
+                              ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm font-medium"
+                              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200",
+                          )}
+                          onClick={() => setTxView(id)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <AnalysisHelpPanel explain={TRANSACTION_AGGREGATE_HELP} title="거래목록 집계 설명" />
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={refOpen}
+                    onClick={() => {
+                      setDetailId(null);
+                      setRefOpen(true);
+                    }}
+                    className={clsx(
+                      "shrink-0 px-2.5 py-1 rounded border text-[11px] font-medium whitespace-nowrap",
+                      allocation
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-slate-200 text-slate-700 bg-white hover:bg-slate-50",
+                    )}
+                  >
+                    간이 토지배분단가
+                  </button>
+                </span>
+                <span className="inline-flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    disabled={exportLoading || total === 0}
+                    onClick={() => void handleExport()}
+                    className="shrink-0 px-2.5 py-1 rounded border border-slate-200 text-[11px] font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {exportLoading ? "보내는 중…" : "CSV보내기"}
+                  </button>
+                  <AnalysisHelpPanel explain={TRANSACTION_CSV_HELP} title="CSV보내기 설명" />
+                </span>
+              </div>
             </div>
+            {allocation && (
+              <p className="text-[11px] text-slate-500 leading-4">
+                토지 배분단가는 원가 가정에 따라 계산한 참고값입니다. 목록의 원가·내용연수·배분단가를 누르면 거래별로 조정할 수 있습니다. 설명과 원가표는 ‘간이 토지배분단가’ 버튼에서 다시 확인하세요.
+              </p>
+            )}
             {exportError && <p className="text-[11px] text-red-600 shrink-0">{exportError}</p>}
             {items.length > 0 ? (
               <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                <BuiltTransactionTable
-                  items={items}
-                  assetType={assetType}
-                  truncated={truncated}
-                  enrich={Boolean(exportParams.enrich)}
-                />
+                {txView === "aggregate" ? (
+                  <BuiltTransactionAggregate
+                    items={items}
+                    total={total}
+                    truncated={truncated}
+                    showStructure={Boolean(exportParams.enrich)}
+                    showAsset={isUnifiedAsset(assetType)}
+                    useLabel={isOnlyDetached(assetType) ? "주택유형" : "건축물용도"}
+                    onDrillDown={(filters) => {
+                      setExternalFilters(filters);
+                      setExternalToken((token) => token + 1);
+                      setTxView("list");
+                    }}
+                  />
+                ) : (
+                  <BuiltTransactionTable
+                    items={items}
+                    assetType={assetType}
+                    truncated={truncated}
+                    enrich={Boolean(exportParams.enrich)}
+                    allocation={allocation}
+                    bands={bands}
+                    rowOverrides={rowOverrides}
+                    onOpenAllocation={setDetailId}
+                    activeRowId={detailId}
+                    externalSelectFilters={externalFilters}
+                    externalFilterToken={externalToken}
+                  />
+                )}
               </div>
             ) : (
               <p className="text-xs text-slate-400 text-center py-6">조건에 맞는 거래가 없습니다.</p>
@@ -135,6 +267,31 @@ export default function BuiltTransactionListModal({
           </>
         )}
       </div>
+      <AllocationReferenceDialog
+        open={refOpen}
+        bands={bands}
+        onConfirm={(nextBands, showAllocation) => {
+          setBands(nextBands);
+          setAllocation(showAllocation);
+          if (showAllocation) setTxView("list");
+          setRefOpen(false);
+        }}
+        onClose={() => setRefOpen(false)}
+      />
+      <AllocationDetailDialog
+        row={detailRow}
+        bands={bands}
+        override={detailId == null ? undefined : rowOverrides[detailId]}
+        onOverride={patchOverride}
+        onClear={(id) => {
+          setRowOverrides((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+        }}
+        onClose={() => setDetailId(null)}
+      />
     </DraggableModalShell>
   );
 }

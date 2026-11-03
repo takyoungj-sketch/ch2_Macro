@@ -38,8 +38,8 @@ LOCATION_TERMS = frozenset({"eup_population", "rent_jeonse_p50", "land_p50_zone"
 MACRO_TERMS = frozenset({"sigungu_population", "sigungu_land_p50", "sigungu_rent_p50"})
 
 STRUCTURE_LABELS: dict[str, str] = {
-    "RC": "RC",
-    "SRC": "SRC",
+    "RC": "철콘",
+    "SRC": "철골철콘",
     "STEEL": "철골",
     "OTHER": "기타구조",
 }
