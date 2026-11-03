@@ -423,7 +423,7 @@ export default function DraggableModalShell({
         style={panelStyle}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-col min-h-0 w-full overflow-hidden">
+        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <div
           className={`${
             minimized

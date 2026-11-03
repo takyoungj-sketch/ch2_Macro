@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import type { BuiltTransactionRow } from "../types";
+import { formatMan, type BandMap, type RowOverride } from "../utils/allocationCost";
 import {
   aggregateBuiltTransactions,
   aggregateBuiltTransactionsCross,
+  allocationAggregateEnds,
   BUILT_TX_AGGREGATE_DIMENSIONS,
   buildBuiltTxDrillDownFilters,
   builtTxAggregateDimensionLabel,
   builtTxAggregateValue,
   crossCellKey,
   type BuiltTxAggregateDimension,
+  type BuiltTxAllocRange,
   type BuiltTxDrillDownFilters,
   type BuiltTxPriceStats,
 } from "../utils/builtTxAggregate";
@@ -21,6 +24,9 @@ type Props = {
   showStructure: boolean;
   showAsset: boolean;
   useLabel: string;
+  allocation?: boolean;
+  bands?: BandMap;
+  rowOverrides?: Record<number, RowOverride>;
   onDrillDown: (filters: BuiltTxDrillDownFilters) => void;
 };
 
@@ -31,7 +37,22 @@ function formatPrice(v: number | null): string {
   return v.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
-function PricePair({ stats }: { stats: BuiltTxPriceStats }) {
+function formatAllocRange(low: number | null | undefined, high: number | null | undefined): string {
+  if (low == null || high == null || !Number.isFinite(low) || !Number.isFinite(high)) return "—";
+  const a = formatMan(low);
+  const b = formatMan(high);
+  if (a === "부적합" || b === "부적합") return "—";
+  return a === b ? a : `${a}~${b}`;
+}
+
+function allocTitle(alloc: BuiltTxAllocRange | undefined, kind: "중앙" | "평균"): string {
+  if (!alloc || alloc.n === 0) return "산정된 거래가 없습니다";
+  const mid = kind === "중앙" ? alloc.midMedian : alloc.midMean;
+  const basis = mid == null ? "" : `기준 ${kind} ${formatMan(mid)}만원/㎡ · `;
+  return `${basis}산정 ${alloc.n.toLocaleString("ko-KR")}건 · 하한끼리·상한끼리의 ${kind}`;
+}
+
+function PricePair({ stats, showAlloc }: { stats: BuiltTxPriceStats; showAlloc: boolean }) {
   if (stats.count === 0) return <span className="text-slate-300 dark:text-slate-600">—</span>;
   return (
     <div className="leading-tight">
@@ -39,6 +60,14 @@ function PricePair({ stats }: { stats: BuiltTxPriceStats }) {
       <div className="tabular-nums text-[10px] text-blue-700 dark:text-blue-300" title="중앙 단가 대지 · 연면적 (만원/㎡)">
         {formatPrice(stats.landMedian)} · {formatPrice(stats.grossMedian)}
       </div>
+      {showAlloc && (
+        <div
+          className="tabular-nums text-[10px] text-amber-800 dark:text-amber-300"
+          title={allocTitle(stats.alloc, "중앙")}
+        >
+          배분 {formatAllocRange(stats.alloc?.lowMedian, stats.alloc?.highMedian)}
+        </div>
+      )}
     </div>
   );
 }
@@ -50,6 +79,9 @@ export default function BuiltTransactionAggregate({
   showStructure,
   showAsset,
   useLabel,
+  allocation = false,
+  bands,
+  rowOverrides,
   onDrillDown,
 }: Props) {
   const options = useMemo(
@@ -106,10 +138,18 @@ export default function BuiltTransactionAggregate({
     }
   }, [colDim, dimension, items, options, rowDim]);
 
-  const rows = useMemo(() => aggregateBuiltTransactions(items, dimension), [dimension, items]);
+  const allocOf = useMemo(() => {
+    if (!allocation || !bands) return undefined;
+    return (row: BuiltTransactionRow) => allocationAggregateEnds(row, bands, rowOverrides?.[row.id]);
+  }, [allocation, bands, rowOverrides]);
+
+  const rows = useMemo(
+    () => aggregateBuiltTransactions(items, dimension, allocOf),
+    [allocOf, dimension, items],
+  );
   const crossTab = useMemo(
-    () => aggregateBuiltTransactionsCross(items, rowDim, colDim),
-    [colDim, items, rowDim],
+    () => aggregateBuiltTransactionsCross(items, rowDim, colDim, allocOf),
+    [allocOf, colDim, items, rowDim],
   );
 
   const drill = (parts: { dimension: BuiltTxAggregateDimension; value: string }[]) => {
@@ -255,7 +295,7 @@ export default function BuiltTransactionAggregate({
 
       {mode === "single" ? (
         <div className="flex-1 min-h-[280px] overflow-auto rounded-lg border border-slate-100 dark:border-slate-700">
-          <table className="w-full text-[11px] border-collapse min-w-[640px]">
+          <table className={clsx("w-full text-[11px] border-collapse", allocation ? "min-w-[860px]" : "min-w-[640px]")}>
             <thead className="sticky top-0 z-10">
               <tr className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                 <th className="text-left px-2 py-1.5">{builtTxAggregateDimensionLabel(dimension, useLabel)}</th>
@@ -264,12 +304,28 @@ export default function BuiltTransactionAggregate({
                 <th className="text-right px-2 py-1.5" title="금액 ÷ 대지면적, 만원/㎡">대지 평균</th>
                 <th className="text-right px-2 py-1.5" title="금액 ÷ 연면적, 만원/㎡">연면적 중앙</th>
                 <th className="text-right px-2 py-1.5" title="금액 ÷ 연면적, 만원/㎡">연면적 평균</th>
+                {allocation && (
+                  <>
+                    <th
+                      className="text-right px-2 py-1.5"
+                      title="신축원가 하한·상한으로 계산한 토지 배분단가를 각각 모아 중앙. 만원/㎡. 기준은 칸에 마우스를 올리면 표시."
+                    >
+                      배분단가 중앙
+                    </th>
+                    <th
+                      className="text-right px-2 py-1.5"
+                      title="신축원가 하한·상한으로 계산한 토지 배분단가를 각각 모아 평균. 만원/㎡."
+                    >
+                      배분단가 평균
+                    </th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-slate-400 py-6">
+                  <td colSpan={allocation ? 8 : 6} className="text-center text-slate-400 py-6">
                     집계할 거래가 없습니다.
                   </td>
                 </tr>
@@ -295,6 +351,22 @@ export default function BuiltTransactionAggregate({
                     <td className="px-2 py-1 text-right tabular-nums text-slate-600 dark:text-slate-300">
                       {formatPrice(row.grossMean)}
                     </td>
+                    {allocation && (
+                      <>
+                        <td
+                          className="px-2 py-1 text-right tabular-nums text-amber-800 dark:text-amber-300 font-semibold"
+                          title={allocTitle(row.alloc, "중앙")}
+                        >
+                          {formatAllocRange(row.alloc?.lowMedian, row.alloc?.highMedian)}
+                        </td>
+                        <td
+                          className="px-2 py-1 text-right tabular-nums text-amber-800/80 dark:text-amber-300/80"
+                          title={allocTitle(row.alloc, "평균")}
+                        >
+                          {formatAllocRange(row.alloc?.lowMean, row.alloc?.highMean)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))
               )}
@@ -360,12 +432,12 @@ export default function BuiltTransactionAggregate({
                             ]);
                           }}
                         >
-                          <PricePair stats={cell} />
+                          <PricePair stats={cell} showAlloc={allocation} />
                         </td>
                       );
                     })}
                     <td className="px-1.5 py-1 text-center bg-slate-50/50 dark:bg-slate-800/40 align-middle">
-                      <PricePair stats={crossTab.rowTotals[row] ?? emptyStats} />
+                      <PricePair stats={crossTab.rowTotals[row] ?? emptyStats} showAlloc={allocation} />
                     </td>
                   </tr>
                 ))}
@@ -378,6 +450,9 @@ export default function BuiltTransactionAggregate({
       <p className="text-[10px] text-slate-400">
         단가 만원/㎡ · 대지는 금액÷대지면적, 연면적은 금액÷연면적
         {mode === "cross" ? " · 칸 아래 숫자는 중앙값(대지 · 연면적)" : ""}
+        {allocation
+          ? " · 배분단가 범위는 산정된 거래만 모읍니다. 하한끼리, 상한끼리의 중앙값과 평균이며 목록의 한 줄 범위와 같은 뜻입니다. 음수도 포함합니다. 원가표나 행 수정을 바꾸면 집계도 같이 바뀝니다."
+          : ""}
         {" · "}
         {mode === "single" ? "행을 누르면 목록이 그 구간만 보여 줍니다." : "칸은 행과 열, 머리글은 한 축만 목록으로 좁힙니다."}
       </p>

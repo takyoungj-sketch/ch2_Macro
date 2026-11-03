@@ -1179,10 +1179,29 @@ export default function App() {
   const txModalSummary = useMemo(() => {
     const parts = [assetTypeLabel(assetType)];
     if (addr1) parts.push(addr1);
-    if (addr2) parts.push(formatScopeAddr2(addr2, addr1));
+    const sigungu = addr2 ? formatScopeAddr2(addr2, addr1) : "";
+    if (sigungu) parts.push(sigungu);
+    const addr4Mode = useAddr4Leaf || inferredGuList.length > 0;
+    if (addr4Mode && inferredGuList.length) parts.push(inferredGuList.join(", "));
+    if (leafList.length) parts.push(leafList.join(", "));
+    if (riList.length) parts.push(riList.map((p) => p.ri).join(", "));
+    const elsewhere = analysisUnits.filter((u) => u.crossParent).map(analysisUnitLabel);
+    if (elsewhere.length) parts.push(elsewhere.join(", "));
     if (!yearFilterActive && asOfMonth) parts.push(`롤링 ${windowYears}년 · ${asOfMonth}`);
     return parts.join(" · ");
-  }, [assetType, addr1, addr2, yearFilterActive, asOfMonth, windowYears]);
+  }, [
+    assetType,
+    addr1,
+    addr2,
+    useAddr4Leaf,
+    inferredGuList,
+    leafList,
+    riList,
+    analysisUnits,
+    yearFilterActive,
+    asOfMonth,
+    windowYears,
+  ]);
 
   return (
     <ActiveAiViewProvider fallback={emptyAiContext("built", "RegressionCard")}>

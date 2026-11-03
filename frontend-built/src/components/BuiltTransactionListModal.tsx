@@ -207,7 +207,7 @@ export default function BuiltTransactionListModal({
                         : "border-slate-200 text-slate-700 bg-white hover:bg-slate-50",
                     )}
                   >
-                    간이 토지배분단가
+                    간이 토지 배분단가
                   </button>
                 </span>
                 <span className="inline-flex items-center gap-0.5">
@@ -225,7 +225,7 @@ export default function BuiltTransactionListModal({
             </div>
             {allocation && (
               <p className="text-[11px] text-slate-500 leading-4">
-                토지 배분단가는 원가 가정에 따라 계산한 참고값입니다. 목록의 원가·내용연수·배분단가를 누르면 거래별로 조정할 수 있습니다. 설명과 원가표는 ‘간이 토지배분단가’ 버튼에서 다시 확인하세요.
+                토지 배분단가는 원가 가정에 따라 계산한 참고값입니다. 목록의 원가·내용연수·배분단가를 누르면 거래별로 조정할 수 있습니다. 설명과 원가표는 ‘간이 토지 배분단가’ 버튼에서 다시 확인하세요.
               </p>
             )}
             {exportError && <p className="text-[11px] text-red-600 shrink-0">{exportError}</p>}
@@ -239,6 +239,9 @@ export default function BuiltTransactionListModal({
                     showStructure={Boolean(exportParams.enrich)}
                     showAsset={isUnifiedAsset(assetType)}
                     useLabel={isOnlyDetached(assetType) ? "주택유형" : "건축물용도"}
+                    allocation={allocation}
+                    bands={bands}
+                    rowOverrides={rowOverrides}
                     onDrillDown={(filters) => {
                       setExternalFilters(filters);
                       setExternalToken((token) => token + 1);
@@ -270,6 +273,7 @@ export default function BuiltTransactionListModal({
       <AllocationReferenceDialog
         open={refOpen}
         bands={bands}
+        items={items}
         onConfirm={(nextBands, showAllocation) => {
           setBands(nextBands);
           setAllocation(showAllocation);
