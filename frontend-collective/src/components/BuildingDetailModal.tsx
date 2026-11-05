@@ -807,15 +807,15 @@ export default function BuildingDetailModal({
 
   const tabAiContext = useMemo(() => {
     const regionLabel = row.display_name;
-    const scope = { region_label: regionLabel, asset_type: assetType };
+    const scope = { region_label: regionLabel, asset_type: effectiveAssetType };
     if (panel === "trend") {
       if (trendCohortActive && cohortRollingQ.data) {
-        const context = buildCollectiveCohortRollingTrendContext(cohortRollingQ.data, { regionLabel, assetType });
+        const context = buildCollectiveCohortRollingTrendContext(cohortRollingQ.data, { regionLabel, assetType: effectiveAssetType });
         context.facts = { ...context.facts, trend_metric: rollMetric };
         return context;
       }
       if (!trendCohortActive && rollingQ.data && rollingQ.data.points.length > 0) {
-        const context = buildCollectiveRollingTrendContext(rollingQ.data, { regionLabel, assetType });
+        const context = buildCollectiveRollingTrendContext(rollingQ.data, { regionLabel, assetType: effectiveAssetType });
         context.facts = { ...context.facts, trend_metric: rollMetric };
         return context;
       }
@@ -840,14 +840,14 @@ export default function BuildingDetailModal({
         };
       }
       if (!longTermCohortActive && longTermYears.length > 0) {
-        const context = buildCollectiveYearlyTrendContext(longTermYears, { regionLabel, assetType });
+        const context = buildCollectiveYearlyTrendContext(longTermYears, { regionLabel, assetType: effectiveAssetType });
         context.facts = { ...context.facts, trend_metric: longTermMetric };
         return context;
       }
     }
     if (panel === "histogram") {
       const data = histCohortActive ? cohortHistQ.data : histQ.data;
-      if (data) return buildCollectiveHistogramContext(data, { regionLabel, assetType, cohort: histCohortActive });
+      if (data) return buildCollectiveHistogramContext(data, { regionLabel, assetType: effectiveAssetType, cohort: histCohortActive });
     }
     if (panel === "transactions" && activeTxQ.data) {
       return {
@@ -860,7 +860,7 @@ export default function BuildingDetailModal({
     }
     return null;
   }, [
-    panel, row.display_name, assetType, trendCohortActive, cohortRollingQ.data, rollMetric, rollingQ.data,
+    panel, row.display_name, effectiveAssetType, trendCohortActive, cohortRollingQ.data, rollMetric, rollingQ.data,
     longTermCohortActive, cohortLongTermQ.data, longTermMetric, longTermYears,
     histCohortActive, cohortHistQ.data, histQ.data, activeTxQ.data,
   ]);

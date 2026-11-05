@@ -345,7 +345,7 @@ export default function CommercialClusterDetailModal({
 
   const activeTxQ = txCohortActive ? cohortTxQ : txQ;
   const tabAiContext = useMemo(() => {
-    const regionLabel = row.display_label || row.road_name;
+    const regionLabel = row.display_label || row.road_name || "선택 도로";
     const scope = { region_label: regionLabel, asset_type: effectiveAssetType };
     const rowsOf = (points: { label: string; count: number; mean?: number | null; median?: number | null }[]) =>
       points.map((point) => ({
@@ -393,6 +393,7 @@ export default function CommercialClusterDetailModal({
       }
       if (!longTermCohortActive && longTermYearQ.data && longTermYearQ.data.points.length > 0) {
         const context = buildCommercialYearlyTrendContext(longTermYearQ.data.points, { regionLabel, assetType: effectiveAssetType });
+        context.panel = "LongTermTrendPanel";
         context.facts = { ...context.facts, trend_metric: longTermMetric };
         return context;
       }

@@ -4,6 +4,7 @@ import type {
   BuildingStatsRow,
   CollectiveRegressionResponse,
   CommercialFloorIndexResponse,
+  CommercialCohortHistogramResponse,
   CommercialHistogramResponse,
   CommercialRegressionResponse,
   CohortRegressionResponse,
@@ -473,7 +474,7 @@ export function buildCommercialYearlyTrendContext(
 }
 
 export function buildCommercialHistogramContext(
-  data: CommercialHistogramResponse,
+  data: CommercialHistogramResponse | CommercialCohortHistogramResponse,
   opts: {
     regionLabel: string;
     assetType: "collective_shop" | "collective_factory";
