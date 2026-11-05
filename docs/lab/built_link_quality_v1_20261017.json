@@ -389,7 +389,7 @@
       "partial": 93
     },
     {
-      "sido": NaN,
+      "sido": null,
       "asset_type": "commercial",
       "all_tx": 85,
       "invalid": 0,
@@ -397,7 +397,7 @@
       "partial": 10
     },
     {
-      "sido": NaN,
+      "sido": null,
       "asset_type": "detached",
       "all_tx": 445,
       "invalid": 0,
@@ -405,7 +405,7 @@
       "partial": 0
     },
     {
-      "sido": NaN,
+      "sido": null,
       "asset_type": "factory",
       "all_tx": 48,
       "invalid": 0,
