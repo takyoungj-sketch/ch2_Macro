@@ -25,7 +25,7 @@ type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResp
 
 function answerContextLabel(context: AiContextPayload): string {
   const app = { land: "토지", built: "복합", collective: "집합", rent: "임대", profile: "지역프로필", insight: "Insight" }[context.app];
-  const panel = { RegressionCard: "회귀분석", LandRegressionTab: "회귀분석", TrendCard: "추세", PredictionCard: "예측 결과", BuildingList: "건물 목록", FloorIndexPanel: "층·동·면적 효용지수", CommercialFloorIndexPanel: "층·면적 효용지수", BuildingRegressionPanel: "회귀 분석", CommercialRegressionPanel: "회귀 분석", RegionalRegressionModal: "지역회귀", SangkwonCard: "상권분석", ModelSelectionModal: "모형 탐색", ModelCompareModal: "모형 비교" }[context.panel] || "현재 분석 화면";
+  const panel = { RegressionCard: "회귀분석", RegressionScatterCard: "회귀분석", LandRegressionTab: "회귀분석", TrendCard: "추세", LongTermTrendPanel: "장기 추세", HistogramPanel: "단가 분포", TransactionsPanel: "거래목록", PredictionCard: "예측 결과", BuildingList: "건물 목록", CommercialList: "도로 목록", FloorIndexPanel: "층·동·면적 효용지수", CommercialFloorIndexPanel: "층·면적 효용지수", BuildingRegressionPanel: "회귀 분석", CommercialRegressionPanel: "회귀 분석", RegionalRegressionModal: "지역회귀", RentListCard: "임대", SangkwonCard: "상권분석", RegionalProfile: "지역프로필", ModelSelectionCard: "모형 탐색", RecommendationCard: "모형 추천", ModelSelectionModal: "모형 탐색", ModelCompareModal: "모형 비교" }[context.panel] || "현재 분석 화면";
   const filters = context.scope?.filters ?? {};
   const facts = (context.facts?.primary ?? context.facts) as Record<string, unknown>;
   const years = filters.window_years ?? facts?.window_years;

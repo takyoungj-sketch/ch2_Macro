@@ -4,6 +4,8 @@ import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { COLLECTIVE_EXPERIMENT_MODE } from "../api/client";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { buildCommercialHistogramContext, buildCommercialYearlyTrendContext } from "../api/aiContext";
 import {
   fetchAllCommercialCohortTransactions,
   fetchAllCommercialTransactions,
@@ -342,6 +344,75 @@ export default function CommercialClusterDetailModal({
   const txCohortActive = cohortRunForPanel("transactions") > 0;
 
   const activeTxQ = txCohortActive ? cohortTxQ : txQ;
+  const tabAiContext = useMemo(() => {
+    const regionLabel = row.display_label || row.road_name;
+    const scope = { region_label: regionLabel, asset_type: effectiveAssetType };
+    const rowsOf = (points: { label: string; count: number; mean?: number | null; median?: number | null }[]) =>
+      points.map((point) => ({
+        chart_label: point.label,
+        count: point.count,
+        mean_unit_price_per_sqm: point.mean,
+        median_unit_price_per_sqm: point.median ?? point.mean,
+      }));
+    if (panel === "trend") {
+      if (trendCohortActive && cohortRollingQ.data) {
+        return {
+          app: "collective" as const, panel: "TrendCard", purpose: "market_analysis" as const, scope,
+          facts: {
+            trend_metric: rollMetric, cohort: true,
+            series: cohortRollingQ.data.map((item) => ({
+              region_name: item.display_label,
+              points: item.points.map((point) => ({
+                year: point.label, count: point.count, mean: point.mean, median: point.median ?? point.mean,
+              })),
+            })),
+          },
+        };
+      }
+      if (!trendCohortActive && rollingQ.data && rollingQ.data.points.length > 0) {
+        return {
+          app: "collective" as const, panel: "TrendCard", purpose: "market_analysis" as const, scope,
+          facts: { trend_metric: rollMetric, rows: rowsOf(rollingQ.data.points), window_years: rollingQ.data.window_years },
+        };
+      }
+    }
+    if (panel === "long_term") {
+      if (longTermCohortActive && cohortLongTermQ.data) {
+        return {
+          app: "collective" as const, panel: "LongTermTrendPanel", purpose: "market_analysis" as const, scope,
+          facts: {
+            trend_metric: longTermMetric, cohort: true,
+            series: cohortLongTermQ.data.map((item) => ({
+              region_name: item.display_label,
+              points: item.points.map((point) => ({
+                year: point.year, count: point.count, mean: point.mean, median: point.median ?? point.mean,
+              })),
+            })),
+          },
+        };
+      }
+      if (!longTermCohortActive && longTermYearQ.data && longTermYearQ.data.points.length > 0) {
+        const context = buildCommercialYearlyTrendContext(longTermYearQ.data.points, { regionLabel, assetType: effectiveAssetType });
+        context.facts = { ...context.facts, trend_metric: longTermMetric };
+        return context;
+      }
+    }
+    if (panel === "histogram") {
+      const data = histCohortActive ? cohortHistQ.data : histQ.data;
+      if (data) return buildCommercialHistogramContext(data, { regionLabel, assetType: effectiveAssetType });
+    }
+    if (panel === "transactions" && activeTxQ.data) {
+      return {
+        app: "collective" as const, panel: "TransactionsPanel", purpose: "statistics" as const, scope,
+        facts: { total: activeTxQ.data.total, loaded: activeTxQ.data.items.length },
+      };
+    }
+    return null;
+  }, [
+    panel, row.display_label, row.road_name, effectiveAssetType, trendCohortActive, cohortRollingQ.data, rollMetric,
+    rollingQ.data, longTermCohortActive, cohortLongTermQ.data, longTermMetric, longTermYearQ.data,
+    histCohortActive, cohortHistQ.data, histQ.data, activeTxQ.data,
+  ]);
 
   useEffect(() => {
     setTxSubView("list");
@@ -501,6 +572,7 @@ export default function CommercialClusterDetailModal({
       minHeight={360}
       bodyClassName="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4"
     >
+          <PublishAiContext context={tabAiContext} />
           {panel === "trend" && (
             <>
               {trendCohortActive && cohortRollingQ.isLoading && (

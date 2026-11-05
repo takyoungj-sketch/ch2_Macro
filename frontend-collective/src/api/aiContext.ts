@@ -29,6 +29,7 @@ function rollingPointsToRows(points: RollingStatPoint[]) {
     count: p.count,
     mean: p.mean,
     mean_unit_price_per_sqm: p.mean,
+    median_unit_price_per_sqm: p.median ?? p.mean,
   }));
 }
 
@@ -38,6 +39,7 @@ function yearlyPointsToRows(points: YearlyStatPoint[]) {
     count: p.count,
     mean: p.mean,
     mean_unit_price_per_sqm: p.mean,
+    median_unit_price_per_sqm: p.median ?? p.mean,
   }));
 }
 
@@ -331,7 +333,7 @@ export function buildCollectiveCohortRollingTrendContext(
           year: p.label,
           count: p.count,
           mean: p.mean,
-          median: p.mean,
+          median: p.median ?? p.mean,
         })),
       })),
       trend_kind: "rolling",
@@ -361,6 +363,7 @@ export function buildCollectiveYearlyTrendContext(
     facts: {
       series: [
         {
+          region_name: opts.regionLabel,
           points: points.map((p) => ({
             year: p.year,
             count: p.count,

@@ -90,7 +90,7 @@ def _screen(ctx: AiContext) -> ScreenEvidence:
             result.context[key] = raw[key]
     if ctx.panel == "LandRegressionTab":
         _regression(result, raw)
-    elif ctx.panel == "TrendCard":
+    elif ctx.panel in ("TrendCard", "LongTermTrendPanel"):
         _trend(result, raw)
     elif ctx.panel == "LandPredict":
         for key, label in (("y_hat", "모형 추정 단가"), ("pi_lower", "예측구간 하한"),
@@ -98,18 +98,14 @@ def _screen(ctx: AiContext) -> ScreenEvidence:
                            ("ci_upper", "신뢰구간 상한")):
             result.number(label, raw.get(key), "만원/㎡")
         result.number("회귀 표본", raw.get("regression_n"), "건")
-    elif ctx.panel == "LandHistogram":
-        result.number("분포 표본", raw.get("n"), "건")
-        for key, label in (("min", "최소"), ("p25", "하위 사분위"), ("median", "중앙값"),
-                           ("p75", "상위 사분위"), ("max", "최대")):
-            result.number(f"단가 {label}", raw.get(f"{key}_unit_price_per_sqm"), "만원/㎡")
-        for row in _rows(raw.get("bins"))[:60]:
-            start, end = row.get("bin_from"), row.get("bin_to")
-            if isinstance(start, (int, float)) and isinstance(end, (int, float)):
-                result.number(f"{start:g}~{end:g}만원/㎡ 구간 거래", row.get("count"), "건")
-    elif ctx.panel == "LandTransactions":
+    elif ctx.panel in ("LandHistogram", "HistogramPanel"):
+        _histogram(result, raw)
+    elif ctx.panel in ("LandTransactions", "TransactionsPanel"):
         result.number("조건에 맞는 거래", raw.get("total"), "건")
-        result.number("화면에 불러온 거래", raw.get("loaded"), "건")
+        loaded = raw.get("loaded")
+        if loaded is None and isinstance(raw.get("items"), list):
+            loaded = len(raw["items"])
+        result.number("화면에 불러온 거래", loaded, "건")
         result.notes.append("개별 거래 행은 제공되지 않습니다.")
     elif ctx.panel == "PaidMatrixCell":
         result.number("전체 거래", raw.get("tx_count"), "건")
@@ -125,18 +121,35 @@ def _screen(ctx: AiContext) -> ScreenEvidence:
             "지금 화면은 한 단지의 거래 회귀다. 한 행은 거래이고 종속변수는 금액(만원)이다. "
             "지역회귀는 이 화면이 아니다. 지역회귀는 그 지역 단지를 한 행으로 두고 기간 중앙단가(만원/㎡)와 규모·연식의 연관을 본다."
         )
+        _trade_equation(result, raw, "금액(만원)")
     elif ctx.panel == "CommercialRegressionPanel":
         result.notes.append(
             "지금 화면은 한 도로명 cluster의 거래 회귀다. 한 행은 거래이고 종속변수는 금액이다. "
             "지역회귀는 이 화면이 아니다. 지역회귀는 주거 단지의 기간 중앙단가 모형이다."
         )
+        _trade_equation(result, raw, "금액(만원)")
     elif ctx.panel == "RegionalRegressionModal":
         result.notes.append(
             "지금 화면은 지역회귀다. 한 행은 단지이고 종속변수는 기간 중앙단가(만원/㎡)다. "
             "한 단지 거래의 금액 회귀와 섞지 않는다."
         )
+        _regional_regression(result, raw)
+    elif ctx.panel == "PredictionCard":
+        _prediction(result, raw, "만원")
+    elif ctx.panel == "RentListCard":
+        _rent_rates(result, raw)
+    elif ctx.panel == "SangkwonCard":
+        _sangkwon(result, raw)
+    elif ctx.panel == "RegionalProfile":
+        _profile(result, raw)
     elif ctx.panel in ("FloorIndexPanel", "CommercialFloorIndexPanel"):
         _floor_index(result, raw)
+    elif ctx.panel in ("RegressionCard", "RegressionScatterCard"):
+        _built_regression(result, raw)
+    elif ctx.panel == "RecommendationCard":
+        _recommendation(result, raw)
+    elif ctx.panel in ("ModelSelectionCard", "ModelSelectionModal", "ModelCompareModal"):
+        _model_selection(result, raw)
     if not result.facts:
         result.notes.append("이 화면의 숫자는 항목별로 전달되지 않았습니다. 없는 관측값은 만들지 않습니다.")
     return result
@@ -171,6 +184,75 @@ def _floor_index(result: ScreenEvidence, raw: dict) -> None:
         result.number(f"{label} 지수 하한", row.get("index_lo"))
         result.number(f"{label} 지수 상한", row.get("index_hi"))
         result.number(f"{label} p값", row.get("p_value"))
+
+
+def _built_term(name: str, scale: str) -> str:
+    labels = {"const": "절편", "gross_area": "연면적", "land_area": "대지면적", "building_age": "연식", "assessed_land_price": "개별공시지가"}
+    if name == "assessed_land_price" or (scale == "loglog" and name in ("gross_area", "land_area")):
+        return f"log({labels.get(name, name)})"
+    if name in labels:
+        return labels[name]
+    for prefix, kind in (("zone_", "용도지역"), ("use_", "건축물용도"), ("struct_", "구조"), ("road_", "도로조건"), ("atype_", "유형"), ("loc_", "지역")):
+        if name.startswith(prefix):
+            return f"{kind} {name[len(prefix):]}"
+    return name[:80]
+
+
+def _built_regression(result: ScreenEvidence, raw: dict) -> None:
+    primary = raw.get("primary") if isinstance(raw.get("primary"), dict) else raw
+    scale = raw.get("response_scale") if raw.get("response_scale") in ("linear", "log", "loglog") else "linear"
+    dependent = "금액(만원)" if scale == "linear" else "log(금액)"
+    scope = str(primary.get("scope_label") or "")[:80]
+    result.context["화면"] = "복합 회귀"
+    result.context["종속변수"] = dependent
+    result.notes.append(
+        f"화면에 {scope + ' ' if scope else ''}회귀식이 있다. 종속변수는 {dependent}이다. "
+        "식에는 절편과 p<0.1인 항만 표시된다. 추정금액은 표시되지 않은 항을 포함한 전체 적합 모형으로 계산된다."
+    )
+    result.number("적합 표본", primary.get("n"), "건")
+    result.number("R²", primary.get("r_squared"))
+    result.number("조정 R²", primary.get("adj_r_squared"))
+    result.number("학습 MAPE", primary.get("mape"), "%")
+    result.number("CV-MAPE", primary.get("cv_mape"), "%")
+    result.number("모형 F 검정 p값", primary.get("f_p_value"))
+    if isinstance(primary.get("warning"), str) and primary["warning"].strip():
+        result.notes.append(primary["warning"][:240])
+    options = primary.get("predict_options") if isinstance(primary.get("predict_options"), dict) else {}
+    for key, kind in (
+        ("zone_reference", "용도지역"), ("building_use_reference", "건축물용도"),
+        ("structure_reference", "구조"), ("road_width_reference", "도로조건"),
+        ("asset_type_reference", "유형"), ("region_reference", "지역"),
+    ):
+        value = options.get(key)
+        if isinstance(value, str) and value.strip():
+            result.notes.append(f"{kind} 기준 범주 {value[:100]}")
+            result.identifiers.append(value[:100])
+    for row in _rows(primary.get("coefficients"))[:80]:
+        name = str(row.get("name") or "")
+        if not name:
+            continue
+        p_value = row.get("p_value")
+        shown = name == "const" or (isinstance(p_value, (int, float)) and not isinstance(p_value, bool) and p_value < 0.1)
+        if not shown:
+            continue
+        term = _built_term(name, scale)
+        result.identifiers.append(term)
+        result.number(f"{term} 계수", row.get("estimate"))
+        result.number(f"{term} p값", p_value)
+    tab = raw.get("scatter_tab")
+    if tab == "partial":
+        for row in _rows(raw.get("partial_regressions"))[:20]:
+            label = str(row.get("label") or row.get("variable") or "변수")[:80]
+            result.number(f"{label} 부분회귀 기울기", row.get("beta"))
+            result.number(f"{label} 부분회귀 p값", row.get("p_value"))
+            result.number(f"{label} 부분 R²", row.get("partial_r_squared"))
+    elif tab == "raw":
+        for row in _rows(raw.get("correlations"))[:20]:
+            label = str(row.get("label") or row.get("variable") or "변수")[:80]
+            result.number(f"{label} 피어슨 상관", row.get("pearson_r"))
+    names = [str(row.get("scope_label"))[:40] for row in _rows(raw.get("comparisons"))[:6] if isinstance(row.get("scope_label"), str)]
+    if names:
+        result.notes.append("초점 외 비교 지역: " + ", ".join(names) + ".")
 
 
 def _regression(result: ScreenEvidence, raw: dict) -> None:
@@ -229,11 +311,346 @@ def _regression(result: ScreenEvidence, raw: dict) -> None:
         result.notes.extend(str(value)[:240] for value in raw["warnings"][:6])
 
 
+def _scale_name(scale: Any) -> str:
+    return {"linear": "선형", "log": "log(금액)", "loglog": "log-log"}.get(scale, "")
+
+
+def _block_line(blocks: Any) -> str:
+    labels = {
+        "gross_area": "연면적", "land_area": "대지면적", "building_age": "연식", "road_width": "도로조건",
+        "zone_type": "용도지역", "building_use": "건축물용도", "structure": "구조", "asset_type": "유형",
+        "region_leaf": "지역", "assessed_land_price": "개별공시지가",
+    }
+    if not isinstance(blocks, list) or not blocks:
+        return "절편만"
+    return " · ".join(labels.get(str(block), "추가 변수") for block in blocks[:12])
+
+
+def _confirm_mape(candidate: dict) -> Any:
+    report = candidate.get("cv_report")
+    confirm = report.get("confirm") if isinstance(report, dict) else None
+    return confirm.get("mape") if isinstance(confirm, dict) else None
+
+
+def _visible_equation(result: ScreenEvidence, candidate: dict, title: str) -> None:
+    rows = candidate.get("coefficients")
+    if not isinstance(rows, list) or not rows:
+        return
+    scale = candidate.get("response_scale") if candidate.get("response_scale") in ("linear", "log", "loglog") else "linear"
+    dependent = "금액(만원)" if scale == "linear" else "log(금액)"
+    result.notes.append(f"{title} 회귀식이 화면에 있다. 종속변수는 {dependent}이다. 식에는 절편과 p<0.1인 항만 표시된다.")
+    for row in _rows(rows)[:80]:
+        name = str(row.get("name") or "")
+        if not name:
+            continue
+        p_value = row.get("p_value") if row.get("p_value") is not None else row.get("p")
+        shown = name == "const" or (isinstance(p_value, (int, float)) and not isinstance(p_value, bool) and p_value < 0.1)
+        if not shown:
+            continue
+        term = _built_term(name, scale)
+        result.identifiers.append(term)
+        estimate = row.get("estimate") if row.get("estimate") is not None else row.get("coef")
+        result.number(f"{term} 계수", estimate)
+        result.number(f"{term} p값", p_value)
+
+
+def _recommend_counts(result: ScreenEvidence, raw: dict, stage1: dict) -> None:
+    scope = raw.get("analysis_scope") if isinstance(raw.get("analysis_scope"), dict) else {}
+    result.number("조회 거래", scope.get("scope_n_tx"), "건")
+    result.number("탐색 표본", stage1.get("selection_n"), "건")
+    result.number("적합 표본", stage1.get("fit_n"), "건")
+    if scope.get("include_partial") is False:
+        result.number("제외된 지분 거래", scope.get("partial_tx_count"), "건")
+
+
+def _recommend_local(result: ScreenEvidence, raw: dict, stage1: dict, predictive: bool) -> None:
+    recommended = stage1.get("primary") if predictive else stage1.get("alternate")
+    if not isinstance(recommended, dict):
+        result.notes.append("이 탭에는 추천 모형이 없다.")
+        return
+    kind = "예측형" if predictive else "설명형"
+    metrics = recommended.get("metrics") if isinstance(recommended.get("metrics"), dict) else {}
+    scale = _scale_name(recommended.get("response_scale"))
+    result.notes.append(f"추천 모형은 {scale + ' · ' if scale else ''}{_block_line(recommended.get('blocks'))}이다.")
+    if predictive:
+        result.notes.append("예측형 추천은 탐색 CV-MAPE가 낮은 후보다. 확인 CV-MAPE는 선정에 쓰지 않은 마지막 연도다.")
+        if stage1.get("representative_confirmed") is False:
+            note = stage1.get("representative_note")
+            result.notes.append("탐색 1위이며 대표 예측모형은 미확정이다." + (f" {str(note)[:180]}" if isinstance(note, str) and note.strip() else ""))
+        result.number("탐색 CV-MAPE", metrics.get("cv_mape"), "%")
+        result.number("확인 CV-MAPE", _confirm_mape(recommended), "%")
+        result.number("학습 MAPE", metrics.get("mape"), "%")
+        result.number("조정 R²", metrics.get("adj_r_squared"))
+        rate = stage1.get("primary_cv_extreme_rate")
+        if isinstance(rate, (int, float)) and not isinstance(rate, bool) and rate > 0.05:
+            result.number("학습 범위를 벗어난 검증 예측", rate * 100, "%")
+        warnings = raw.get("warnings")
+        if isinstance(warnings, list) and warnings and isinstance(warnings[0], str) and warnings[0].strip():
+            result.notes.append(warnings[0][:240])
+    else:
+        result.notes.append("설명형 추천은 AIC 기준이다. 예측형 순위와 다르다.")
+        result.number("AIC", recommended.get("aic"))
+        result.number("조정 R²", metrics.get("adj_r_squared"))
+        result.number("학습 MAPE", metrics.get("mape"), "%")
+        result.number("탐색 CV-MAPE", metrics.get("cv_mape"), "%")
+    key = "candidates_predictive" if predictive else "candidates_explanatory"
+    candidates = _rows(stage1.get(key))
+    judgments = {row.get("rank"): row for row in _rows(stage1.get("predictive_judgments"))}
+    for candidate in candidates[:12]:
+        rank = candidate.get("rank")
+        if rank == recommended.get("rank"):
+            continue
+        row_metrics = candidate.get("metrics") if isinstance(candidate.get("metrics"), dict) else {}
+        prefix = f"{rank}위"
+        if predictive:
+            result.number(f"{prefix} 탐색 CV-MAPE", row_metrics.get("cv_mape"), "%")
+            result.number(f"{prefix} 확인 CV-MAPE", _confirm_mape(candidate), "%")
+            result.number(f"{prefix}와 탐색 오차 차이", judgments.get(rank, {}).get("cv_gap_pp"), "%p")
+        else:
+            result.number(f"{prefix} AIC", candidate.get("aic"))
+            result.number(f"{prefix} 조정 R²", row_metrics.get("adj_r_squared"))
+        result.notes.append(f"{prefix}는 {_scale_name(candidate.get('response_scale'))} · {_block_line(candidate.get('blocks'))}이다.")
+    selected_rank = raw.get("selected_rank")
+    selected = next((row for row in candidates if row.get("rank") == selected_rank), None)
+    _visible_equation(result, selected or recommended, "선택한 모형")
+
+
+def _recommend_twin(result: ScreenEvidence, raw: dict) -> None:
+    result.notes.append("지금 화면은 쌍둥이 확장이다. Local은 선택 지역 기준선, Twin1은 지역을 보탠 기존 식, Twin2는 확장 표본의 재탐색이다.")
+    stage2 = raw.get("stage2") if isinstance(raw.get("stage2"), dict) else {}
+    for row in _rows(raw.get("twin_choices"))[:12]:
+        label = str(row.get("label") or "지역")[:80]
+        score = row.get("similarity_score")
+        if isinstance(score, (int, float)) and not isinstance(score, bool) and abs(score) <= 1:
+            score *= 100
+        result.number(f"{label} 유사도", score, "%")
+    if not stage2.get("ran"):
+        result.notes.append("Twin1은 아직 실행되지 않았다.")
+        return
+    pool = stage2.get("inspect_pool") if isinstance(stage2.get("inspect_pool"), dict) else {}
+    result.number("Twin1 적합 표본", pool.get("n"), "건")
+    result.number("Twin1 조정 R²", pool.get("adj_r_squared"))
+    result.number("Twin1 탐색 CV-MAPE", pool.get("cv_mape"), "%")
+    result.number("Twin1 확인 CV-MAPE", pool.get("confirm_cv_mape"), "%")
+    result.number("Twin1 학습 MAPE", pool.get("mape"), "%")
+    names = [str(name)[:40] for name in raw.get("twin1_regions") or [] if isinstance(name, str)]
+    if names:
+        result.notes.append("Twin1 사용 지역: " + " · ".join(names) + ".")
+    if stage2.get("research_ran") and isinstance(stage2.get("research"), dict):
+        research = stage2["research"]
+        result.notes.append("Twin2 탐색 오차는 독립적인 확인 검증 결과가 아니다.")
+        result.number("Twin2 적합 표본", research.get("n"), "건")
+        result.number("Twin2 조정 R²", research.get("adj_r_squared"))
+        result.number("Twin2 탐색 CV-MAPE", research.get("cv_mape"), "%")
+        result.number("Twin2 확인 CV-MAPE", research.get("confirm_cv_mape"), "%")
+        result.number("Twin2 학습 MAPE", research.get("mape"), "%")
+        research_names = [str(name)[:40] for name in raw.get("twin2_regions") or [] if isinstance(name, str)]
+        if research_names:
+            result.notes.append("Twin2 사용 지역: " + " · ".join(research_names) + ".")
+    elif stage2.get("ran"):
+        result.notes.append("Twin2는 아직 실행되지 않았다.")
+
+
+def _recommendation(result: ScreenEvidence, raw: dict) -> None:
+    view = raw.get("recommend_view") if raw.get("recommend_view") in ("predict", "explain", "twin") else "predict"
+    stage1 = raw.get("stage1") if isinstance(raw.get("stage1"), dict) else {}
+    result.context["화면"] = "복합 모형 탐색"
+    result.context["탭"] = {"predict": "예측형", "explain": "설명형", "twin": "쌍둥이 확장"}[view]
+    _recommend_counts(result, raw, stage1)
+    if view == "twin":
+        _recommend_twin(result, raw)
+    else:
+        result.notes.append(f"지금 화면은 {'예측형' if view == 'predict' else '설명형'} 탭이다.")
+        _recommend_local(result, raw, stage1, view == "predict")
+
+
+def _comparison_rows(result: ScreenEvidence, comparison: dict) -> None:
+    for key, label in (("linear", "선형"), ("log", "로그(금액)"), ("loglog", "log-log")):
+        row = comparison.get(key)
+        if not isinstance(row, dict):
+            continue
+        result.number(f"{label} 조정 R²", row.get("adj_r_squared"))
+        result.number(f"{label} 표본내 MAPE", row.get("mape"), "%")
+        result.number(f"{label} CV-MAPE", row.get("cv_mape"), "%")
+        result.number(f"{label} RMSE", row.get("rmse"), "만원")
+
+
+def _model_selection(result: ScreenEvidence, raw: dict) -> None:
+    mode = raw.get("selection_mode")
+    if mode not in ("suggest", "compare"):
+        mode = "compare" if isinstance(raw.get("candidates_by_aic"), list) else "suggest"
+    result.context["화면"] = "모형 비교" if mode == "compare" else "모형 추천"
+    result.number("표본", raw.get("n"), "건")
+    result.number("공통 표본", raw.get("selection_n"), "건")
+    if isinstance(raw.get("scope_label"), str) and raw["scope_label"].strip():
+        result.notes.append(f"범위는 {raw['scope_label'][:80]}이다.")
+    if mode == "compare":
+        result.number("평가한 조합", raw.get("total_subsets"), "개")
+        result.notes.append("지금 화면의 순위 기준은 AIC다. 접힌 후보는 행에 나온 MAPE만 전달한다.")
+        for index, candidate in enumerate(_rows(raw.get("candidates_by_aic"))[:12]):
+            rank = candidate.get("rank") or index + 1
+            metrics = candidate.get("metrics") if isinstance(candidate.get("metrics"), dict) else {}
+            result.number(f"{rank}위 MAPE", metrics.get("mape"), "%")
+            result.notes.append(f"{rank}위는 {_scale_name(candidate.get('response_scale'))} · {_block_line(candidate.get('blocks'))}이다.")
+            if index == 0:
+                result.number("AIC", candidate.get("aic"))
+                result.number("BIC", candidate.get("bic"))
+                result.number("조정 R²", metrics.get("adj_r_squared"))
+                result.number("CV-MAPE", metrics.get("cv_mape"), "%")
+        return
+    metrics = raw.get("metrics") if isinstance(raw.get("metrics"), dict) else {}
+    scale = _scale_name(raw.get("response_scale"))
+    result.notes.append(f"추천 모형은 {scale + ' · ' if scale else ''}{_block_line(raw.get('recommended_blocks'))}이다.")
+    result.number("조정 R²", metrics.get("adj_r_squared"))
+    result.number("MAPE", metrics.get("mape"), "%")
+    result.number("CV-MAPE", metrics.get("cv_mape"), "%")
+    steps = raw.get("forward_steps")
+    if isinstance(steps, list) and steps and isinstance(steps[-1], dict):
+        result.number("AIC", steps[-1].get("aic_after"))
+    tests = raw.get("joint_f_tests")
+    if isinstance(tests, dict):
+        for block, test in list(tests.items())[:8]:
+            if isinstance(test, dict) and test.get("tested"):
+                result.number(f"{_block_line([block])} Joint F p값", test.get("p_value"))
+    comparison = raw.get("model_comparison")
+    if isinstance(comparison, dict):
+        _comparison_rows(result, comparison)
+    pooling = raw.get("pooling_evaluation")
+    if isinstance(pooling, dict):
+        if isinstance(pooling.get("decision_reason"), str) and pooling["decision_reason"].strip():
+            result.notes.append(pooling["decision_reason"][:240])
+        for candidate in _rows(pooling.get("candidates"))[:6]:
+            label = str(candidate.get("label") or "후보")[:40]
+            result.number(f"{label} 표본", candidate.get("n"), "건")
+            result.number(f"{label} CV-MAPE", candidate.get("cv_mape"), "%")
+            result.number(f"{label} AIC", candidate.get("aic"))
+
+
+def _coef_parts(row: dict) -> tuple[str, str, Any, Any]:
+    name = str(row.get("name") or "")
+    label = str(row.get("label") or "").strip() or _built_term(name, "linear")
+    estimate = row.get("coef") if row.get("coef") is not None else row.get("estimate")
+    p_value = row.get("p") if row.get("p") is not None else row.get("p_value")
+    return name, label[:80], estimate, p_value
+
+
+def _equation_coefficients(result: ScreenEvidence, rows: Any) -> None:
+    for row in _rows(rows)[:80]:
+        name, label, estimate, p_value = _coef_parts(row)
+        if not name and not label:
+            continue
+        shown = name == "const" or (isinstance(p_value, (int, float)) and not isinstance(p_value, bool) and p_value < 0.1)
+        if not shown:
+            continue
+        result.identifiers.append(label)
+        result.number(f"{label} 계수", estimate)
+        result.number(f"{label} p값", p_value)
+
+
+def _trade_equation(result: ScreenEvidence, raw: dict, fallback: str) -> None:
+    if raw.get("conditions_changed"):
+        result.notes.append("선택 조건이 바뀌었습니다. 아래 숫자는 마지막 실행 결과입니다.")
+    model = raw.get("model_type")
+    dependent = "log(금액)" if model == "log" else fallback
+    result.context["종속변수"] = dependent
+    result.notes.append(f"화면에 회귀식이 있다. 종속변수는 {dependent}이다. 식에는 절편과 p<0.1인 항만 표시된다.")
+    result.number("적합 표본", raw.get("n"), "건")
+    result.number("R²", raw.get("r_squared"))
+    result.number("조정 R²", raw.get("adj_r_squared") if raw.get("adj_r_squared") is not None else raw.get("price_adj_r_squared"))
+    result.number("학습 MAPE", raw.get("mape"), "%")
+    result.number("CV-MAPE", raw.get("cv_mape"), "%")
+    result.number("모형 F 검정 p값", raw.get("f_p_value"))
+    _equation_coefficients(result, raw.get("coefficients"))
+
+
+def _regional_regression(result: ScreenEvidence, raw: dict) -> None:
+    if raw.get("ran") is False:
+        result.notes.append("지역회귀를 아직 실행하지 않았다.")
+        return
+    if raw.get("conditions_changed"):
+        result.notes.append("선택 조건이 바뀌었습니다. 아래 숫자는 마지막 실행 결과입니다.")
+    dependent = "log(중앙단가)" if raw.get("model_type") == "log" else "중앙단가(만원/㎡)"
+    result.context["종속변수"] = dependent
+    result.notes.append(f"화면에 지역회귀식이 있다. 종속변수는 {dependent}이다. 식에는 절편과 p<0.1인 항만 표시된다.")
+    result.number("적합 표본", raw.get("n"), "건")
+    result.number("R²", raw.get("r_squared"))
+    result.number("조정 R²", raw.get("model_adj_r_squared") if raw.get("model_adj_r_squared") is not None else raw.get("price_adj_r_squared"))
+    result.number("학습 MAPE", raw.get("mape"), "%")
+    result.number("확인 MAPE", raw.get("hold_mape"), "%")
+    refs = raw.get("reference_categories")
+    if isinstance(refs, dict):
+        for kind, value in list(refs.items())[:8]:
+            if isinstance(value, str) and value.strip():
+                result.notes.append(f"{kind} 기준 범주 {value[:100]}")
+                result.identifiers.append(value[:100])
+    _equation_coefficients(result, raw.get("coefficients"))
+    prediction = raw.get("prediction")
+    if isinstance(prediction, dict):
+        _prediction(result, prediction, "만원/㎡")
+
+
+def _prediction(result: ScreenEvidence, raw: dict, unit: str) -> None:
+    result.context["화면"] = "조건별 추정"
+    result.notes.append(f"추정값은 열린 회귀모형에 입력 조건을 넣은 결과다. 단위는 {unit}이다.")
+    for key, label in (
+        ("y_hat", "모형 추정값"), ("pi_lower", "예측구간 하한"), ("pi_upper", "예측구간 상한"),
+        ("ci_lower", "신뢰구간 하한"), ("ci_upper", "신뢰구간 상한"),
+    ):
+        result.number(label, raw.get(key), unit)
+    result.number("적합 표본", raw.get("regression_n") if raw.get("regression_n") is not None else raw.get("n"), "건")
+
+
+def _histogram(result: ScreenEvidence, raw: dict) -> None:
+    result.number("분포 표본", raw.get("n"), "건")
+    for key, label in (("min", "최소"), ("p25", "하위 사분위"), ("median", "중앙값"), ("p75", "상위 사분위"), ("max", "최대")):
+        result.number(f"단가 {label}", raw.get(f"{key}_unit_price_per_sqm") if raw.get(f"{key}_unit_price_per_sqm") is not None else raw.get(f"{key}_unit_price"), "만원/㎡")
+    for row in _rows(raw.get("bins"))[:60]:
+        start = row.get("bin_from") if row.get("bin_from") is not None else row.get("lo")
+        end = row.get("bin_to") if row.get("bin_to") is not None else row.get("hi")
+        if isinstance(start, (int, float)) and isinstance(end, (int, float)):
+            result.number(f"{start:g}~{end:g}만원/㎡ 구간 거래", row.get("count"), "건")
+
+
+_RENT_KIND = {"apartment": "아파트", "rowhouse": "연립다세대", "officetel": "오피스텔", "detached": "단독다가구"}
+
+
+def _rent_rates(result: ScreenEvidence, raw: dict) -> None:
+    result.notes.append("적용 전환율은 같은 건물 전세·반전세로 구한 건물별 값의 단순평균이다. 한국부동산원 공표 전환율이 아니다.")
+    result.number("적용 전환율", raw.get("r_selected"))
+    result.number("전환율 표본", raw.get("n_rates"), "개")
+    for row in _rows(raw.get("rates"))[:12]:
+        kind = _RENT_KIND.get(str(row.get("asset_type") or ""), str(row.get("asset_type") or "유형"))
+        result.number(f"{kind} 전환율", row.get("r_selected"))
+        result.number(f"{kind} 건물 수", row.get("n_buildings"), "동")
+
+
+def _sangkwon(result: ScreenEvidence, raw: dict) -> None:
+    result.notes.append("상권 수치는 한국부동산원 상업용 임대동향 공표다. 주거 전월세 원장과 섞지 않는다.")
+    annual = raw.get("annual")
+    if not isinstance(annual, dict):
+        return
+    for metric, values in list(annual.items())[:12]:
+        if not isinstance(values, dict):
+            continue
+        years = sorted(str(year) for year in values)[-4:]
+        for year in years:
+            result.number(f"{year} {str(metric)[:40]}", values.get(year) if year in values else values.get(int(year)) if year.isdigit() else None)
+
+
+def _profile(result: ScreenEvidence, raw: dict) -> None:
+    if isinstance(raw.get("as_of_month"), str) and raw["as_of_month"]:
+        result.notes.append(f"기준월은 {raw['as_of_month']}이다.")
+    if isinstance(raw.get("dominant_type"), str) and raw["dominant_type"]:
+        result.notes.append(f"주요 유형은 {raw['dominant_type']}이다.")
+    result.number("3년 거래", raw.get("total_count_3y"), "건")
+    result.number("롤링 구간", raw.get("window_years"), "년")
+
+
 def _trend(result: ScreenEvidence, raw: dict) -> None:
     metric = "median" if raw.get("trend_metric") == "median" else "mean"
     label = "중앙값" if metric == "median" else "평균"
     for series in _rows(raw.get("series"))[:6]:
-        region = str(series.get("region_name") or "선택 지역")[:100]
+        region = str(series.get("region_name") or series.get("label") or "선택 지역")[:100]
         for row in _rows(series.get("points"))[-30:]:
             period = f"{region} {row.get('year')}년"
             if row.get("reference_only"):
@@ -424,6 +841,10 @@ def _omit_fact(message: str, fact: str) -> bool:
     if fact.startswith("적합 표본") and not broad and not any(word in text for word in ("표본", "몇 건", "건수")):
         return True
     if fact.startswith(("조정 R²", "R²")) and not broad and not any(word in text for word in ("설명력", "조정", "r²", "r2", "적합도", "맞춘")):
+        return True
+    if any(token in fact for token in ("MAPE", "피어슨 상관", "부분회귀", "부분 R²")) and not broad and not any(
+        word in text for word in ("mape", "오차", "검증", "상관", "산점", "부분회귀", "기울기")
+    ):
         return True
     return False
 

@@ -83,6 +83,7 @@ export function buildBuiltRegressionContext(
   opts: {
     regionLabel: string;
     assetType: string;
+    responseScale?: ResponseScale;
     purpose?: AiPurpose;
   },
 ): AiContextPayload {
@@ -94,7 +95,10 @@ export function buildBuiltRegressionContext(
       region_label: opts.regionLabel,
       asset_type: opts.assetType,
     },
-    facts: regData as unknown as Record<string, unknown>,
+    facts: {
+      ...(regData as unknown as Record<string, unknown>),
+      response_scale: opts.responseScale ?? "linear",
+    },
   };
 }
 

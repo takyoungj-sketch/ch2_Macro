@@ -14,7 +14,6 @@ import { buildBuiltRecommendContext } from "../api/aiClient";
 import { BUILT_RECOMMEND_HELP } from "../utils/builtAnalysisHelp";
 import type { ProfileLinkTarget } from "../utils/profileLink";
 import { mapProfileTwinNeighbors, resolveTwinAnchorFromRequest, profileTwinFullName } from "../utils/profileLink";
-import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
 import RecommendStagePanel from "./RecommendStagePanel";
@@ -312,13 +311,25 @@ export default function RecommendationModal({
   );
 
   const aiRecommendContext = useMemo(() => {
-    if (!recommendM.data) return null;
-    return buildBuiltRecommendContext(recommendM.data, {
+    const sourceData = recommendM.data ?? heldData;
+    const shown = sourceData && localBaseline && sourceData.stage2?.ran
+      ? {
+          ...sourceData,
+          stage1: localBaseline.stage1,
+          coefficient_narratives: localBaseline.coefficient_narratives,
+          warnings: localBaseline.warnings,
+          termination: localBaseline.termination,
+          analysis_scope: localBaseline.analysis_scope,
+          diagnostics_checklist: localBaseline.diagnostics_checklist,
+        }
+      : sourceData;
+    if (!shown) return null;
+    return buildBuiltRecommendContext(shown, {
       regionLabel,
       assetType: String(assetType),
       purpose: "statistics",
     });
-  }, [recommendM.data, regionLabel, assetType]);
+  }, [recommendM.data, heldData, localBaseline, regionLabel, assetType]);
 
   const runExplore = () => {
     setRunStage2(false);
@@ -410,7 +421,6 @@ export default function RecommendationModal({
       headerActions={
         <div className="flex items-center gap-1.5">
           <AnalysisHelpPanel explain={BUILT_RECOMMEND_HELP} />
-          <PublishAiContext context={!recommendM.isPending && !twinSelectionChanged && recommendM.data && aiRecommendContext ? aiRecommendContext : null} />
           <button
             type="button"
             className="btn btn-ghost text-sm"
@@ -495,6 +505,7 @@ export default function RecommendationModal({
             researchPredictIdentity={researchTarget ? contentSignature({ vars: researchTarget.vars, scale: researchTarget.scale, fitN: researchTarget.fitN, regionCodes: researchTarget.regionCodes }) : null}
             researchPredictActiveLabel={researchTarget?.label ?? null}
             regionNameByCode={regionNameByCode}
+            aiContext={!recommendM.isPending && !twinSelectionChanged ? aiRecommendContext : null}
             onRunTwin={
               twinCandidateStatus === "ready" && !recommendM.isPending
                 ? () => {

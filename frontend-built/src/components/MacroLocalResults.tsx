@@ -26,10 +26,11 @@ function Metric({ label, value }: { label: string; value: string }) {
   return <div className="rounded-lg border border-slate-200 bg-white/70 p-3 dark:border-slate-600 dark:bg-slate-900/50"><p className="text-sm text-slate-500 dark:text-slate-400">{label}</p><p className="mt-1 text-xl font-semibold tabular-nums text-slate-900 dark:text-slate-100">{value}</p></div>;
 }
 
-export default function MacroLocalResults({ mode, data, assetType, onPredict, predictPanel, predictActiveLabel, predictOptions, busy }: {
+export default function MacroLocalResults({ mode, data, assetType, onPredict, predictPanel, predictActiveLabel, predictOptions, busy, onSelectedRank }: {
   mode: "predict" | "explain"; data: RegressionRecommendResponse; assetType: AssetType; busy: boolean;
   onPredict?: (vars: RegressionVariableSpec, scale: ResponseScale, label: string) => void;
   predictPanel?: ReactNode; predictActiveLabel?: string | null; predictOptions?: PredictOptions | null;
+  onSelectedRank?: (rank: number | null) => void;
 }) {
   const { stage1 } = data;
   const predictive = mode === "predict";
@@ -42,6 +43,7 @@ export default function MacroLocalResults({ mode, data, assetType, onPredict, pr
   const [estimateOpen, setEstimateOpen] = useState(false);
   const selectedKey = selected ? `${mode}:${selected.rank}:${selected.response_scale}:${selected.blocks.join(",")}` : mode;
   useEffect(() => { setEstimateOpen(false); }, [selectedKey]);
+  useEffect(() => { onSelectedRank?.(selected?.rank ?? null); }, [onSelectedRank, selected?.rank]);
   if (!recommended || !selected) return <p className="py-4 text-sm text-slate-500">이 분석에서 {predictive ? "예측형" : "설명형"} 추천 모형을 제공하지 않습니다.</p>;
   const selectedLabel = `${predictive ? "예측형" : "설명형"} 후보 ${selected.rank} · ${formatResponseScale(selected.response_scale)} · ${variables(selected)}`;
   const confirmed = stage1.representative_confirmed !== false;

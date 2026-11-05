@@ -1123,8 +1123,9 @@ export default function App() {
     return buildBuiltRegressionContext(regM.data, {
       regionLabel: aiRegionLabel,
       assetType,
+      responseScale: appliedResponseScale,
     });
-  }, [regM.data, aiRegionLabel, assetType]);
+  }, [regM.data, aiRegionLabel, assetType, appliedResponseScale]);
 
   useEffect(() => {
     if (!aiRegressionContext) return;

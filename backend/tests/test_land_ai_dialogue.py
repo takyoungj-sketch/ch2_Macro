@@ -169,6 +169,128 @@ def test_floor_index_screen_passes_the_visible_table(monkeypatch):
     assert result.llm_used and "조회 거래 121건" in result.answer
 
 
+def test_built_screen_passes_the_visible_equation(monkeypatch):
+    def choose(payload):
+        facts = " ".join(payload["sources"]["current"]["facts"].values())
+        notes = " ".join(payload["sources"]["current"]["notes"])
+        assert "연면적 계수 12.5" in facts
+        assert "연식 계수" not in facts
+        assert "R²" not in facts and "MAPE" not in facts
+        assert "회귀식이 있다" in notes and "금액(만원)" in notes
+        assert "용도지역 기준 범주 일반상업" in notes
+        return "screen", "화면에 회귀식이 있습니다. 연면적 계수는 {{" + reference(payload, "연면적 계수") + "}}입니다."
+
+    fake_model(monkeypatch, choose)
+    result = ask("지금 화면의 회귀식이 보이나?", AiContext(
+        app="built", panel="RegressionScatterCard", scope=AiScope(region_label="마산합포구"),
+        facts={
+            "response_scale": "linear", "scatter_tab": "raw",
+            "primary": {
+                "scope_label": "마산합포구", "n": 218, "r_squared": 0.41, "adj_r_squared": 0.38,
+                "mape": 31.2, "coefficients": [
+                    {"name": "const", "estimate": 1000, "p_value": 0.001},
+                    {"name": "gross_area", "estimate": 12.5, "p_value": 0.01},
+                    {"name": "building_age", "estimate": -3, "p_value": 0.4},
+                ],
+                "predict_options": {"zone_reference": "일반상업"},
+            },
+            "correlations": [{"label": "연면적", "pearson_r": 0.22, "points": [{"x": 80, "y": 9000}]}],
+            "comparisons": [{"scope_label": "창원시"}],
+        },
+    ))
+    assert result.llm_used and "연면적 계수 12.5" in result.answer
+    assert "80" not in result.answer and "9000" not in result.answer
+
+
+def test_recommendation_screen_passes_only_the_open_tab():
+    from app.ai.dialogue import _screen
+
+    stage1 = {
+        "selection_n": 200, "fit_n": 180, "representative_confirmed": False,
+        "representative_note": "확인 표본이 부족합니다.",
+        "primary": {
+            "rank": 1, "response_scale": "log", "blocks": ["gross_area"],
+            "metrics": {"cv_mape": 12.5, "mape": 9.0, "adj_r_squared": 0.4},
+            "cv_report": {"confirm": {"mape": 14.2}},
+            "coefficients": [
+                {"name": "const", "estimate": 10, "p_value": 0.001},
+                {"name": "gross_area", "estimate": 0.2, "p_value": 0.01},
+                {"name": "building_age", "estimate": -0.1, "p_value": 0.4},
+            ],
+        },
+        "alternate": {
+            "rank": 1, "response_scale": "linear", "blocks": ["land_area"], "aic": 100,
+            "metrics": {"adj_r_squared": 0.9, "mape": 1, "cv_mape": 2},
+        },
+        "candidates_predictive": [
+            {"rank": 1, "response_scale": "log", "blocks": ["gross_area"], "metrics": {"cv_mape": 12.5}, "cv_report": {"confirm": {"mape": 14.2}}},
+            {"rank": 2, "response_scale": "linear", "blocks": ["building_age"], "metrics": {"cv_mape": 18}, "cv_report": {"confirm": {"mape": 19}}},
+        ],
+        "predictive_judgments": [{"rank": 2, "cv_gap_pp": 1.5, "label": "비교"}],
+    }
+    raw = {
+        "analysis_scope": {"scope_n_tx": 300, "include_partial": False, "partial_tx_count": 4},
+        "stage1": stage1,
+        "stage2": {"ran": True, "inspect_pool": {"n": 900, "cv_mape": 8, "adj_r_squared": 0.5, "confirm_cv_mape": 9}},
+        "twin_choices": [{"label": "인근동", "similarity_score": 0.85, "rank": 1}],
+    }
+    predict = _screen(AiContext(app="built", panel="RecommendationCard", scope=AiScope(region_label="마산합포구"), facts={**raw, "recommend_view": "predict"}))
+    assert any(fact.startswith("탐색 CV-MAPE 12.5") for fact in predict.facts)
+    assert any(fact.startswith("연면적 계수 0.2") for fact in predict.facts)
+    assert any(fact.startswith("2위 탐색 CV-MAPE 18") for fact in predict.facts)
+    assert not any("연식 계수" in fact for fact in predict.facts)
+    assert not any(fact.startswith("AIC") for fact in predict.facts)
+    assert not any("900" in fact for fact in predict.facts)
+    assert "예측형" in " ".join(predict.notes)
+
+    explain = _screen(AiContext(app="built", panel="RecommendationCard", scope=AiScope(region_label="마산합포구"), facts={**raw, "recommend_view": "explain"}))
+    assert any(fact.startswith("AIC 100") for fact in explain.facts)
+    assert not any("12.5" in fact for fact in explain.facts)
+
+    twin = _screen(AiContext(app="built", panel="RecommendationCard", scope=AiScope(region_label="마산합포구"), facts={**raw, "recommend_view": "twin"}))
+    assert any(fact.startswith("인근동 유사도 85") for fact in twin.facts)
+    assert any(fact.startswith("Twin1 적합 표본 900") for fact in twin.facts)
+    assert not any("12.5" in fact for fact in twin.facts)
+
+    suggest = _screen(AiContext(
+        app="built", panel="ModelSelectionCard", scope=AiScope(region_label="마산합포구"),
+        facts={"selection_mode": "suggest", "n": 40, "response_scale": "log", "recommended_blocks": ["gross_area"],
+               "metrics": {"adj_r_squared": 0.31, "mape": 11, "cv_mape": 13},
+               "forward_steps": [{"aic_after": 80.5}],
+               "joint_f_tests": {"gross_area": {"tested": True, "p_value": 0.02}, "building_age": {"tested": False, "p_value": 0.4}}},
+    ))
+    assert any(fact.startswith("CV-MAPE 13") for fact in suggest.facts)
+    assert any(fact.startswith("연면적 Joint F p값 0.02") for fact in suggest.facts)
+    assert not any("building_age" in fact or fact.startswith("연식") for fact in suggest.facts)
+
+
+def test_regional_rent_and_histogram_screens_pass_visible_numbers():
+    from app.ai.dialogue import _screen
+
+    regional = _screen(AiContext(
+        app="collective", panel="RegionalRegressionModal", scope=AiScope(region_label="광주시"),
+        facts={"ran": True, "model_type": "log", "n": 40, "r_squared": 0.61,
+               "coefficients": [{"name": "const", "label": "절편", "coef": 1.2, "p": 0.01},
+                                {"name": "households", "label": "세대수", "coef": 0.04, "p": 0.2}]},
+    ))
+    assert any(fact.startswith("절편 계수") for fact in regional.facts)
+    assert not any(fact.startswith("세대수 계수") for fact in regional.facts)
+    assert "지역회귀" in " ".join(regional.notes)
+
+    rent = _screen(AiContext(
+        app="rent", panel="RentListCard", scope=AiScope(region_label="창원시"),
+        facts={"r_selected": 0.046, "n_rates": 1, "rates": [{"asset_type": "apartment", "r_selected": 0.046, "n_buildings": 12}]},
+    ))
+    assert any(fact.startswith("아파트 전환율 0.046") for fact in rent.facts)
+
+    hist = _screen(AiContext(
+        app="collective", panel="HistogramPanel", scope=AiScope(region_label="단지"),
+        facts={"n": 80, "median_unit_price": 500, "bins": [{"lo": 400, "hi": 500, "count": 11}]},
+    ))
+    assert any(fact.startswith("단가 중앙값 500") for fact in hist.facts)
+    assert any("400~500만원/㎡ 구간 거래 11" in fact for fact in hist.facts)
+
+
 def test_building_screen_is_described_as_trade_regression_not_regional():
     from app.ai.dialogue import _screen
 
@@ -178,7 +300,8 @@ def test_building_screen_is_described_as_trade_regression_not_regional():
     ))
     text = " ".join(evidence.notes)
     assert "거래 회귀" in text and "지역회귀" in text and "중앙단가" in text
-    assert evidence.facts == []
+    assert any(fact.startswith("적합 표본 121") for fact in evidence.facts)
+    assert any(fact.startswith("R² ") for fact in evidence.facts)
 
 
 def test_unrelated_meal_is_refused_without_the_model(monkeypatch):

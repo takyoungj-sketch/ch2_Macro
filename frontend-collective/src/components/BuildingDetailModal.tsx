@@ -22,6 +22,13 @@ import {
 import type { AssetSelectorType, AssetType, DanjiAttributesResponse } from "../types";
 import { assetTypeLabel } from "../types";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import {
+  buildCollectiveCohortRollingTrendContext,
+  buildCollectiveHistogramContext,
+  buildCollectiveRollingTrendContext,
+  buildCollectiveYearlyTrendContext,
+} from "../api/aiContext";
 import { structureGroupLabel } from "../utils/collectiveRegressionFormat";
 import BuildingRegressionPanel from "./BuildingRegressionPanel";
 import CohortTrendPanel from "./CohortTrendPanel";
@@ -798,6 +805,66 @@ export default function BuildingDetailModal({
     [effectiveAssetType, txCohortActive],
   );
 
+  const tabAiContext = useMemo(() => {
+    const regionLabel = row.display_name;
+    const scope = { region_label: regionLabel, asset_type: assetType };
+    if (panel === "trend") {
+      if (trendCohortActive && cohortRollingQ.data) {
+        const context = buildCollectiveCohortRollingTrendContext(cohortRollingQ.data, { regionLabel, assetType });
+        context.facts = { ...context.facts, trend_metric: rollMetric };
+        return context;
+      }
+      if (!trendCohortActive && rollingQ.data && rollingQ.data.points.length > 0) {
+        const context = buildCollectiveRollingTrendContext(rollingQ.data, { regionLabel, assetType });
+        context.facts = { ...context.facts, trend_metric: rollMetric };
+        return context;
+      }
+    }
+    if (panel === "long_term") {
+      if (longTermCohortActive && cohortLongTermQ.data) {
+        return {
+          app: "collective" as const,
+          panel: "LongTermTrendPanel",
+          purpose: "market_analysis" as const,
+          scope,
+          facts: {
+            trend_metric: longTermMetric,
+            cohort: true,
+            series: cohortLongTermQ.data.map((item) => ({
+              region_name: item.display_name,
+              points: item.points.map((point) => ({
+                year: point.year, count: point.count, mean: point.mean, median: point.median ?? point.mean,
+              })),
+            })),
+          },
+        };
+      }
+      if (!longTermCohortActive && longTermYears.length > 0) {
+        const context = buildCollectiveYearlyTrendContext(longTermYears, { regionLabel, assetType });
+        context.facts = { ...context.facts, trend_metric: longTermMetric };
+        return context;
+      }
+    }
+    if (panel === "histogram") {
+      const data = histCohortActive ? cohortHistQ.data : histQ.data;
+      if (data) return buildCollectiveHistogramContext(data, { regionLabel, assetType, cohort: histCohortActive });
+    }
+    if (panel === "transactions" && activeTxQ.data) {
+      return {
+        app: "collective" as const,
+        panel: "TransactionsPanel",
+        purpose: "statistics" as const,
+        scope,
+        facts: { total: activeTxQ.data.total, loaded: activeTxQ.data.items.length },
+      };
+    }
+    return null;
+  }, [
+    panel, row.display_name, assetType, trendCohortActive, cohortRollingQ.data, rollMetric, rollingQ.data,
+    longTermCohortActive, cohortLongTermQ.data, longTermMetric, longTermYears,
+    histCohortActive, cohortHistQ.data, histQ.data, activeTxQ.data,
+  ]);
+
   const handleTxExport = async () => {
     setTxExportLoading(true);
     setTxExportError(null);
@@ -969,6 +1036,7 @@ export default function BuildingDetailModal({
       minHeight={360}
       bodyClassName="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4"
     >
+          <PublishAiContext context={tabAiContext} />
           {typeSiblings.length > 0 && (
             <TypeSiblingStrip row={row} siblings={typeSiblings} onOpen={onOpenSibling} />
           )}

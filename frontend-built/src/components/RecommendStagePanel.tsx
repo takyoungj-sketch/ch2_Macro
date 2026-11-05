@@ -1,5 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import clsx from "clsx";
+import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import type { AssetType, RegressionLevelResult, RegressionRecommendResponse, RegressionVariableSpec, ResponseScale, PredictOptions } from "../types";
 import MacroLocalResults from "./MacroLocalResults";
 import MacroTwinResults from "./MacroTwinResults";
@@ -51,6 +53,7 @@ export type RecommendStagePanelProps = {
   assetType?: AssetType;
   minePrimary?: RegressionLevelResult | null;
   mineScale?: ResponseScale | null;
+  aiContext?: AiContextPayload | null;
 };
 
 type WorkspaceTab = "predict" | "explain" | "twin";
@@ -101,12 +104,35 @@ function WorkspaceTabs({
 
 export default function RecommendStagePanel(props: RecommendStagePanelProps) {
   const [workspace, setWorkspace] = useState<WorkspaceTab>("predict");
-  const { data, assetType, busy = false, onPredict, predictPanel, predictActiveLabel, predictOptions } = props;
+  const [selectedRank, setSelectedRank] = useState<number | null>(null);
+  const onSelectedRank = useCallback((rank: number | null) => setSelectedRank(rank), []);
+  const { data, assetType, busy = false, onPredict, predictPanel, predictActiveLabel, predictOptions, aiContext, regionNameByCode, twinChoices } = props;
+  const viewContext = useMemo(() => {
+    if (!aiContext) return null;
+    const facts: Record<string, unknown> = { ...(aiContext.facts || {}), recommend_view: workspace };
+    if (selectedRank != null) facts.selected_rank = selectedRank;
+    if (workspace === "twin") {
+      const scope = data.analysis_scope;
+      const nameOf = (code: string) =>
+        regionNameByCode?.[code]
+        || scope.region_units.find((unit) => unit.code === code)?.name
+        || (scope.anchor_unit?.code === code ? scope.anchor_unit.name : "지역명 미제공");
+      facts.twin_choices = (twinChoices ?? []).map((row) => ({
+        rank: row.rank, label: row.label, similarity_score: row.similarityScore ?? null,
+      }));
+      const stage2 = data.stage2;
+      if (stage2?.ran && stage2.inspect_pool?.region_codes?.length) facts.twin1_regions = stage2.inspect_pool.region_codes.map(nameOf);
+      if (stage2?.research_ran && stage2.research?.region_codes?.length) facts.twin2_regions = stage2.research.region_codes.map(nameOf);
+    }
+    return { ...aiContext, facts };
+  }, [aiContext, workspace, selectedRank, data, regionNameByCode, twinChoices]);
   const resolvedAssetType = assetType ?? (data.analysis_scope.asset_slice === "unified" ? "commercial" : data.analysis_scope.asset_slice as AssetType);
   return <div className="space-y-3 text-base">
+    <PublishAiContext context={viewContext} />
     <WorkspaceTabs value={workspace} onChange={setWorkspace} />
     {workspace === "twin" ? <MacroTwinResults {...props} assetType={resolvedAssetType} />
       : <MacroLocalResults key={workspace} mode={workspace} data={data} assetType={resolvedAssetType} busy={busy}
-          onPredict={onPredict} predictPanel={predictPanel} predictActiveLabel={predictActiveLabel} predictOptions={predictOptions} />}
+          onPredict={onPredict} predictPanel={predictPanel} predictActiveLabel={predictActiveLabel} predictOptions={predictOptions}
+          onSelectedRank={onSelectedRank} />}
   </div>;
 }
