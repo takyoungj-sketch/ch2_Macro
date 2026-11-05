@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: Number(env.VITE_DEV_PORT ?? 5173),
       proxy: {
+        "/api/ai3": { target: env.AI3_API_TARGET || "http://127.0.0.1:8002", changeOrigin: false },
         "/api": {
           target: apiTarget,
           changeOrigin: true,

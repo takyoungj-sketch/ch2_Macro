@@ -8,6 +8,7 @@ export default {
     "../shared/macro-shell/**/*.{js,ts,jsx,tsx}",
     "../shared/stats-glossary/**/*.{js,ts,jsx,tsx}",
     "../shared/ui-window/**/*.{js,ts,jsx,tsx}",
+    "../shared/ai-assistant/**/*.{js,ts,jsx,tsx}",
   ],
   theme: { extend: {} },
   plugins: [],

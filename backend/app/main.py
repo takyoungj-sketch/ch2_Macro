@@ -182,6 +182,9 @@ app.include_router(land_twin_router, prefix="/api")
 from app.ai2.router import router as ai2_router
 
 app.include_router(ai2_router, prefix="/api")
+from app.ai3.router import router as ai3_router
+
+app.include_router(ai3_router, prefix="/api")
 _LOG.info("대장DB 조회 API 활성(관리자·로컬): /api/admin/parcel/status")
 _LOG.info("토지 쌍둥이 실험 API 활성(관리자): /api/admin/land-twin")
 

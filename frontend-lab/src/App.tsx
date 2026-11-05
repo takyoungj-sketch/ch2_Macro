@@ -27,7 +27,9 @@ import AptTwinRegressionLab from "./components/AptTwinRegressionLab";
 import LandTwinLab from "./components/LandTwinLab";
 import LandLotUnmaskLab from "./components/LandLotUnmaskLab";
 import AllocGapLab from "./components/AllocGapLab";
+import SameLotPriceLab from "./components/SameLotPriceLab";
 import Ai2ProtocolLab from "./components/Ai2ProtocolLab";
+import Ai3TrialLab from "./components/Ai3TrialLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -57,7 +59,9 @@ export type LabTool =
   | "land-twin"
   | "land-unmask"
   | "alloc-gap"
-  | "ai2";
+  | "same-lot"
+  | "ai2"
+  | "ai3";
 export type TwinPane = "v2" | "mape" | "scope";
 
 type LabParams = {
@@ -95,7 +99,9 @@ function readParams(): LabParams {
     t === "land-twin" ||
     t === "land-unmask" ||
     t === "alloc-gap" ||
-    t === "ai2"
+    t === "same-lot" ||
+    t === "ai2" ||
+    t === "ai3"
       ? t
       : null;
   const pane = q.get("pane");
@@ -372,6 +378,14 @@ export default function App() {
       </LabChrome>
     );
   }
+  if (params.tool === "ai3") {
+    return (
+      <LabChrome title="AI3 통합 어시스턴트 시험" whyIds={[]} onWhy={setWhy} onBack={back}>
+        <Ai3TrialLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
   if (params.tool === "ai2") {
     return (
       <LabChrome title="AI2 프로토콜" whyIds={TOOL_WHY.ai2 ?? []} onWhy={setWhy} onBack={back}>
@@ -392,6 +406,14 @@ export default function App() {
     return (
       <LabChrome title="토지 단독거래와 건부지 배분" whyIds={TOOL_WHY["alloc-gap"] ?? []} onWhy={setWhy} onBack={back}>
         <AllocGapLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "same-lot") {
+    return (
+      <LabChrome title="동일 지번 아파트·오피스텔" whyIds={TOOL_WHY["same-lot"] ?? []} onWhy={setWhy} onBack={back}>
+        <SameLotPriceLab />
         {whyModal}
       </LabChrome>
     );

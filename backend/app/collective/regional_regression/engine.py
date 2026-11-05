@@ -23,6 +23,7 @@ from app.collective.asset_scope import (
     without_presale_asset_param,
 )
 from app.collective.building_stats_query import (
+    _mart_has_addr5,
     _mart_region_where,
     latest_mart_snapshot,
     stats_as_of_label,
@@ -281,12 +282,13 @@ def load_danji_frame(
     params["window_years"] = int(req.window_years)
     params["snap"] = snap
     land_price_select, land_price_join = _assessed_land_price_sql(conn)
+    addr5_sql = "m.addr5" if _mart_has_addr5(conn) else "NULL::varchar AS addr5"
 
     rows = conn.execute(
         text(
             f"""
             SELECT m.building_key, m.display_name, m.median, m.count AS n_tx,
-                   m.building_year, m.addr1, m.addr2, m.addr3, m.addr4, m.asset_type,
+                   m.building_year, m.addr1, m.addr2, m.addr3, m.addr4, {addr5_sql}, m.asset_type,
                    a.match_tier, a.match_rule, a.households, a.max_floor, a.parking_per_household,
                    a.approved_year, a.structure_group, a.builder_group,
                    a.attr_quality_flags,
@@ -874,9 +876,10 @@ def assign_region_groups(df: pd.DataFrame, keys: list[str]) -> pd.Series:
     addr2 = df["addr2"].fillna("").astype(str).str.strip() if "addr2" in df.columns else pd.Series("", index=df.index)
     addr3 = df["addr3"].fillna("").astype(str).str.strip() if "addr3" in df.columns else pd.Series("", index=df.index)
     addr4 = df["addr4"].fillna("").astype(str).str.strip() if "addr4" in df.columns else pd.Series("", index=df.index)
+    addr5 = df["addr5"].fillna("").astype(str).str.strip() if "addr5" in df.columns else pd.Series("", index=df.index)
     out: list[str] = []
     for i in df.index:
-        names = {addr3.at[i], addr4.at[i]} - {""}
+        names = {addr3.at[i], addr4.at[i], addr5.at[i]} - {""}
         hit = ref
         for a1, a2, leaf in triples:
             if addr1.at[i] != a1:
@@ -1340,8 +1343,11 @@ def _extension_comparison(work: pd.DataFrame, req: RegionalRegressionRunRequest)
         match = work["addr1"].eq(a1)
         if not is_flat_sido_addr2(a2):
             match &= work["addr2"].eq(a2)
-        match &= work.apply(lambda row: _leaf_names_match(leaf,
-            {str(row.get("addr3") or ""), str(row.get("addr4") or "")}), axis=1)
+        match &= work.apply(lambda row: _leaf_names_match(leaf, {
+            str(row.get("addr3") or ""),
+            str(row.get("addr4") or ""),
+            str(row.get("addr5") or ""),
+        }), axis=1)
         mask |= match
     base = work.loc[mask].copy()
     before_train, hold = _split_hold(base.index)
@@ -1373,9 +1379,19 @@ def _extension_comparison(work: pd.DataFrame, req: RegionalRegressionRunRequest)
     if not proof.evaluation_signature:
         return RegionalExtensionComparison(status="unavailable", reason="평가 대상 단지를 식별할 정보가 없습니다.")
     status, reason = _extension_limit(before, after)
-    return RegionalExtensionComparison(status=status, reason=reason, evaluation_n=len(hold), fit_before_n=before["n"],
+    return RegionalExtensionComparison(status=status, reason=reason, evaluation_n=len(hold),
+        evaluation_by_type=_hold_type_counts(base.loc[hold]), fit_before_n=before["n"],
         fit_after_n=after["n"], mape_before=before["hold_mape"], mape_after=after["hold_mape"],
         evaluation_signature=proof.evaluation_signature)
+
+
+def _hold_type_counts(hold: pd.DataFrame) -> dict[str, int]:
+    """검증 단지가 어느 유형인지. 홀드아웃 구성은 바꾸지 않는다."""
+    if hold.empty or "asset_type" not in hold.columns:
+        return {}
+    raw = hold["asset_type"].fillna("").astype(str).str.strip()
+    raw = raw[raw != ""]
+    return {str(key): int(count) for key, count in raw.value_counts().items()}
 
 
 def _extension_limit(before: dict, after: dict) -> tuple[str, str | None]:
@@ -1434,8 +1450,7 @@ def suggest_regional_regression(
     if unified:
         pool.append("asset_type_dummy")
 
-    designs = []
-    common = None
+    indexed: list[tuple[list[str], RegionalRegressionVariables, pd.Index]] = []
     for blocks in iter_block_subsets(pool):
         variables = _regional_vars(blocks)
         try:
@@ -1451,10 +1466,23 @@ def suggest_regional_regression(
                 continue
         except Exception:
             continue
-        common = work.index if common is None else common.intersection(work.index, sort=False)
-        designs.append((blocks, variables))
+        indexed.append((list(blocks), variables, work.index))
+    # 여러 유형이면 주차 후보가 공통 표본을 자르지 않는다. 그 표본에 주차가 없는 행이 있으면 주차 후보는 비교에서 뺀다.
+    defining = indexed
+    if unified:
+        without_parking = [row for row in indexed if "parking" not in row[0]]
+        if without_parking:
+            defining = without_parking
+    common = None
+    for _blocks, _variables, index in defining:
+        common = index if common is None else common.intersection(index, sort=False)
     if common is None or len(_split_hold(common)[0]) < MIN_FIT_N:
         return []
+    designs = [
+        (blocks, variables)
+        for blocks, variables, index in indexed
+        if not (unified and "parking" in blocks and not bool(common.isin(index).all()))
+    ]
     work = df.loc[common].copy()
     train_idx, hold_idx = _split_hold(work.index)
     region_levels, region_ref, _region_warns = _prepare_region_dummy(work, req)

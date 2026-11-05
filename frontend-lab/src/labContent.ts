@@ -173,5 +173,6 @@ export const TOOL_WHY: Record<string, string[]> = {
   "land-twin": [],
   "land-unmask": [],
   "alloc-gap": [],
+  "same-lot": [],
   ai2: [],
 };

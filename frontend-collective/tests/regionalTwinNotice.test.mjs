@@ -13,3 +13,9 @@ test('no anchor and no candidate have different explanations',()=>{
  assert.equal(scope.kind,'insufficient');assert.equal(candidates.kind,'insufficient');assert.notEqual(scope.title,candidates.title);
 });
 test('successful candidate lists are preserved',()=>assert.equal(notice({...base,hasAnchor:true,hasTwins:true}),null));
+test('a city without a district does not ask for a twin list',()=>{
+ const row=notice({...base,flatCity:true,placeName:'세종특별자치시',error:'같은 이름의 읍면동이 둘 이상입니다.',scopeEmpty:true});
+ assert.equal(row.kind,'guide');
+ assert.match(row.reason,/시·군·구가 없습니다/);
+ assert.match(row.reason,/기본회귀/);
+});

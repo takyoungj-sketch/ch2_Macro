@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.collective.db import get_collective_db
@@ -42,24 +42,41 @@ class AptTwinRequest(BaseModel):
 class AptTwinListRequest(BaseModel):
     addr1: str
     addr2: str = ""
+    addr3_list: list[str] = Field(default_factory=list)
     addr4: str = ""
     region_code: str = ""
+    asset_type: str = "apartment"
 
 
 @router.post("/apt-twins")
 def apt_twin_list(body: AptTwinListRequest, db: Session = Depends(get_collective_db)):
-    """지역회귀 모달의 쌍둥이지역 탭. 아파트 재고·가격분포로 1–5위."""
+    """지역회귀 모달의 쌍둥이지역 탭. 아파트는 아파트 재고, 오피스텔만은 오피스텔 재고."""
     if not body.addr1.strip():
         raise HTTPException(400, detail="시·도를 선택하세요")
-    from app.collective.regional_regression.apt_twin_lab import list_display_twins
-
+    asset = (body.asset_type or "apartment").strip()
     try:
+        if asset == "officetel":
+            from app.collective.regional_regression.apt_officetel_twin_lab import list_officetel_display_twins
+
+            return list_officetel_display_twins(
+                db.connection(),
+                addr1=body.addr1,
+                addr2=body.addr2,
+                addr4=body.addr4,
+                region_code=body.region_code,
+                addr3_list=body.addr3_list,
+            )
+        if asset != "apartment":
+            raise HTTPException(400, detail="쌍둥이 순위는 아파트 또는 오피스텔만 지원합니다")
+        from app.collective.regional_regression.apt_twin_lab import list_display_twins
+
         return list_display_twins(
             db.connection(),
             addr1=body.addr1,
             addr2=body.addr2,
             addr4=body.addr4,
             region_code=body.region_code,
+            addr3_list=body.addr3_list,
         )
     except RuntimeError as exc:
         raise HTTPException(404, detail=str(exc)) from exc

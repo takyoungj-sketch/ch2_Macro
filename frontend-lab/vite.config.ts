@@ -18,8 +18,9 @@ export default defineConfig({
     port: 5179,
     fs: { allow: [path.resolve(__dirname, "..")] },
     proxy: {
+      "/api/ai3": { target: process.env.AI3_API_TARGET || "http://127.0.0.1:8002", changeOrigin: false },
       "/api": {
-        target: "http://127.0.0.1:8000",
+        target: process.env.AI3_API_TARGET || "http://127.0.0.1:8000",
         changeOrigin: true,
       },
     },

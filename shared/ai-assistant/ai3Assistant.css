@@ -1,0 +1,11 @@
+.ai3-trial .input {
+  border: 1px solid rgb(148 163 184 / .5);
+  border-radius: .375rem;
+  padding: .4rem .6rem;
+  background: inherit;
+  color: inherit;
+}
+.ai3-trial .input:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.built.schemas import ModelCandidate, ModelMetrics, RegressionCoeff, RegressionVariableSpec
+from app.built.schemas import CandidateCvReport, CvCoverage, ModelCandidate, ModelMetrics, RegressionCoeff, RegressionVariableSpec
 from app.recommendation.ranks import annotate_predictive_band
 
 
@@ -20,6 +20,7 @@ def _cand(
         response_scale=scale,  # type: ignore[arg-type]
         metrics=ModelMetrics(model_type=scale, cv_mape=cv),  # type: ignore[arg-type]
         coefficients=coefs or [],
+        cv_report=CandidateCvReport(search=CvCoverage(evaluation_signature="same-actual-evaluation-fixture")),
     )
 
 
@@ -125,3 +126,14 @@ def test_missing_cv_has_no_band():
     assert judgments[0].label == "비교 후보"
     assert judgments[0].cv_gap_pp is None
     assert notes == []
+
+
+def test_equal_counts_do_not_prove_same_evaluation():
+    rows = [_cand(1, ["gross_area"], 35), _cand(2, ["gross_area", "building_age"], 35.2)]
+    rows[1].cv_report = None
+    judgments, notes = annotate_predictive_band(rows, ns=[69, 69])
+    assert judgments[1].label == "비교 후보"
+    assert any("미확인" in note for note in notes)
+    rows[1].cv_report = CandidateCvReport(search=CvCoverage(evaluation_signature="different-split"))
+    judgments, _ = annotate_predictive_band(rows, ns=[69, 69])
+    assert judgments[1].label == "비교 후보"

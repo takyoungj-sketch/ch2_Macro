@@ -61,6 +61,11 @@ export const INSIGHT_LEARN_BY_Q: Record<string, InsightLearnChapter[]> = {
     { slug: "quantiles", label: "분위수" },
     { slug: "reading-results", label: "통계 결과 읽기" },
   ],
+  "13": [
+    { slug: "quantiles", label: "분위수" },
+    { slug: "regression", label: "회귀분석" },
+    { slug: "reading-results", label: "통계 결과 읽기" },
+  ],
 };
 
 export function insightLearnUrl(ch: InsightLearnChapter): string {

@@ -15,6 +15,7 @@ from app.collective.regional_regression.engine import (
     _category_support,
     _collapse_dummy,
     _design,
+    _extension_comparison,
     assign_region_groups,
     _eligible_mask,
     _fit_ols,
@@ -613,6 +614,47 @@ def test_price_intervals_pi_wider_than_mean_ci():
     )
     assert ci_lo is not None and ci_hi is not None and pi_lo is not None and pi_hi is not None
     assert pi_lo < ci_lo <= y_hat <= ci_hi < pi_hi
+
+
+def test_ri_leaf_matches_addr5_for_groups_and_extension():
+    ri = "충청북도|청주시|내판리"
+    other = "충청북도|청주시|연동면"
+    ri_rows = [
+        {
+            "addr1": "충청북도", "addr2": "청주시", "addr3": "연동면", "addr4": "", "addr5": "내판리",
+            "median": 800 + i, "households": 40 + i, "n_tx": 6, "asset_type": "officetel",
+            "building_key": f"ri-{i}",
+        }
+        for i in range(48)
+    ]
+    other_rows = [
+        {
+            "addr1": "충청북도", "addr2": "청주시", "addr3": "", "addr4": "연동면", "addr5": "",
+            "median": 900 + i, "households": 80 + i, "n_tx": 6, "asset_type": "officetel",
+            "building_key": f"myeon-{i}",
+        }
+        for i in range(24)
+    ]
+    work = pd.DataFrame(ri_rows + other_rows)
+    groups = assign_region_groups(work, [ri, other])
+    assert list(groups.iloc[:48]) == [ri] * 48
+    assert list(groups.iloc[48:]) == [other] * 24
+    req = RegionalRegressionRunRequest(
+        addr1="충청북도",
+        addr2="청주시",
+        asset_type="officetel",
+        variables=RegionalRegressionVariables(
+            households=True, max_floor=False, building_age=False, parking=False,
+            structure=False, builder=False, asset_type_dummy=False, assessed_land_price=False,
+        ),
+        region_addrs=[ri, other],
+        evaluation_region_addrs=[ri],
+    )
+    result = _extension_comparison(work, req)
+    assert result is not None
+    assert result.fit_before_n > 0
+    assert result.status == "available"
+    assert result.evaluation_by_type == {"officetel": result.evaluation_n}
 
 
 def test_region_dummy_anchor_is_reference_intercept():

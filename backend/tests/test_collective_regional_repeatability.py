@@ -42,6 +42,10 @@ def unordered_connection(monkeypatch):
     state = {"order": np.arange(len(rows)), "count": len(rows)}
 
     def execute(*args, **kwargs):
+        statement = args[0] if args else ""
+        sql = str(getattr(statement, "text", statement))
+        if "information_schema.columns" in sql:
+            return SimpleNamespace(scalar=lambda: 1)
         result = [rows[int(i)].copy() for i in state["order"] if i < state["count"]]
         return SimpleNamespace(mappings=lambda: SimpleNamespace(all=lambda: result))
 

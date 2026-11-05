@@ -380,15 +380,21 @@ export default function App() {
     regionCodeScope,
   );
 
-  const isApartment = assetKinds.includes("apartment");
-  const regionalReady = Boolean(scope) && !scopeStale && isApartment;
-  const regionalTitle = !isApartment
-    ? "아파트일 때만 사용할 수 있습니다"
+  const regionalKind = assetKinds.includes("apartment")
+    ? "apartment"
+    : assetKinds.includes("officetel")
+      ? "officetel"
+      : null;
+  const regionalReady = Boolean(scope) && !scopeStale && regionalKind != null;
+  const regionalTitle = regionalKind == null
+    ? "아파트 또는 오피스텔을 선택하면 사용할 수 있습니다"
     : !scope
       ? "「통계분석」을 먼저 실행하세요"
       : scopeStale
         ? "분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다."
-        : "선택한 지역의 아파트 단지별 기간 중앙단가(만원/㎡)를 분석합니다";
+        : regionalKind === "officetel"
+          ? "선택한 지역의 오피스텔 단지별 기간 중앙단가(만원/㎡)를 분석합니다"
+          : "선택한 지역의 아파트 단지별 기간 중앙단가(만원/㎡)를 분석합니다";
 
   useEffect(() => {
     if (!regionalReady) setRegionalOpen(false);

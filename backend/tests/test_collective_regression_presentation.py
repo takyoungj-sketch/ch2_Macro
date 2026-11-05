@@ -49,7 +49,8 @@ def test_short_display_label():
     assert short_display_label("용도지역 제3종일반주거(기준 대비)") == "제3종일반주거"
     assert short_display_label("건축물용도 근린생활시설(기준 대비)") == "근린생활시설"
     assert short_display_label("시공사 계룡건설산업 (기준 대비)") == "계룡건설산업"
-    assert short_display_label("구조 SRC (기준 대비)") == "SRC"
+    assert short_display_label("구조 RC (기준 대비)") == "철콘"
+    assert short_display_label("구조 SRC (기준 대비)") == "철골철콘"
     assert short_display_label("유형 오피스텔 (기준 대비)") == "오피스텔"
 
 

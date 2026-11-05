@@ -268,7 +268,7 @@ def _load_apartments(
     stmt = text(
         f"""
         SELECT m.building_key, m.display_name, m.median, m.count AS n_tx,
-               m.building_year, m.addr1, m.addr2, m.addr4, m.asset_type,
+               m.building_year, m.addr1, m.addr2, m.addr3, m.addr4, m.asset_type,
                m.beopjungri_code,
                a.match_tier, a.match_rule, a.households, a.max_floor, a.parking_per_household,
                a.approved_year, a.structure_group, a.builder_group, a.attr_quality_flags,
@@ -352,6 +352,7 @@ def _profiles(df: pd.DataFrame) -> pd.DataFrame:
                 "label": str(part["label"].mode().iloc[0]) if not part["label"].mode().empty else str(region_id),
                 "addr1": str(part["addr1"].iloc[0] or "").strip(),
                 "addr2": str(part["addr2"].iloc[0] or "").strip(),
+                "addr3": _profile_text(part, "addr3"),
                 "addr4": str(part["addr4"].iloc[0] or "").strip(),
                 "n_complexes": int(len(part)),
                 "n_tx": float(part["n_tx"].sum()),
@@ -690,7 +691,13 @@ def experiment4_anchor(
 _NATIONAL_CACHE: dict[tuple[str, str], tuple[pd.DataFrame, dict[str, Any]]] = {}
 
 
-def rank_display_twins(profiles: pd.DataFrame, anchor_id: str, *, keep: int = PRODUCT_TWIN_KEEP) -> list[str]:
+def rank_display_twins(
+    profiles: pd.DataFrame,
+    anchor_id: str,
+    *,
+    keep: int = PRODUCT_TWIN_KEEP,
+    struct_cols: tuple[str, ...] = STRUCT_COLS,
+) -> list[str]:
     """제품 목록. 구조 거리 20곳 안에서 가격분포 거리가 짧은 순으로 keep곳.
 
     후보 풀은 적격 단지가 20곳 이상인 읍면동이다. 기준 지역은 그 풀에 없어도
@@ -702,7 +709,7 @@ def rank_display_twins(profiles: pd.DataFrame, anchor_id: str, *, keep: int = PR
     if pool.empty:
         return []
     anchor = profiles.loc[anchor_id]
-    struct = _feature_dists(pool, anchor, STRUCT_COLS)
+    struct = _feature_dists(pool, anchor, struct_cols)
     struct = struct.loc[struct.index.astype(str) != str(anchor_id)]
     struct = struct.replace([np.inf, -np.inf], np.nan).dropna()
     if struct.empty:
@@ -760,6 +767,7 @@ def _match_product_anchor(
     addr2: str,
     addr4: str,
     region_code: str,
+    stock_name: str = "아파트",
 ) -> str:
     code = region_code.strip()
     if len(code) >= 8 and code[:8].isdigit() and code[:8] in profiles.index:
@@ -775,16 +783,39 @@ def _match_product_anchor(
         if len(hit) == 0 and a2 == a1:
             hit = flat_hit
     if len(hit) == 0:
-        raise RuntimeError("이 읍면동의 아파트 재고로 쌍둥이 순위를 만들지 못했습니다. 거래와 핵심 변수가 있는 단지가 필요합니다.")
+        raise RuntimeError(
+            f"이 읍면동의 {stock_name} 재고로 쌍둥이 순위를 만들지 못했습니다. "
+            "거래와 핵심 변수가 있는 단지가 필요합니다."
+        )
     if len(hit) > 1:
         raise RuntimeError("같은 이름의 읍면동이 둘 이상입니다. 지도에서 그 지역을 한 곳만 선택한 뒤 다시 여세요.")
     return str(hit[0])
 
 
-def _scope_anchor_rows(profiles: pd.DataFrame, addr1: str, addr2: str) -> list[dict[str, Any]]:
+def _profile_text(part: pd.DataFrame, col: str) -> str:
+    if col not in part.columns:
+        return ""
+    values = part[col].dropna().astype(str).str.strip()
+    values = values[~values.isin(["", "nan", "None"])]
+    if values.empty:
+        return ""
+    mode = values.mode()
+    return str(mode.iloc[0] if not mode.empty else values.iloc[0])
+
+
+def _scope_anchor_rows(
+    profiles: pd.DataFrame,
+    addr1: str,
+    addr2: str,
+    addr3_list: list[str] | None = None,
+) -> list[dict[str, Any]]:
     hit = profiles.loc[profiles["addr1"] == addr1.strip()]
     if addr2.strip() and addr2.strip() != FLAT_SIDO_ADDR2_TOKEN:
         hit = hit.loc[hit["addr2"] == addr2.strip()]
+    names = {str(name).strip() for name in (addr3_list or []) if str(name).strip()}
+    if names and "addr3" in hit.columns:
+        addr3 = hit["addr3"].fillna("").astype(str).str.strip()
+        hit = hit.loc[addr3.isin(names)]
     if hit.empty:
         return []
     ordered = hit.sort_values("label")
@@ -798,6 +829,7 @@ def list_display_twins(
     addr2: str = "",
     addr4: str = "",
     region_code: str = "",
+    addr3_list: list[str] | None = None,
 ) -> dict[str, Any]:
     """쌍둥이지역 탭. 읍면동이 정해지면 1–5위, 아니면 그 시군구의 기준 후보만."""
     profiles, meta = _national_profiles(conn)
@@ -807,7 +839,7 @@ def list_display_twins(
             "as_of_label": as_of_label,
             "anchor": None,
             "twins": [],
-            "scope_anchors": _scope_anchor_rows(profiles, addr1, addr2),
+            "scope_anchors": _scope_anchor_rows(profiles, addr1, addr2, addr3_list),
         }
     anchor_id = _match_product_anchor(
         profiles,

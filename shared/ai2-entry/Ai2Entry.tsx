@@ -88,9 +88,6 @@ export function singleScreenRegion(input: {
 }
 
 export function Ai2HeaderSlot({
-  domain,
-  screenRegion = "",
-  screenTarget = "",
   children,
 }: {
   domain: Ai2Domain;
@@ -98,12 +95,7 @@ export function Ai2HeaderSlot({
   screenTarget?: string;
   children: ReactNode;
 }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <Ai2Entry domain={domain} screenRegion={screenRegion} screenTarget={screenTarget} />
-      {children}
-    </span>
-  );
+  return <>{children}</>;
 }
 
 export default function Ai2Entry({

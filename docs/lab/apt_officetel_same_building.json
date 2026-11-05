@@ -1,0 +1,1196 @@
+{
+  "status": "executed",
+  "as_of": "2026-10-01",
+  "period_start": "2021-11-01",
+  "period_end": "2026-10-31",
+  "window_years": 5,
+  "attribute_snapshot": "202607",
+  "thresholds": {
+    "stop_min_pairs": 30,
+    "matched_min_each_side": 10,
+    "side_min_trades": 15,
+    "regression_min_trades": 40,
+    "cell_min_pairs": 15,
+    "area_ratio": [
+      0.85,
+      1.15
+    ],
+    "reuse_median_over": 5
+  },
+  "notes": [
+    "짝은 법정동·리 코드와 지번이다. 건물 키는 유형을 포함하므로 같은 주소가 두 키가 된다.",
+    "사용승인연도는 단지 속성 최신 스냅샷의 approved_year다. 거래의 건축년도로 짝을 나누지 않았다.",
+    "건축물대장 관리번호는 거래 행에 없어 1차에서 붙이지 않았다.",
+    "해제 거래는 is_valid에서 빠져 있다. 거래구분은 중개·직거래만 남겼다.",
+    "동 이름이 어긋나도 다른 건물로 다시 분류하지 않는다.",
+    "kapt_same_pnu 오피스텔은 가격이 있으면 표본에 남긴다. 세대수로 가중하지 않는다.",
+    "비율은 전용면적 ㎡당 실거래가다. 감정평가 할인율이 아니고, 법적 용도만의 차이로 읽지 않는다.",
+    "후속 확인(면적 0.90–1.10과 92일, 대장 대조)은 본결과 분포를 바꾸지 않는다.",
+    "건물 안 회귀가 통제한 것은 전용면적, 키 안 층 대역, 계약연도다. 사용승인연도는 이미 1년 이내라 그 식의 변수가 아니다."
+  ],
+  "stage1": {
+    "mixed_lot_n": 2621,
+    "same_building_n": 2417,
+    "year_unknown_n": 167,
+    "different_building_n": 29,
+    "multi_key_n": 8,
+    "same_building_trade_counts": {
+      "apartment": {
+        "n": 2417,
+        "p10": 3.0,
+        "p50": 11.0,
+        "p90": 73.0
+      },
+      "officetel": {
+        "n": 2417,
+        "p10": 1.0,
+        "p50": 4.0,
+        "p90": 24.0
+      }
+    },
+    "exclusive_area": {
+      "apartment": {
+        "n": 73145,
+        "p10": 20.19,
+        "p50": 75.86,
+        "p90": 101.08
+      },
+      "officetel": {
+        "n": 24852,
+        "p10": 22.08,
+        "p50": 39.63,
+        "p90": 84.66
+      }
+    },
+    "area_median_within_15pct_n": 610,
+    "dong": {
+      "both_nonempty_n": 0,
+      "disjoint_n": 0,
+      "overlap_n": 0
+    },
+    "kapt_same_pnu_n": 585,
+    "direct_pass_n": 104,
+    "stop": false
+  },
+  "same_building": {
+    "direct": {
+      "pass_n": 104,
+      "thin_n": 2313,
+      "reuse_flag_n": 12,
+      "distribution": {
+        "n": 104,
+        "median": 0.6195,
+        "p25": 0.5374,
+        "p75": 0.7499,
+        "share_below": 0.9808
+      },
+      "without_reuse_flag": {
+        "distribution": {
+          "n": 92,
+          "median": 0.6229,
+          "p25": 0.5448,
+          "p75": 0.7499,
+          "share_below": 0.9783
+        },
+        "sign_flipped": false
+      }
+    },
+    "composition": {
+      "note": "면적·층·연도를 맞추기 전 유형별 ㎡당 중앙값의 비. 본결과가 아니다.",
+      "rule": "유형마다 창 안 거래 15건 이상",
+      "distribution": {
+        "n": 333,
+        "median": 0.6532,
+        "p25": 0.5546,
+        "p75": 0.7518,
+        "share_below": 0.964
+      },
+      "median_area_ratio": 0.7041,
+      "median_floor_gap_off_minus_apt": -5.0
+    },
+    "regression": {
+      "n_fit": 88,
+      "n_failed": 0,
+      "n_hc1": 18,
+      "distribution": {
+        "n": 88,
+        "median": -37.62,
+        "p25": -46.0875,
+        "p75": -25.2825,
+        "share_below": 0.9886
+      },
+      "intervals": {
+        "n": 88,
+        "entirely_below_0": 84,
+        "crosses_0": 4,
+        "entirely_above_0": 0,
+        "n_trades_min": 41,
+        "n_trades_median": 128
+      },
+      "beside_direct": [
+        {
+          "direct_ratio": 0.5551,
+          "percent": -43.49,
+          "ci_low": -44.87,
+          "ci_high": -42.07,
+          "cov": "HC3",
+          "n": 594
+        },
+        {
+          "direct_ratio": 0.5325,
+          "percent": -46.02,
+          "ci_low": -47.93,
+          "ci_high": -44.04,
+          "cov": "HC3",
+          "n": 186
+        },
+        {
+          "direct_ratio": 0.5828,
+          "percent": -46.92,
+          "ci_low": -50.37,
+          "ci_high": -43.22,
+          "cov": "HC3",
+          "n": 199
+        },
+        {
+          "direct_ratio": 0.6037,
+          "percent": -42.22,
+          "ci_low": -44.87,
+          "ci_high": -39.44,
+          "cov": "HC3",
+          "n": 209
+        },
+        {
+          "direct_ratio": 0.4981,
+          "percent": -48.5,
+          "ci_low": -51.08,
+          "ci_high": -45.8,
+          "cov": "HC3",
+          "n": 881
+        },
+        {
+          "direct_ratio": 0.6098,
+          "percent": -39.62,
+          "ci_low": -43.13,
+          "ci_high": -35.89,
+          "cov": "HC3",
+          "n": 179
+        },
+        {
+          "direct_ratio": 0.4876,
+          "percent": -55.67,
+          "ci_low": -60.19,
+          "ci_high": -50.63,
+          "cov": "HC3",
+          "n": 353
+        },
+        {
+          "direct_ratio": 0.4028,
+          "percent": -54.55,
+          "ci_low": -58.81,
+          "ci_high": -49.86,
+          "cov": "HC3",
+          "n": 69
+        },
+        {
+          "direct_ratio": 0.8239,
+          "percent": -9.94,
+          "ci_low": -16.9,
+          "ci_high": -2.39,
+          "cov": "HC3",
+          "n": 61
+        },
+        {
+          "direct_ratio": 0.5987,
+          "percent": -42.95,
+          "ci_low": -45.21,
+          "ci_high": -40.61,
+          "cov": "HC3",
+          "n": 91
+        },
+        {
+          "direct_ratio": 0.545,
+          "percent": -45.31,
+          "ci_low": -48.11,
+          "ci_high": -42.36,
+          "cov": "HC3",
+          "n": 107
+        },
+        {
+          "direct_ratio": 0.8488,
+          "percent": -18.24,
+          "ci_low": -20.88,
+          "ci_high": -15.51,
+          "cov": "HC3",
+          "n": 161
+        },
+        {
+          "direct_ratio": 1.1871,
+          "percent": 18.6,
+          "ci_low": -0.3,
+          "ci_high": 41.09,
+          "cov": "HC3",
+          "n": 56
+        },
+        {
+          "direct_ratio": 0.5279,
+          "percent": -45.03,
+          "ci_low": -47.74,
+          "ci_high": -42.19,
+          "cov": "HC3",
+          "n": 464
+        },
+        {
+          "direct_ratio": 0.5662,
+          "percent": -47.32,
+          "ci_low": -49.31,
+          "ci_high": -45.26,
+          "cov": "HC1",
+          "n": 187
+        },
+        {
+          "direct_ratio": 0.6239,
+          "percent": -37.61,
+          "ci_low": -40.68,
+          "ci_high": -34.38,
+          "cov": "HC1",
+          "n": 213
+        },
+        {
+          "direct_ratio": 0.4519,
+          "percent": -56.35,
+          "ci_low": -58.03,
+          "ci_high": -54.59,
+          "cov": "HC3",
+          "n": 527
+        },
+        {
+          "direct_ratio": 0.5823,
+          "percent": -41.43,
+          "ci_low": -43.85,
+          "ci_high": -38.91,
+          "cov": "HC3",
+          "n": 80
+        },
+        {
+          "direct_ratio": 0.5072,
+          "percent": -49.24,
+          "ci_low": -50.47,
+          "ci_high": -47.97,
+          "cov": "HC1",
+          "n": 103
+        },
+        {
+          "direct_ratio": 0.6002,
+          "percent": -40.52,
+          "ci_low": -44.04,
+          "ci_high": -36.78,
+          "cov": "HC1",
+          "n": 64
+        },
+        {
+          "direct_ratio": 0.5456,
+          "percent": -47.62,
+          "ci_low": -48.72,
+          "ci_high": -46.49,
+          "cov": "HC3",
+          "n": 241
+        },
+        {
+          "direct_ratio": 0.6346,
+          "percent": -37.28,
+          "ci_low": -39.8,
+          "ci_high": -34.65,
+          "cov": "HC3",
+          "n": 372
+        },
+        {
+          "direct_ratio": 0.4167,
+          "percent": -55.92,
+          "ci_low": -57.75,
+          "ci_high": -54.01,
+          "cov": "HC3",
+          "n": 308
+        },
+        {
+          "direct_ratio": 0.8438,
+          "percent": -5.6,
+          "ci_low": -11.39,
+          "ci_high": 0.57,
+          "cov": "HC1",
+          "n": 108
+        },
+        {
+          "direct_ratio": 0.4,
+          "percent": -58.2,
+          "ci_low": -59.42,
+          "ci_high": -56.95,
+          "cov": "HC3",
+          "n": 207
+        },
+        {
+          "direct_ratio": 0.5027,
+          "percent": -49.98,
+          "ci_low": -53.2,
+          "ci_high": -46.53,
+          "cov": "HC3",
+          "n": 108
+        },
+        {
+          "direct_ratio": 0.4143,
+          "percent": -57.83,
+          "ci_low": -59.54,
+          "ci_high": -56.05,
+          "cov": "HC3",
+          "n": 338
+        },
+        {
+          "direct_ratio": 0.4683,
+          "percent": -53.96,
+          "ci_low": -56.46,
+          "ci_high": -51.32,
+          "cov": "HC3",
+          "n": 336
+        },
+        {
+          "direct_ratio": 0.8332,
+          "percent": -5.89,
+          "ci_low": -9.86,
+          "ci_high": -1.75,
+          "cov": "HC3",
+          "n": 157
+        },
+        {
+          "direct_ratio": 0.4223,
+          "percent": -59.79,
+          "ci_low": -69.22,
+          "ci_high": -47.47,
+          "cov": "HC3",
+          "n": 146
+        },
+        {
+          "direct_ratio": 0.3791,
+          "percent": -57.94,
+          "ci_low": -60.5,
+          "ci_high": -55.21,
+          "cov": "HC3",
+          "n": 362
+        },
+        {
+          "direct_ratio": 0.6211,
+          "percent": -42.43,
+          "ci_low": -46.78,
+          "ci_high": -37.72,
+          "cov": "HC3",
+          "n": 432
+        },
+        {
+          "direct_ratio": 0.6816,
+          "percent": -27.82,
+          "ci_low": -34.31,
+          "ci_high": -20.69,
+          "cov": "HC3",
+          "n": 193
+        },
+        {
+          "direct_ratio": 0.7596,
+          "percent": -24.87,
+          "ci_low": -28.28,
+          "ci_high": -21.3,
+          "cov": "HC3",
+          "n": 230
+        },
+        {
+          "direct_ratio": 0.563,
+          "percent": -41.07,
+          "ci_low": -44.26,
+          "ci_high": -37.69,
+          "cov": "HC3",
+          "n": 128
+        },
+        {
+          "direct_ratio": 0.7466,
+          "percent": -33.7,
+          "ci_low": -46.02,
+          "ci_high": -18.57,
+          "cov": "HC3",
+          "n": 69
+        },
+        {
+          "direct_ratio": 0.864,
+          "percent": -13.44,
+          "ci_low": -15.28,
+          "ci_high": -11.56,
+          "cov": "HC3",
+          "n": 80
+        },
+        {
+          "direct_ratio": 0.8546,
+          "percent": -20.97,
+          "ci_low": -26.99,
+          "ci_high": -14.45,
+          "cov": "HC3",
+          "n": 86
+        },
+        {
+          "direct_ratio": 0.6995,
+          "percent": -28.97,
+          "ci_low": -31.72,
+          "ci_high": -26.12,
+          "cov": "HC3",
+          "n": 84
+        },
+        {
+          "direct_ratio": 0.8684,
+          "percent": -17.4,
+          "ci_low": -20.79,
+          "ci_high": -13.86,
+          "cov": "HC3",
+          "n": 131
+        },
+        {
+          "direct_ratio": 0.5912,
+          "percent": -35.17,
+          "ci_low": -39.12,
+          "ci_high": -30.97,
+          "cov": "HC3",
+          "n": 103
+        },
+        {
+          "direct_ratio": 0.681,
+          "percent": -29.08,
+          "ci_low": -31.96,
+          "ci_high": -26.09,
+          "cov": "HC1",
+          "n": 50
+        },
+        {
+          "direct_ratio": 0.6702,
+          "percent": -31.34,
+          "ci_low": -33.92,
+          "ci_high": -28.65,
+          "cov": "HC3",
+          "n": 133
+        },
+        {
+          "direct_ratio": 0.8423,
+          "percent": -17.99,
+          "ci_low": -22.42,
+          "ci_high": -13.29,
+          "cov": "HC3",
+          "n": 111
+        },
+        {
+          "direct_ratio": 0.718,
+          "percent": -43.65,
+          "ci_low": -47.16,
+          "ci_high": -39.9,
+          "cov": "HC3",
+          "n": 108
+        },
+        {
+          "direct_ratio": 0.6568,
+          "percent": -35.62,
+          "ci_low": -39.27,
+          "ci_high": -31.75,
+          "cov": "HC3",
+          "n": 89
+        },
+        {
+          "direct_ratio": 0.6467,
+          "percent": -35.89,
+          "ci_low": -38.47,
+          "ci_high": -33.2,
+          "cov": "HC1",
+          "n": 126
+        },
+        {
+          "direct_ratio": 0.9333,
+          "percent": -3.33,
+          "ci_low": -10.43,
+          "ci_high": 4.34,
+          "cov": "HC3",
+          "n": 55
+        },
+        {
+          "direct_ratio": 0.8226,
+          "percent": -29.14,
+          "ci_low": -30.92,
+          "ci_high": -27.31,
+          "cov": "HC3",
+          "n": 243
+        },
+        {
+          "direct_ratio": 0.6516,
+          "percent": -32.7,
+          "ci_low": -38.25,
+          "ci_high": -26.66,
+          "cov": "HC3",
+          "n": 59
+        },
+        {
+          "direct_ratio": 0.4812,
+          "percent": -50.37,
+          "ci_low": -52.25,
+          "ci_high": -48.42,
+          "cov": "HC3",
+          "n": 68
+        },
+        {
+          "direct_ratio": 0.3511,
+          "percent": -61.34,
+          "ci_low": -63.02,
+          "ci_high": -59.59,
+          "cov": "HC3",
+          "n": 99
+        },
+        {
+          "direct_ratio": 0.9477,
+          "percent": -5.69,
+          "ci_low": -7.63,
+          "ci_high": -3.7,
+          "cov": "HC3",
+          "n": 154
+        },
+        {
+          "direct_ratio": 0.6825,
+          "percent": -35.57,
+          "ci_low": -40.42,
+          "ci_high": -30.32,
+          "cov": "HC3",
+          "n": 72
+        },
+        {
+          "direct_ratio": 0.6629,
+          "percent": -36.11,
+          "ci_low": -39.34,
+          "ci_high": -32.71,
+          "cov": "HC3",
+          "n": 121
+        },
+        {
+          "direct_ratio": 0.8485,
+          "percent": -15.55,
+          "ci_low": -18.58,
+          "ci_high": -12.42,
+          "cov": "HC1",
+          "n": 122
+        },
+        {
+          "direct_ratio": 0.475,
+          "percent": -50.07,
+          "ci_low": -54.35,
+          "ci_high": -45.4,
+          "cov": "HC3",
+          "n": 65
+        },
+        {
+          "direct_ratio": 0.8556,
+          "percent": -16.07,
+          "ci_low": -20.16,
+          "ci_high": -11.78,
+          "cov": "HC3",
+          "n": 139
+        },
+        {
+          "direct_ratio": 0.7366,
+          "percent": -25.42,
+          "ci_low": -28.26,
+          "ci_high": -22.46,
+          "cov": "HC3",
+          "n": 42
+        },
+        {
+          "direct_ratio": 0.5846,
+          "percent": -35.42,
+          "ci_low": -41.05,
+          "ci_high": -29.24,
+          "cov": "HC3",
+          "n": 41
+        },
+        {
+          "direct_ratio": 0.7285,
+          "percent": -28.04,
+          "ci_low": -31.72,
+          "ci_high": -24.17,
+          "cov": "HC3",
+          "n": 87
+        },
+        {
+          "direct_ratio": 0.5416,
+          "percent": -45.29,
+          "ci_low": -45.71,
+          "ci_high": -44.87,
+          "cov": "HC1",
+          "n": 61
+        },
+        {
+          "direct_ratio": 0.6243,
+          "percent": -37.22,
+          "ci_low": -40.12,
+          "ci_high": -34.17,
+          "cov": "HC1",
+          "n": 86
+        },
+        {
+          "direct_ratio": 0.8424,
+          "percent": -15.68,
+          "ci_low": -20.18,
+          "ci_high": -10.91,
+          "cov": "HC3",
+          "n": 83
+        },
+        {
+          "direct_ratio": 0.7785,
+          "percent": -22.17,
+          "ci_low": -23.87,
+          "ci_high": -20.44,
+          "cov": "HC1",
+          "n": 102
+        },
+        {
+          "direct_ratio": 0.7121,
+          "percent": -23.66,
+          "ci_low": -26.99,
+          "ci_high": -20.17,
+          "cov": "HC1",
+          "n": 64
+        },
+        {
+          "direct_ratio": 0.8578,
+          "percent": -8.66,
+          "ci_low": -9.23,
+          "ci_high": -8.08,
+          "cov": "HC3",
+          "n": 104
+        },
+        {
+          "direct_ratio": 0.7681,
+          "percent": -23.23,
+          "ci_low": -23.4,
+          "ci_high": -23.06,
+          "cov": "HC3",
+          "n": 174
+        },
+        {
+          "direct_ratio": 0.8543,
+          "percent": -14.21,
+          "ci_low": -15.06,
+          "ci_high": -13.35,
+          "cov": "HC3",
+          "n": 129
+        },
+        {
+          "direct_ratio": 0.6078,
+          "percent": -44.73,
+          "ci_low": -46.91,
+          "ci_high": -42.46,
+          "cov": "HC3",
+          "n": 590
+        },
+        {
+          "direct_ratio": 0.5999,
+          "percent": -39.28,
+          "ci_low": -40.41,
+          "ci_high": -38.13,
+          "cov": "HC3",
+          "n": 197
+        },
+        {
+          "direct_ratio": 0.6096,
+          "percent": -38.2,
+          "ci_low": -39.99,
+          "ci_high": -36.36,
+          "cov": "HC1",
+          "n": 269
+        },
+        {
+          "direct_ratio": 0.5143,
+          "percent": -44.31,
+          "ci_low": -46.03,
+          "ci_high": -42.53,
+          "cov": "HC3",
+          "n": 567
+        },
+        {
+          "direct_ratio": 0.5986,
+          "percent": -37.63,
+          "ci_low": -41.88,
+          "ci_high": -33.07,
+          "cov": "HC1",
+          "n": 201
+        },
+        {
+          "direct_ratio": 0.5381,
+          "percent": -43.55,
+          "ci_low": -44.99,
+          "ci_high": -42.07,
+          "cov": "HC3",
+          "n": 434
+        },
+        {
+          "direct_ratio": 0.6354,
+          "percent": -37.08,
+          "ci_low": -39.11,
+          "ci_high": -34.97,
+          "cov": "HC1",
+          "n": 62
+        },
+        {
+          "direct_ratio": 0.72,
+          "percent": -25.71,
+          "ci_low": -29.73,
+          "ci_high": -21.46,
+          "cov": "HC1",
+          "n": 43
+        },
+        {
+          "direct_ratio": 0.5558,
+          "percent": -44.57,
+          "ci_low": -46.79,
+          "ci_high": -42.26,
+          "cov": "HC3",
+          "n": 258
+        },
+        {
+          "direct_ratio": 0.5355,
+          "percent": -46.29,
+          "ci_low": -49.06,
+          "ci_high": -43.36,
+          "cov": "HC3",
+          "n": 73
+        },
+        {
+          "direct_ratio": 0.6556,
+          "percent": -26.86,
+          "ci_low": -40.05,
+          "ci_high": -10.77,
+          "cov": "HC3",
+          "n": 64
+        },
+        {
+          "direct_ratio": 0.6204,
+          "percent": -37.86,
+          "ci_low": -39.67,
+          "ci_high": -35.99,
+          "cov": "HC3",
+          "n": 188
+        },
+        {
+          "direct_ratio": 0.5423,
+          "percent": -44.58,
+          "ci_low": -45.89,
+          "ci_high": -43.23,
+          "cov": "HC1",
+          "n": 143
+        },
+        {
+          "direct_ratio": 0.6219,
+          "percent": -36.42,
+          "ci_low": -39.12,
+          "ci_high": -33.59,
+          "cov": "HC1",
+          "n": 279
+        },
+        {
+          "direct_ratio": 0.5046,
+          "percent": -51.51,
+          "ci_low": -53.83,
+          "ci_high": -49.07,
+          "cov": "HC3",
+          "n": 119
+        },
+        {
+          "direct_ratio": 1.1392,
+          "percent": -0.88,
+          "ci_low": -7.76,
+          "ci_high": 6.52,
+          "cov": "HC3",
+          "n": 105
+        },
+        {
+          "direct_ratio": 0.4364,
+          "percent": -54.04,
+          "ci_low": -55.69,
+          "ci_high": -52.33,
+          "cov": "HC3",
+          "n": 221
+        },
+        {
+          "direct_ratio": 0.4356,
+          "percent": -51.78,
+          "ci_low": -53.98,
+          "ci_high": -49.47,
+          "cov": "HC3",
+          "n": 192
+        },
+        {
+          "direct_ratio": 0.8224,
+          "percent": -18.4,
+          "ci_low": -19.12,
+          "ci_high": -17.67,
+          "cov": "HC3",
+          "n": 55
+        }
+      ],
+      "pooled": {
+        "ok": true,
+        "percent": -37.83,
+        "ci_low": -41.06,
+        "ci_high": -34.43,
+        "n_pairs": 88,
+        "n_trades": 15850,
+        "se": "cluster_pair"
+      },
+      "n_eligible": 88,
+      "n_direct_only": 16,
+      "selection": {
+        "rule": "직접 비교를 통과한 곳 가운데 유형별 거래 15건 이상, 합계 40건 이상만 회귀에 넣는다.",
+        "in_regression": {
+          "n": 88,
+          "ratio": {
+            "n": 88,
+            "median": 0.6208,
+            "p25": 0.5374,
+            "p75": 0.7499,
+            "share_below": 0.9773
+          },
+          "region_n": {
+            "광역시": 35,
+            "시": 30,
+            "서울": 22,
+            "군": 1
+          },
+          "vintage_n": {
+            "그 밖": 44,
+            "5년 이하": 30,
+            "20년 이상": 14
+          }
+        },
+        "direct_only": {
+          "n": 16,
+          "ratio": {
+            "n": 16,
+            "median": 0.5951,
+            "p25": 0.5335,
+            "p75": 0.7164,
+            "share_below": 1.0
+          },
+          "region_n": {
+            "광역시": 10,
+            "시": 4,
+            "서울": 2
+          },
+          "vintage_n": {
+            "그 밖": 9,
+            "5년 이하": 4,
+            "20년 이상": 3
+          }
+        }
+      }
+    },
+    "strata": {
+      "region": {
+        "서울": {
+          "n": 24,
+          "median": 0.8006,
+          "p25": 0.7212,
+          "p75": 0.8561,
+          "share_below": 1.0
+        },
+        "시": {
+          "n": 34,
+          "median": 0.5993,
+          "p25": 0.5391,
+          "p75": 0.6319,
+          "share_below": 0.9412
+        },
+        "광역시": {
+          "n": 45,
+          "median": 0.5676,
+          "p25": 0.4812,
+          "p75": 0.6702,
+          "share_below": 1.0
+        },
+        "군": {
+          "n": 1,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null
+        }
+      },
+      "vintage": {
+        "그 밖": {
+          "n": 53,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null
+        },
+        "5년 이하": {
+          "n": 34,
+          "median": 0.5433,
+          "p25": 0.4747,
+          "p75": 0.6506,
+          "share_below": 1.0
+        },
+        "20년 이상": {
+          "n": 17,
+          "median": 0.7466,
+          "p25": 0.681,
+          "p75": 0.8546,
+          "share_below": 1.0
+        }
+      }
+    },
+    "sensitivity": {
+      "area_pm15": {
+        "n": 104,
+        "median": 0.6195,
+        "p25": 0.5374,
+        "p75": 0.7499,
+        "share_below": 0.9808
+      },
+      "area_pm10": {
+        "n": 74,
+        "median": 0.6176,
+        "p25": 0.5397,
+        "p75": 0.7362,
+        "share_below": 1.0
+      },
+      "area_pm20": {
+        "n": 150,
+        "median": 0.632,
+        "p25": 0.5418,
+        "p75": 0.7859,
+        "share_below": 0.9867
+      },
+      "quarter": {
+        "n": 64,
+        "median": 0.62,
+        "p25": 0.5411,
+        "p75": 0.77,
+        "share_below": 0.9844
+      },
+      "month_pass_n": 37,
+      "absolute_floor_pm2": {
+        "n_floors_within_20pct": 2336,
+        "n_floors_far": 81,
+        "distribution": {
+          "n": 70,
+          "median": 0.6,
+          "p25": 0.5249,
+          "p75": 0.6953,
+          "share_below": 0.9571
+        }
+      },
+      "iqr_1_5": {
+        "distribution": {
+          "n": 97,
+          "median": 0.6219,
+          "p25": 0.5381,
+          "p75": 0.7717,
+          "share_below": 0.9794
+        },
+        "sign_flipped": false
+      },
+      "without_kapt_same_pnu": {
+        "distribution": {
+          "n": 34,
+          "median": 0.719,
+          "p25": 0.6206,
+          "p75": 0.8378,
+          "share_below": 1.0
+        },
+        "sign_flipped": false
+      },
+      "without_reuse_flag": {
+        "distribution": {
+          "n": 92,
+          "median": 0.6229,
+          "p25": 0.5448,
+          "p75": 0.7499,
+          "share_below": 0.9783
+        },
+        "sign_flipped": false
+      }
+    },
+    "followup": {
+      "matched_area": {
+        "n": 104,
+        "median_matched_area_apt": 84.68,
+        "median_matched_area_off": 82.98,
+        "area_ratio": {
+          "n": 104,
+          "median": 0.9988,
+          "p25": 0.9415,
+          "p75": 1.0168,
+          "share_below": 0.5673
+        }
+      },
+      "region_vintage": [
+        {
+          "n": 5,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null,
+          "region": "서울",
+          "vintage": "그 밖"
+        },
+        {
+          "n": 3,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null,
+          "region": "서울",
+          "vintage": "5년 이하"
+        },
+        {
+          "n": 16,
+          "median": 0.7531,
+          "p25": 0.6821,
+          "p75": 0.8548,
+          "share_below": 1.0,
+          "region": "서울",
+          "vintage": "20년 이상"
+        },
+        {
+          "n": 22,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null,
+          "region": "시",
+          "vintage": "그 밖"
+        },
+        {
+          "n": 18,
+          "median": 0.498,
+          "p25": 0.4163,
+          "p75": 0.5739,
+          "share_below": 1.0,
+          "region": "광역시",
+          "vintage": "5년 이하"
+        },
+        {
+          "n": 26,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null,
+          "region": "광역시",
+          "vintage": "그 밖"
+        },
+        {
+          "n": 1,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null,
+          "region": "광역시",
+          "vintage": "20년 이상"
+        },
+        {
+          "n": 12,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null,
+          "region": "시",
+          "vintage": "5년 이하"
+        },
+        {
+          "n": 1,
+          "median": null,
+          "p25": null,
+          "p75": null,
+          "share_below": null,
+          "region": "군",
+          "vintage": "5년 이하"
+        }
+      ],
+      "strict_90_92d": {
+        "rule": "전용면적 비율 0.90–1.10, 계약일 차이 92일 이내, 키 안 층 대역. 양쪽 10건.",
+        "pass_n": 62,
+        "among_headline_n": 62,
+        "replaces_headline": false,
+        "distribution": {
+          "n": 62,
+          "median": 0.6138,
+          "p25": 0.5402,
+          "p75": 0.7818,
+          "share_below": 1.0
+        },
+        "sign_flipped": false
+      }
+    },
+    "register": {
+      "available": true,
+      "n": 104,
+      "note": "확인된 짝만 따로 센다. 확인 불가 짝은 본결과 104곳에 그대로 둔다. 용도 문구는 확인 조건이 아니다.",
+      "source": "building_ledger_v1",
+      "lot_closed": 0,
+      "no_parcel": 0,
+      "no_title_year": 0,
+      "year_miss": 0,
+      "ambiguous": 0,
+      "verified": 104,
+      "verified_distribution": {
+        "n": 104,
+        "median": 0.6195,
+        "p25": 0.5374,
+        "p75": 0.7499,
+        "share_below": 0.9808
+      },
+      "purpose_both_n": 71,
+      "purpose_split": {
+        "both": {
+          "n": 71,
+          "median": 0.5715,
+          "p25": 0.5022,
+          "p75": 0.6509,
+          "share_below": 1.0
+        },
+        "not_both": {
+          "n": 33,
+          "median": 0.8226,
+          "p25": 0.6516,
+          "p75": 0.8546,
+          "share_below": 0.9394
+        },
+        "apt_only_n": 5,
+        "off_only_n": 10,
+        "neither_n": 18
+      },
+      "sign_flipped": false
+    }
+  },
+  "different_building": {
+    "note": "같은 지번이고 사용승인연도 차이가 2년 이상. 동일 건물 분포와 합치지 않는다.",
+    "direct": {
+      "pass_n": 3,
+      "thin_n": 26,
+      "reuse_flag_n": 0,
+      "distribution": {
+        "n": 3,
+        "median": 0.6568,
+        "p25": 0.6568,
+        "p75": 0.7738,
+        "share_below": 1.0
+      },
+      "without_reuse_flag": {
+        "distribution": {
+          "n": 3,
+          "median": 0.6568,
+          "p25": 0.6568,
+          "p75": 0.7738,
+          "share_below": 1.0
+        },
+        "sign_flipped": false
+      }
+    }
+  }
+}

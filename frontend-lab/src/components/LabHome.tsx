@@ -2,11 +2,6 @@ import type { LabTool } from "../App";
 
 const DOORS: { id: LabTool; title: string; desc: string }[] = [
   {
-    id: "ai2",
-    title: "AI2 프로토콜",
-    desc: "ask·call·offer·refuse 루프. 화면 어시스턴트와 세션이 분리된 같은 OpenAI 연결. 실데이터는 층 지수·쌍둥이·복합 예측.",
-  },
-  {
     id: "plan",
     title: "계획일지",
     desc: "토지 · 복합 · 집합 · 임대 · 지역프로필 · 관리 — 한 표로 오늘과 다음.",
@@ -125,6 +120,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     id: "alloc-gap",
     title: "토지 단독거래와 건부지 배분",
     desc: "읍·면·동 10칸은 짝을 맞춘 뒤 구간 밖에 남지 않았습니다. 시·군·구 887칸은 지역과 용도에 따라 방향이 갈립니다.",
+  },
+  {
+    id: "same-lot",
+    title: "동일 지번 아파트·오피스텔",
+    desc: "104곳 가격비율 중앙값 62.0%. 면적·92일로 좁히면 62곳 61.4%. 같은 건물은 확정하지 않음. 공개 글 13번.",
   },
   {
     id: "yield-compare",

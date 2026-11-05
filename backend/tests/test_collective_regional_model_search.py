@@ -92,3 +92,52 @@ def test_saturated_region_model_is_not_recommended():
         model_type="linear", min_tx=5, region_dummy=True, region_addrs=addrs,
     )
     assert suggest_regional_regression(pd.DataFrame(rows), req, unified=False) == []
+
+
+def test_unified_search_does_not_let_parking_drop_the_other_type():
+    rows = []
+    for i in range(24):
+        rows.append({
+            "median": 500 + i * 12,
+            "match_tier": "A",
+            "households": 80 + i * 8,
+            "max_floor": 10 + (i % 5),
+            "building_age": float(i % 9),
+            "parking_per_household": 1.0,
+            "assessed_land_price": 200 + i,
+            "structure_group": "철근콘크리트",
+            "builder_group": "기타",
+            "n_tx": 8,
+            "asset_type": "apartment",
+        })
+    for i in range(8):
+        rows.append({
+            "median": 700 + i * 15,
+            "match_tier": "T",
+            "households": 40 + i * 3,
+            "max_floor": 14,
+            "building_age": float(5 + i),
+            "parking_per_household": None,
+            "assessed_land_price": 300 + i,
+            "structure_group": "철근콘크리트",
+            "builder_group": "기타",
+            "n_tx": 8,
+            "asset_type": "officetel",
+        })
+    df = pd.DataFrame(rows)
+    req = RegionalRegressionRunRequest(
+        addr1="서울특별시",
+        addr2="강남구",
+        asset_type="apartment,officetel",
+        variables=RegionalRegressionVariables(parking=False),
+        model_type="log",
+        min_tx=5,
+        region_dummy=False,
+    )
+    mixed = suggest_regional_regression(df, req, unified=True)
+    assert mixed
+    assert {item.n for item in mixed} == {32}
+    assert all("parking" not in item.blocks for item in mixed)
+    apartment_rule = suggest_regional_regression(df, req, unified=False)
+    assert apartment_rule
+    assert {item.n for item in apartment_rule} == {24}

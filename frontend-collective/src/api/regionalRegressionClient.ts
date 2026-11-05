@@ -114,6 +114,7 @@ export type RegionalRegressionRunResponse = {
     status: "available" | "partial" | "unavailable";
     reason?: string | null;
     evaluation_n: number;
+    evaluation_by_type?: Record<string, number> | null;
     fit_before_n: number;
     fit_after_n: number;
     mape_before?: number | null;
@@ -210,8 +211,10 @@ export type AptTwinListResponse = {
 export async function fetchAptTwins(body: {
   addr1: string;
   addr2?: string;
+  addr3_list?: string[];
   addr4?: string;
   region_code?: string;
+  asset_type?: string;
 }): Promise<AptTwinListResponse> {
   const { data } = await api.post<AptTwinListResponse>(
     "/analysis/regional-regression/apt-twins",

@@ -33,10 +33,11 @@ import {
 } from "@ch2/stats-glossary";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { ASSET_LABELS } from "../types";
+import { checkedTwinsAddRegion, twinPoolRegionAddrs } from "../utils/twinPool";
 import { parseResidentialAssetKinds } from "../utils/residentialAssetTypes";
 import { countSignificantCoefficients, structureGroupLabel } from "../utils/collectiveRegressionFormat";
-import { APT_TWIN_REGION_HELP, RESIDENTIAL_REGIONAL_REGRESSION_HELP, RESIDENTIAL_REGIONAL_ESTIMATE_HELP, REGIONAL_SETTINGS_HELP } from "../utils/residentialAnalysisHelp";
-import { FLAT_SIDO_ADDR2_TOKEN } from "../utils/flatSidoRegion";
+import { APT_TWIN_REGION_HELP, OFFICETEL_TWIN_REGION_HELP, RESIDENTIAL_REGIONAL_REGRESSION_HELP, RESIDENTIAL_REGIONAL_ESTIMATE_HELP, REGIONAL_SETTINGS_HELP } from "../utils/residentialAnalysisHelp";
+import { FLAT_SIDO_ADDR2_TOKEN, isFlatSidoAddr2 } from "../utils/flatSidoRegion";
 import { regionalPredictionCategories } from "../utils/regionalPredictionCategories";
 import { regionalTwinNotice } from "../utils/regionalTwinNotice";
 
@@ -265,26 +266,26 @@ function splitAddrKey(key: string): { addr1: string; addr2: string; addr4: strin
   return { addr1: parts[0], addr2: parts[1] ?? "", addr4: parts[2] };
 }
 
-/** 고른 지역과 체크한 쌍둥이를 중복 없이 붙인다. 순위만의 상위 읍·면은 식에 넣지 않는다. */
-export function twinPoolRegionAddrs(selected: string[], anchor: string, twins: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  const push = (raw: string) => {
-    const key = raw.trim();
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    out.push(key);
-  };
-  const selectedKeys = selected.map((key) => key.trim()).filter(Boolean);
-  const anchorKey = anchor.trim();
-  if (selectedKeys.length === 0 || selectedKeys.includes(anchorKey)) push(anchorKey);
-  for (const key of selectedKeys) push(key);
-  for (const key of twins) push(key);
-  return out;
+const EVALUATION_TYPE_ORDER = ["apartment", "rowhouse", "officetel"];
+
+function evaluationTypeNote(counts?: Record<string, number> | null): string {
+  if (!counts) return "";
+  const keys = Object.keys(counts).filter((key) => (counts[key] ?? 0) > 0);
+  keys.sort((a, b) => {
+    const ia = EVALUATION_TYPE_ORDER.indexOf(a);
+    const ib = EVALUATION_TYPE_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  if (!keys.length) return "";
+  const text = keys
+    .map((key) => `${ASSET_LABELS[key as keyof typeof ASSET_LABELS] ?? key} ${counts[key]}`)
+    .join(" · ");
+  return ` (${text})`;
 }
 
 function TwinRegionPanel(props: {
   windowYears: number;
+  stockLabel?: string;
   extraTypeLabel: string;
   choices: AnchorChoice[];
   anchorKey: string;
@@ -304,24 +305,44 @@ function TwinRegionPanel(props: {
   regionDummy: boolean;
   onRegionDummy: (on: boolean) => void;
   rankScopeNote: string;
+  parkingDropsMissing?: boolean;
   onAddNeighbors: () => void;
   onRetry: () => void;
+  flatCity?: boolean;
+  placeName?: string;
 }) {
+  const stockLabel = props.stockLabel ?? "아파트";
   const notice = regionalTwinNotice({
     loading: props.scopeLoading || props.listLoading,
     error: props.scopeError || props.listError,
     scopeEmpty: props.choices.length === 0 && props.scopeAnchors.length === 0,
     hasAnchor: Boolean(props.anchorLabel),
     hasTwins: props.twins.length > 0,
+    stock: stockLabel,
+    flatCity: props.flatCity,
+    placeName: props.placeName,
   });
+  if (notice?.kind === "guide") {
+    return (
+      <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
+        <p className="text-xs font-semibold">쌍둥이 지역</p>
+        <div role="status" className="rounded-lg border border-slate-300 bg-slate-50 p-3 space-y-2 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-900/40 dark:text-slate-100">
+          <p className="font-semibold">{notice.title}</p>
+          <p className="leading-relaxed">{notice.reason}</p>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
       <div className="flex flex-wrap items-center gap-1">
         <p className="text-xs font-semibold">쌍둥이 지역</p>
-        <AnalysisHelpPanel explain={APT_TWIN_REGION_HELP} />
+        <AnalysisHelpPanel explain={stockLabel === "오피스텔" ? OFFICETEL_TWIN_REGION_HELP : APT_TWIN_REGION_HELP} />
       </div>
       <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
-        기준 읍면동의 아파트 재고 구성과 가격분포를 비교해 최대 5곳을 제시합니다.
+        {stockLabel === "오피스텔"
+          ? "기준 읍면동의 오피스텔 재고 구성과 가격분포를 비교해 최대 5곳을 제시합니다. 그 지역만으로 식이 서지 않을 때 단지를 더하기 위한 목록이며, 오차가 줄어든다는 뜻은 아닙니다."
+          : "기준 읍면동의 아파트 재고 구성과 가격분포를 비교해 최대 5곳을 제시합니다."}
         {props.asOfLabel ? ` 목록 기준은 ${props.asOfLabel}의 3년 창입니다.` : " 목록은 최근 3년 창입니다."}
         {props.windowYears === 3
           ? " 식의 통계 창도 3년입니다."
@@ -332,11 +353,15 @@ function TwinRegionPanel(props: {
       {props.extraTypeLabel && (
         <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
           {`${props.extraTypeLabel}${josaEun(props.extraTypeLabel)} 순위에 쓰지 않았습니다. 통합회귀를 실행하면 고른 지역의 ${props.extraTypeLabel} 단지도 같은 식에 들어갑니다.`}
+          {props.parkingDropsMissing
+            ? " 세대당 주차가 켜져 있으면 주차 값이 없는 단지는 이 식에서 빠집니다."
+            : ""}
         </p>
       )}
       <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
-        이 식은 이미 고른 읍면동 전부와 체크한 쌍둥이 지역의 단지를 한 식으로 합칩니다. 쌍둥이 순위만 기준
-        읍면동으로 고릅니다. 미래 가격의 정답을 보장하지 않습니다. 그 지역만의 식은 기본회귀 탭에 있습니다.
+        {props.choices.length === 0
+          ? "읍·면·동을 따로 고르지 않으면 식에는 기준 읍·면·동 한 곳과 체크한 쌍둥이만 들어갑니다. 시·군·구 전체는 들어가지 않습니다. 그 전체의 식은 기본회귀 탭에 있습니다."
+          : "식에는 이미 고른 읍·면·동과 체크한 쌍둥이 지역의 단지가 들어갑니다. 쌍둥이 순위만 기준 읍·면·동으로 고릅니다. 미래 가격의 정답을 보장하지 않습니다. 그 지역만의 식은 기본회귀 탭에 있습니다."}
       </p>
 
       {props.choices.length > 1 && (
@@ -384,7 +409,7 @@ function TwinRegionPanel(props: {
         </> : <button type="button" className="btn" onClick={props.onRetry}>다시 불러오기</button>}
       </div>}
       {props.listLoading && (
-        <p className="text-[11px] text-slate-500">전국 아파트 단지를 읽어 순위를 계산하고 있습니다.</p>
+        <p className="text-[11px] text-slate-500">전국 {stockLabel} 단지를 읽어 순위를 계산하고 있습니다.</p>
       )}
       {!props.listLoading && props.anchorLabel && (
         <p className="text-[11px] text-slate-500">기준: {props.anchorLabel}</p>
@@ -397,8 +422,8 @@ function TwinRegionPanel(props: {
                 <th className="text-left w-8">선택</th>
                 <th className="text-right">순위</th>
                 <th className="text-left">지역</th>
-                <th className="text-right" title="순위 계산에 쓴 아파트 적격 단지 수">
-                  아파트 단지 수
+                <th className="text-right" title={`순위 계산에 쓴 ${stockLabel} 적격 단지 수`}>
+                  {stockLabel} 단지 수
                 </th>
               </tr>
             </thead>
@@ -447,16 +472,21 @@ function TwinRegionPanel(props: {
 export default function RegionalRegressionModal(props: Props) {
   const resultSummaryRef = useRef<HTMLElement>(null);
   const kinds = regressionKinds(props.assetType);
+  const officetelOnly = kinds.includes("officetel") && !kinds.includes("apartment");
+  const parkingDefaultOn = !kinds.includes("officetel");
   const [vars, setVars] = useState<RegionalRegressionVariables>({
     households: true,
     max_floor: true,
     building_age: true,
-    parking: true,
+    parking: parkingDefaultOn,
     structure: false,
     builder: false,
     asset_type_dummy: true,
     assessed_land_price: true,
   });
+  useEffect(() => {
+    setVars((current) => ({ ...current, parking: parkingDefaultOn }));
+  }, [parkingDefaultOn]);
   const [modelType, setModelType] = useState<"linear" | "log">("log");
   const [weightMode, setWeightMode] = useState<"equal" | "tx">("equal");
   const [minTx, setMinTx] = useState<MinTx>(5);
@@ -500,13 +530,15 @@ export default function RegionalRegressionModal(props: Props) {
     ],
   );
 
-  const showTwin = kinds.includes("apartment");
+  const showTwin = kinds.includes("apartment") || officetelOnly;
+  const twinAsset = kinds.includes("apartment") ? "apartment" : "officetel";
   const [tab, setTab] = useState<"local" | "twin">("local");
   const effectiveTab = showTwin && tab === "twin" ? "twin" : "local";
   const choices = useMemo(
     () => anchorChoices(props),
     [props.addr1, props.addr2, props.leafList, props.regionAddrs, props.regionCodes],
   );
+  const flatCity = isFlatSidoAddr2(props.addr2) && choices.length === 0;
   const choiceKey = choices.map((c) => `${c.key}\t${c.code ?? ""}`).join("\n");
   const [anchorKey, setAnchorKey] = useState("");
   const [scopeKey, setScopeKey] = useState("");
@@ -519,13 +551,23 @@ export default function RegionalRegressionModal(props: Props) {
 
   const explicit = choices.find((c) => c.key === anchorKey) ?? choices[0];
   const explicitParts = explicit ? splitAddrKey(explicit.key) : null;
+  const scopeGuList = props.hasIntermediate && props.guList.length ? props.guList : [];
   const scopeQ = useQuery({
-    queryKey: ["apt-twin-scope", props.addr1, props.addr2],
-    queryFn: () => fetchAptTwins({ addr1: props.addr1, addr2: props.addr2 }),
-    enabled: showTwin && effectiveTab === "twin" && choices.length === 0,
+    queryKey: ["apt-twin-scope", props.addr1, props.addr2, twinAsset, scopeGuList.join("\n")],
+    queryFn: () => fetchAptTwins({
+      addr1: props.addr1,
+      addr2: props.addr2,
+      asset_type: twinAsset,
+      addr3_list: scopeGuList.length ? scopeGuList : undefined,
+    }),
+    enabled: showTwin && effectiveTab === "twin" && choices.length === 0 && !flatCity,
     staleTime: 10 * 60 * 1000,
   });
   const scopeAnchors = scopeQ.data?.scope_anchors ?? [];
+  const scopeGuKey = scopeGuList.join("\n");
+  useEffect(() => {
+    setScopeKey("");
+  }, [props.addr1, props.addr2, twinAsset, scopeGuKey]);
   useEffect(() => {
     const first = scopeQ.data?.scope_anchors?.[0]?.region_addr;
     if (choices.length > 0 || !first) return;
@@ -538,14 +580,15 @@ export default function RegionalRegressionModal(props: Props) {
         addr2: explicitParts.addr2,
         addr4: explicitParts.addr4,
         region_code: explicit?.code,
+        asset_type: twinAsset,
       }
     : scopePlace
-      ? { addr1: scopePlace.addr1, addr2: scopePlace.addr2, addr4: scopePlace.addr4 }
+      ? { addr1: scopePlace.addr1, addr2: scopePlace.addr2, addr4: scopePlace.addr4, asset_type: twinAsset }
       : null;
   const twinQ = useQuery({
     queryKey: ["apt-twin-list", twinQueryArgs],
     queryFn: () => fetchAptTwins(twinQueryArgs!),
-    enabled: showTwin && effectiveTab === "twin" && twinQueryArgs != null && !!twinQueryArgs.addr4,
+    enabled: showTwin && effectiveTab === "twin" && !flatCity && twinQueryArgs != null && !!twinQueryArgs.addr4,
     staleTime: 10 * 60 * 1000,
   });
   const anchorAddr = twinQ.data?.anchor?.region_addr ?? "";
@@ -562,6 +605,11 @@ export default function RegionalRegressionModal(props: Props) {
     const anchor = twinQ.data?.anchor;
     const pickedTwins = (twinQ.data?.twins ?? []).filter((row) => checked.includes(row.region_addr));
     if (!anchor || pickedTwins.length === 0) return null;
+    if (!checkedTwinsAddRegion(
+      choices.map((choice) => choice.key),
+      anchor.region_addr,
+      pickedTwins.map((row) => row.region_addr),
+    )) return null;
     return {
       addr1: anchor.addr1,
       addr2: anchor.addr2,
@@ -718,8 +766,9 @@ export default function RegionalRegressionModal(props: Props) {
         {effectiveTab === "twin" && (
           <TwinRegionPanel
             windowYears={props.windowYears}
+            stockLabel={twinAsset === "officetel" ? "오피스텔" : "아파트"}
             extraTypeLabel={kinds
-              .filter((k) => k !== "apartment")
+              .filter((k) => k !== twinAsset)
               .map((k) => ASSET_LABELS[k] ?? k)
               .join("·")}
             choices={choices}
@@ -760,6 +809,9 @@ export default function RegionalRegressionModal(props: Props) {
             regionDummy={regionDummy}
             onRegionDummy={setRegionDummy}
             rankScopeNote={rankScopeNote}
+            parkingDropsMissing={vars.parking}
+            flatCity={flatCity}
+            placeName={props.addr1}
             onAddNeighbors={props.onClose}
             onRetry={() => {
               if (choices.length === 0) void scopeQ.refetch();
@@ -883,6 +935,9 @@ export default function RegionalRegressionModal(props: Props) {
           </button>
         )}
 
+        {effectiveTab === "twin" && checked.length > 0 && !twinRequest && twinQ.data?.anchor && (
+          <p className="text-xs text-slate-500 dark:text-slate-400">체크한 지역은 이미 식에 들어 있어 지역이 늘지 않습니다.</p>
+        )}
         {effectiveTab === "twin" && (
           <button type="button" className="btn btn-primary" disabled={!twinRequest || twinRun.isPending}
             onClick={() => {
@@ -990,7 +1045,7 @@ export default function RegionalRegressionModal(props: Props) {
             {data.extension_comparison && <section className="rounded border border-slate-200 dark:border-slate-600 p-3 space-y-1 text-xs">
               <p className="font-semibold">기존 지역의 같은 단지로 확장 전후 비교</p>
               {data.extension_comparison.status === "available" || data.extension_comparison.status === "partial" ? <>
-                <p>검증 {data.extension_comparison.evaluation_n}곳 · 확장 전 학습 {data.extension_comparison.fit_before_n}곳 · 확장 후 학습 {data.extension_comparison.fit_after_n}곳</p>
+                <p>검증 {data.extension_comparison.evaluation_n}곳{evaluationTypeNote(data.extension_comparison.evaluation_by_type)} · 확장 전 학습 {data.extension_comparison.fit_before_n}곳 · 확장 후 학습 {data.extension_comparison.fit_after_n}곳</p>
                 <p>선정용 검증 MAPE: 확장 전 {fmt(data.extension_comparison.mape_before, 1)}% → 확장 후 {fmt(data.extension_comparison.mape_after, 1)}%</p>
                 {data.extension_comparison.status === "partial" && data.extension_comparison.reason && (
                   <p className="text-amber-800 dark:text-amber-300">{data.extension_comparison.reason}</p>
