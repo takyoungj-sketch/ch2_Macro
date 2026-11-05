@@ -53,6 +53,7 @@ export interface AiContextPayload {
   purpose: AiPurpose;
   scope: {
     region_label?: string;
+    region_codes?: string[];
     asset_type?: string;
     filters?: Record<string, unknown>;
   };

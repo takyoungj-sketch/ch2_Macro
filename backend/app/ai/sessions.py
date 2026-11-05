@@ -5,9 +5,12 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from app.config import settings
+
+if TYPE_CHECKING:
+    from app.ai.dialogue import ScreenEvidence
 
 
 @dataclass
@@ -27,6 +30,8 @@ class AiSession:
     turns: list[SessionTurn] = field(default_factory=list)
     context_snapshots: list[dict[str, Any]] = field(default_factory=list)
     analysis_history: list[dict[str, Any]] = field(default_factory=list)
+    dialogue_evidence: ScreenEvidence | None = None
+    dialogue_product_app: str | None = None
 
     def touch(self) -> None:
         self.updated_at = time.time()

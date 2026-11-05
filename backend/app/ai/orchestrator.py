@@ -1366,7 +1366,9 @@ def _finalize_response(resp: AiChatResponse, ctx: AiContext, message: str) -> Ai
 
 
 def handle_chat(req: AiChatRequest) -> AiChatResponse:
-    return _finalize_response(_handle_chat(req), req.context, req.message)
+    from app.ai.dialogue import answer_land
+
+    return answer_land(req, get_or_create(req.session_id))
 
 
 def handle_explain(req: AiExplainRequest) -> AiChatResponse:

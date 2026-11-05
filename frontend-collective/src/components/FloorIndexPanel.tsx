@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { fetchBuildingFloorIndex, runCohortFloorIndex } from "../api/client";
+import { buildCollectiveFloorIndexContext } from "../api/aiContext";
 import type { AssetType } from "../types";
 import { buildAnalysisPeriodParams } from "../utils/analysisPeriod";
 import ResidentialUtilityIndexHelp from "./ResidentialUtilityIndexHelp";
@@ -98,6 +100,11 @@ export default function FloorIndexPanel({
   });
 
   const q = useCohort ? cohortQ : singleQ;
+  const aiContext = useMemo(() => q.data ? buildCollectiveFloorIndexContext(q.data, {
+    regionLabel: "display_name" in q.data ? q.data.display_name : `통합 ${q.data.building_keys.length}개 단지`,
+    assetType,
+    cohort: useCohort,
+  }) : null, [q.data, assetType, useCohort]);
 
   const header = <div className="flex items-center justify-between gap-2">
     <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">{assetType === "presale" ? "층·권리·면적 효용지수" : "층·동·면적 효용지수"}</h3>
@@ -115,6 +122,7 @@ export default function FloorIndexPanel({
     ? "면적·연식·거래시점 등의 차이를 고려하여 층에 따른 가격 수준을 비교합니다. 기준층의 지수를 100으로 표시합니다."
     : `분석에 포함된 다른 조건의 차이를 고려하여 ${dim === "dong" ? "동" : dim === "rights" ? "권리" : "면적형"}에 따른 가격 수준을 비교합니다. 기준 구간의 지수를 100으로 표시합니다.`;
   return <UtilityIndexResults data={q.data} header={header} intro={intro} columnLabel={dimensionColumnLabel(dim)} notice={<>
+    {aiContext ? <PublishAiContext context={aiContext} /> : null}
     {useCohort && <p className="text-sm text-indigo-700 dark:text-indigo-300">현재 단지를 포함한 {keys.length}개 단지 통합 분석입니다.</p>}
     {!useCohort && !floorIndexEligible && <p className="text-sm text-amber-700 dark:text-amber-300">{gateTip ?? "권장 표본 기준 미달"} · 실험 모드 결과입니다.</p>}
   </>}>

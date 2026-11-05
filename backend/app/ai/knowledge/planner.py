@@ -84,6 +84,8 @@ def is_path_intent_question(message: str, context: AiContext | None = None) -> b
         return False
     if any(k in m for k in ("왜 이 결과", "왜 이렇게", "이 화면", "이번 표본", "이 계수")):
         return False
+    if any(k in m for k in ("무엇을 할 수", "뭘 할 수", "할 수 있", "무슨 차이", "차이가 뭐", "차이는")):
+        return False
     if _is_result_explanation(m, context):
         return False
     if detect_intent(m, context) in ("apartment_officetel_price_gap", "built_type_price_gap"):

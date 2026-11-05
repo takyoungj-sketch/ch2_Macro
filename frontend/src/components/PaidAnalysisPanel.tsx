@@ -468,6 +468,7 @@ export default function PaidAnalysisPanel() {
         matrixMode={matrixMode}
         rows={trendRows}
         filterRequest={trendRequest}
+        aiRegionLabel={basicData?.beopjungri_name}
       />
     </div>
   );

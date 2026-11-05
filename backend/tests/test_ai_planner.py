@@ -5,7 +5,7 @@ from app.ai.knowledge.caveats import fire_caveats
 from app.ai.knowledge.history import maybe_record, slot_from_success_bundle
 from app.ai.knowledge.planner import assess_feasibility, detect_intent, is_path_intent_question, plan_analysis
 from app.ai.knowledge.product import is_howto_ui_question
-from app.ai.orchestrator import handle_chat, handle_history_record
+from app.ai.orchestrator import _handle_chat, handle_history_record
 from app.ai.schemas import AiChatRequest, AiContext, AiHistoryRecordRequest, AiScope
 from app.ai.sessions import get_or_create
 
@@ -18,7 +18,7 @@ def test_analysis_path_recommend_not_refusal(monkeypatch):
     assert not is_refusal_message("아파트와 오피스텔은 통합회귀가 적합한가요?")
     assert not is_refusal_message("분석 경로를 추천해 주세요")
     assert classify_route("분석 경로를 추천해 주세요") != "refusal"
-    resp = handle_chat(
+    resp = _handle_chat(
         AiChatRequest(
             message="분석 경로를 추천해 주세요",
             context=AiContext(app="collective", panel="BuildingRegressionPanel"),
@@ -151,7 +151,7 @@ def test_history_endpoint_and_chat_planner(monkeypatch):
     )
     assert failed.recorded is False
 
-    resp = handle_chat(
+    resp = _handle_chat(
         AiChatRequest(
             session_id=rec.session_id,
             message="아파트와 오피스텔 가격 차이를 보고 싶어",
@@ -167,7 +167,7 @@ def test_history_endpoint_and_chat_planner(monkeypatch):
     assert "통합회귀" in resp.answer
     assert "바로 실행" in resp.answer or "한 유형" in resp.answer or "실행" in resp.answer
 
-    memo = handle_chat(
+    memo = _handle_chat(
         AiChatRequest(
             session_id=rec.session_id,
             message="지금까지 실행한 분석을 정리해 주세요",
@@ -178,7 +178,7 @@ def test_history_endpoint_and_chat_planner(monkeypatch):
     assert "small_sample" in memo.answer
     assert any("비교" in (q or "") for q in (memo.suggested_followups or []))
 
-    cmp_empty = handle_chat(
+    cmp_empty = _handle_chat(
         AiChatRequest(
             session_id=rec.session_id,
             message="아까와 비교해 주세요",
@@ -341,7 +341,7 @@ def test_chat_compare_two_slots_and_actions(monkeypatch):
     )
     assert rec2.history_len == 2
 
-    cmp_ok = handle_chat(
+    cmp_ok = _handle_chat(
         AiChatRequest(
             session_id=rec1.session_id,
             message="아까와 비교해 주세요",
@@ -352,7 +352,7 @@ def test_chat_compare_two_slots_and_actions(monkeypatch):
     assert "23%" not in cmp_ok.answer
     assert "통합회귀가 적합" not in cmp_ok.answer
 
-    path = handle_chat(
+    path = _handle_chat(
         AiChatRequest(
             message="분석 경로를 추천해 주세요",
             context=AiContext(app="collective", panel="BuildingRegressionPanel"),
@@ -373,7 +373,7 @@ def test_howto_trend_is_not_playbook_dump(monkeypatch):
     assert is_howto_ui_question(q)
     assert not is_path_intent_question(q)
 
-    resp = handle_chat(
+    resp = _handle_chat(
         AiChatRequest(
             message=q,
             context=AiContext(app="collective", panel="BuildingList"),
@@ -408,7 +408,7 @@ def test_built_type_gap_does_not_use_collective_playbook(monkeypatch):
     assert "built_type_compare" in path_ids
     assert "collective_integrated_regression" not in path_ids
 
-    resp = handle_chat(AiChatRequest(message=q, context=ctx))
+    resp = _handle_chat(AiChatRequest(message=q, context=ctx))
     assert resp.route == "ch2"
     assert "유형 더미" in resp.answer
     assert "계수" in resp.answer
@@ -427,14 +427,14 @@ def test_built_type_gap_does_not_use_collective_playbook(monkeypatch):
     src = "위의 답변내용(집합 통합회귀, 지역회귀 등)은 ch2 macro 에서 사전에 제공한 지식에 기반해서 답변한 건가?"
     assert is_knowledge_source_question(src)
     assert not is_path_intent_question(src, ctx)
-    src_resp = handle_chat(AiChatRequest(message=src, context=ctx))
+    src_resp = _handle_chat(AiChatRequest(message=src, context=ctx))
     assert "확인된 플레이북이 없는" not in src_resp.answer
     assert "Product Knowledge" in src_resp.answer
     assert "Playbook" in src_resp.answer
     assert "유형 더미" in src_resp.answer
     assert not any(a.href == "/collective/residential/" for a in (src_resp.actions or []))
 
-    rec = handle_chat(
+    rec = _handle_chat(
         AiChatRequest(message="분석 경로를 추천해 주세요", context=ctx)
     )
     rec_paths = " ".join(a.label or "" for a in (rec.actions or []))
@@ -487,14 +487,14 @@ def test_nested_admin_scope_not_history_compare(monkeypatch):
     pack = build_regression_diagnostic(ctx)
     assert any("남동구" in s for s in pack.summary_lines)
 
-    meaning_resp = handle_chat(AiChatRequest(message=meaning, context=ctx))
+    meaning_resp = _handle_chat(AiChatRequest(message=meaning, context=ctx))
     assert "실행 비교" not in meaning_resp.answer
     assert "시군구" in meaning_resp.answer
     assert "읍" in meaning_resp.answer
     assert "History" in meaning_resp.answer or "실행 순서" in meaning_resp.answer
     assert "259" not in meaning_resp.answer or "남동구" in meaning_resp.answer
 
-    cmp_resp = handle_chat(AiChatRequest(message=compare_q, context=ctx))
+    cmp_resp = _handle_chat(AiChatRequest(message=compare_q, context=ctx))
     assert "실행 비교" not in cmp_resp.answer
     assert "남동구" in cmp_resp.answer
     assert "n=259" in cmp_resp.answer
@@ -569,7 +569,7 @@ def test_product_questions_skip_llm_even_if_configured(monkeypatch):
 
     monkeypatch.setattr("app.ai.orchestrator.try_grounded_synthesis", _boom)
 
-    meaning = handle_chat(
+    meaning = _handle_chat(
         AiChatRequest(
             message="1차와 2차가 의미하는 바는 각각 무엇인가?",
             context=AiContext(app="built", panel="RegressionCard", facts={}),
@@ -578,7 +578,7 @@ def test_product_questions_skip_llm_even_if_configured(monkeypatch):
     assert meaning.llm_used is False
     assert "시군구" in meaning.answer
 
-    path = handle_chat(
+    path = _handle_chat(
         AiChatRequest(
             message="분석 경로를 추천해 주세요",
             context=AiContext(app="collective", panel="BuildingRegressionPanel"),

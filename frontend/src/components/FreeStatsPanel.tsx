@@ -442,6 +442,7 @@ export default function FreeStatsPanel() {
         matrixMode={matrixMode}
         rows={trendRows}
         filterRequest={trendRequest}
+        aiRegionLabel={data.beopjungri_name}
       />
     </div>
   );

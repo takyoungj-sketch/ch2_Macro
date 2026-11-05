@@ -1,6 +1,7 @@
 import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import type {
   LandRegressionPredictResponse,
+  LandRegressionRequest,
   LandRegressionResponse,
   LongTermTrendResponse,
   MatrixCell,
@@ -16,13 +17,24 @@ export function buildLandRegressionContext(
     landCategory: string;
     modelType: "log" | "linear";
     controlsChanged?: boolean;
+    request?: LandRegressionRequest | null;
   },
 ): AiContextPayload {
   return {
     app: "land",
     panel: "LandRegressionTab",
     purpose: "statistics",
-    scope: { region_label: opts.regionLabel },
+    scope: {
+      region_label: opts.regionLabel,
+      region_codes: opts.request?.region_codes ?? opts.request?.region_selections?.map((region) => region.code),
+      filters: {
+        year_from: opts.request?.year_from,
+        year_to: opts.request?.year_to,
+        years: opts.request?.years,
+        zone_type: opts.zoneType,
+        land_category: opts.landCategory,
+      },
+    },
     facts: {
       ...regData,
       zone_type: opts.zoneType,
@@ -30,30 +42,6 @@ export function buildLandRegressionContext(
       model_type: regData.model_type,
       requested_model_type: opts.modelType,
       controls_changed: Boolean(opts.controlsChanged),
-    },
-  };
-}
-
-export function buildLandScatterContext(
-  regData: LandRegressionResponse,
-  opts: {
-    regionLabel: string;
-    zoneType: string;
-    landCategory: string;
-    activeTab?: "raw" | "partial";
-  },
-): AiContextPayload {
-  return {
-    app: "land",
-    panel: "LandRegressionTab",
-    purpose: "statistics",
-    scope: { region_label: opts.regionLabel },
-    facts: {
-      ...(regData as unknown as Record<string, unknown>),
-      zone_type: opts.zoneType,
-      land_category: opts.landCategory,
-      scatter_tab: opts.activeTab ?? "raw",
-      unit: "만원/㎡",
     },
   };
 }
@@ -86,6 +74,7 @@ export function buildLandMatrixTrendContext(
     regionLabel: string;
     zoneType: string;
     landCategory: string;
+    metric: "mean" | "median";
   },
 ): AiContextPayload {
   return {
@@ -95,6 +84,7 @@ export function buildLandMatrixTrendContext(
     scope: { region_label: opts.regionLabel },
     facts: {
       rows,
+      trend_metric: opts.metric,
       zone_type: opts.zoneType,
       land_category: opts.landCategory,
     },
@@ -103,14 +93,14 @@ export function buildLandMatrixTrendContext(
 
 export function buildLandLongTermContext(
   data: LongTermTrendResponse,
-  opts: { regionLabel: string },
+  opts: { regionLabel: string; metric: "mean" | "median" },
 ): AiContextPayload {
   return {
     app: "land",
     panel: "TrendCard",
     purpose: "market_analysis",
     scope: { region_label: opts.regionLabel },
-    facts: data as unknown as Record<string, unknown>,
+    facts: { ...data, trend_metric: opts.metric },
   };
 }
 

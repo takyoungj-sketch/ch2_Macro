@@ -5,7 +5,7 @@ import type {
   LandRegressionResponse,
   PartialRegressionSeries,
 } from "../types";
-import { buildLandScatterContext } from "../api/aiContext";
+import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import {
@@ -150,13 +150,11 @@ function ScatterMini({
 export default function LandRegressionScatterSection({
   data,
   regionLabel,
-  zoneType,
-  landCategory,
+  aiContext,
 }: {
   data: LandRegressionResponse;
   regionLabel: string;
-  zoneType: string;
-  landCategory: string;
+  aiContext: AiContextPayload | null;
 }) {
   const [tab, setTab] = useState<ScatterTab>("raw");
   const correlations = data.correlations ?? [];
@@ -164,15 +162,9 @@ export default function LandRegressionScatterSection({
   const hasRaw = correlations.length > 0;
   const hasPartial = partials.length > 0;
 
-  const aiContext = useMemo(
-    () =>
-      buildLandScatterContext(data, {
-        regionLabel,
-        zoneType,
-        landCategory,
-        activeTab: tab,
-      }),
-    [data, regionLabel, zoneType, landCategory, tab],
+  const scatterContext = useMemo(
+    () => aiContext && { ...aiContext, facts: { ...aiContext.facts, scatter_tab: tab } },
+    [aiContext, tab],
   );
 
   const explain = tab === "raw" ? LAND_SCATTER_RAW_HELP : LAND_SCATTER_PARTIAL_HELP;
@@ -197,7 +189,7 @@ export default function LandRegressionScatterSection({
           <p className="text-[11px] text-slate-500 mt-0.5">{scopeBits.join(" · ")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-          <PublishAiContext context={aiContext} />
+          {scatterContext && <PublishAiContext context={scatterContext} />}
           <AnalysisHelpPanel explain={explain} />
           <div
             className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[11px]"

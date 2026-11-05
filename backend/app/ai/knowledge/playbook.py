@@ -33,7 +33,7 @@ PATHS: dict[str, dict[str, Any]] = {
         "id": "regional_regression",
         "label": "지역회귀",
         "app": "collective",
-        "purpose": "단지가 아니라 지역 단위에서 유형·규모 효과를 본다",
+        "purpose": "그 지역 단지를 한 행으로 두고 기간 중앙단가(만원/㎡)와 규모·연식의 연관을 본다. 한 단지의 거래금액 회귀가 아니다",
         "requires": ["region_scope"],
     },
     "expand_adjacent": {

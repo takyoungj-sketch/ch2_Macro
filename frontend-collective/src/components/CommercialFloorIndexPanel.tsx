@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { fetchCommercialFloorIndex, runCommercialCohortFloorIndex } from "../api/commercialClient";
+import { buildCollectiveFloorIndexContext } from "../api/aiContext";
 import type { CommercialAssetType } from "../types";
 import type { CommercialModalScope } from "./CommercialClusterDetailModal";
 import CommercialUtilityIndexHelp from "./CommercialUtilityIndexHelp";
@@ -100,6 +102,12 @@ export default function CommercialFloorIndexPanel({
           }),
     enabled: (!useCohort || cohortRunId > 0) && (floorIndexEligible || experiment),
   });
+  const aiContext = useMemo(() => q.data ? buildCollectiveFloorIndexContext(q.data, {
+    regionLabel: q.data.display_label,
+    assetType: q.data.asset_type,
+    cohort: useCohort,
+    panel: "CommercialFloorIndexPanel",
+  }) : null, [q.data, useCohort]);
 
   const header = <div className="flex items-center justify-between gap-2">
     <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">{isFactory ? "면적대·층 효용지수" : "층·면적 효용지수"}</h3>
@@ -118,6 +126,7 @@ export default function CommercialFloorIndexPanel({
     ? "분석에 포함된 다른 조건의 차이를 고려하여 면적 구간에 따른 가격 수준을 비교합니다. 기준 구간의 지수를 100으로 표시합니다."
     : "면적·연식·거래시점 등의 차이를 고려하여 층에 따른 가격 수준을 비교합니다. 기준층의 지수를 100으로 표시합니다.";
   return <UtilityIndexResults data={q.data} header={header} intro={intro} columnLabel={isArea ? isFactory ? "면적대" : "면적형" : "층 구간"} notice={<>
+    {aiContext ? <PublishAiContext context={aiContext} /> : null}
     {useCohort && <p className="text-sm text-indigo-700 dark:text-indigo-300">현재 도로를 포함한 {keys.length}개 도로명 묶음의 통합 분석입니다.</p>}
     {!floorIndexEligible && <p className="text-sm text-amber-700 dark:text-amber-300">{gateTip} · 실험 모드 결과입니다.</p>}
   </>}>

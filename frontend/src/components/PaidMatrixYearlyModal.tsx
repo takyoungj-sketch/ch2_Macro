@@ -113,6 +113,7 @@ interface Props {
   filterRequest: MatrixYearlyRequest | null;
   /** 적용 범위 안내(기본: 필터 분석 기준 문구) */
   scopeNote?: string;
+  aiRegionLabel?: string;
 }
 
 type PanelMode = "trend" | "longTerm" | "histogram" | "transactions" | "regression";
@@ -172,6 +173,7 @@ export default function PaidMatrixYearlyModal({
   rows,
   filterRequest,
   scopeNote,
+  aiRegionLabel,
 }: Props) {
   const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
@@ -212,6 +214,7 @@ export default function PaidMatrixYearlyModal({
   const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
   const [regSuggestion, setRegSuggestion] = useState<LandRegressionSuggestResponse | null>(null);
   const [regBody, setRegBody] = useState<LandRegressionRequest | null>(null);
+  const [regScatterOpen, setRegScatterOpen] = useState(false);
   const [regSuggestionBody, setRegSuggestionBody] = useState<LandRegressionRequest | null>(null);
   const regRequestGen = useRef(0);
   const regressionResultRef = useRef<HTMLDivElement>(null);
@@ -254,6 +257,7 @@ export default function PaidMatrixYearlyModal({
       setRegSuggestion(null);
       setRegError(null);
       setRegBody(null);
+      setRegScatterOpen(false);
     }
   }, [open, zoneType, landCategory]);
 
@@ -282,33 +286,50 @@ export default function PaidMatrixYearlyModal({
     [filterRequest, rows],
   );
 
+  const aiScopeLabel = [aiRegionLabel, scopeNote?.trim() || `${zoneType} × ${landCategory}`].filter(Boolean).join(" · ");
   const aiRegressionContext = useMemo(() => {
     if (!regResult) return null;
-    const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
     return buildLandRegressionContext(regResult, {
-      regionLabel: label,
+      regionLabel: aiScopeLabel,
       zoneType,
       landCategory,
       modelType: regModelType,
       controlsChanged: regControlsStale,
+      request: regBody,
     });
-  }, [regResult, scopeNote, zoneType, landCategory, regModelType, regControlsStale]);
+  }, [regResult, aiScopeLabel, zoneType, landCategory, regModelType, regControlsStale, regBody]);
 
   const aiPanelContext = useMemo(() => {
-    const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
     if (panel === "regression" && aiRegressionContext) return aiRegressionContext;
     if (panel === "trend" && sortedRows.length > 0) {
       return buildLandMatrixTrendContext(sortedRows, {
-        regionLabel: label,
+        regionLabel: aiScopeLabel,
         zoneType,
         landCategory,
+        metric: isRolling ? rollMetric : "mean",
       });
     }
     if (panel === "longTerm" && ltData && ltData.series.length > 0) {
-      return buildLandLongTermContext(ltData, { regionLabel: label });
+      return buildLandLongTermContext(ltData, { regionLabel: aiScopeLabel, metric: ltMetric });
     }
-    return null;
-  }, [panel, aiRegressionContext, sortedRows, ltData, scopeNote, zoneType, landCategory]);
+    return {
+      app: "land" as const,
+      panel: {
+        histogram: "LandHistogram",
+        transactions: "LandTransactions",
+        regression: "LandRegressionTab",
+        trend: "TrendCard",
+        longTerm: "TrendCard",
+      }[panel],
+      purpose: "statistics" as const,
+      scope: { region_label: aiScopeLabel },
+      facts: panel === "histogram" && !histLoading && !histError && histData
+        ? { ...histData }
+        : panel === "transactions" && !txLoading && !txError && txData
+          ? { total: txData.total, loaded: txData.items.length }
+          : {},
+    };
+  }, [panel, aiRegressionContext, sortedRows, ltData, aiScopeLabel, zoneType, landCategory, isRolling, rollMetric, ltMetric, histData, histLoading, histError, txData, txLoading, txError]);
 
   useEffect(() => {
     if (sortedRows.length === 0) return;
@@ -1379,13 +1400,13 @@ export default function PaidMatrixYearlyModal({
               {regResult && <div ref={regressionResultRef} tabIndex={-1} aria-label="회귀 결과"><LandRegressionResults data={regResult} /></div>}
 
               {regResult && (
-                <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700">
+                <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700"
+                  onToggle={(event) => setRegScatterOpen(event.currentTarget.open)}>
                 <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">변수별 산점도</summary>
                 <div className="mt-3"><LandRegressionScatterSection
                   data={regResult}
                   regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
-                  zoneType={zoneType}
-                  landCategory={landCategory}
+                  aiContext={regScatterOpen ? aiRegressionContext : null}
                 /></div>
                 </details>
               )}

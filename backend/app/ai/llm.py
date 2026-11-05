@@ -154,6 +154,7 @@ def _openai_chat(
     user: str,
     temperature: float = 0.2,
     timeout: float = 45,
+    json_response: bool = False,
 ) -> Optional[str]:
     key = (settings.openai_api_key or "").strip()
     if not key:
@@ -166,6 +167,8 @@ def _openai_chat(
             {"role": "user", "content": user},
         ],
     }
+    if json_response:
+        body["response_format"] = {"type": "json_object"}
     # gpt-5* 계열은 temperature 커스텀 미지원 (default 1만 허용)
     if not model.lower().startswith("gpt-5"):
         body["temperature"] = temperature

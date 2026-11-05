@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     #: DECISIONS D-007 — 비어 있으면 인증 미들웨어 비활성. 값이 있으면 비-/health 요청은
     #: `X-Api-Token: <값>` 헤더가 필요하다. 결제·로그인 도입 전 1단 보호용.
     api_token: str = ""
+    #: 명시적으로 켠 로컬 개발 서버의 제품 구독 게이트만 생략한다.
+    #: loopback 접속·로컬 Host·API_TOKEN 미설정 조건을 함께 검사한다.
+    local_dev_access: bool = Field(default=False, validation_alias="CH2_LOCAL_DEV_ACCESS")
     #: 관리자 QA 검증 API (`/api/admin/qa/*`). 비어 있으면 통과(로컬).
     #: 값이 있으면 `X-Qa-Audit-Token` 필요. 공개 앱과 분리.
     qa_audit_token: str = Field(default="", validation_alias="QA_AUDIT_TOKEN")
@@ -94,6 +97,11 @@ class Settings(BaseSettings):
     ai_monthly_budget_krw: float = Field(default=10000, validation_alias="AI_MONTHLY_BUDGET_KRW")
     ai_usd_krw: float = Field(default=1400, validation_alias="AI_USD_KRW")
     ai_usage_log_dir: str = Field(default="", validation_alias="AI_USAGE_LOG_DIR")
+    # AI3 독립 로컬 시험. 기존 AI·AI2의 활성 여부와 무관하다.
+    ai3_enabled: bool = Field(default=False, validation_alias="AI3_ENABLED")
+    ai3_access_token: str = Field(default="", validation_alias="AI3_ACCESS_TOKEN")
+    ai3_monthly_call_limit: int = Field(default=40, ge=1, validation_alias="AI3_MONTHLY_CALL_LIMIT")
+    ai3_session_ttl_seconds: int = Field(default=86400, ge=60, validation_alias="AI3_SESSION_TTL_SECONDS")
     #: CH2 AI — Tavily 웹 검색 (없으면 DuckDuckGo Instant 폴백)
     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
     #: 카카오 Local API (FieldNote 주소 지오코딩 프록시)

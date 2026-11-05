@@ -7,7 +7,7 @@ import pytest
 from app.ai.constitution import classify_route, is_refusal_message
 from app.ai.llm import numbers_preserved
 from app.ai.open_mode import soft_facts_snapshot
-from app.ai.orchestrator import handle_chat
+from app.ai.orchestrator import _handle_chat
 from app.ai.schemas import AiChatRequest, AiContext, AiDiagnosticPack, AiScope
 from app.ai.validator import validate_answer
 from app.ai.web_answer import web_template_answer
@@ -54,7 +54,7 @@ def test_casual_greeting_when_enabled(monkeypatch):
             facts={"primary": {"n": 73, "adj_r_squared": 0.72, "coefficients": []}},
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "casual"
     assert "안녕" in resp.answer or "CH2" in resp.answer
     assert "회귀모형" not in resp.answer
@@ -81,7 +81,7 @@ def test_casual_greeting_even_when_flag_disabled(monkeypatch):
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "casual"
     assert "회귀모형" not in resp.answer
     assert "주요 변수" not in resp.answer
@@ -101,7 +101,7 @@ def test_casual_weather_redirect_when_enabled(monkeypatch):
             facts={"primary": {"n": 73, "adj_r_squared": 0.72, "coefficients": []}},
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "casual"
     assert "범위" in resp.answer or "CH2" in resp.answer
 
@@ -124,7 +124,7 @@ def test_open_mode_bypasses_template(monkeypatch):
                 facts={"primary": {"n": 42, "adj_r_squared": 0.55, "coefficients": []}},
             ),
         )
-        resp = handle_chat(req)
+        resp = _handle_chat(req)
     assert resp.route == "open"
     assert resp.llm_used is True
     assert "회귀모형" not in resp.answer
@@ -229,7 +229,7 @@ def test_open_mode_still_refuses_valuation(monkeypatch):
                 scope=AiScope(region_label="서동"),
             ),
         )
-        resp = handle_chat(req)
+        resp = _handle_chat(req)
     llm.assert_not_called()
     assert resp.route == "refusal"
     assert resp.llm_used is False
@@ -265,8 +265,8 @@ def test_chat_log_log_methodology():
             },
         ),
     )
-    r1 = handle_chat(req)
-    r2 = handle_chat(
+    r1 = _handle_chat(req)
+    r2 = _handle_chat(
         AiChatRequest(
             message="log회귀와 log-log회귀의 차이는 무엇인가요?",
             context=req.context,
@@ -305,7 +305,7 @@ def test_regional_result_explain_is_not_missing_playbook(monkeypatch):
     assert is_path_intent_question("지역회귀는 언제 쓰나요?", ctx)
     assert is_path_intent_question("분석 경로를 추천해 주세요", ctx)
 
-    closed = handle_chat(AiChatRequest(message=q, context=ctx))
+    closed = _handle_chat(AiChatRequest(message=q, context=ctx))
     assert "전용 플레이북" not in closed.answer
 
     monkeypatch.setattr(settings, "ai_open_mode", True)
@@ -316,7 +316,7 @@ def test_regional_result_explain_is_not_missing_playbook(monkeypatch):
         return "가경동 지역회귀는 로그 식이고 표본 안 MAPE는 5.3%입니다."
 
     with patch("app.ai.orchestrator.open_mode_chat_completion", side_effect=_fake_open):
-        opened = handle_chat(AiChatRequest(message=q, context=ctx))
+        opened = _handle_chat(AiChatRequest(message=q, context=ctx))
     assert opened.route == "open"
     assert "전용 플레이북" not in opened.answer
     facts = seen["facts"]
@@ -340,7 +340,7 @@ def test_loglog_prediction_is_methodology_not_playbook():
     assert "smear" in targeted.lower() or "역변환" in targeted or "exp" in targeted.lower()
     assert "플레이북" not in targeted
 
-    resp = handle_chat(
+    resp = _handle_chat(
         AiChatRequest(
             message=q,
             context=AiContext(
@@ -486,7 +486,7 @@ def test_chat_twin_experiment_not_sent_to_profile(monkeypatch):
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert "볼 수 있습니다" in resp.answer
     assert "61.2" in resp.answer
     assert "42.8" in resp.answer
@@ -512,7 +512,7 @@ def test_chat_mape_caution_not_generic_explain():
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route in ("explain", "ch2", "statistics")
     assert "높은 편" in resp.answer
     assert "45%" in resp.answer or "60%" in resp.answer
@@ -567,7 +567,7 @@ def test_chat_refusal_response():
             facts={"primary": {"n": 140, "prediction": 97040, "adj_r_squared": 0.87, "mape": 128.1}},
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "refusal"
     assert resp.session_id
     assert any(e.type == "refusal_policy" for e in resp.evidence)
@@ -593,7 +593,7 @@ def test_refusal_appraisal_apply_redirect(monkeypatch):
         ),
     )
     with patch("app.ai.orchestrator.open_mode_chat_completion") as llm:
-        resp = handle_chat(req)
+        resp = _handle_chat(req)
     llm.assert_not_called()
     assert resp.route == "refusal"
     assert "감정평가" in resp.answer
@@ -625,7 +625,7 @@ def test_chat_regression_bundle():
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "ch2"
     assert resp.bundle_id == "regression_diagnostic"
     assert "### 요약" in resp.answer
@@ -657,7 +657,7 @@ def test_explain_small_sample_detailed():
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert "77건" in resp.answer
     assert "방향성" in resp.answer or "주의" in resp.answer
     assert resp.trust_level == "medium"
@@ -686,7 +686,7 @@ def test_explain_interpret_built():
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "explain"
     assert "### 요약" in resp.answer
     assert "설명력" in resp.answer
@@ -717,7 +717,7 @@ def test_land_regression_narrative():
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "explain"
     assert "### 요약" in resp.answer
     assert "88건" in resp.answer
@@ -740,7 +740,7 @@ def test_collective_regression_narrative():
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route in ("ch2", "opinion", "explain")
     assert resp.session_id
 
@@ -752,14 +752,14 @@ def test_scope_comparison():
         scope=AiScope(region_label="가경동"),
         facts={"primary": {"n": 50, "adj_r_squared": 0.7, "coefficients": []}},
     )
-    r1 = handle_chat(AiChatRequest(message="회귀 해석", context=ctx))
+    r1 = _handle_chat(AiChatRequest(message="회귀 해석", context=ctx))
     ctx2 = AiContext(
         app="built",
         panel="RegressionCard",
         scope=AiScope(region_label="운암동"),
         facts={"primary": {"n": 120, "adj_r_squared": 0.8, "coefficients": []}},
     )
-    r2 = handle_chat(
+    r2 = _handle_chat(
         AiChatRequest(message="가경동과 운암동 차이를 비교해 주세요", context=ctx2, session_id=r1.session_id)
     )
     assert "비교" in r2.answer or "가경동" in r2.answer
@@ -791,7 +791,7 @@ def test_land_trend_narrative():
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.bundle_id == "trend_diagnostic"
     assert resp.route in ("ch2", "explain")
     assert "### 요약" in resp.answer
@@ -818,7 +818,7 @@ def test_built_prediction_narrative():
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.bundle_id == "prediction_explain"
     assert resp.route in ("ch2", "explain", "statistics")
     assert "### 요약" in resp.answer or "예측" in resp.answer or "신뢰구간" in resp.answer
@@ -836,14 +836,14 @@ def test_offer_external_does_not_search():
     req = AiChatRequest(
         message="국토부 토지 정책 요약해줘",
         context=AiContext(
-            app="land",
+            app="built",
             panel="TrendCard",
             scope=AiScope(region_label="충북 청주시"),
             facts={"rows": []},
         ),
     )
     with patch("app.ai.orchestrator.web_search") as mock_search:
-        resp = handle_chat(req)
+        resp = _handle_chat(req)
     mock_search.assert_not_called()
     assert resp.route == "offer_external"
     assert "외부자료" in resp.answer or "조사" in resp.answer
@@ -864,13 +864,13 @@ def test_web_chat_with_hits(mock_search):
         message="국토부 토지 정책 요약해줘",
         external_research=True,
         context=AiContext(
-            app="land",
+            app="built",
             panel="TrendCard",
             scope=AiScope(region_label="충북 청주시"),
             facts={"rows": []},
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "web"
     assert resp.evidence
     assert any(e.url == "https://example.com/molit" for e in resp.evidence)
@@ -893,12 +893,12 @@ def test_offer_then_confirm_searches(mock_search):
         scope=AiScope(region_label="복대동"),
         facts={"rows": []},
     )
-    first = handle_chat(
+    first = _handle_chat(
         AiChatRequest(message="복대동 과거 5년 굵직한 개발사업이 있었나?", context=ctx)
     )
     assert first.route == "offer_external"
     mock_search.assert_not_called()
-    second = handle_chat(
+    second = _handle_chat(
         AiChatRequest(
             session_id=first.session_id,
             message="외부자료를 조사해 주세요",
@@ -936,7 +936,7 @@ def test_numbers_preserved_polish_guard():
 
 
 def test_collective_building_list_explains_basic_stats():
-    resp = handle_chat(
+    resp = _handle_chat(
         AiChatRequest(
             message="이 화면의 분석 결과를 설명해 주세요.",
             context=AiContext(
@@ -973,7 +973,7 @@ def test_collective_building_list_explains_basic_stats():
 
 
 def test_land_matrix_explains_basic_stats():
-    resp = handle_chat(
+    resp = _handle_chat(
         AiChatRequest(
             message="지금 기본통계화면의 결과에 대해 설명해줘.",
             context=AiContext(
@@ -1014,7 +1014,7 @@ def test_land_matrix_explains_basic_stats():
 
 
 def test_regression_results_still_use_engine_numbers():
-    resp = handle_chat(
+    resp = _handle_chat(
         AiChatRequest(
             message="이 화면의 분석 결과를 설명해 주세요.",
             context=AiContext(

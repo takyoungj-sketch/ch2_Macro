@@ -257,17 +257,18 @@ export function buildRegionalRegressionContext(
 }
 
 export function buildCollectiveFloorIndexContext(
-  data: FloorIndexResponse | CohortFloorIndexResponse,
+  data: (FloorIndexResponse | CohortFloorIndexResponse | CommercialFloorIndexResponse) & { n_total: number },
   opts: {
     regionLabel: string;
-    assetType: AssetType;
+    assetType: string;
     cohort?: boolean;
     purpose?: AiPurpose;
+    panel?: string;
   },
 ): AiContextPayload {
   return {
     app: "collective",
-    panel: "FloorIndexPanel",
+    panel: opts.panel ?? "FloorIndexPanel",
     purpose: opts.purpose ?? "statistics",
     scope: {
       region_label: opts.regionLabel,
