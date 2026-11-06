@@ -17,6 +17,7 @@ from app.collective.meta_cache import get_ttl_cached
 from app.collective.building_stats_query import stats_as_of_label, stats_reference_date
 from app.v2_stats_windows import MAX_WINDOW_YEARS, period_bounds_for_window
 from app.collective_commercial.cluster_stats_query import (
+    cluster_rolling_by_area,
     cluster_rolling_from_mart,
     cluster_rolling_live,
     cluster_yearly_resolved,
@@ -50,6 +51,7 @@ from app.collective_commercial.road_geometry import (
 )
 from app.collective_commercial.schemas import (
     CommercialAddressListResponse,
+    CommercialAreaRollingResponse,
     CommercialAddressRow,
     CommercialClusterListResponse,
     CommercialFilterMeta,
@@ -704,6 +706,31 @@ def cluster_stats_rolling(
         display_label=_cluster_display_label(db, cluster_key),
         window_years=window_years,
         points=[],
+        data_source="live",
+    )
+
+
+@router.get("/clusters/{cluster_key}/stats/rolling-by-area", response_model=CommercialAreaRollingResponse)
+def cluster_stats_rolling_by_area(
+    cluster_key: str,
+    db: Session = Depends(get_collective_db),
+    window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
+):
+    conn = db.connection()
+    as_of_month, _ = latest_mart_snapshot(conn)
+    display_label, series, as_of, area_rule = cluster_rolling_by_area(
+        conn, cluster_key, window_years=window_years, as_of_month=as_of_month
+    )
+    if not display_label:
+        display_label = _cluster_display_label(db, cluster_key)
+    return CommercialAreaRollingResponse(
+        cluster_key=cluster_key,
+        display_label=display_label,
+        window_years=window_years,
+        as_of_month=as_of.isoformat() if as_of else None,
+        stats_as_of_label=stats_as_of_label(as_of),
+        area_rule=area_rule,
+        series=series,
         data_source="live",
     )
 

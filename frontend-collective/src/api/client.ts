@@ -24,6 +24,7 @@ import type {
   HistogramResponse,
   RegionOption,
   RegionStructure,
+  AreaRollingResponse,
   RollingStatsResponse,
   YearlyStatPoint,
   YearlyStatsResponse,
@@ -318,6 +319,16 @@ export async function fetchBuildingRollingStats(
   windowYears: number,
 ): Promise<RollingStatsResponse> {
   const { data } = await api.get<RollingStatsResponse>(`/buildings/${buildingKey}/stats/rolling`, {
+    params: { window_years: windowYears },
+  });
+  return data;
+}
+
+export async function fetchBuildingAreaRolling(
+  buildingKey: string,
+  windowYears: number,
+): Promise<AreaRollingResponse> {
+  const { data } = await api.get<AreaRollingResponse>(`/buildings/${buildingKey}/stats/rolling-by-area`, {
     params: { window_years: windowYears },
   });
   return data;

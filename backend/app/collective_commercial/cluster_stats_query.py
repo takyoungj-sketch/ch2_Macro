@@ -8,6 +8,7 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from app.collective.area_rolling import build_area_series, commercial_area_rule, commercial_area_type
 from app.collective.asset_scope import COMMERCIAL_ASSET_TYPES, apply_asset_type_filter
 from app.collective.building_stats_query import (
     _rolling_bucket_label,
@@ -468,3 +469,71 @@ def cluster_rolling_live(
     if not points:
         return None
     return display_label, points, "live"
+
+
+def cluster_rolling_by_area(
+    conn: Connection,
+    cluster_key: str,
+    *,
+    window_years: int,
+    as_of_month: date | None = None,
+) -> tuple[str, list[dict], date | None, str]:
+    """한 cluster의 창 거래를 한 번 읽어 연면적 구간×12개월 버킷으로 집계한다."""
+    as_of = as_of_month
+    if as_of is None:
+        as_of, _ = latest_mart_snapshot(conn)
+    if as_of is None:
+        as_of = default_as_of_month_for_service()
+
+    _, period_end = period_bounds_for_window(as_of, window_years)
+    buckets = iter_rolling_year_buckets_old_first(period_end, window_years)
+    meta = conn.execute(
+        text(
+            """
+            SELECT COALESCE(MAX(c.display_label), MAX(t.road_name), :ck) AS display_label,
+                   MAX(t.asset_type) AS asset_type
+            FROM collective_commercial_transactions t
+            LEFT JOIN commercial_clusters c ON c.id = t.cluster_id
+            WHERE t.cluster_key = :ck AND t.is_valid = true
+            """
+        ),
+        {"ck": cluster_key},
+    ).mappings().first()
+    display_label = (meta or {}).get("display_label") or ""
+    fallback_type = (meta or {}).get("asset_type")
+    if not buckets:
+        return display_label, [], as_of, commercial_area_rule({str(fallback_type)} if fallback_type else set())
+
+    rows = conn.execute(
+        text(
+            """
+            SELECT contract_date, unit_price::float8 AS unit_price,
+                   gross_area::float8 AS gross_area, asset_type
+            FROM collective_commercial_transactions
+            WHERE cluster_key = :ck
+              AND is_valid = true
+              AND unit_price IS NOT NULL
+              AND unit_price > 0
+              AND gross_area IS NOT NULL
+              AND gross_area > 0
+              AND contract_date IS NOT NULL
+              AND contract_date >= :ps
+              AND contract_date <= :pe
+            """
+        ),
+        {"ck": cluster_key, "ps": buckets[0][0], "pe": buckets[-1][1]},
+    ).mappings().all()
+    labeled: list[tuple[date, float, str, float]] = []
+    seen_types: set[str] = set()
+    for row in rows:
+        asset_type = row["asset_type"]
+        if asset_type:
+            seen_types.add(str(asset_type))
+        typed = commercial_area_type(asset_type, row["gross_area"])
+        if typed is None or row["contract_date"] is None or row["unit_price"] is None:
+            continue
+        label, sort_key = typed
+        labeled.append((row["contract_date"], float(row["unit_price"]), label, sort_key))
+    if not seen_types and fallback_type:
+        seen_types.add(str(fallback_type))
+    return display_label, build_area_series(labeled, buckets), as_of, commercial_area_rule(seen_types)

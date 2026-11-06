@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from app.regression_contracts import RegressionAnalysisContext, RegressionComparisonContext, RegressionValidationContext
 
 from app.collective.schemas import AnalysisExplain, ContinuousRange, ModelComparison, RegressionCoeff
-from app.collective.schemas import AnalysisFeatures, FloorIndexCell, FloorIndexDiagnostics
+from app.collective.schemas import AnalysisFeatures, AreaRollingSeries, FloorIndexCell, FloorIndexDiagnostics
 
 CommercialAssetType = Literal["collective_shop", "collective_factory"]
 
@@ -138,6 +138,17 @@ class CommercialRollingStatsResponse(BaseModel):
     stats_as_of_label: Optional[str] = None
     points: list[CommercialRollingStatPoint]
     data_source: Literal["mart", "live"] = "live"
+
+
+class CommercialAreaRollingResponse(BaseModel):
+    cluster_key: str
+    display_label: str
+    window_years: int
+    as_of_month: Optional[str] = None
+    stats_as_of_label: Optional[str] = None
+    area_rule: str
+    series: list[AreaRollingSeries]
+    data_source: Literal["live"] = "live"
 
 
 class CommercialHistogramBin(BaseModel):

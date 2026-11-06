@@ -477,6 +477,44 @@ export interface RollingStatsResponse {
   data_source?: "mart" | "live";
 }
 
+export interface AreaRollingPoint {
+  bucket_index: number;
+  period_start: string;
+  period_end: string;
+  label: string;
+  count: number;
+  mean?: number | null;
+  median?: number | null;
+}
+
+export interface AreaRollingSeries {
+  area_label: string;
+  area_sort: number;
+  points: AreaRollingPoint[];
+}
+
+export interface AreaRollingResponse {
+  building_key: string;
+  display_name: string;
+  window_years: number;
+  as_of_month?: string | null;
+  stats_as_of_label?: string | null;
+  area_rule: string;
+  series: AreaRollingSeries[];
+  data_source?: "live";
+}
+
+export interface CommercialAreaRollingResponse {
+  cluster_key: string;
+  display_label: string;
+  window_years: number;
+  as_of_month?: string | null;
+  stats_as_of_label?: string | null;
+  area_rule: string;
+  series: AreaRollingSeries[];
+  data_source?: "live";
+}
+
 export interface YearlyStatPoint {
   year: number;
   count: number;

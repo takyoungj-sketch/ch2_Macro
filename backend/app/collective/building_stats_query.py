@@ -18,6 +18,7 @@ from app.flat_sido_region import FLAT_SIDO_ADDR2_TOKEN, apply_addr2_scope
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.filters import apply_region_filters
 from app.collective.schemas import AnalysisFeatures, BuildingStatsRow
+from app.collective.area_rolling import RESIDENTIAL_AREA_RULE, build_area_series, residential_area_type
 from app.stats_utils import attach_rolling_percentiles, compute_stats
 from app.v2_stats_windows import (
     default_as_of_month_for_service,
@@ -903,3 +904,61 @@ def building_rolling_live(
     if not points:
         return None
     return display_name, points, "live"
+
+
+def building_rolling_by_area(
+    conn: Connection,
+    building_key: str,
+    *,
+    window_years: int,
+    as_of_month: date | None = None,
+) -> tuple[str, list[dict], date | None, str]:
+    """한 건물의 창 거래를 한 번 읽어 5㎡ 면적형×12개월 버킷으로 집계한다."""
+    as_of = as_of_month
+    if as_of is None:
+        as_of, _ = latest_mart_snapshot(conn)
+    if as_of is None:
+        as_of = default_as_of_month_for_service()
+
+    _, period_end = period_bounds_for_window(as_of, window_years)
+    buckets = iter_rolling_year_buckets_old_first(period_end, window_years)
+    meta = conn.execute(
+        text(
+            """
+            SELECT MAX(display_name) AS display_name
+            FROM collective_transactions
+            WHERE building_key = :bk AND is_valid = true
+            """
+        ),
+        {"bk": building_key},
+    ).mappings().first()
+    display_name = (meta or {}).get("display_name") or ""
+    if not buckets:
+        return display_name, [], as_of, RESIDENTIAL_AREA_RULE
+
+    rows = conn.execute(
+        text(
+            """
+            SELECT contract_date, unit_price::float8 AS unit_price, exclusive_area::float8 AS exclusive_area
+            FROM collective_transactions
+            WHERE building_key = :bk
+              AND is_valid = true
+              AND unit_price IS NOT NULL
+              AND unit_price > 0
+              AND exclusive_area IS NOT NULL
+              AND exclusive_area > 0
+              AND contract_date IS NOT NULL
+              AND contract_date >= :ps
+              AND contract_date <= :pe
+            """
+        ),
+        {"bk": building_key, "ps": buckets[0][0], "pe": buckets[-1][1]},
+    ).mappings().all()
+    labeled: list[tuple[date, float, str, float]] = []
+    for row in rows:
+        typed = residential_area_type(row["exclusive_area"])
+        if typed is None or row["contract_date"] is None or row["unit_price"] is None:
+            continue
+        label, sort_key = typed
+        labeled.append((row["contract_date"], float(row["unit_price"]), label, sort_key))
+    return display_name, build_area_series(labeled, buckets), as_of, RESIDENTIAL_AREA_RULE

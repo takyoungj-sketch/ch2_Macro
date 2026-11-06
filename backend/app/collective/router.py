@@ -29,6 +29,7 @@ from app.collective.asset_scope import (
 from app.collective.meta_cache import get_ttl_cached
 from app.collective.building_stats_query import (
     building_addr_meta,
+    building_rolling_by_area,
     building_rolling_from_mart,
     building_rolling_live,
     building_yearly_from_mart,
@@ -93,6 +94,7 @@ from app.collective.schemas import (
     TransactionListResponse,
     YearlyStatPoint,
     YearlyStatsResponse,
+    AreaRollingResponse,
     RollingStatPoint,
     RollingStatsResponse,
 )
@@ -854,6 +856,31 @@ def building_stats_rolling(
         display_name=display_name,
         window_years=window_years,
         points=[],
+        data_source="live",
+    )
+
+
+@router.get("/buildings/{building_key}/stats/rolling-by-area", response_model=AreaRollingResponse)
+def building_stats_rolling_by_area(
+    building_key: str,
+    db: Session = Depends(get_collective_db),
+    window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
+):
+    conn = db.connection()
+    as_of_month, _ = latest_mart_snapshot(conn)
+    display_name, series, as_of, area_rule = building_rolling_by_area(
+        conn, building_key, window_years=window_years, as_of_month=as_of_month
+    )
+    if not display_name:
+        display_name, _ = _get_building_meta(db, building_key)
+    return AreaRollingResponse(
+        building_key=building_key,
+        display_name=display_name,
+        window_years=window_years,
+        as_of_month=as_of.isoformat() if as_of else None,
+        stats_as_of_label=stats_as_of_label(as_of),
+        area_rule=area_rule,
+        series=series,
         data_source="live",
     )
 

@@ -103,12 +103,17 @@ export default function MultiBuildingTrendChart({
   metric = "mean",
   showQuartiles = false,
   annual = false,
+  showValueLabels = true,
+  ariaLabel,
 }: {
   series: TrendSeries[];
   metric?: CohortTrendMetric;
   /** 중앙값 모드에서 25%·75% 띠. 기본은 끔 */
   showQuartiles?: boolean;
   annual?: boolean;
+  /** 점 위 숫자. 면적형이 여러 개면 겹치므로 끈다 */
+  showValueLabels?: boolean;
+  ariaLabel?: string;
 }) {
   const clipId = useId().replace(/:/g, "");
   const active = series.filter((s) => s.points.some((p) => metricValue(p, metric) != null));
@@ -160,7 +165,7 @@ export default function MultiBuildingTrendChart({
     metric === "count" ? "거래 건수" : metric === "median" ? "중앙값(만원/㎡)" : "평균(만원/㎡)";
 
   return (
-    <div className="w-full overflow-x-auto" role="img" aria-label={`다중 단지 ${metricLabel} 추이`}>
+    <div className="w-full overflow-x-auto" role="img" aria-label={ariaLabel ?? `다중 단지 ${metricLabel} 추이`}>
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
           <span
@@ -234,16 +239,20 @@ export default function MultiBuildingTrendChart({
                 const v = Number(metricValue(r, metric));
                 return (
                   <g key={`${s.label}-${r.xOrder}`}>
-                    <circle cx={xAt(r.xOrder)} cy={yVal(v)} r={3.5} fill="#fff" stroke={color} strokeWidth={2} />
-                    <text
-                      x={xAt(r.xOrder)}
-                      y={yVal(v) - LABEL_ABOVE - (idx % 3) * 14}
-                      textAnchor="middle"
-                      className="fill-slate-900 dark:fill-white font-bold"
-                      style={{ fontSize: n > 5 ? "14px" : "15px" }}
-                    >
-                      {formatLabel(v)}
-                    </text>
+                    <circle cx={xAt(r.xOrder)} cy={yVal(v)} r={3.5} fill="#fff" stroke={color} strokeWidth={2}>
+                      <title>{`${s.label} ${r.xLabel} ${formatLabel(v)}`}</title>
+                    </circle>
+                    {showValueLabels && (
+                      <text
+                        x={xAt(r.xOrder)}
+                        y={yVal(v) - LABEL_ABOVE - (idx % 3) * 14}
+                        textAnchor="middle"
+                        className="fill-slate-900 dark:fill-white font-bold"
+                        style={{ fontSize: n > 5 ? "14px" : "15px" }}
+                      >
+                        {formatLabel(v)}
+                      </text>
+                    )}
                   </g>
                 );
               })}
