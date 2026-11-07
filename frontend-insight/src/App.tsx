@@ -13,6 +13,8 @@ import Insight08 from "./pages/Insight08";
 import Insight10 from "./pages/Insight10";
 import Insight11 from "./pages/Insight11";
 import Insight12 from "./pages/Insight12";
+import Insight13 from "./pages/Insight13";
+import Insight14 from "./pages/Insight14";
 import InsightLearnFooter from "./components/InsightLearnFooter";
 import { insightPanel } from "./insightOrder";
 
@@ -50,7 +52,9 @@ export default function App() {
                 </a>
               </h1>
             </div>
-            <AiAssistantPanel />
+            <div className="inline-flex items-center gap-1">
+              <AiAssistantPanel />
+            </div>
           </div>
         </header>
         {q === "1" ? (
@@ -75,6 +79,10 @@ export default function App() {
           <Insight03 />
         ) : q === "11" ? (
           <Insight10 />
+        ) : q === "12" ? (
+          <Insight13 />
+        ) : q === "13" ? (
+          <Insight14 />
         ) : (
           <InsightHome />
         )}

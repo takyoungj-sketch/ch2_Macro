@@ -10,6 +10,8 @@ import { INSIGHT_08 } from "../copy/insight08";
 import { INSIGHT_10 } from "../copy/insight10";
 import { INSIGHT_11 } from "../copy/insight11";
 import { INSIGHT_12 } from "../copy/insight12";
+import { INSIGHT_13 } from "../copy/insight13";
+import { INSIGHT_14 } from "../copy/insight14";
 
 const homeCtx = {
   app: "insight" as const,
@@ -38,6 +40,8 @@ const homeItems = [
   { q: "9", copy: INSIGHT_08 },
   { q: "10", copy: INSIGHT_03 },
   { q: "11", copy: INSIGHT_10 },
+  { q: "12", copy: INSIGHT_13 },
+  { q: "13", copy: INSIGHT_14 },
 ];
 
 export default function InsightHome() {

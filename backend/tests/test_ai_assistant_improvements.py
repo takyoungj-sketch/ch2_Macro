@@ -4,7 +4,7 @@ from unittest.mock import patch
 from app.ai.knowledge.history import maybe_record, format_history_compare
 from app.ai.knowledge.product import product_knowledge_excerpt, SANGKWON_REB
 from app.ai.llm import numbers_preserved
-from app.ai.orchestrator import handle_chat, handle_explain
+from app.ai.orchestrator import _finalize_response, _handle_chat, handle_explain
 from app.ai.schemas import AiChatRequest, AiContext, AiScope, AiExplainRequest
 from app.ai.sessions import AiSession, get_or_create
 from app.ai.validator import numbers_grounded
@@ -58,7 +58,7 @@ def test_open_mode_validates_before_answer_enters_followup_memory(monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "ai_open_mode", True)
     with patch("app.ai.orchestrator.open_mode_chat_completion", return_value="표본은 999건이며 반드시 오를 것입니다."):
-        response = handle_chat(AiChatRequest(message="이 결과를 설명해주세요", context=context()))
+        response = _finalize_response(_handle_chat(AiChatRequest(message="이 결과를 설명해주세요", context=context())), context(), "이 결과를 설명해주세요")
     assert "999" not in response.answer
     assert "반드시 오를" not in response.answer
     assert not response.llm_used
@@ -81,7 +81,7 @@ def test_open_mode_keeps_grounded_answer_and_sanitizes_valuation(monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "ai_open_mode", True)
     with patch("app.ai.orchestrator.open_mode_chat_completion", return_value="표본 73건입니다. 반드시 오를 것입니다."):
-        response = handle_chat(AiChatRequest(message="이 결과를 설명해주세요", context=context()))
+        response = _finalize_response(_handle_chat(AiChatRequest(message="이 결과를 설명해주세요", context=context())), context(), "이 결과를 설명해주세요")
     assert "표본 73건" in response.answer
     assert "반드시 오를" not in response.answer
     assert response.llm_used

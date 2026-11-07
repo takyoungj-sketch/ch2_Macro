@@ -2,7 +2,7 @@
 
 from app.ai.constitution import classify_route
 from app.ai.knowledge.product import product_knowledge_excerpt, product_knowledge_pack
-from app.ai.orchestrator import handle_chat
+from app.ai.orchestrator import _handle_chat
 from app.ai.schemas import AiChatRequest, AiContext, AiScope
 from app.ai.targeted_qa import answer_conversion_method_question
 
@@ -48,7 +48,7 @@ def test_chat_why_simple_mean(monkeypatch):
             },
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert "단순평균" in resp.answer
     assert "공식" in resp.answer or "한국부동산원" in resp.answer
     assert resp.route in ("explain", "opinion", "ch2", "statistics")
@@ -66,7 +66,7 @@ def test_chat_conversion_wins_over_open_mode(monkeypatch):
             facts={"r_selected": 5.08, "window_years": 5, "conversion_applied": True},
         ),
     )
-    resp = handle_chat(req)
+    resp = _handle_chat(req)
     assert resp.route == "opinion"
     assert resp.llm_used is False
     assert "한국부동산원" in resp.answer

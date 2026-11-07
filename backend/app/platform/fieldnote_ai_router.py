@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import json
+import uuid
 from contextlib import nullcontext
 from datetime import datetime, timezone
 
@@ -286,7 +287,7 @@ async def _proxy_openai(
         if grant:
             if not premium:
                 raise HTTPException(403, "Fieldnote 구독이 필요합니다.")
-            ticket = quota.reserve(db.get_bind(), grant, feature, units, body.request_id or "",
+            ticket = quota.reserve(db.get_bind(), grant, feature, units, body.request_id or f"legacy-{uuid.uuid4()}",
                 quota.fingerprint({"messages": body.messages, "feature": feature, "response_format": body.response_format,
                                    "max_tokens": body.max_tokens, "temperature": body.temperature}))
             if ticket.replay is not None:
