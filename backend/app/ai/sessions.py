@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import time
 import uuid
+from contextvars import ContextVar
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -27,6 +29,7 @@ class AiSession:
     session_id: str
     created_at: float
     updated_at: float
+    owner: str | None = None
     turns: list[SessionTurn] = field(default_factory=list)
     context_snapshots: list[dict[str, Any]] = field(default_factory=list)
     analysis_history: list[dict[str, Any]] = field(default_factory=list)
@@ -38,6 +41,7 @@ class AiSession:
 
     def add_turn(self, turn: SessionTurn) -> None:
         self.turns.append(turn)
+        self.turns = self.turns[-40:]
         self.touch()
 
     def push_context(self, snapshot: dict[str, Any]) -> None:
@@ -54,6 +58,16 @@ class AiSession:
 
 
 _store: dict[str, AiSession] = {}
+_owner: ContextVar[str | None] = ContextVar("ai_session_owner", default=None)
+
+
+@contextmanager
+def session_owner(owner: str):
+    token = _owner.set(owner)
+    try:
+        yield
+    finally:
+        _owner.reset(token)
 
 
 def _ttl() -> float:
@@ -70,11 +84,13 @@ def _purge_expired() -> None:
 
 def get_or_create(session_id: Optional[str]) -> AiSession:
     _purge_expired()
-    if session_id and session_id in _store:
+    owner = _owner.get()
+    if session_id and session_id in _store and _store[session_id].owner == owner:
         return _store[session_id]
-    sid = session_id or str(uuid.uuid4())
+    # HTTP clients cannot select a session id or acquire another owner's session.
+    sid = (session_id if owner is None and session_id not in _store else None) or str(uuid.uuid4())
     now = time.time()
-    sess = AiSession(session_id=sid, created_at=now, updated_at=now)
+    sess = AiSession(session_id=sid, created_at=now, updated_at=now, owner=owner)
     _store[sid] = sess
     return sess
 

@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchAiUsage } from "../api/aiUsageClient";
+import { fetchAiUsage, fetchAiAccountUsage } from "../api/aiUsageClient";
 
 function fmtKrw(n: number) {
   return `${Math.round(n).toLocaleString("ko-KR")}원`;
 }
 
 export default function AiUsagePanel() {
+  const account = useQuery({ queryKey: ["ai-account-usage"], queryFn: fetchAiAccountUsage, refetchInterval: 15000, retry: false });
   const q = useQuery({
     queryKey: ["ai-usage"],
     queryFn: () => fetchAiUsage(),
@@ -29,6 +30,15 @@ export default function AiUsagePanel() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      {account.data?.enabled ? <section className="card p-4 space-y-2">
+        <h2 className="font-semibold">계정별 AI 제공량 · 모델 원가</h2>
+        <p className="text-sm text-slate-500">사용자 차감과 내부 생성·검증 호출은 별도입니다. 아래 기존 실험 장부의 서버 전체 200회 한도는 계정별 유료 요청에 적용되지 않습니다.</p>
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr><th>계정</th><th>기능</th><th>사용 / 한도</th><th>예약</th><th>다음 초기화</th></tr></thead><tbody>
+          {account.data.balances.map((b, i) => <tr key={`${b.user_id}-${b.feature}-${i}`}><td>{b.user_id}</td><td>{b.feature}</td><td>{b.used} / {b.limit_units}</td><td>{b.reserved}</td><td>{new Date(b.period_end).toLocaleDateString("ko-KR")}</td></tr>)}
+        </tbody></table></div>
+        {account.data.costs.map(c => <p className="text-sm" key={`${c.stage}-${c.status}`}>{c.stage} · {c.status} · {c.calls}호출 · {c.estimated_usd == null ? "비용 미확정" : `$${c.estimated_usd.toFixed(6)} (토큰 추정)`}</p>)}
+        {account.data.pending?.length ? <p className="text-sm">정산 대기 {account.data.pending.length}건. 오래된 예약은 작업 종료 여부를 확인한 뒤 복구 도구로 처리해 주세요.</p> : null}
+      </section> : null}
       <div className="card p-4 space-y-2">
         <p className="text-xs text-slate-500 leading-relaxed">
           질문 내용이 아니라 <strong>토큰·원화 장부</strong>입니다. 이번 달 실험: 서버 전체 {d.call_limit}회 ·{" "}

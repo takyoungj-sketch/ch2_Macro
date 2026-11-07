@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     ai_monthly_budget_krw: float = Field(default=10000, validation_alias="AI_MONTHLY_BUDGET_KRW")
     ai_usd_krw: float = Field(default=1400, validation_alias="AI_USD_KRW")
     ai_usage_log_dir: str = Field(default="", validation_alias="AI_USAGE_LOG_DIR")
+    #: Enable only after db/077_platform_ai_allowances.sql and client rollout.
+    ai_subscription_quota_enabled: bool = Field(default=False, validation_alias="AI_SUBSCRIPTION_QUOTA_ENABLED")
+    ai_max_output_tokens: int = Field(default=8000, ge=512, le=16000, validation_alias="AI_MAX_OUTPUT_TOKENS")
+    ai_paid_emergency_stop: bool = Field(default=False, validation_alias="AI_PAID_EMERGENCY_STOP")
     # AI3 독립 로컬 시험. 기존 AI·AI2의 활성 여부와 무관하다.
     ai3_enabled: bool = Field(default=False, validation_alias="AI3_ENABLED")
     ai3_access_token: str = Field(default="", validation_alias="AI3_ACCESS_TOKEN")

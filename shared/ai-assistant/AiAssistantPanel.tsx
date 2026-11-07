@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import type { AiChatResponse, AiContextPayload, EvidenceItem } from "./aiClient";
-import { isAiChatAborted, readAiSessionId, sendAiChat } from "./aiClient";
+import { isAiChatAborted, readAiSessionId, sendAiChat, fetchAiAllowance, fetchPendingAiResult, type AiAllowance } from "./aiClient";
 import { emptyAiContext, useActiveAiView } from "./ActiveAiView";
 import { setAiChatOpen } from "./aiHost";
 import {
@@ -20,6 +20,7 @@ import {
   usePanelDrag,
 } from "../ui-window/resizableWindow";
 import "./aiAssistantPanel.css";
+import insightCatalog from "../insight-catalog.json";
 
 type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse; contextLabel?: string; contextDetails?: string };
 
@@ -30,7 +31,8 @@ function answerContextLabel(context: AiContextPayload): string {
   const facts = (context.facts?.primary ?? context.facts) as Record<string, unknown>;
   const years = filters.window_years ?? facts?.window_years;
   const period = filters.period ?? filters.as_of_month ?? facts?.as_of_month;
-  return [app, context.scope?.region_label || "지역 미선택", context.scope?.asset_type, panel, years != null ? `${years}년 구간` : null, typeof period === "string" ? period : null].filter(Boolean).join(" · ");
+  const label = context.app === "insight" ? insightCatalog.find(item => item.panel === context.panel)?.title || "보고서 목록" : context.panel === "RentBuildingDetail" ? "임대 건물 상세" : panel;
+  return [app, context.scope?.region_label || "지역 미선택", context.scope?.asset_type, label, years != null ? `${years}년 구간` : null, typeof period === "string" ? period : null].filter(Boolean).join(" · ");
 }
 
 const PANEL_DISCLAIMER = "본 답변은 시장통계 해석이며 감정평가를 대체하지 않습니다.";
@@ -39,7 +41,7 @@ const PURPOSE_COPY =
   "CH2 데이터와 기능을 이해하고, 분석 목적에 맞는 경로를 제안하며, 엔진이 낸 결과를 해석합니다. 숫자는 CH2가 계산한 값만 인용합니다.";
 
 const LIMITS_COPY =
-  "감정평가·적정가·투자·매수 추천에는 답하지 않습니다. 분석 경로 추천은 가능합니다. 실험 기간 서버 전체 월 200회·1만 원 한도이며, 한도에 닿으면 멈춥니다.";
+  "감정평가·적정가·직접적인 매수·매도 권유에는 답하지 않습니다. 분석 경로 추천은 가능합니다. 정상 완료한 새 AI 답변을 기준으로 이용량을 계산하며, 내부 검증·자동 재시도는 추가 차감하지 않습니다.";
 
 const ENTRY_CHIPS = [
   {
@@ -374,6 +376,23 @@ function AiAssistantModal({
   const [stoppedNotice, setStoppedNotice] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [lastMeta, setLastMeta] = useState<AiChatResponse | null>(null);
+  const [allowance, setAllowance] = useState<AiAllowance | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    const refresh = async () => {
+      try { const data = await fetchAiAllowance(); if (active) setAllowance(data); } catch { if (active) setAllowance(null); }
+      if (loadingRef.current) return;
+      const result = await fetchPendingAiResult();
+      if (active && result) {
+        setMessages(current => [...current, { role: "assistant", text: result.answer, meta: result, contextLabel: "완료된 이전 질문" }]);
+        setLastMeta(result);
+      }
+    };
+    void refresh();
+    const interval = window.setInterval(refresh, 30000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, [open]);
   const [win, setWin] = useState(defaultWinPos);
   const [fontScale, setFontScale] = useState(readStoredFontScale);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
@@ -468,6 +487,7 @@ function AiAssistantModal({
       setInput("");
       try {
         const resp = await sendAiChat(q, context, sessionId, { signal: ac.signal });
+        if (resp.quota?.items) setAllowance(resp.quota);
         if (ac.signal.aborted) return;
         setSessionId(resp.session_id);
         const capturedTrust = deriveTrustFromContext(context);
@@ -482,7 +502,8 @@ function AiAssistantModal({
           if (userStopRef.current) setStoppedNotice(true);
           return;
         }
-        setError((e as Error).message ?? "AI 요청 실패");
+        const detail = e?.response?.data?.detail;
+        setError(detail?.message ? `${detail.message}${detail.period_end ? ` 다음 초기화: ${new Date(detail.period_end).toLocaleDateString("ko-KR")}` : ""}` : (e as Error).message ?? "AI 요청 실패");
       } finally {
         if (abortRef.current === ac) abortRef.current = null;
         loadingRef.current = false;
@@ -603,6 +624,11 @@ function AiAssistantModal({
         className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3"
         style={{ fontSize: `${BASE_FONT_PX * fontScale}px` }}
       >
+        {allowance?.items?.filter(item => item.feature === "macro_question").map(item => <div key={item.feature} className="text-sm text-slate-700 dark:text-slate-200" role="status">
+          이번 이용 기간 AI 질문 {item.used} / {item.limit}회 · {item.remaining}회 남음
+          {allowance.period_end ? ` · 다음 초기화 ${new Date(allowance.period_end).toLocaleDateString("ko-KR")}` : ""}
+          {item.remaining === 0 ? <p>AI 제공량을 모두 사용했습니다. 통계분석과 기존 결과는 계속 이용할 수 있습니다.</p> : item.warn ? <p>이번 이용 기간 AI 제공량의 80%를 사용했습니다.</p> : null}
+        </div>)}
         <details open={messages.length === 0} className="rounded-lg border border-slate-200 bg-white/70 px-3 py-2.5 space-y-2 text-[0.92em] leading-relaxed dark:border-slate-600 dark:bg-slate-800/40">
           <summary className="cursor-pointer text-slate-600 dark:text-slate-300">역할·제한사항 및 사용량</summary>
           <div>

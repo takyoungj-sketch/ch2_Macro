@@ -1,5 +1,6 @@
 // @ts-nocheck
 import axios from "axios";
+import { withVisibleInsightReport } from "./insightReportContext";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
@@ -32,6 +33,7 @@ export interface AiScreenAction {
 }
 
 export interface AiChatResponse {
+  quota?: AiAllowance;
   session_id: string;
   route: string;
   answer: string;
@@ -45,6 +47,32 @@ export interface AiChatResponse {
   trust_level?: "high" | "medium" | "low" | null;
   trust_sources?: string[];
   ai_interpretation?: string | null;
+}
+
+export interface AiAllowance {
+  mode?: string;
+  plan?: string;
+  period_end?: string;
+  items: { feature: string; label: string; used: number; reserved: number; remaining: number; limit: number; warn: boolean; unit: string }[];
+}
+
+export async function fetchAiAllowance(): Promise<AiAllowance> {
+  return (await api.get<AiAllowance>("/allowance")).data;
+}
+
+const PENDING_REQUEST_KEY = "ch2_ai_pending_request";
+export async function fetchPendingAiResult(): Promise<AiChatResponse | null> {
+  let key: string | null;
+  try { key = sessionStorage.getItem(PENDING_REQUEST_KEY); } catch { return null; }
+  if (!key) return null;
+  try {
+    const { data } = await api.get(`/requests/${encodeURIComponent(key)}`);
+    if (data.status === "completed" || data.status === "failed") sessionStorage.removeItem(PENDING_REQUEST_KEY);
+    return data.status === "completed" ? data.result : null;
+  } catch (error) {
+    if (error?.response?.status === 404 || error?.response?.status === 401) sessionStorage.removeItem(PENDING_REQUEST_KEY);
+    return null;
+  }
 }
 
 export interface AiContextPayload {
@@ -110,16 +138,20 @@ export async function sendAiChat(
   opts?: { signal?: AbortSignal },
 ): Promise<AiChatResponse> {
   const sid = sessionId ?? readAiSessionId() ?? undefined;
+  const requestId = crypto.randomUUID();
+  try { sessionStorage.setItem(PENDING_REQUEST_KEY, requestId); } catch { /* optional recovery */ }
   const { data } = await api.post<AiChatResponse>(
     "/chat",
     {
       session_id: sid,
+      request_id: requestId,
       message,
-      context,
+      context: withVisibleInsightReport(context),
     },
     { signal: opts?.signal },
   );
   if (data?.session_id) writeAiSessionId(data.session_id);
+  try { if (sessionStorage.getItem(PENDING_REQUEST_KEY) === requestId) sessionStorage.removeItem(PENDING_REQUEST_KEY); } catch { /* optional recovery */ }
   return data;
 }
 

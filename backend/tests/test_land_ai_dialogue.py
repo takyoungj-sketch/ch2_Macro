@@ -27,7 +27,10 @@ def ask(message, context, session_id=None):
 def fake_model(monkeypatch, choose):
     def draft(*, user, system, json_response, timeout=45):
         assert json_response
-        kind, answer = choose(json.loads(user))
+        payload = json.loads(user)
+        if "passages" in payload:
+            return json.dumps({"general_indices": [i for i, text in enumerate(payload["passages"]) if "유의수준" in text]})
+        kind, answer = choose(payload)
         return json.dumps({"kind": kind, "answer": answer}, ensure_ascii=False)
 
     monkeypatch.setattr("app.ai.dialogue.llm._openai_chat", draft)
@@ -175,7 +178,7 @@ def test_built_screen_passes_the_visible_equation(monkeypatch):
         notes = " ".join(payload["sources"]["current"]["notes"])
         assert "연면적 계수 12.5" in facts
         assert "연식 계수" not in facts
-        assert "R²" not in facts and "MAPE" not in facts
+        assert "R²" in facts and "MAPE" in facts  # available regardless of question wording
         assert "회귀식이 있다" in notes and "금액(만원)" in notes
         assert "용도지역 기준 범주 일반상업" in notes
         return "screen", "화면에 회귀식이 있습니다. 연면적 계수는 {{" + reference(payload, "연면적 계수") + "}}입니다."
@@ -314,10 +317,10 @@ def test_unrelated_meal_is_refused_without_the_model(monkeypatch):
     assert "통계 밖" in result.answer
 
 
-def test_p_value_is_withheld_until_the_user_asks(monkeypatch):
+def test_p_value_is_available_without_question_keyword_gating(monkeypatch):
     def choose(payload):
         facts = " ".join(payload["sources"]["current"]["facts"].values())
-        assert "p값" not in facts
+        assert "p값" in facts
         return "knowledge", "이 표본에서는 면적이 크면 단가가 낮게 연관됩니다."
 
     fake_model(monkeypatch, choose)
@@ -505,7 +508,7 @@ def test_display_rounding_is_checked_against_cited_metric(monkeypatch, claim, ac
 def test_validation_feedback_identifies_missing_reference():
     from app.ai.dialogue import _repair_feedback, _screen
     feedback = _repair_feedback({"kind":"screen", "answer":"표본은 999건입니다."}, {"current":_screen(regression())})
-    assert "number_without_local_reference" in feedback
+    assert "unverified_numeric_passage" in feedback
 
 
 @pytest.mark.parametrize(("category", "accepted"), [("12미만", True), ("25이상", True), ("8미만", True), ("99미만", False)])
