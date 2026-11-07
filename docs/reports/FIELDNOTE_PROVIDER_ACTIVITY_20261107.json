@@ -1,0 +1,42 @@
+[
+  {
+    "start_time_iso": "2026-11-04T00:00:00+00:00",
+    "end_time_iso": "2026-11-05T00:00:00+00:00",
+    "model": "gpt-5-mini-2025-08-07",
+    "num_model_requests": "69.0",
+    "input_tokens": "364139.0",
+    "output_tokens": "125808.0",
+    "input_cached_tokens": "97664.0",
+    "input_image_tokens": "0.0"
+  },
+  {
+    "start_time_iso": "2026-11-05T00:00:00+00:00",
+    "end_time_iso": "2026-11-06T00:00:00+00:00",
+    "model": "gpt-5-mini-2025-08-07",
+    "num_model_requests": "45.0",
+    "input_tokens": "270459.0",
+    "output_tokens": "86298.0",
+    "input_cached_tokens": "12928.0",
+    "input_image_tokens": "0.0"
+  },
+  {
+    "start_time_iso": "2026-11-06T00:00:00+00:00",
+    "end_time_iso": "2026-11-07T00:00:00+00:00",
+    "model": "gpt-5-mini-2025-08-07",
+    "num_model_requests": "3.0",
+    "input_tokens": "14593.0",
+    "output_tokens": "1473.0",
+    "input_cached_tokens": "0.0",
+    "input_image_tokens": "0.0"
+  },
+  {
+    "start_time_iso": "2026-11-07T00:00:00+00:00",
+    "end_time_iso": "2026-11-08T00:00:00+00:00",
+    "model": "gpt-5-mini-2025-08-07",
+    "num_model_requests": "18.0",
+    "input_tokens": "147554.0",
+    "output_tokens": "23919.0",
+    "input_cached_tokens": "0.0",
+    "input_image_tokens": "0.0"
+  }
+]

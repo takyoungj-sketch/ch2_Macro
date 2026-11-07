@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, Response
+import secrets
+from app.ai.sessions import session_owner
+from app.platform.jwt_util import COOKIE_NAME, decode_access_token
 
 from app.ai.bundles.registry import BUNDLE_REGISTRY, suggested_questions
 from app.ai.constitution import CONSTITUTION_VERSION
@@ -28,6 +31,20 @@ from app.ai.schemas import (
 router = APIRouter(prefix="/ai", tags=["CH2 AI Assistant"])
 
 
+def _owner(request: Request, response: Response) -> str:
+    payload = decode_access_token(request.cookies.get(COOKIE_NAME, ""))
+    if payload and payload.get("sub"):
+        return f"user:{payload['sub']}"
+    # Local development has no signed-in user. A server-issued HttpOnly browser
+    # cookie isolates those sessions without changing product access rules.
+    browser = request.cookies.get("ch2_ai_browser", "")
+    if not browser or len(browser) != 43:
+        browser = secrets.token_urlsafe(32)
+        response.set_cookie("ch2_ai_browser", browser, httponly=True, samesite="lax",
+                            secure=request.url.scheme == "https", path="/api/ai", max_age=86400)
+    return f"browser:{browser}"
+
+
 @router.get("/health", response_model=AiHealthResponse)
 def ai_health():
     return AiHealthResponse(
@@ -42,24 +59,107 @@ def ai_health():
 
 
 @router.post("/chat", response_model=AiChatResponse)
-def ai_chat(body: AiChatRequest, request: Request):
+def ai_chat(body: AiChatRequest, request: Request, response: Response):
     """세션 기반 AI 대화 — Screen-bound + Reasoning Bundle."""
     check_ai_rate_limit(request)
-    return handle_chat(body)
+    return _run_with_allowance(body, request, response, handle_chat)
+
+
+def _run_with_allowance(body, request, response, handler):
+    from app.config import settings
+    from app.ai import allowances as quota
+    from fastapi import HTTPException
+    if not settings.ai_subscription_quota_enabled:
+        with session_owner(_owner(request, response)):
+            return handler(body)
+    user = quota.request_user(request)
+    if user is None:
+        raise HTTPException(401, "AI 이용량을 확인하려면 로그인해 주세요.")
+    if user.role == "admin":
+        with session_owner(f"user:{user.id}"):
+            return handler(body)
+    engine, grant = quota.grant_for_user(user)
+    if grant is None:
+        raise HTTPException(403, "Macro 구독이 필요합니다.")
+    import json
+    if len(json.dumps(body.model_dump(), ensure_ascii=False)) > 120_000:
+        raise HTTPException(413, "AI 입력이 너무 큽니다. 분석 범위나 대화 입력을 줄여 주세요.")
+    ticket = quota.reserve(engine, grant, "macro_question", 1,
+        body.request_id or request.headers.get("Idempotency-Key", ""),
+        quota.fingerprint(body.model_dump(exclude={"request_id"})))
+    if ticket.replay is not None:
+        result = AiChatResponse.model_validate(ticket.replay)
+        result.quota = {**quota.snapshot(engine, grant), "request_id": ticket.id}
+        return result
+    try:
+        with quota.tracking(ticket), session_owner(f"user:{user.id}"):
+            result = handler(body)
+        # Deterministic refusals and failed model answers do not consume questions.
+        success = result.llm_used and not result.error_code and result.route != "refusal"
+        result.quota = {"request_id": ticket.id}
+        quota.finish(ticket, result.model_dump(mode="json") if success else None,
+                     error=result.error_code or (None if success else "not_chargeable"))
+        result.quota = {**quota.snapshot(engine, grant), "request_id": ticket.id}
+        return result
+    except BaseException:
+        quota.finish(ticket, error="request_failed")
+        raise
+
+
+@router.get("/allowance")
+def ai_allowance(request: Request):
+    from app.config import settings
+    from app.ai import allowances as quota
+    if not settings.ai_subscription_quota_enabled:
+        return {"mode": "legacy", "items": []}
+    user = quota.request_user(request)
+    if user is None:
+        from fastapi import HTTPException
+        raise HTTPException(401, "로그인이 필요합니다.")
+    if user.role == "admin":
+        return {"mode": "staff", "items": []}
+    engine, grant = quota.grant_for_user(user)
+    return quota.snapshot(engine, grant) if grant else {"mode": "no_subscription", "items": []}
+
+
+@router.get("/requests/{request_id}")
+def ai_request_result(request_id: str, request: Request):
+    from app.ai import allowances as quota
+    from fastapi import HTTPException
+    from sqlalchemy import select
+    user = quota.request_user(request)
+    if user is None:
+        raise HTTPException(401, "로그인이 필요합니다.")
+    from app.platform.db import get_platform_engine
+    engine = get_platform_engine()
+    with engine.connect() as c:
+        row = c.execute(select(quota.jobs).where((quota.jobs.c.id == request_id) | (quota.jobs.c.key == request_id),
+                        quota.jobs.c.user_id == user.id)).mappings().first()
+        if not row:
+            raise HTTPException(404, "작업을 찾을 수 없습니다.")
+        payload = c.execute(select(quota.results.c.payload).where(quota.results.c.request_id == row["id"])).scalar()
+    import json
+    return {"request_id": request_id, "status": row["status"], "result": json.loads(payload) if payload else None}
 
 
 @router.post("/history", response_model=AiHistoryRecordResponse)
-def ai_history_record(body: AiHistoryRecordRequest, request: Request):
+def ai_history_record(body: AiHistoryRecordRequest, request: Request, response: Response):
     """성공한 분석 Bundle을 Analysis History에 자동 기록 (채팅 없이)."""
     check_ai_rate_limit(request)
-    return handle_history_record(body)
+    with session_owner(_owner(request, response)):
+        return handle_history_record(body)
 
 
 @router.post("/explain", response_model=AiChatResponse)
-def ai_explain(body: AiExplainRequest, request: Request):
+def ai_explain(body: AiExplainRequest, request: Request, response: Response):
     """Explain layer만 자연어화 (LLM 없이 presets 우선)."""
     check_ai_rate_limit(request)
-    return handle_explain(body)
+    from app.config import settings
+    if settings.ai_subscription_quota_enabled:
+        return _run_with_allowance(AiChatRequest(message=body.message or "이 화면을 설명해 주세요.",
+            context=body.context, request_id=body.request_id), request, response, lambda _: handle_explain(body))
+    with session_owner(_owner(request, response)):
+        return handle_explain(body)
 
 
 @router.get("/suggested-questions")

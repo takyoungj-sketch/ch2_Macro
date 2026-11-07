@@ -98,7 +98,7 @@ export function ActiveAiViewProvider({
   }, []);
 
   const remove = useCallback((id: string) => {
-    setLayers((prev) => prev.filter((e) => e.id !== id));
+    setLayers((prev) => prev.some((e) => e.id === id) ? prev.filter((e) => e.id !== id) : prev);
   }, []);
 
   const context = useMemo(() => composeAiContext(layers, fallback), [layers, fallback]);
@@ -122,17 +122,19 @@ export function PublishAiContext({
   role?: AiContextRole;
 }) {
   const api = useContext(Ctx);
+  const upsert = api?.upsert;
+  const remove = api?.remove;
   const id = useId();
 
   useEffect(() => {
-    if (!api) return;
+    if (!upsert || !remove) return;
     if (!context) {
-      api.remove(id);
+      remove(id);
       return;
     }
-    api.upsert(id, context, role);
-    return () => api.remove(id);
-  }, [api, id, context, role]);
+    upsert(id, context, role);
+    return () => remove(id);
+  }, [upsert, remove, id, context, role]);
 
   return null;
 }

@@ -154,6 +154,7 @@ def _openai_chat(
     user: str,
     temperature: float = 0.2,
     timeout: float = 45,
+    json_response: bool = False,
 ) -> Optional[str]:
     key = (settings.openai_api_key or "").strip()
     if not key:
@@ -166,6 +167,9 @@ def _openai_chat(
             {"role": "user", "content": user},
         ],
     }
+    if json_response:
+        body["response_format"] = {"type": "json_object"}
+    body["max_completion_tokens" if model.lower().startswith(("gpt-5", "o1", "o3", "o4")) else "max_tokens"] = settings.ai_max_output_tokens
     # gpt-5* 계열은 temperature 커스텀 미지원 (default 1만 허용)
     if not model.lower().startswith("gpt-5"):
         body["temperature"] = temperature
@@ -181,15 +185,17 @@ def _openai_chat(
     try:
         from app.ai.usage_log import assert_quota_or_raise, record_llm_call
 
-        assert_quota_or_raise()
+        from app.ai.allowances import managed_request, record_provider, provider_stage
+        if not managed_request():
+            assert_quota_or_raise()
         with urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-        choices = data.get("choices") or []
-        if not choices:
-            return None
-        content = (choices[0].get("message") or {}).get("content")
         usage = data.get("usage") or {}
         details = usage.get("prompt_tokens_details") or {}
+        record_provider(model=str(data.get("model") or model),
+            prompt_tokens=int(usage.get("prompt_tokens") or 0),
+            completion_tokens=int(usage.get("completion_tokens") or 0),
+            cached_tokens=int(details.get("cached_tokens") or 0), stage=provider_stage.get())
         try:
             record_llm_call(
                 requested_model=model,
@@ -200,10 +206,25 @@ def _openai_chat(
             )
         except Exception:
             _LOG.warning("AI usage log failed", exc_info=True)
+        choices = data.get("choices") or []
+        if not choices:
+            return None
+        content = (choices[0].get("message") or {}).get("content")
         return str(content).strip() if content else None
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        from app.ai.allowances import record_provider_failure
+        record_provider_failure(model, "failed" if isinstance(exc, HTTPError) else "unknown")
         _LOG.warning("OpenAI call failed: %s", exc)
         return None
+
+
+def staged_chat(stage: str, **kwargs):
+    from app.ai.allowances import provider_stage
+    token = provider_stage.set(stage)
+    try:
+        return _openai_chat(**kwargs)
+    finally:
+        provider_stage.reset(token)
 
 
 def _extract_number_tokens(text: str) -> set[str]:

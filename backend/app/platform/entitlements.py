@@ -31,7 +31,7 @@ def list_entitlements(db: Session, user_id: int) -> dict[str, bool]:
         if not r["active"]:
             continue
         exp = r["expires_at"]
-        if exp is not None and exp.replace(tzinfo=timezone.utc) if exp.tzinfo is None else exp < now:
+        if exp is not None and (exp.replace(tzinfo=timezone.utc) if exp.tzinfo is None else exp) < now:
             continue
         out[product] = True
     return out

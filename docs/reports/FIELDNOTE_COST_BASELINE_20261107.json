@@ -1,0 +1,73 @@
+{
+  "status": "provider_usage_reconciled",
+  "baseline_observed_at_utc": "2026-11-07T13:36:06Z",
+  "organization": "Personal",
+  "project": "Default project",
+  "period": "2026-11",
+  "api_keys": "All API keys",
+  "displayed_spend_usd": 0.62,
+  "displayed_requests": 127,
+  "displayed_input_tokens": 737824,
+  "previous_macro_test": {
+    "total_calls": 4,
+    "total_input_tokens": 25722,
+    "total_completion_tokens": 4226,
+    "total_estimated_usd": 0.0148825,
+    "first_call_apparently_reflected": {
+      "input_tokens": 7265,
+      "completion_tokens": 1051,
+      "estimated_usd": 0.00391825
+    },
+    "remaining_calls_not_yet_identified_on_dashboard": 3,
+    "remaining_input_tokens": 18457,
+    "remaining_completion_tokens": 3175,
+    "remaining_estimated_usd": 0.01096425
+  },
+  "notes": [
+    "Prior all-key baseline was 126 requests and 730559 input tokens. Latest increase exactly matches first Macro test input token count, indicating delayed attribution remains relevant.",
+    "FieldNote-test key filter displayed the same totals as All API keys at baseline; key name alone does not isolate Fieldnote app activity.",
+    "Need user-provided feature execution counts, image counts, failures and retries for per-task cost comparison.",
+    "Dashboard spend has cent-level display precision. Do not treat rounded delta as exact per-task cost.",
+    "Two activity CSV exports and refreshed/reloaded Usage both still show 130 requests. Fieldnote cost must remain unknown rather than zero. Five matching 200 responses are confirmed via nginx; no other production AI requests in the interval. CSV contains no new image tokens yet. The apparent 127 to 130 delta exactly matches remaining Macro calls (18457 input / 3175 output).",
+    "Final activity CSV and Usage agree on 135 requests and 796745 input tokens. Token-based cost estimate: (40464 * 0.25 + 3053 * 2) / 1000000 USD. No additional cached input tokens. CSV image-token field remains zero; do not interpret it as no photos sent. Photo count 12 is user-reported. Aggregate delta covers five requests; individual request/image costs are not separately measured."
+  ],
+  "last_checked_at_utc": "2026-11-07T14:08:25.919729+00:00",
+  "user_reported_photos": 12,
+  "user_reported_answers": 5,
+  "server_successful_vision_requests": 5,
+  "server_successful_request_times_utc": [
+    "2026-11-07T13:37:21Z",
+    "2026-11-07T13:38:14Z",
+    "2026-11-07T13:39:18Z",
+    "2026-11-07T13:39:48Z",
+    "2026-11-07T13:40:38Z"
+  ],
+  "same_local_production_api_key_verified": true,
+  "post_macro_provider_baseline": {
+    "requests": 130,
+    "input_tokens": 756281,
+    "output_tokens": 234445,
+    "cached_input_tokens": 110592,
+    "displayed_spend_usd": 0.63
+  },
+  "fieldnote_provider_delta_not_yet_visible": false,
+  "provider_after": {
+    "requests": 135,
+    "input_tokens": 796745,
+    "output_tokens": 237498,
+    "cached_input_tokens": 110592,
+    "displayed_spend_usd": 0.65
+  },
+  "fieldnote_delta": {
+    "requests": 5,
+    "input_tokens": 40464,
+    "output_tokens": 3053,
+    "cached_input_tokens": 0,
+    "estimated_usd": 0.016222,
+    "estimated_krw": 22.7108,
+    "krw_per_answer": 4.54216,
+    "krw_per_photo": 1.8925666667,
+    "usd_krw": 1400,
+    "model": "gpt-5-mini-2025-08-07"
+  }
+}

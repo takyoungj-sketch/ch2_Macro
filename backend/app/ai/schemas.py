@@ -132,6 +132,7 @@ class AiScreenAction(BaseModel):
 
 
 class AiChatRequest(BaseModel):
+    request_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
     session_id: Optional[str] = None
     message: str = Field(..., min_length=1, max_length=4000)
     context: AiContext = Field(default_factory=AiContext)
@@ -152,6 +153,7 @@ class AiHistoryRecordResponse(BaseModel):
 
 
 class AiExplainRequest(BaseModel):
+    request_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
     message: Optional[str] = None
     context: AiContext = Field(default_factory=AiContext)
 
@@ -177,6 +179,7 @@ class AiChatResponse(BaseModel):
     trust_sources: list[str] = Field(default_factory=list)
     ai_interpretation: Optional[str] = None
     quota: Optional[dict[str, Any]] = None
+    error_code: Optional[Literal["quota_exceeded", "provider_unavailable", "missing_screen_data", "evidence_validation_failed"]] = None
 
 
 class AiDiagnosticPack(BaseModel):
@@ -192,6 +195,7 @@ class AiDiagnosticPack(BaseModel):
 
 class AiHealthResponse(BaseModel):
     status: str = "ok"
+    chat_engine: Literal["grounded_dialogue"] = "grounded_dialogue"
     llm_configured: bool = False
     polish_enabled: bool = False
     web_search_configured: bool = False

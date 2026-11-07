@@ -1,0 +1,15 @@
+[
+  {"q":"1","panel":"Insight05","title":"경제지표(GDP, M2, 주식거래액)와 부동산의 관계"},
+  {"q":"2","panel":"Insight01","title":"부동산 거래와 금리, 유동성과의 관계"},
+  {"q":"3","panel":"Insight02","title":"부동산 유형별 상관관계"},
+  {"q":"4","panel":"Insight11","title":"상업용, 주거용 부동산의 수익률 분석"},
+  {"q":"5","panel":"Insight12","title":"상권 수익률과 아파트 수익률의 상관관계 분석"},
+  {"q":"6","panel":"Insight07","title":"쌍둥이 지역 찾기 로직"},
+  {"q":"7","panel":"Insight04","title":"광평수 토지의 가격효과"},
+  {"q":"8","panel":"Insight06","title":"도로 지목의 가격배율 검토"},
+  {"q":"9","panel":"Insight08","title":"아파트(오피스텔)의 층별효용지수 검토"},
+  {"q":"10","panel":"Insight03","title":"연립다세대의 층별효용지수 검토"},
+  {"q":"11","panel":"Insight10","title":"집합상가의 층별효용지수 검토"},
+  {"q":"12","panel":"Insight13","title":"토지 단독거래가격과 건부지 배분단가의 차이"},
+  {"q":"13","panel":"Insight14","title":"동일 지번의 아파트와 오피스텔, 가격은 얼마나 다를까?"}
+]
