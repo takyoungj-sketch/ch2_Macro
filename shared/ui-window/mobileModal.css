@@ -1,0 +1,100 @@
+.modal-shell[data-mobile-modal="true"] .modal-header {
+  padding: 4px 8px;
+}
+
+.modal-shell[data-mobile-modal="true"] .modal-header h2 {
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-modal-subtitle {
+  max-width: 100%;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.modal-shell[data-mobile-modal="true"] .modal-header > div > .min-w-0 {
+  flex: 1;
+}
+
+.modal-shell[data-mobile-modal="true"] .modal-header [aria-label="모달 글자 크기"],
+.modal-shell[data-mobile-modal="true"] .modal-header button[aria-label="모달 최소화"],
+.modal-shell[data-mobile-modal="true"] .modal-header button[aria-label="전체화면"] span,
+.modal-shell[data-mobile-modal="true"] .modal-header button[aria-label="전체화면 나가기"] span,
+.modal-shell[data-mobile-modal="true"] .ch2-modal-header-extra:empty {
+  display: none;
+}
+
+.modal-shell[data-mobile-modal="true"] .modal-header button[aria-label="전체화면"],
+.modal-shell[data-mobile-modal="true"] .modal-header button[aria-label="전체화면 나가기"],
+.modal-shell[data-mobile-modal="true"] .modal-header button[aria-label="닫기"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-rolling-card {
+  padding: 4px;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-modal-scroll-content {
+  padding: 4px 8px;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-rolling-period {
+  margin-bottom: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 14px;
+  color: #475569;
+}
+
+html.dark .modal-shell[data-mobile-modal="true"] .ch2-rolling-period {
+  color: #94a3b8;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-rolling-toolbar {
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 0;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-rolling-toolbar p {
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-rolling-toolbar button {
+  min-height: 28px;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-rolling-toolbar > div {
+  gap: 4px;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-rolling-chart > p {
+  margin-bottom: 2px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.modal-shell[data-mobile-modal="true"] .ch2-rolling-chart > svg {
+  max-height: clamp(160px, calc(100dvh - 190px), 300px);
+}

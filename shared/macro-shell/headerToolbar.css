@@ -143,6 +143,13 @@ html.dark .ch2-macro-stats-header .macro-header-title h1 {
   color: rgb(241 245 249);
 }
 
+.ch2-macro-stats-header .macro-header-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 /* 헤더 툴바 — px 고정 */
 
 .ch2-macro-stats-header .macro-header-toolbar {

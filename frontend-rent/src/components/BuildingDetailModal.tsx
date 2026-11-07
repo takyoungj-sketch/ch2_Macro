@@ -10,6 +10,7 @@ import DraggableModalShell from "./DraggableModalShell";
 import RentRegressionPanel from "./RentRegressionPanel";
 import RentTransactionTable from "./RentTransactionTable";
 import RollingTrendChart from "./RollingTrendChart";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 
 type PanelMode = "conversion" | "rolling" | "transactions" | "regression";
 type RollingSeriesId = "jeonse" | "mixed_deposit" | "mixed_monthly" | "monthly";
@@ -271,8 +272,30 @@ export default function BuildingDetailModal({
     [rollingPoints, rollingSeries],
   );
   const rollingSeriesLabel = ROLLING_SERIES.find((s) => s.id === rollingSeries)?.label ?? "전세";
+  const detailContext = useMemo(() => ({
+    app: "rent" as const,
+    panel: "RentBuildingDetail",
+    purpose: "statistics" as const,
+    scope: { region_label: row.display_name, asset_type: row.asset_type, filters: { window_years: windowYears } },
+    facts: {
+      display_name: row.display_name, detail_tab: panel, window_years: windowYears,
+      period: panel === "transactions" ? "보유 전체기간" : statsAsOfLabel,
+      building_rate: panel === "conversion" ? focusR : undefined,
+      region_rate: panel === "conversion" ? regionR : undefined,
+      pool_rate: panel === "conversion" ? poolR : undefined,
+      lease_metrics: panel === "conversion" ? { 전세: row.jeonse, "반전세 보증금": row.mixed.deposit,
+        "반전세 월세": row.mixed.monthly, "순수 월세": row.monthly } : {},
+      rolling_metric: rollingSeriesLabel,
+      rolling_unit: rollingSeries.includes("monthly") ? "만원/㎡·월" : "만원/㎡",
+      rolling_points: panel === "rolling" ? rollingChartPoints.map(p => ({ label: p.label, count: p.count, median: p.mean })) : [],
+      transaction_count: panel === "transactions" ? txQ.data?.total : undefined,
+      transaction_loaded: panel === "transactions" ? txQ.data?.items.length : undefined,
+    },
+  }), [row, panel, windowYears, statsAsOfLabel, focusR, regionR, poolR, rollingSeriesLabel, rollingSeries, rollingChartPoints, txQ.data]);
 
   return (
+    <>
+    <PublishAiContext context={detailContext} />
     <DraggableModalShell
       open
       onClose={onClose}
@@ -508,5 +531,6 @@ export default function BuildingDetailModal({
       )}
 
     </DraggableModalShell>
+    </>
   );
 }

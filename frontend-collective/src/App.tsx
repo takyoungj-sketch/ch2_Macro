@@ -23,6 +23,7 @@ import RegionalRegressionModal from "./components/RegionalRegressionModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
+import CollectiveAnalysisGuide from "./components/CollectiveAnalysisGuide";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
@@ -467,6 +468,7 @@ export default function App() {
       <MacroStatsHeader
         currentApp="collective-residential"
         title="주거형 집합부동산"
+        titleAction={!narrow ? <CollectiveAnalysisGuide kind="residential" /> : null}
         fontPct={fontPct}
         fontStepMin={fontStepMin}
         fontStepMax={fontStepMax}

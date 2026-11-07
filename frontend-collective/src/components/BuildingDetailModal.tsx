@@ -932,7 +932,9 @@ export default function BuildingDetailModal({
       initialFullscreen={narrow}
       titleId="building-detail-modal-title"
       title={row.display_name}
-      subtitle={
+      subtitle={narrow ? (
+        <>{assetTypeLabel(effectiveAssetType)} · {(row.count ?? 0).toLocaleString("ko-KR")}건 · 평균 {fmtPrice(row.mean)}만원/㎡</>
+      ) : (
         <>
           {assetTypeLabel(effectiveAssetType)} · n={(row.count ?? 0).toLocaleString("ko-KR")} · 평균 {fmtPrice(row.mean)}{" "}
           만원/㎡
@@ -949,7 +951,7 @@ export default function BuildingDetailModal({
           )}
           {experiment && <span className="ml-1.5 text-indigo-600 font-medium">· 실험 모드</span>}
         </>
-      }
+      )}
       headerExtra={
         <>
           {!narrow && (
@@ -999,8 +1001,8 @@ export default function BuildingDetailModal({
           </div>
           )}
           {(() => {
-            if (!narrow && panel === "floor_index") return null;
-            const help = collectiveModalPanelHelp(narrow ? "trend" : panel);
+            if (narrow || panel === "floor_index") return null;
+            const help = collectiveModalPanelHelp(panel);
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
           {!narrow && peerBuildings.length > 0 && panel !== "danji" && (
@@ -1109,14 +1111,14 @@ export default function BuildingDetailModal({
               {!trendCohortActive && panel === "trend" && rollingQ.data && rollingQ.data.points.length > 0 && (
                 <>
                   {rollingQ.data.stats_as_of_label && (
-                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-1">
+                    <p className="ch2-rolling-period text-xs text-indigo-600 dark:text-indigo-400 mb-1">
                       {rollingQ.data.stats_as_of_label}
                       {rollingQ.data.window_years ? ` · ${rollingQ.data.window_years}년 창` : ""}
                     </p>
                   )}
-                  <div className="modal-card px-2 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
-                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">12개월 롤링 버킷 추이</p>
+                  <div className="ch2-rolling-card modal-card px-2 py-3">
+                    <div className="ch2-rolling-toolbar flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{narrow ? "롤링 추이" : "12개월 롤링 버킷 추이"}</p>
                       <div className="flex flex-wrap items-center gap-2">
                         <RollingScopeToggle value={rollScope} onChange={setRollScope} areaLabel="면적형" />
                         <LongTermMetricToggle
@@ -1130,7 +1132,7 @@ export default function BuildingDetailModal({
                     </div>
                     {rollScope === "all" && rollMetric === "median" && (
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 px-1 mb-2">
-                        이 12개월 구간 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다.
+                        {narrow ? "이 구간의 중앙값과 25%·75%입니다." : "이 12개월 구간 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다."}
                       </p>
                     )}
                     {rollScope === "all" && (

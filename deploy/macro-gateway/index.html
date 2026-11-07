@@ -27,45 +27,36 @@
         <a class="hero__back" href="https://ch2data.com/">← CH2 DATA</a>
         <p class="hero__eyebrow">실거래 통계</p>
         <h1 class="hero__title">CH2 Macro</h1>
-        <p class="hero__lead">분석할 시장을 고르거나, 실험·기능 설명을 봅니다.</p>
+        <p class="hero__lead">실거래 데이터로 부동산 시장을 분석하고 비교합니다.</p>
+        <button type="button" class="guide-trigger" aria-haspopup="dialog" aria-controls="service-guide" hidden>
+          서비스 안내
+        </button>
       </header>
 
       <main class="grid" aria-label="시장">
         <a class="card" href="/land/">
-          <span class="card__badge card__badge--live">이용 가능</span>
           <h2 class="card__name">토지</h2>
-          <p class="card__desc">토지 매매 실거래 — 단가·분포·V2 통계·필터 분석</p>
-          <span class="card__action">토지 →</span>
+          <p class="card__desc">용도지역·지목별 실거래가격의 분포와 거래 특성을 분석합니다.</p>
         </a>
         <a class="card" href="/built/">
-          <span class="card__badge card__badge--beta">베타</span>
           <h2 class="card__name">복합</h2>
-          <p class="card__desc">상업·공장·단독다가구 — 거래 탐색·OLS 회귀·예측</p>
-          <span class="card__action">복합 →</span>
+          <p class="card__desc">상업용·공장창고·단독다가구 부동산의 거래 특성과 가격 결정요인을 분석합니다.</p>
         </a>
         <a class="card" href="/collective/">
-          <span class="card__badge card__badge--beta">베타</span>
           <h2 class="card__name">집합</h2>
-          <p class="card__desc">주거형(아파트·오피스텔 등)과 집합상가·집합공장 — 유형별 통계·회귀</p>
-          <span class="card__action">집합 →</span>
+          <p class="card__desc">아파트·오피스텔 등 집합부동산의 거래가격과 층·면적 등의 영향을 분석합니다.</p>
         </a>
         <a class="card" href="/profile/">
-          <span class="card__badge card__badge--beta">베타</span>
           <h2 class="card__name">지역프로필</h2>
-          <p class="card__desc">토지·상가·공장·주거 8대 유형을 아우르는 지역 단위 종합 프로필</p>
-          <span class="card__action">지역프로필 →</span>
+          <p class="card__desc">토지·주거·인구 등 주요 지표를 통해 지역의 특성을 비교하고 살펴봅니다.</p>
         </a>
         <a class="card" href="/rent/">
-          <span class="card__badge card__badge--beta">베타</span>
           <h2 class="card__name">임대시장</h2>
-          <p class="card__desc">주거 전월세 — 전세 · 반전세 · 월세 단가, 상권 공표</p>
-          <span class="card__action">임대시장 →</span>
+          <p class="card__desc">주거·상업용 부동산의 임대료, 전월세 관계와 수익률을 살펴봅니다.</p>
         </a>
         <a class="card" href="/insight/">
-          <span class="card__badge card__badge--beta">베타</span>
           <h2 class="card__name">Macro Insight</h2>
-          <p class="card__desc">시장에 물어본 실험과, 기능을 어떻게 쓰는지. 분석 앱이 아님</p>
-          <span class="card__action">Macro Insight →</span>
+          <p class="card__desc">실거래 데이터와 통계분석을 통해 부동산 시장의 주요 현상을 연구합니다.</p>
         </a>
       </main>
 
@@ -83,15 +74,140 @@
         </footer>
       </blockquote>
 
-      <p class="learn-gateway-link" style="margin-top: 2rem; text-align: center; font-size: 0.875rem">
-        <a href="https://ch2data.com/learn/stats/" style="color: #64748b; text-decoration: none; font-weight: 600"
-          >통계학 &amp; 데이터 분석 — Macro 용어 설명 →</a
-        >
+      <p class="learn-gateway-link">
+        <a href="https://ch2data.com/learn/stats/">통계분석과 데이터 이해하기 →</a>
       </p>
 
       <footer class="footer">
         <p>© CH2 Macro</p>
       </footer>
     </div>
+
+    <dialog class="guide" id="service-guide" aria-labelledby="guide-title" aria-describedby="guide-summary">
+      <header class="guide__header">
+        <p class="guide__eyebrow">CH2 DATA · 서비스 안내</p>
+        <h2 id="guide-title">CH2 Macro</h2>
+        <button type="button" class="guide__close" aria-label="서비스 안내 닫기" data-guide-close autofocus>×</button>
+      </header>
+
+      <div class="guide__body" role="region" aria-label="서비스 안내 본문" tabindex="0">
+        <p class="guide__tagline">사용자가 데이터를 선택하고 분석하는 부동산 통계분석기</p>
+        <p id="guide-summary">
+          CH2 Macro는 전국 부동산 실거래 데이터를 바탕으로 시장의 가격 형성과 거래 특성을 탐색하는 통계분석 도구입니다.
+        </p>
+
+        <ul class="guide__features">
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 4v4m6 2v4m-5 2v4" /></svg>
+            <div>
+              <h3>사용자가 선택하는 분석</h3>
+              <p>분석할 데이터와 지역, 변수, 통계기법 등을 직접 선택하고 다양한 조건에서 결과를 비교할 수 있습니다.</p>
+            </div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18v-5m5 5V9m5 9V5" /></svg>
+            <div>
+              <h3>대수의 법칙<span lang="en"> (law of large numbers)</span>과 시장의 통계적 특성</h3>
+              <p>개별 거래의 우연성보다 다수의 거래에서 나타나는 통계적 경향에 주목합니다. 단, 충분한 표본과 대표성, 적절한 분석 조건이 중요합니다.</p>
+            </div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14h14M9 15h.01M11 10h.01M14 13h.01M17 7h.01M18 11h.01" /></svg>
+            <div>
+              <h3>개별 가격보다 시장의 구조</h3>
+              <p>개별 부동산의 가격을 산정하기보다 시장의 가치 형성 요인과 통계적 관계를 분석하며, 미래 시장을 전망하기 위한 기초자료를 제공합니다.</p>
+            </div>
+          </li>
+        </ul>
+
+        <section class="guide__note">
+          <h3>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 11v5m0-8h.01" /></svg>
+            분석 결과의 해석은 사용자의 몫입니다
+          </h3>
+          <p>
+            CH2 Macro는 주어진 데이터와 분석 조건에서 도출된 통계적 결과를 제시합니다.
+            결과의 의미와 한계를 해석하고 이를 받아들일지, 어떻게 활용할지는 사용자의 몫입니다.
+          </p>
+          <p>
+            본 서비스는 개별 부동산의 적정가격을 산정하는 자동가치산정모형(AVM)이 아니며,
+            통계적 관계가 곧 인과관계나 미래의 예측 정확성을 보장하지는 않습니다.
+          </p>
+        </section>
+      </div>
+
+      <footer class="guide__footer">
+        <label class="guide__preference">
+          <input type="checkbox" /> 다음부터 보지 않기
+        </label>
+        <button type="button" class="guide__primary" data-guide-close>CH2 Macro 살펴보기</button>
+      </footer>
+    </dialog>
+
+    <script>
+      (() => {
+        if (window.matchMedia("(max-width: 767px)").matches) return;
+
+        const guide = document.querySelector("#service-guide");
+        if (typeof guide.showModal !== "function") return;
+
+        const trigger = document.querySelector(".guide-trigger");
+        const body = guide.querySelector(".guide__body");
+        const preference = guide.querySelector("input");
+        const storageKey = "ch2-macro:hide-service-guide";
+        let hideOnVisit = false;
+        let startedOnBackdrop = false;
+
+        function readPreference() {
+          try {
+            hideOnVisit = localStorage.getItem(storageKey) === "1";
+          } catch {
+            // Storage may be unavailable. Keep the choice for this page.
+          }
+          return hideOnVisit;
+        }
+
+        function openGuide() {
+          if (guide.open) return;
+          preference.checked = readPreference();
+          startedOnBackdrop = false;
+          guide.showModal();
+          body.scrollTop = 0;
+        }
+
+        function closeGuide() {
+          hideOnVisit = preference.checked;
+          try {
+            if (hideOnVisit) localStorage.setItem(storageKey, "1");
+            else localStorage.removeItem(storageKey);
+          } catch {
+            // Dismissal also works when storage is blocked.
+          }
+          guide.close();
+          trigger.focus({ preventScroll: true });
+        }
+
+        trigger.hidden = false;
+        trigger.addEventListener("click", openGuide);
+        guide.querySelectorAll("[data-guide-close]").forEach((button) => {
+          button.addEventListener("click", closeGuide);
+        });
+        guide.addEventListener("cancel", (event) => {
+          event.preventDefault();
+          closeGuide();
+        });
+        guide.addEventListener("pointerdown", (event) => {
+          startedOnBackdrop = event.target === guide;
+        });
+        guide.addEventListener("click", (event) => {
+          if (startedOnBackdrop && event.target === guide) closeGuide();
+          startedOnBackdrop = false;
+        });
+        window.addEventListener("pageshow", (event) => {
+          if (event.persisted && !readPreference()) openGuide();
+        });
+        if (!readPreference()) openGuide();
+      })();
+    </script>
   </body>
 </html>

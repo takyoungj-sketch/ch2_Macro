@@ -61,7 +61,7 @@ export default function ModalScrollZoom({ children }: { children: ReactNode }) {
         className="min-h-0 flex-1 overflow-auto overscroll-contain"
         style={{ touchAction: "pan-x pan-y", WebkitOverflowScrolling: "touch" }}
       >
-        <div className="px-3 py-3" style={{ zoom: scale }}>
+        <div className="ch2-modal-scroll-content px-3 py-3" style={{ zoom: scale }}>
           {children}
         </div>
       </div>
