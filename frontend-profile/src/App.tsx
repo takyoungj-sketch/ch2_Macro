@@ -11,6 +11,7 @@ import { fetchNationalRanks, fetchRegionalProfile, fetchRentProfileYearly, fetch
 import RentYearlyTable from "./components/RentYearlyTable";
 import type { RegionLevel, RegionNameInfo, YearlyMix } from "./types";
 import IdentityHeader from "./components/IdentityHeader";
+import ProfileAnalysisGuide from "./components/ProfileAnalysisGuide";
 import YearlyMixTable from "./components/YearlyMixTable";
 import NationalRankCard from "./components/NationalRankCard";
 import MarketComposition from "./components/MarketComposition";
@@ -203,10 +204,18 @@ export default function App() {
             region_level: selection.regionLevel,
             dominant_type: profileQuery.data.features.dominant_type ?? yearlyMix?.dominant_type,
             total_count_3y: yearlyMix?.total_count_3y,
+            total_amount_3y: yearlyMix?.total_amount_3y,
+            population: profileQuery.data.features.population,
+            yearly_mix: yearlyMix,
+            features: profileQuery.data.features,
+            national_rank: rankQuery.data?.rows.find(row => row[0] === selection.regionCode),
+            twins: twinQuery.data?.neighbors.map(({ twin_sido_name, twin_sigungu_name, twin_eupmyeondong_name, twin_beopjungri_name, similarity_score }) => ({
+              twin_sido_name, twin_sigungu_name, twin_eupmyeondong_name, twin_beopjungri_name, similarity_score,
+            })),
           }
         : {},
     };
-  }, [selection, shortName, profileQuery.data, yearlyMix]);
+  }, [selection, shortName, profileQuery.data, yearlyMix, rankQuery.data, twinQuery.data]);
 
   useEffect(() => {
     const on = (e: Event) => {
@@ -222,6 +231,7 @@ export default function App() {
     <ActiveAiViewProvider fallback={emptyAiContext("profile", "RegionalProfile")}>
     <div className="h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-900">
       <MacroStatsHeader
+        titleAction={<ProfileAnalysisGuide />}
         profileActive
         title="지역 프로필"
         fontPct={fontPct}

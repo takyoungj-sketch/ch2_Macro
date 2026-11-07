@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import "../../../shared/ui-window/mobileModal.css";
 import { clampModalBox, centeredModalBox, fullscreenModalBox, modalViewport } from "../../../shared/ui-window/modalViewport";
 import { isForeignDialogEvent, useModalFocus } from "../../../shared/ui-window/modalFocus";
 import {
@@ -419,6 +420,7 @@ export default function DraggableModalShell({
         ref={panelRef}
         tabIndex={-1}
         data-fullscreen={fullscreen ? "true" : undefined}
+        data-mobile-modal={narrow ? "true" : undefined}
         className={`fixed modal-shell bg-white dark:bg-slate-800 shadow-xl pointer-events-auto ${
           fullscreen ? "rounded-none" : "rounded-xl"
         } ${box ? "" : maxWidthClass} ${
@@ -454,7 +456,7 @@ export default function DraggableModalShell({
                 {title}
               </h2>
               {!minimized && subtitle && (
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</div>
+                <div className="ch2-modal-subtitle text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</div>
               )}
             </div>
             <div className="flex items-center gap-1 shrink-0" data-no-drag>
@@ -525,7 +527,7 @@ export default function DraggableModalShell({
               </button>
             </div>
           </div>
-          {!minimized && headerExtra && <div className="mt-2 pointer-events-auto max-h-[35vh] overflow-y-auto" data-no-drag>{headerExtra}</div>}
+          {!minimized && headerExtra && <div className="ch2-modal-header-extra mt-2 pointer-events-auto max-h-[35vh] overflow-y-auto" data-no-drag>{headerExtra}</div>}
         </div>
 
         {!minimized && (fullscreen && narrow ? (

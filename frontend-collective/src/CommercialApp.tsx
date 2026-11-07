@@ -19,6 +19,7 @@ import CommercialClusterDetailModal from "./components/CommercialClusterDetailMo
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
+import CollectiveAnalysisGuide from "./components/CollectiveAnalysisGuide";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
@@ -457,6 +458,7 @@ export default function CommercialApp() {
       <MacroStatsHeader
         currentApp="collective"
         title="상업·업무 집합부동산"
+        titleAction={!narrow ? <CollectiveAnalysisGuide kind="commercial" /> : null}
         fontPct={fontPct}
         fontStepMin={fontStepMin}
         fontStepMax={fontStepMax}

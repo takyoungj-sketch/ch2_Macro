@@ -20,6 +20,7 @@
       "@ch2/ai2-entry/*": ["../shared/ai2-entry/*"],
       "@ch2/stats-glossary": ["../shared/stats-glossary/index.ts"],
       "@ch2/stats-glossary/*": ["../shared/stats-glossary/*"],
+      "@ch2/analysis-help": ["../shared/analysis-help/index.ts"],
       "@ch2/stats-table-filter": ["../shared/stats-table-filter/index.tsx"]
     }
   },

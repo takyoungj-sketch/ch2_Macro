@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
+import BuiltAnalysisGuide from "./components/BuiltAnalysisGuide";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import Recommend2Modal from "./components/Recommend2Modal";
@@ -1186,6 +1187,7 @@ export default function App() {
       <MacroStatsHeader
         currentApp="built"
         title="복합부동산 통계"
+        titleAction={<BuiltAnalysisGuide />}
         badge={<span>beta</span>}
         fontPct={fontPct}
         fontStepMin={fontStepMin}

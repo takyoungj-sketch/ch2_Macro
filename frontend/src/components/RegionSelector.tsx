@@ -484,11 +484,6 @@ export default function RegionSelector() {
       )}
 
       <div className="space-y-1.5">
-        {narrow ? null : (
-        <label className="block text-sm font-medium text-slate-500 dark:text-slate-400" htmlFor="region-search">
-          지역 이름·코드 검색
-        </label>
-        )}
         <div className={narrow ? "flex items-center gap-2" : undefined}>
         <input
           ref={inputRef}
@@ -496,7 +491,6 @@ export default function RegionSelector() {
           type="search"
           autoComplete="off"
           spellCheck={false}
-          placeholder="예: 오창읍 화산리 · 흥덕구 가경동 (Enter로 확정)"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={onSearchKeyDown}
@@ -524,17 +518,7 @@ export default function RegionSelector() {
         paidSubSigunguSelections >= 1 &&
         (!LEFT_REGION_MULTI_SELECT || !paidLeafAddGateOpen) ? (
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug">
-            {LEFT_REGION_MULTI_SELECT ? (
-              <>
-                다른 지역을 검색·선택하면 현재 선택이 <strong>바뀝니다</strong>. 이어서 추가하려면 아래 「+ 추가
-                지역 선택」을 누르세요.
-              </>
-            ) : (
-              <>
-                다른 지역을 검색·선택하면 현재 선택이 <strong>바뀝니다</strong>(지도로 붙인 이웃 포함). 인접
-                추가는 <strong>지도</strong>에서 하세요.
-              </>
-            )}
+            오른쪽 지도에서 인접지역을 추가할 수 있습니다.
           </p>
         ) : null}
         {searchPanelOpen ? (
@@ -880,7 +864,7 @@ export default function RegionSelector() {
           <p className="truncate text-xs font-medium text-slate-600 dark:text-slate-300">{mobileRegionLabel}</p>
         ) : null
       ) : (
-      <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 space-y-1.5">
+      <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 space-y-1.5 dark:bg-slate-900/60">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {viewMode === "paid" ? "선택된 지역" : "선택"}{" "}
           <span className="font-normal text-slate-500">
@@ -892,7 +876,7 @@ export default function RegionSelector() {
             {tierSelection.sido_codes.map((code) => (
               <span
                 key={`sid-${code}`}
-                className="inline-flex items-center gap-1 max-w-full rounded-full border border-violet-200 bg-white pl-2 pr-1 py-1 text-sm text-violet-950"
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-violet-200 bg-white pl-2 pr-1 py-1 text-sm text-violet-950 dark:border-violet-700 dark:text-violet-100"
               >
                 <span className="truncate max-w-[14rem]" title={`시도 ${code}`}>
                   [시·도] {labelSidoChip(regions, code)}
@@ -912,7 +896,7 @@ export default function RegionSelector() {
             {tierSelection.city_codes.map((code) => (
               <span
                 key={`city-${code}`}
-                className="inline-flex items-center gap-1 max-w-full rounded-full border border-indigo-200 bg-white pl-2 pr-1 py-1 text-sm text-indigo-950"
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-indigo-200 bg-white pl-2 pr-1 py-1 text-sm text-indigo-950 dark:border-indigo-700 dark:text-indigo-100"
               >
                 <span className="truncate max-w-[14rem]" title={`의사 시(자치구 묶음) ${code}`}>
                   [시] {labelCityChip(regions, code)}
@@ -932,7 +916,7 @@ export default function RegionSelector() {
             {tierSelection.sigungu_codes.map((code) => (
               <span
                 key={`sgg-${code}`}
-                className="inline-flex items-center gap-1 max-w-full rounded-full border border-blue-200 bg-white pl-2 pr-1 py-1 text-sm text-blue-950"
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-blue-200 bg-white pl-2 pr-1 py-1 text-sm text-blue-950 dark:border-blue-700 dark:text-blue-100"
               >
                 <span className="truncate max-w-[14rem]" title={`시군구 ${code}`}>
                   [시군구] {labelSigunguChip(regions, code)}
@@ -955,7 +939,7 @@ export default function RegionSelector() {
             ).map((code) => (
               <span
                 key={`eup-${code}`}
-                className="inline-flex items-center gap-1 max-w-full rounded-full border border-emerald-200 bg-white pl-2 pr-1 py-1 text-sm text-emerald-950"
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-emerald-200 bg-white pl-2 pr-1 py-1 text-sm text-emerald-950 dark:border-emerald-700 dark:text-emerald-100"
               >
                 <span className="truncate max-w-[14rem]" title={`읍면동 ${code}`}>
                   [읍·면·동] {labelEupChip(regions, code)}

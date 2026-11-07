@@ -12,6 +12,7 @@ type Props = {
   currentApp?: MacroAppKind | null;
   profileActive?: boolean;
   title: string;
+  titleAction?: ReactNode;
   badge?: ReactNode;
   fontPct: number;
   fontStepMin: boolean;
@@ -26,6 +27,7 @@ export default function MacroStatsHeader({
   currentApp = null,
   profileActive = false,
   title,
+  titleAction,
   badge,
   fontPct,
   fontStepMin,
@@ -65,7 +67,14 @@ export default function MacroStatsHeader({
             </a>
             {badge ? <span className="macro-header-badge-slot">{badge}</span> : null}
           </p>
-          <h1>{title}</h1>
+          {titleAction ? (
+            <div className="macro-header-heading-row">
+              <h1>{title}</h1>
+              {titleAction}
+            </div>
+          ) : (
+            <h1>{title}</h1>
+          )}
         </div>
         <div className="macro-header-toolbar">
           <div className="macro-header-nav-cluster">

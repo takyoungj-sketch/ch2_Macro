@@ -19,6 +19,7 @@ import RegionMapHub, { type MapPanelMode } from "./components/RegionMapHub";
 import FreeStatsPanel from "./components/FreeStatsPanel";
 import PaidAnalysisPanel from "./components/PaidAnalysisPanel";
 import PaidFilterTable from "./components/PaidFilterTable";
+import LandAnalysisGuide from "./components/LandAnalysisGuide";
 import { setLandPickSingle } from "./regionPickMode";
 
 const MOBILE_REGION_KEY = "ch2.land.mobileRegion";
@@ -117,6 +118,7 @@ export default function App() {
       <MacroStatsHeader
         currentApp="land"
         title="토지 실거래 통계"
+        titleAction={!narrow ? <LandAnalysisGuide /> : null}
         fontPct={fontPct}
         fontStepMin={fontStepMin}
         fontStepMax={fontStepMax}

@@ -19,6 +19,7 @@ import AiAssistantPanel from "./components/AiAssistantPanel";
 import { Ai2HeaderSlot, singleScreenRegion } from "@ch2/ai2-entry/Ai2Entry";
 import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import BuildingDetailModal from "./components/BuildingDetailModal";
+import RentAnalysisGuide from "./components/RentAnalysisGuide";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
   toggleChipMulti,
@@ -331,6 +332,7 @@ export default function App() {
     <ActiveAiViewProvider fallback={emptyAiContext("rent", "RentListCard")}>
     <div className="h-screen flex flex-col overflow-hidden">
       <MacroStatsHeader
+        titleAction={<RentAnalysisGuide />}
         currentApp="rent"
         title="임대시장"
         fontPct={fontPct}
@@ -352,7 +354,7 @@ export default function App() {
           </Ai2HeaderSlot>
         }
       />
-      <PublishAiContext context={rentAiContext} />
+      <PublishAiContext context={rentAiContext} role="base" />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className="flex flex-1 min-h-0 overflow-hidden">

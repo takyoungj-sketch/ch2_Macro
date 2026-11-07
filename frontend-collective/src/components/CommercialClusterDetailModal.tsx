@@ -367,7 +367,9 @@ export default function CommercialClusterDetailModal({
       initialFullscreen={narrow}
       titleId="commercial-cluster-detail-modal-title"
       title={label}
-      subtitle={
+      subtitle={narrow ? (
+        <>{commercialAssetTypeLabel(effectiveAssetType)} · {row.count.toLocaleString("ko-KR")}건 · 평균 {fmtPrice(row.mean, 0)}만원/㎡{!row.is_reliable && " · 참고용"}</>
+      ) : (
         <>
           {commercialAssetTypeLabel(effectiveAssetType)} · n={row.count.toLocaleString("ko-KR")} · 평균{" "}
           {fmtPrice(row.mean, 0)} 만원/㎡
@@ -376,7 +378,7 @@ export default function CommercialClusterDetailModal({
           )}
           {!row.is_reliable && <span className="ml-1 text-amber-600">· n&lt;15</span>}
         </>
-      }
+      )}
       headerExtra={
         <>
           {!narrow && (
@@ -424,7 +426,8 @@ export default function CommercialClusterDetailModal({
           </div>
           )}
           {(() => {
-            const help = commercialModalPanelHelp(narrow ? "trend" : panel);
+            if (narrow) return null;
+            const help = commercialModalPanelHelp(panel);
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
           {!narrow && peerClusters.length > 0 && (
@@ -527,15 +530,15 @@ export default function CommercialClusterDetailModal({
               {!trendCohortActive && rollingQ.data && rollingQ.data.points.length > 0 && (
                 <>
                   {(rollingQ.data.stats_as_of_label || statsAsOfLabel || periodLabel) && (
-                    <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
+                    <p className="ch2-rolling-period text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
                       {rollingQ.data.stats_as_of_label || statsAsOfLabel}
                       {windowYears ? ` · ${windowYears}년 창` : ""}
                       {periodLabel ? ` · ${periodLabel}` : ""}
                     </p>
                   )}
-                  <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
-                      <p className="text-xs font-semibold text-slate-600">12개월 롤링 구간 추이</p>
+                  <div className="ch2-rolling-card rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
+                    <div className="ch2-rolling-toolbar flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
+                      <p className="text-xs font-semibold text-slate-600">{narrow ? "롤링 추이" : "12개월 롤링 구간 추이"}</p>
                       <LongTermMetricToggle
                         metric={rollMetric}
                         onChange={setRollMetric}
@@ -546,7 +549,7 @@ export default function CommercialClusterDetailModal({
                     </div>
                     {rollMetric === "median" && (
                       <p className="text-[11px] text-slate-500 px-1 mb-2">
-                        이 12개월 구간 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다.
+                        {narrow ? "이 구간의 중앙값과 25%·75%입니다." : "이 12개월 구간 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다."}
                       </p>
                     )}
                     <RollingTrendChart points={rollingQ.data.points} metric={rollMetric} showQuartiles={rollQuartiles} />
