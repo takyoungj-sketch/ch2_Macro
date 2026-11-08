@@ -1477,6 +1477,8 @@ export default function App() {
                 1. 변수 선택
                 <AnalysisHelpPanel explain={BUILT_VAR_SELECT_HELP} title="변수 선택 설명" />
               </p>
+              <fieldset className="space-y-2">
+                <legend className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">실거래자료</legend>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
                 {(
                   [
@@ -1489,8 +1491,6 @@ export default function App() {
                       "building_use_dummy",
                       isOnlyDetached(assetType) ? "주택유형 더미" : "건축물용도 더미",
                     ],
-                    ["structure_dummy", "구조 더미"],
-                    ["assessed_land_price", "개별공시지가"],
                     ...(isUnifiedAsset(assetType)
                       ? ([["asset_type_dummy", "유형 더미"]] as const)
                       : []),
@@ -1506,15 +1506,11 @@ export default function App() {
                 ).map(([key, label]) => (
                   <label
                     key={key}
-                    className={clsx(
-                      "flex items-center gap-1",
-                      (key === "structure_dummy" || key === "assessed_land_price") && !enrich && "opacity-50",
-                    )}
+                    className="flex items-center gap-1"
                   >
                     <input
                       type="checkbox"
                       checked={Boolean(effectiveVars[key as keyof RegressionVariableSpec])}
-                      disabled={(key === "structure_dummy" || key === "assessed_land_price") && !enrich}
                       onChange={(e) =>
                         setVars((v) => ({ ...v, [key]: e.target.checked }))
                       }
@@ -1523,6 +1519,43 @@ export default function App() {
                   </label>
                 ))}
               </div>
+              </fieldset>
+              <fieldset className="border-t border-slate-200 dark:border-slate-600 pt-2 space-y-2">
+                <legend className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-1">대장자료</legend>
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={enrich}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setEnrichConsentOpen(true);
+                        return;
+                      }
+                      setEnrich(false);
+                    }}
+                  />
+                  대장자료 연결
+                </label>
+              </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
+                  {([
+                    ["structure_dummy", "구조 더미"],
+                    ["assessed_land_price", "개별공시지가"],
+                  ] as const).map(([key, label]) => (
+                    <label key={key} className={clsx("flex items-center gap-1", !enrich && "opacity-50")}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(effectiveVars[key])}
+                        disabled={!enrich}
+                        onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                {!enrich && <p className="text-xs text-slate-500 dark:text-slate-400">대장자료를 연결하면 구조·개별공시지가를 선택할 수 있습니다.</p>}
+              </fieldset>
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
@@ -1617,22 +1650,6 @@ export default function App() {
                     }}
                   />
                   지분거래 포함
-                </label>
-              </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={enrich}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setEnrichConsentOpen(true);
-                        return;
-                      }
-                      setEnrich(false);
-                    }}
-                  />
-                  건축물대장 보강
                 </label>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
