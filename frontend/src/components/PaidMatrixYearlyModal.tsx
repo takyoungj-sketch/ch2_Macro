@@ -576,19 +576,19 @@ export default function PaidMatrixYearlyModal({
       onClose={onClose}
       initialFullscreen={narrow && isRolling}
       titleId="paid-matrix-yearly-title"
-      title={narrow ? "롤링 추이" : isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
+      title={isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
       headerActions={!narrow && canDetail ? <LandMatrixTabsGuide /> : null}
       subtitle={
         <>
           용도 <span className="font-semibold text-slate-700">{zoneType}</span> ·{" "}
           {matrixMode === "group" ? "지목군" : "지목"}{" "}
           <span className="font-semibold text-slate-700">{landCategory}</span>
-          {!narrow && matrixMode === "group" ? (
+          {matrixMode === "group" ? (
             <span className="block text-xs mt-1 text-slate-400">
               용도 × 지목군 모드 — 구성 지목 거래를 원장에서 재집계합니다.
             </span>
           ) : null}
-          {!narrow && scopeNote ? (
+          {scopeNote ? (
             <span className="block text-xs mt-1 text-slate-400">{scopeNote}</span>
           ) : null}
         </>
@@ -894,11 +894,11 @@ export default function PaidMatrixYearlyModal({
 
           {canDetail && panel === "trend" && (
             <>
-              <div className="ch2-rolling-card rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                <div className="ch2-rolling-toolbar flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
                   <div className="flex items-center gap-1">
                     <p className="text-xs font-semibold text-slate-600">추이 (꺾은선)</p>
-                    {!narrow && <AnalysisHelpPanel explain={trendExplain} />}
+                    <AnalysisHelpPanel explain={trendExplain} />
                   </div>
                   {isRolling && (
                     <div

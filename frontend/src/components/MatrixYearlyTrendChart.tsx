@@ -163,7 +163,7 @@ export default function MatrixYearlyTrendChart({
   }
 
   return (
-    <div className="ch2-rolling-chart w-full overflow-x-auto" role="img" aria-label={`구간별 ${priceLabel} 및 거래 건수 추이 그래프`}>
+    <div className="w-full overflow-x-auto" role="img" aria-label={`구간별 ${priceLabel} 및 거래 건수 추이 그래프`}>
       <p className="text-xs text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
