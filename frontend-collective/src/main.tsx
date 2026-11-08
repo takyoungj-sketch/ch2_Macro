@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import CommercialApp from "./CommercialApp";
+import MobileCollectiveApp from "./MobileCollectiveApp";
+import { useMobileScreen } from "@ch2/macro-shell/mobile/useMobileScreen";
 import CollectiveLanding from "./CollectiveLanding";
 import BuildingRegressionPage from "./pages/BuildingRegressionPage";
 import { getCollectiveSegment, redirectToCollectiveSubpath } from "./routing";
@@ -17,7 +19,13 @@ applyColorScheme(readStoredColorScheme());
 const qc = new QueryClient();
 
 function Root() {
+  const mobile = useMobileScreen();
   const view = new URLSearchParams(window.location.search).get("view");
+
+  if (mobile) {
+    const commercial = getCollectiveSegment() === "commercial" || view === "commercial";
+    return <MobileCollectiveApp key={commercial ? "commercial" : "residential"} commercial={commercial} />;
+  }
 
   if (view === "commercial") {
     redirectToCollectiveSubpath("commercial");
