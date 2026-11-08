@@ -1250,4 +1250,3 @@ def _cells_from_regression(
 
     cells.sort(key=_sort_key)
     return cells
-
