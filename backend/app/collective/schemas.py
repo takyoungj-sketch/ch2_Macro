@@ -245,6 +245,33 @@ class RollingStatsResponse(BaseModel):
     data_source: Literal["mart", "live"] = "live"
 
 
+class AreaRollingPoint(BaseModel):
+    bucket_index: int
+    period_start: str
+    period_end: str
+    label: str
+    count: int
+    mean: Optional[float] = None
+    median: Optional[float] = None
+
+
+class AreaRollingSeries(BaseModel):
+    area_label: str
+    area_sort: float
+    points: list[AreaRollingPoint]
+
+
+class AreaRollingResponse(BaseModel):
+    building_key: str
+    display_name: str
+    window_years: int
+    as_of_month: Optional[str] = None
+    stats_as_of_label: Optional[str] = None
+    area_rule: str
+    series: list[AreaRollingSeries]
+    data_source: Literal["live"] = "live"
+
+
 class HistogramBin(BaseModel):
     lo: float
     hi: float

@@ -9,6 +9,7 @@ import {
   downloadCohortTransactionsCsv,
   fetchAllBuildingTransactions,
   fetchAllCohortTransactions,
+  fetchBuildingAreaRolling,
   fetchBuildingHistogram,
   fetchBuildingRollingStats,
   fetchBuildingYearlyStats,
@@ -28,6 +29,7 @@ import DraggableModalShell from "./DraggableModalShell";
 import FloorIndexPanel from "./FloorIndexPanel";
 import HistogramChart from "./HistogramChart";
 import type { CohortTrendMetric } from "./MultiBuildingTrendChart";
+import AreaRollingView, { RollingScopeToggle, type RollingScope } from "./AreaRollingView";
 import RollingTrendChart from "./RollingTrendChart";
 import YearlyTrendChart, { yearlyPointPrice } from "./YearlyTrendChart";
 import LongTermMetricToggle, { longTermPriceLabel, type LongTermPriceMetric } from "./LongTermMetricToggle";
@@ -529,6 +531,7 @@ export default function BuildingDetailModal({
   const [showQuartiles, setShowQuartiles] = useState(false);
   const [rollMetric, setRollMetric] = useState<LongTermPriceMetric>("mean");
   const [rollQuartiles, setRollQuartiles] = useState(false);
+  const [rollScope, setRollScope] = useState<RollingScope>("all");
   const [defaultSize] = useState(defaultBuildingDetailSize);
   const [presaleOverlay, setPresaleOverlay] = useState<{ key: string; name: string }[]>([]);
   const [showPresalePicker, setShowPresalePicker] = useState(false);
@@ -564,6 +567,11 @@ export default function BuildingDetailModal({
     queryKey: ["b-rolling", row.building_key, windowYears],
     queryFn: () => fetchBuildingRollingStats(row.building_key, windowYears),
     enabled: cohortRunForPanel("trend") === 0 && panel === "trend",
+  });
+  const areaRollingQ = useQuery({
+    queryKey: ["b-rolling-area", row.building_key, windowYears],
+    queryFn: () => fetchBuildingAreaRolling(row.building_key, windowYears),
+    enabled: cohortRunForPanel("trend") === 0 && panel === "trend" && rollScope === "area",
   });
 
   const longTermYearQ = useQuery({
@@ -766,6 +774,7 @@ export default function BuildingDetailModal({
     setTxSubView("list");
     setTxExternalFilters({});
     setTxExternalFilterToken(0);
+    setRollScope("all");
   }, [row.building_key]);
 
   const handleTxDrillDown = useCallback((filters: TxDrillDownFilters<CollectiveTxSortKey>) => {
@@ -1020,22 +1029,44 @@ export default function BuildingDetailModal({
                   <div className="modal-card px-2 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
                       <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">12개월 롤링 버킷 추이</p>
-                      <LongTermMetricToggle
-                        metric={rollMetric}
-                        onChange={setRollMetric}
-                        showQuartiles={rollQuartiles}
-                        onQuartilesChange={setRollQuartiles}
-                        ariaLabel="롤링 구간 단가 기준"
-                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <RollingScopeToggle value={rollScope} onChange={setRollScope} areaLabel="면적형" />
+                        <LongTermMetricToggle
+                          metric={rollMetric}
+                          onChange={setRollMetric}
+                          showQuartiles={rollScope === "all" && rollQuartiles}
+                          onQuartilesChange={rollScope === "all" ? setRollQuartiles : undefined}
+                          ariaLabel="롤링 구간 단가 기준"
+                        />
+                      </div>
                     </div>
-                    {rollMetric === "median" && (
+                    {rollScope === "all" && rollMetric === "median" && (
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 px-1 mb-2">
                         이 12개월 구간 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다.
                       </p>
                     )}
-                    <RollingTrendChart points={rollingQ.data.points} metric={rollMetric} showQuartiles={rollQuartiles} />
+                    {rollScope === "all" && (
+                      <RollingTrendChart points={rollingQ.data.points} metric={rollMetric} showQuartiles={rollQuartiles} />
+                    )}
+                    {rollScope === "area" && areaRollingQ.isLoading && (
+                      <p className="text-xs text-slate-400 text-center py-6">면적형 집계 중…</p>
+                    )}
+                    {rollScope === "area" && areaRollingQ.isError && (
+                      <p className="text-xs text-amber-700 dark:text-amber-400 text-center py-6">면적형 추세를 불러오지 못했습니다.</p>
+                    )}
+                    {rollScope === "area" && areaRollingQ.data && areaRollingQ.data.series.length === 0 && (
+                      <p className="text-xs text-slate-400 text-center py-6">면적형으로 나눌 거래가 없습니다.</p>
+                    )}
+                    {rollScope === "area" && areaRollingQ.data && areaRollingQ.data.series.length > 0 && (
+                      <AreaRollingView
+                        series={areaRollingQ.data.series}
+                        metric={rollMetric}
+                        areaRule={areaRollingQ.data.area_rule}
+                        areaColumnLabel="면적형"
+                      />
+                    )}
                   </div>
-                  <div className="modal-table-wrap">
+                  {rollScope === "all" && <div className="modal-table-wrap">
                     <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">구간별 수치</p>
                     <table className="w-full text-xs border-collapse modal-inner-table">
                       <thead>
@@ -1079,7 +1110,7 @@ export default function BuildingDetailModal({
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </div>}
                 </>
               )}
               {!trendCohortActive && panel === "trend" && rollingQ.data && rollingQ.data.points.length === 0 && (

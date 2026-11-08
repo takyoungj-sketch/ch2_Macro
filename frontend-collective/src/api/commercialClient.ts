@@ -14,6 +14,7 @@ import type {
   CommercialRegressionPredictInputs,
   CommercialRegressionPredictResponse,
   CommercialRegressionResponse,
+  CommercialAreaRollingResponse,
   CommercialRollingStatsResponse,
   CommercialTransactionListResponse,
   CommercialYearlyStatsResponse,
@@ -401,6 +402,16 @@ export async function fetchCommercialRollingStats(
   windowYears: number,
 ): Promise<CommercialRollingStatsResponse> {
   const { data } = await api.get<CommercialRollingStatsResponse>(`/clusters/${clusterKey}/stats/rolling`, {
+    params: { window_years: windowYears },
+  });
+  return data;
+}
+
+export async function fetchCommercialAreaRolling(
+  clusterKey: string,
+  windowYears: number,
+): Promise<CommercialAreaRollingResponse> {
+  const { data } = await api.get<CommercialAreaRollingResponse>(`/clusters/${clusterKey}/stats/rolling-by-area`, {
     params: { window_years: windowYears },
   });
   return data;

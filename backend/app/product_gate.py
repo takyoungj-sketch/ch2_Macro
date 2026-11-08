@@ -133,6 +133,10 @@ def _rolling_is_free(query: Mapping[str, str]) -> bool:
     return _window_is_five(query.get("window_years"))
 
 
+def _is_rolling_stats_path(path: str) -> bool:
+    return path.endswith("/stats/rolling") or path.endswith("/stats/rolling-by-area")
+
+
 def _collective_open(method: str, path: str, query: Mapping[str, str]) -> bool:
     if method == "GET" and (
         path.startswith("/api/collective/regions/")
@@ -145,9 +149,9 @@ def _collective_open(method: str, path: str, query: Mapping[str, str]) -> bool:
         return _collective_list_is_free(query)
     if method == "GET" and path == "/api/collective/commercial/clusters":
         return _collective_list_is_free(query)
-    if method == "GET" and path.startswith("/api/collective/buildings/") and path.endswith("/stats/rolling"):
+    if method == "GET" and path.startswith("/api/collective/buildings/") and _is_rolling_stats_path(path):
         return _rolling_is_free(query)
-    if method == "GET" and path.startswith("/api/collective/commercial/clusters/") and path.endswith("/stats/rolling"):
+    if method == "GET" and path.startswith("/api/collective/commercial/clusters/") and _is_rolling_stats_path(path):
         return _rolling_is_free(query)
     if method == "POST" and path in {
         "/api/collective/buildings/geocode",

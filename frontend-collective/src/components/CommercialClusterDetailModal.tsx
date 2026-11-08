@@ -8,6 +8,7 @@ import {
   fetchAllCommercialCohortTransactions,
   fetchAllCommercialTransactions,
   fetchCommercialAddresses,
+  fetchCommercialAreaRolling,
   fetchCommercialCohortHistogram,
   fetchCommercialHistogram,
   fetchCommercialRollingStats,
@@ -33,6 +34,7 @@ import CommercialFloorIndexPanel from "./CommercialFloorIndexPanel";
 import CommercialRegressionPanel from "./CommercialRegressionPanel";
 import CommercialTransactionTable from "./CommercialTransactionTable";
 import TransactionAggregatePanel, { TxListSubViewToggle, type TxSubView } from "./TransactionAggregatePanel";
+import AreaRollingView, { RollingScopeToggle, type RollingScope } from "./AreaRollingView";
 import RollingTrendChart from "./RollingTrendChart";
 import YearlyTrendChart, { yearlyPointPrice } from "./YearlyTrendChart";
 import LongTermMetricToggle, { longTermPriceLabel, type LongTermPriceMetric } from "./LongTermMetricToggle";
@@ -144,6 +146,7 @@ export default function CommercialClusterDetailModal({
   const [showQuartiles, setShowQuartiles] = useState(false);
   const [rollMetric, setRollMetric] = useState<LongTermPriceMetric>("mean");
   const [rollQuartiles, setRollQuartiles] = useState(false);
+  const [rollScope, setRollScope] = useState<RollingScope>("all");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
   const [txSubView, setTxSubView] = useState<TxSubView>("list");
@@ -206,6 +209,11 @@ export default function CommercialClusterDetailModal({
     queryKey: ["comm-rolling", row.cluster_key, windowYears],
     queryFn: () => fetchCommercialRollingStats(row.cluster_key, windowYears),
     enabled: cohortRunForPanel("trend") === 0 && panel === "trend",
+  });
+  const areaRollingQ = useQuery({
+    queryKey: ["comm-rolling-area", row.cluster_key, windowYears],
+    queryFn: () => fetchCommercialAreaRolling(row.cluster_key, windowYears),
+    enabled: cohortRunForPanel("trend") === 0 && panel === "trend" && rollScope === "area",
   });
 
   const longTermYearQ = useQuery({
@@ -345,6 +353,7 @@ export default function CommercialClusterDetailModal({
     setTxSubView("list");
     setTxExternalFilters({});
     setTxExternalFilterToken(0);
+    setRollScope("all");
   }, [row.cluster_key]);
 
   const handleTxDrillDown = useCallback((filters: TxDrillDownFilters<CommercialTxSortKey>) => {
@@ -536,22 +545,44 @@ export default function CommercialClusterDetailModal({
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
                       <p className="text-xs font-semibold text-slate-600">12개월 롤링 구간 추이</p>
-                      <LongTermMetricToggle
-                        metric={rollMetric}
-                        onChange={setRollMetric}
-                        showQuartiles={rollQuartiles}
-                        onQuartilesChange={setRollQuartiles}
-                        ariaLabel="롤링 구간 단가 기준"
-                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <RollingScopeToggle value={rollScope} onChange={setRollScope} areaLabel={isShop ? "면적형" : "면적대"} />
+                        <LongTermMetricToggle
+                          metric={rollMetric}
+                          onChange={setRollMetric}
+                          showQuartiles={rollScope === "all" && rollQuartiles}
+                          onQuartilesChange={rollScope === "all" ? setRollQuartiles : undefined}
+                          ariaLabel="롤링 구간 단가 기준"
+                        />
+                      </div>
                     </div>
-                    {rollMetric === "median" && (
+                    {rollScope === "all" && rollMetric === "median" && (
                       <p className="text-[11px] text-slate-500 px-1 mb-2">
                         이 12개월 구간 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다.
                       </p>
                     )}
-                    <RollingTrendChart points={rollingQ.data.points} metric={rollMetric} showQuartiles={rollQuartiles} />
+                    {rollScope === "all" && (
+                      <RollingTrendChart points={rollingQ.data.points} metric={rollMetric} showQuartiles={rollQuartiles} />
+                    )}
+                    {rollScope === "area" && areaRollingQ.isLoading && (
+                      <p className="text-xs text-slate-400 text-center py-6">{isShop ? "면적형" : "면적대"} 집계 중…</p>
+                    )}
+                    {rollScope === "area" && areaRollingQ.isError && (
+                      <p className="text-xs text-amber-700 text-center py-6">{isShop ? "면적형" : "면적대"} 추세를 불러오지 못했습니다.</p>
+                    )}
+                    {rollScope === "area" && areaRollingQ.data && areaRollingQ.data.series.length === 0 && (
+                      <p className="text-xs text-slate-400 text-center py-6">{isShop ? "면적형으로" : "면적대로"} 나눌 거래가 없습니다.</p>
+                    )}
+                    {rollScope === "area" && areaRollingQ.data && areaRollingQ.data.series.length > 0 && (
+                      <AreaRollingView
+                        series={areaRollingQ.data.series}
+                        metric={rollMetric}
+                        areaRule={areaRollingQ.data.area_rule}
+                        areaColumnLabel={isShop ? "면적형" : "면적대"}
+                      />
+                    )}
                   </div>
-                  <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
+                  {rollScope === "all" && <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-50 text-slate-600">
@@ -594,7 +625,7 @@ export default function CommercialClusterDetailModal({
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </div>}
                 </>
               )}
               {!trendCohortActive && rollingQ.data && rollingQ.data.points.length === 0 && (

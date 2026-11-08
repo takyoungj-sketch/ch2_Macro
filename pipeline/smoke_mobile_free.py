@@ -69,6 +69,11 @@ def main() -> None:
         assert all(1 <= p["bucket_index"] <= 5 for p in series["points"]), series
         call(f"{prefix}/{list_path}/{item_key}/stats/rolling", {"window_years": 7}, expected=401)
         print(f"PASS guest {list_path} 5-year basic + rolling; 7-year access remains protected")
+        areas = call(f"{prefix}/{list_path}/{item_key}/stats/rolling-by-area", {"window_years": 5})
+        assert areas["window_years"] == 5 and areas["series"] and areas["area_rule"], areas
+        assert all(1 <= p["bucket_index"] <= 5 and p["count"] > 0 for group in areas["series"] for p in group["points"]), areas
+        call(f"{prefix}/{list_path}/{item_key}/stats/rolling-by-area", {"window_years": 7}, expected=401)
+        print(f"PASS guest {list_path} area rolling ({len(areas['series'])} area types); 7-year access remains protected")
     call("/api/paid/analyze", body={}, expected=401)
     print("PASS paid analysis remains protected")
 
