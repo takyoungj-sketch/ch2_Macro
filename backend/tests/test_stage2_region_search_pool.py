@@ -219,17 +219,19 @@ def test_stage2_research_uses_stage1_block_pool(monkeypatch):
     assert out.inspect_pool.prefix_k == 1
 
 
-def test_research_uses_only_rank1_passed_twin(monkeypatch):
+def test_research_uses_all_passed_selected_twins(monkeypatch):
     captured: dict = {}
+    selected_twins = ("t1", "t2", "t_rejected", "t3")
 
     def fake_filter(_conn, **_kwargs):
+        assert _kwargs["twin_region_codes"] == selected_twins
         return [], ["t1", "t2", "t3"]
 
     def fake_variant(_conn, **kwargs):
         captured["twin_codes"] = kwargs["twin_codes"]
         captured["prefix_k"] = kwargs["prefix_k"]
         captured["label"] = kwargs["label"]
-        return _metrics("twin_research", 1, n=20, cv=33.0)
+        return _metrics("twin_research", kwargs["prefix_k"], n=40, cv=33.0)
 
     monkeypatch.setattr(
         "app.built.regression.selection.pooling.filter_twins_by_hard_gates",
@@ -247,12 +249,13 @@ def test_research_uses_only_rank1_passed_twin(monkeypatch):
         req=RegressionSelectionRequest(asset_type="commercial"),
         search_pool=["gross_area"],
         anchor_region_codes=("anchor",),
-        twin_region_codes=("t1", "t2", "t3"),
+        twin_region_codes=selected_twins,
         admin_level="eupmyeondong",
         region_col=None,
     )
-    assert captured["twin_codes"] == ("t1",)
-    assert captured["prefix_k"] == 1
-    assert "1위" in captured["label"]
+    assert captured["twin_codes"] == ("t1", "t2", "t3")
+    assert "t_rejected" not in captured["twin_codes"]
+    assert captured["prefix_k"] == 3
+    assert "선택 지역" in captured["label"]
     assert out is not None
-    assert out.prefix_k == 1
+    assert out.prefix_k == 3

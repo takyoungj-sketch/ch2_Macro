@@ -75,7 +75,7 @@
 | D-070 | 2026-09-08 | **복합 모형추천 척도 = 같은 표본의 linear/log/log-log.** 예측형은 원척도 CV-MAPE, 설명형 AIC는 log(금액) 식끼리만. log-log는 면적 블록이 있을 때만(면적만 log). Twin은 1단계 척도 고정. 카드: [`lab/decisions/D-070.json`](lab/decisions/D-070.json). |
 | D-071 | 2026-09-08 | **복합 Macro 탐색 UI = 4단계 스토리.** ① CV-MAPE TOP 5 → ② #1 회귀실험 → ③ Twin 구조 유지 → ④ 기본 통계·Macro·Twin 비교. 설명형 병렬 탭 없음. 「최적」금지. **③ 목적은 D-073이 대체.** 카드: [`lab/decisions/D-071.json`](lab/decisions/D-071.json). |
 | D-072 | 2026-09-09 | **5앱 공유 형식은 동일 적용.** 탭 크기·필터 확인 UX·모달 크롬 등 형식은 토지·복합·집합·임대·지역프로필에 같이. 도메인 내용(열·산식)은 달라도 됨. 랩 제외. 카드: [`lab/decisions/D-072.json`](lab/decisions/D-072.json). |
-| D-073 | 2026-09-10 | **복합 제품 Twin = 식 고정 + Twin 표본.** Local 식·척도를 유지하고 유사 지역 거래만 보태 확인 CV·계수 방향을 본다. 확장 표본 재탐색은 관리자 Lab. D-071 ③ 「구조 유지」를 대체. D-066(가격으로 후보 금지·n만으로 채택 금지)은 유지. 카드: [`lab/decisions/D-073.json`](lab/decisions/D-073.json). |
+| D-073 | 2026-09-10 | **복합 제품 Twin = 선택한 통과 지역 표본.** 사용자가 고른 지역 중 통과한 지역을 합쳐 분석한다(2026-11-08 운영자 확정, 2026-10-20 커밋 반영). D-071 ③ 「구조 유지」를 대체. D-066(가격으로 후보 금지·n만으로 채택 금지)은 유지. 카드: [`lab/decisions/D-073.json`](lab/decisions/D-073.json). |
 | D-077 | 2026-10-05 | **청주 공통 대장 공급 파일럿 성공 종료.** 원천 통합·판본/출처/해시/복구·숫자 재공급·실제 엔진 재현·공급 인계/실패 유지로 종료한다. 추가 완료 조건 금지. 소속·PK 연결·새 월·제품 통합·전국 확대·회귀 채택은 후속 구축/품질/연구로 분리. 카드: [`lab/decisions/D-077.json`](lab/decisions/D-077.json). |
 | D-080 | 2026-10-28 | **토지·집합 무료 공개와 현장용 모바일.** 사이트 비밀번호는 게이트와 함께 제거. 랩 비밀번호 유지. PC 비로그인=기본통계+기본 조건 5년 롤링, 복수는 D-010. 필터·그 밖 모달은 잠금, 서버 거절. 모바일=지역 1곳 텍스트, 본표 스크롤, 롤링만, 지도·로그인 없음. 복합·임대·프로필·인사이트는 로그인. 산식 불변. 요금 D-052. SSOT: [`CH2_ENTITLEMENT.md`](CH2_ENTITLEMENT.md). 카드: [`lab/decisions/D-080.json`](lab/decisions/D-080.json). |
 
@@ -421,7 +421,7 @@
 - Twin이 이겨도 기본 통계 식은 덮지 않음. 재적합 식·예측은 Macro 창 ③.
 - D-071의 ③ 목적(구조 유지)을 대체. 4단계 골격은 유지.
 - 카드 [`lab/decisions/D-073.json`](lab/decisions/D-073.json).
-- 재검토(region_leaf를 Twin 표본에서만) 실험 계획: [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](lab/RECOMMEND_TWIN_BENCH_LAB.md). 제품 Twin1은 1위+지역더미, Twin2는 같은 1위 표본 재탐색(확인용).
+- 재검토(region_leaf를 Twin 표본에서만) 실험 계획: [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](lab/RECOMMEND_TWIN_BENCH_LAB.md). 제품 Twin은 사용자가 고른 지역 중 통과한 지역을 합친 표본을 쓴다 (2026-11-08 운영자 확정, 2026-10-20 커밋 반영).
 
 ## D-074 복합 회귀엔진 — 역변환·CV/holdout·clipping 지표 정의
 
