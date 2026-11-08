@@ -106,3 +106,114 @@ def test_assessed_model_never_fills_all_missing_prices():
     data = rows()
     for row in data: row["official_price_won"] = None
     with pytest.raises(HTTPException): engine.run_land_regression(data, request())
+
+
+def _road_rows():
+    data = rows()
+    for i, row in enumerate(data):
+        row["official_price_won"] = None
+        row["road_condition"] = "8미만" if i < 25 else "12미만"
+    for row in data[:5]:
+        row["road_condition"] = None
+    return data
+
+
+def _road_request():
+    return LandRegressionRequest(
+        zone_type="2주", land_category="대", min_n=10, categorical_missing="drop",
+        variables=LandRegressionVariables(
+            area_sqm=True, log_area=True, road_condition=True, deal_type=False,
+            year_trend=False, partial_ownership=False, beopjungri_fe=False,
+            assessed_land_price=False,
+        ),
+    )
+
+
+def test_prediction_drops_unknown_categories_like_the_displayed_fit():
+    data = _road_rows()
+    req = _road_request()
+    fit = engine.run_land_regression(data, req)
+    assert fit.n == 55
+    assert fit.n_excluded_missing == 5
+    predict = LandRegressionPredictRequest(
+        **req.model_dump(), area_sqm=100, road_condition="8미만",
+        expected_model_signature=fit.analysis.model_signature,
+    )
+    result = engine.predict_land_regression(data, predict)
+    assert result.n == fit.n
+
+
+def test_empty_transactions_return_minimum_sample_instead_of_key_error():
+    with pytest.raises(HTTPException) as exc:
+        engine.run_land_regression([], request())
+    assert exc.value.status_code == 422
+    assert "최소 표본" in exc.value.detail
+
+
+def test_constant_regressors_do_not_emit_a_nan_f_statistic():
+    data = rows()
+    for row in data:
+        row["area_sqm"] = 100.0
+        row["official_price_won"] = None
+    req = request(False)
+    with pytest.raises(HTTPException) as exc:
+        engine.run_land_regression(data, req)
+    assert exc.value.status_code == 422
+    assert "같은 값" in exc.value.detail
+
+
+def test_suggestion_keeps_full_transactions_when_share_label_is_blank():
+    data = rows()
+    for i, row in enumerate(data):
+        row["official_price_won"] = None
+        share = i < 20
+        row["is_partial_ownership"] = share
+        row["partial_ownership_label"] = "지분" if share else None
+    req = request(False).model_copy(update={"variables": LandRegressionVariables(
+        area_sqm=True, log_area=True, road_condition=False, deal_type=False,
+        year_trend=False, partial_ownership=True, beopjungri_fe=False,
+        assessed_land_price=False,
+    )})
+    fit = engine.run_land_regression(data, req)
+    suggestion = engine.suggest_land_regression(data, req)
+    assert fit.n == 60
+    assert suggestion.selection_n == 60
+    assert all(candidate.n == 60 for candidate in suggestion.candidates_by_aic)
+
+    for row in data[10:]:
+        row["is_partial_ownership"] = False
+        row["partial_ownership_label"] = None
+    sparse = request(False).model_copy(update={"min_n": 15, "variables": req.variables})
+    assert engine.suggest_land_regression(data, sparse).selection_n == 60
+
+
+def test_assessed_only_suggestion_asks_for_another_variable():
+    data = rows()
+    req = LandRegressionRequest(
+        zone_type="2주", land_category="대", min_n=10,
+        variables=LandRegressionVariables(
+            area_sqm=False, log_area=False, road_condition=False, deal_type=False,
+            year_trend=False, partial_ownership=False, beopjungri_fe=False,
+            assessed_land_price=True,
+        ),
+    )
+    assert engine.run_land_regression(data, req).n == 60
+    with pytest.raises(HTTPException) as exc:
+        engine.suggest_land_regression(data, req)
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "추천에 사용할 다른 변수를 선택해 주세요."
+
+
+def test_suggestion_uses_the_same_minimum_sample_as_the_fit():
+    data = rows()[:12]
+    req = request(False).model_copy(update={"min_n": 15})
+    with pytest.raises(HTTPException) as fit_exc:
+        engine.run_land_regression(data, req)
+    with pytest.raises(HTTPException) as suggest_exc:
+        engine.suggest_land_regression(data, req)
+    assert fit_exc.value.status_code == 422
+    assert suggest_exc.value.status_code == 422
+    assert "최소 표본" in suggest_exc.value.detail
+    kept = engine.suggest_land_regression(rows(), req)
+    assert kept.selection_n >= 15
+    assert all(candidate.n >= 15 for candidate in kept.candidates_by_aic)

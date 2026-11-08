@@ -78,7 +78,10 @@ class _DesignBundle:
 
 def _prepare_df(rows: list[dict], req: "LandRegressionRequest") -> tuple[pd.DataFrame, list[str]]:
     warnings: list[str] = []
+    needed = ["unit_price_per_sqm", "area_sqm", "contract_year"]
     df = pd.DataFrame(rows)
+    if df.empty or any(col not in df.columns for col in needed):
+        return pd.DataFrame(columns=needed), warnings
     if "id" in df.columns:
         df = df.sort_values("id", kind="stable").reset_index(drop=True)
     df = df.dropna(subset=["unit_price_per_sqm", "area_sqm"])
@@ -130,6 +133,30 @@ def _apply_assessed_case(
     if n_drop:
         out.append(f"개별공시지가 결측 {n_drop}건 제외")
     return df, out
+
+
+def _apply_categorical_missing(
+    df: pd.DataFrame, req: "LandRegressionRequest"
+) -> tuple[pd.DataFrame, int]:
+    """분석과 추정이 같은 범주 결측 제외를 쓴다."""
+    if req.categorical_missing != "drop":
+        return df, 0
+    cat_cols: list[str] = []
+    if req.variables.road_condition:
+        cat_cols.append("road_condition")
+    if req.variables.deal_type:
+        cat_cols.append("deal_type")
+    if req.variables.beopjungri_fe:
+        cat_cols.append("beopjungri_name")
+    return drop_unknown_rows(df, cat_cols)
+
+
+def _json_float(value: object) -> float | None:
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings: list[str]) -> _DesignBundle:
@@ -233,6 +260,10 @@ def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings:
     X = pd.concat(X_parts, axis=1)
     X = X.loc[:, X.nunique() > 1]
     X_const = sm.add_constant(X, has_constant="add")
+    if not any(str(col) != "const" for col in X_const.columns):
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=422, detail="선택한 변수가 모두 같은 값이라 식을 만들 수 없습니다.")
     aligned_y = y_fit.loc[X_const.index]
 
     # 상수항·분산 제거 후 실제 남은 더미만 예측 옵션에 반영
@@ -450,16 +481,7 @@ def run_land_regression(
     n_shares = int(df["is_partial_ownership"].fillna(False).astype(bool).sum()) if req.variables.assessed_land_price and "is_partial_ownership" in df.columns else 0
     df, warnings = _apply_assessed_case(df, req, warnings)
     n_assessed = len(df)
-    n_excluded = 0
-    if req.categorical_missing == "drop":
-        cat_cols: list[str] = []
-        if req.variables.road_condition:
-            cat_cols.append("road_condition")
-        if req.variables.deal_type:
-            cat_cols.append("deal_type")
-        if req.variables.beopjungri_fe:
-            cat_cols.append("beopjungri_name")
-        df, n_excluded = drop_unknown_rows(df, cat_cols)
+    df, n_excluded = _apply_categorical_missing(df, req)
     n = len(df)
     if n < min_n:
         note = " ".join(w for w in warnings if w.startswith("개별공시지가"))
@@ -509,6 +531,10 @@ def run_land_regression(
             group.update(structural_excluded_n=int(shares.sum()),
                 linked_n=int(((~shares) & (price > 0)).sum()),
                 unlinked_n=int(((~shares) & ~(price > 0)).sum()))
+    r_squared = _json_float(model.rsquared)
+    adj_r_squared = _json_float(model.rsquared_adj)
+    if r_squared is None or adj_r_squared is None:
+        raise HTTPException(status_code=422, detail="선택한 변수가 모두 같은 값이라 회귀 통계를 산출하지 못했습니다.")
     return LandRegressionResponse(
         analysis=build_analysis_context(request=req, rows=df.loc[model.model.data.row_labels],
             sample_groups=group_details,
@@ -522,12 +548,12 @@ def run_land_regression(
             response_scale=bundle.model_type, fit_n=int(model.nobs), exog=model.model.exog, source_n=len(rows)),
         n=int(model.nobs),
         model_type=bundle.model_type,  # type: ignore[arg-type]
-        r_squared=float(model.rsquared),
-        adj_r_squared=float(model.rsquared_adj),
+        r_squared=r_squared,
+        adj_r_squared=adj_r_squared,
         coefficients=coefs,
         reference_categories=bundle.reference_categories,
         warnings=bundle.warnings,
-        f_p_value=float(model.f_pvalue),
+        f_p_value=_json_float(model.f_pvalue),
         significant_count=sum(1 for c in coefs if c.name != "const" and c.p < 0.1),
         predict_options=_to_predict_options(bundle),
         correlations=correlations,
@@ -544,6 +570,8 @@ def suggest_land_regression(
     req: "LandRegressionRequest",
 ) -> "LandRegressionSuggestResponse":
     """변수 블록 조합을 동일 complete-case 표본에서 비교한다."""
+    from fastapi import HTTPException
+
     from app.schemas import LandModelCandidate, LandRegressionSuggestResponse
 
     base, warnings = _prepare_df(rows, req)
@@ -562,14 +590,16 @@ def suggest_land_regression(
     ]
     enabled = [field for field in block_fields if getattr(req.variables, field, False)]
     if not enabled:
-        raise ValueError("추천 후보 변수를 하나 이상 선택하세요.")
+        if excluded_blocks:
+            raise HTTPException(status_code=422, detail="추천에 사용할 다른 변수를 선택해 주세요.")
+        raise HTTPException(status_code=422, detail="추천 후보 변수를 하나 이상 선택하세요.")
 
     source_columns = ["unit_price_per_sqm", "area_sqm"]
     for field in enabled:
         column = {
             "road_condition": "road_condition",
             "deal_type": "deal_type",
-            "partial_ownership": "partial_ownership_label",
+            # 빈 지분 표시는 전체 거래다. 표시 문자열 결측으로 표본에서 빼지 않는다.
             "year_trend": "contract_year",
             "beopjungri_fe": "beopjungri_name",
         }.get(field)
@@ -577,6 +607,12 @@ def suggest_land_regression(
             source_columns.append(column)
     sample = base.dropna(subset=list(dict.fromkeys(source_columns))).copy()
     selection_n = len(sample)
+    min_n = max(MIN_N, int(req.min_n))
+    if selection_n < min_n:
+        raise HTTPException(
+            status_code=422,
+            detail=f"회귀 최소 표본({min_n}건) 미충족: 현재 {selection_n}건. 필터 조건을 완화해 주세요.",
+        )
     results: list[LandModelCandidate] = []
     max_subsets = min((1 << len(enabled)) - 1, 64)
     for mask in range(1, max_subsets + 1):
@@ -588,7 +624,14 @@ def suggest_land_regression(
         try:
             bundle = _build_design(sample, candidate_req, [])
             model = sm.OLS(bundle.y_fit, bundle.X_const, missing="drop").fit()
+            from app.regression_sample_judge import judge_exog
+
+            verdict = judge_exog(model.model.exog)
         except Exception:
+            continue
+        if int(model.nobs) < min_n or verdict.tier == "blocked":
+            continue
+        if _json_float(model.aic) is None or _json_float(model.rsquared_adj) is None:
             continue
         y_price = sample.loc[bundle.X_const.index, "unit_price_per_sqm"].astype(float).to_numpy()
         fitted = np.asarray(model.fittedvalues, dtype=float)
@@ -734,6 +777,9 @@ def predict_land_regression(
     min_n = max(MIN_N, int(req.min_n))
     df, warnings = _prepare_df(rows, req)
     df, warnings = _apply_assessed_case(df, req, warnings)
+    df, n_excluded = _apply_categorical_missing(df, req)
+    if n_excluded:
+        warnings.append(treatment_label(req.categorical_missing, n_excluded))
     n = len(df)
     if n < min_n:
         raise HTTPException(
