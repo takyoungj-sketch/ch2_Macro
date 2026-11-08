@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, require_user
-from app.platform.entitlements import activate_subscription, create_subscription, list_entitlements
+from app.platform.entitlements import activate_subscription, create_subscription, list_entitlements, apply_staff_entitlements
 from app.platform.toss_client import TossApiError, confirm_payment, toss_configured
 from app.platform.web_subscription import (
     WEB_MONTH_PLAN_IDS,
@@ -119,7 +119,7 @@ def verify_play_purchase(
         external_id=external_id,
         period_end=period_end,
     )
-    ent = list_entitlements(db, user.id)
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     return {"ok": True, "subscription_id": sub_id, "entitlements": ent, "stub": True}
 
 
@@ -154,7 +154,7 @@ def subscription_me(
     db: Session = Depends(get_platform_db),
 ):
     sub = get_web_subscription(db, user.id)
-    ent = list_entitlements(db, user.id)
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     if not sub:
         return {"active": False, "entitlements": ent}
     plan = PLANS_BY_ID.get(str(sub.get("plan_id") or ""))
@@ -255,7 +255,7 @@ def toss_billing_activate(
     except TossApiError as exc:
         _log.warning("billing activate failed: %s", exc.body[:500])
         raise HTTPException(400, "toss_billing_failed") from exc
-    ent = list_entitlements(db, user.id)
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     return {"ok": True, "subscription_id": sub_id, "entitlements": ent}
 
 
@@ -325,7 +325,7 @@ def toss_confirm(
         _log.warning("Toss confirm failed status=%s body=%s", exc.status_code, exc.body[:500])
         raise HTTPException(400, "toss_confirm_failed") from exc
     sub_id = activate_subscription(db, external_id=body.orderId, source="web_toss")
-    ent = list_entitlements(db, user.id)
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     return {"ok": True, "subscription_id": sub_id, "entitlements": ent}
 
 

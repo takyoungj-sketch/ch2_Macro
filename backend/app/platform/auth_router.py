@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user, require_user
-from app.platform.entitlements import list_entitlements
+from app.platform.entitlements import apply_staff_entitlements, list_entitlements
 from app.platform.jwt_util import COOKIE_NAME, create_access_token
 from app.platform.oauth_next import DEFAULT_NEXT, safe_oauth_next
 from app.platform.review_login import (
@@ -356,7 +356,7 @@ def auth_entitlements(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    ent = list_entitlements(db, user.id)
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     return {
         "user_id": user.id,
         "products": ent,
