@@ -130,7 +130,7 @@ export default function CohortTrendPanel({
         <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">
           {variant === "longTerm" && series.length >= 2 ? "단지별 연도 추이 (꺾은선)" : chartTitle}
         </p>
-        <MultiBuildingTrendChart series={series} metric={chartMetric} showQuartiles={showQuartiles} />
+        <MultiBuildingTrendChart series={series} metric={chartMetric} showQuartiles={showQuartiles} annual={variant === "longTerm"} />
       </div>
       {showQuartiles && priceMetric === "median" && (
         <div className="space-y-3">
@@ -179,7 +179,7 @@ export default function CohortTrendPanel({
           <p className="text-[10px] text-slate-500 dark:text-slate-400 px-1 mb-2">
             Σ(n·단지평균) / Σn · 단지별 선과 축·스케일은 독립
           </p>
-          <MultiBuildingTrendChart series={[combinedSeries]} metric="mean" />
+          <MultiBuildingTrendChart series={[combinedSeries]} metric="mean" annual />
         </div>
       )}
     </div>

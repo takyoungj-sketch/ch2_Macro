@@ -1,3 +1,4 @@
+import { consecutiveTrendSegments, trendAxisOrders } from "../utils/trendComparison";
 import { useId } from "react";
 import type { YearlyStatPoint } from "../types";
 import type { LongTermPriceMetric } from "./LongTermMetricToggle";
@@ -29,17 +30,22 @@ function finiteNum(v: number | null | undefined): v is number {
 }
 
 function quartileBands(
-  ordered: { x: number; lo?: number | null; hi?: number | null }[],
+  ordered: { x: number; xOrder: number; lo?: number | null; hi?: number | null }[],
   yOf: (v: number) => number,
 ): { fill: string; lo: string; hi: string }[] {
   const segs: { x: number; lo: number; hi: number }[][] = [];
   let cur: { x: number; lo: number; hi: number }[] = [];
+  let previousOrder = Number.NaN;
   for (const p of ordered) {
-    if (finiteNum(p.lo) && finiteNum(p.hi)) cur.push({ x: p.x, lo: p.lo, hi: p.hi });
+    if (finiteNum(p.lo) && finiteNum(p.hi)) {
+      if (cur.length && p.xOrder !== previousOrder + 1) { segs.push(cur); cur = []; }
+      cur.push({ x: p.x, lo: p.lo, hi: p.hi });
+    }
     else if (cur.length) {
       segs.push(cur);
       cur = [];
     }
+    previousOrder = p.xOrder;
   }
   if (cur.length) segs.push(cur);
   return segs
@@ -83,11 +89,11 @@ export default function YearlyTrendChart({
   if (sorted.length === 0) return null;
 
   const priceLabel = metric === "median" ? "중앙값" : "평균";
-  const innerW = Math.max(W - PAD_L - PAD_R, Math.max(0, sorted.length - 1) * 56);
+  const years = trendAxisOrders(sorted.map(p => p.year), true);
+  const innerW = Math.max(W - PAD_L - PAD_R, Math.max(0, years.length - 1) * 56);
   const chartW = PAD_L + PAD_R + innerW;
   const innerH = H - PAD_T - PAD_B;
-  const n = sorted.length;
-  const lastI = Math.max(n - 1, 1);
+  const n = years.length;
 
   const countMax = Math.max(...sorted.map((r) => r.count), 1);
   const countTick = niceStep(countMax);
@@ -106,18 +112,14 @@ export default function YearlyTrendChart({
   const priceAxisMin = hasPrice ? Math.floor(priceMin / priceTick) * priceTick : 0;
   const priceAxisMax = hasPrice ? Math.ceil(priceMax / priceTick) * priceTick : 1;
 
-  const xAt = (i: number) => PAD_L + (n <= 1 ? innerW / 2 : (i / lastI) * innerW);
+  const xYear = (year: number) => PAD_L + (n <= 1 ? innerW / 2 : ((year - years[0]) / (n - 1)) * innerW);
+  const xAt = (i: number) => xYear(sorted[i].year);
   const yCount = (c: number) => PAD_T + innerH - (c / countAxisMax) * innerH;
   const yPrice = (m: number) => PAD_T + innerH - ((m - priceAxisMin) / (priceAxisMax - priceAxisMin || 1)) * innerH;
 
-  const countDashPoints = sorted.map((r, i) => `${xAt(i).toFixed(1)},${yCount(r.count).toFixed(1)}`).join(" ");
-  const priceLineRows = sorted.filter((r) => priceValue(r, metric) != null);
-  const pricePoints = priceLineRows
-    .map((r) => {
-      const idx = sorted.indexOf(r);
-      return `${xAt(idx).toFixed(1)},${yPrice(Number(priceValue(r, metric))).toFixed(1)}`;
-    })
-    .join(" ");
+  const countSegments = consecutiveTrendSegments(sorted.map(r => ({ ...r, xOrder: r.year })));
+  const priceLineRows = sorted.filter(r => priceValue(r, metric) != null);
+  const priceSegments = consecutiveTrendSegments(priceLineRows.map(r => ({ ...r, xOrder: r.year })));
 
   return (
     <div className="w-full overflow-x-auto" role="img" aria-label={`연도별 ${priceLabel} 단가 및 거래 건수 추이`}>
@@ -151,14 +153,12 @@ export default function YearlyTrendChart({
             <rect x={PAD_L} y={PAD_T} width={innerW} height={innerH} />
           </clipPath>
         </defs>
-        {sorted.map((r, i) => (
-          <text key={r.year} x={xAt(i)} y={H - 8} textAnchor="middle" className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 6 ? "text-[12px]" : "text-[13px]"}`}>
-            {r.year}
+        {years.map(year => (
+          <text key={year} x={xYear(year)} y={H - 8} textAnchor="middle" className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 6 ? "text-[12px]" : "text-[13px]"}`}>
+            {year}
           </text>
         ))}
-        {n >= 2 && (
-          <polyline fill="none" stroke={COUNT_DASH_LINE} strokeWidth={1.25} strokeDasharray="3 5" strokeOpacity={0.48} points={countDashPoints} />
-        )}
+        {countSegments.filter(segment => segment.length > 1).map((segment, i) => <polyline key={i} fill="none" stroke={COUNT_DASH_LINE} strokeWidth={1.25} strokeDasharray="3 5" strokeOpacity={0.48} points={segment.map(r => `${xYear(r.year)},${yCount(r.count)}`).join(" ")} />)}
         {sorted.map((r, i) => (
           <circle key={`c-${r.year}`} cx={xAt(i)} cy={yCount(r.count)} r={3.5} fill="#fff" stroke={COUNT_MARKER_STROKE} strokeWidth={2} />
         ))}
@@ -169,11 +169,11 @@ export default function YearlyTrendChart({
         ))}
         {priceLineRows.length > 0 && (
           <>
-            <polyline fill="none" stroke={MEDIAN_LINE} strokeWidth={2} strokeLinejoin="round" points={pricePoints} />
+            {priceSegments.filter(segment => segment.length > 1).map((segment, i) => <polyline key={i} fill="none" stroke={MEDIAN_LINE} strokeWidth={2} strokeLinejoin="round" points={segment.map(r => `${xYear(r.year)},${yPrice(Number(priceValue(r, metric)))}`).join(" ")} />)}
             {showBand && (
               <g clipPath={`url(#${clipId})`}>
                 {quartileBands(
-                  sorted.map((r, i) => ({ x: xAt(i), lo: r.p25, hi: r.p75 })),
+                  sorted.map((r, i) => ({ x: xAt(i), xOrder: r.year, lo: r.p25, hi: r.p75 })),
                   yPrice,
                 ).map((b, bi) => (
                   <g key={`band-${bi}`}>
