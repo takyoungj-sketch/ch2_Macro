@@ -37,6 +37,16 @@ def list_entitlements(db: Session, user_id: int) -> dict[str, bool]:
     return out
 
 
+def apply_staff_entitlements(role: str, ent: dict[str, bool]) -> dict[str, bool]:
+    """Existing administrators retain product access without changing billing."""
+    if role != "admin":
+        return ent
+    opened = dict(ent)
+    opened["macro"] = True
+    opened["fieldnote"] = True
+    return opened
+
+
 def upsert_entitlement(
     db: Session,
     *,
