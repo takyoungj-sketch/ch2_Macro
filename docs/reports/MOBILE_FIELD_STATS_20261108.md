@@ -31,3 +31,10 @@
 - `frontend-collective/src/main.tsx`, `frontend-collective/src/MobileCollectiveApp.tsx`
 - `shared/macro-shell/mobile/{useMobileScreen.ts,MobileStatsShell.tsx,MobileRegionSearch.tsx,mobileStats.css}`
 - `pipeline/smoke_mobile_free.py`, 본 보고서
+
+## 운영 반영 완료
+
+- 소스 커밋 `67cda05`를 origin/main에 푸시하고 land·collective scope 배포 완료.
+- 운영 소스 8개 SHA-256이 로컬과 일치. 토지 `index-Cuy_jZdj.js` / `index-D1p4omAw.css`, 집합 `index-CyMf_0s5.js` / `index-Cy1-B8qF.css`에 새 모바일 진입점·공통 검색·스타일 포함 확인.
+- 배포 후 위 비로그인 스모크 재실행 전부 통과. 기존 관리자 권한으로 런북의 복합 회귀(가경동 primary·흥덕구 comparison·잔차)도 통과.
+- PC 1280px 화면에서 기존 선택형 UI 유지 확인. 검색 결과 없음·초기화 후 재검색 확인. 모바일 검증 화면은 별도 로컬 이미지로 저장했다.
