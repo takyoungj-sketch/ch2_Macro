@@ -6,7 +6,6 @@ import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import BuiltAnalysisGuide from "./components/BuiltAnalysisGuide";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
-import Recommend2Modal from "./components/Recommend2Modal";
 import {
   fetchAddr2,
   fetchAddr3WithCounts,
@@ -546,7 +545,6 @@ export default function App() {
   const [yearFrom] = useState<number | "">("");
   const [yearTo] = useState<number | "">("");
   const [txModalOpen, setTxModalOpen] = useState(false);
-  const [recommend2Open, setRecommend2Open] = useState(false);
   const [vars, setVars] = useState<RegressionVariableSpec>(() => defaultVarsForKinds(["commercial"]));
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [includePartial, setIncludePartial] = useState(false);
@@ -1693,14 +1691,6 @@ export default function App() {
                 {sampleGateNote}
               </p>
             )}
-            <button
-              type="button"
-              className="btn btn-ghost w-full"
-              disabled={!addr2 || (!!addr2 && leafList.length > 0 && !structureQ.isSuccess)}
-              onClick={() => setRecommend2Open(true)}
-            >
-              모형추천2
-            </button>
           </div>
         </CollapsibleLeftSidebar>
 
@@ -1942,12 +1932,6 @@ export default function App() {
         </div>
       </main>
 
-      <Recommend2Modal
-        open={recommend2Open}
-        onClose={() => setRecommend2Open(false)}
-        regBody={regBody}
-        assetType={assetType}
-      />
       <BuiltTransactionListModal
         open={txModalOpen}
         onClose={() => setTxModalOpen(false)}

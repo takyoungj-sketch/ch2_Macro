@@ -944,35 +944,6 @@ export interface ModelCandidate {
   cv_report?: CandidateCvReport | null;
 }
 
-export interface Recommend2Side {
-  block_summary: string;
-  response_scale: ResponseScale;
-  n: number;
-  n_rank: number;
-  coverage_ratio?: number | null;
-  cv_mape?: number | null;
-  confirm_cv_mape?: number | null;
-  result: RegressionLevelResult;
-}
-
-export interface Recommend2Response {
-  notice: string;
-  scope_label: string;
-  n_pool: number;
-  pool_summary: string;
-  excluded: { detail: string }[];
-  primary: RegressionLevelResult;
-  variables: RegressionVariableSpec;
-  response_scale: ResponseScale;
-  cv_mape?: number | null;
-  confirm_cv_mape?: number | null;
-  cv_n?: number | null;
-  explanatory_scale?: ResponseScale | null;
-  explanatory_note: string;
-  sides: Recommend2Side[];
-  total_subsets: number;
-}
-
 export interface RegressionCompareResponse {
   candidates_by_aic: ModelCandidate[];
   candidates_by_bic: ModelCandidate[];

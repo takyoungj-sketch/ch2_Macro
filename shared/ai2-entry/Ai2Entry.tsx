@@ -87,23 +87,14 @@ export function singleScreenRegion(input: {
   return "";
 }
 
-export function Ai2HeaderSlot({
-  domain,
-  screenRegion = "",
-  screenTarget = "",
-  children,
-}: {
+export function Ai2HeaderSlot({ children }: {
   domain: Ai2Domain;
   screenRegion?: string;
   screenTarget?: string;
   children: ReactNode;
 }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <Ai2Entry domain={domain} screenRegion={screenRegion} screenTarget={screenTarget} />
-      {children}
-    </span>
-  );
+  // 제품 헤더에서는 AI2 진입점을 숨기고 기존 화면 어시스턴트만 표시한다.
+  return <>{children}</>;
 }
 
 export default function Ai2Entry({
