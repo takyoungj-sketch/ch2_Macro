@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-08",
+  "snapshot_ym": "202607",
+  "asset_type": "apartment",
+  "done_keys": 3888,
+  "applied": 3673,
+  "prepared": 3673,
+  "skip": {
+    "no_row": 214,
+    "already": 0,
+    "partial": 1,
+    "no_ratio": 0
+  },
+  "per_computed_from_count": 14,
+  "park0": 1,
+  "per_over_5": 1,
+  "builder_raw_nonnull_before": 20688,
+  "builder_raw_nonnull_after": 24186,
+  "flagged": 3673,
+  "builder_raw_filled": 3498,
+  "builder_raw_already_present": 1,
+  "builder_flag": "kb_internet_builder",
+  "wrote": [
+    "parking_total",
+    "parking_per_household",
+    "attr_quality_flags",
+    "builder_raw"
+  ],
+  "not_written": [
+    "builder_norm",
+    "builder_group",
+    "households",
+    "heating",
+    "corridor",
+    "보류",
+    "대기"
+  ]
+}

@@ -69,6 +69,9 @@ QUALITY_FLAG_META: dict[str, dict[str, Any]] = {
     },
 }
 
+# 운영 표에 남기는 내부 출처. 화면 품질 플래그로는 내보내지 않는다.
+_INTERNAL_FLAG_PREFIX = "kb_internet_"
+
 NOTE_NOT_USABLE = "매칭 신뢰도가 낮아 이 단지는 브랜드·규모 회귀 표본에서 제외됩니다."
 NOTE_JOINT_BUILDER = (
     "공동시공 단지입니다. 기업집단은 원문 첫 번째 시공사를 기준으로 표시했습니다."
@@ -202,6 +205,8 @@ def _quality_flags(raw: str | None) -> list[dict[str, Any]]:
         return []
     out: list[dict[str, Any]] = []
     for code in [c.strip() for c in str(raw).split(",") if c.strip()]:
+        if code.startswith(_INTERNAL_FLAG_PREFIX):
+            continue
         meta = QUALITY_FLAG_META.get(code)
         if meta is None:
             # 사전에 없는 코드는 문구를 만들지 않고 코드만 그대로 노출한다.
@@ -490,7 +495,10 @@ def fetch_danji_attributes(
         notes.append(NOTE_NOT_USABLE)
     if builder_is_joint and not is_multi:
         notes.append(NOTE_JOINT_BUILDER)
-    if builder_group is None and builder_raw:
+    internet_builder = "kb_internet_builder" in {
+        p.strip() for p in str(row.get("attr_quality_flags") or "").split(",") if p.strip()
+    }
+    if builder_group is None and builder_raw and not internet_builder:
         notes.append(NOTE_BUILDER_GROUP_MISSING)
     if is_public:
         notes.append(NOTE_PUBLIC_SUPPLIER)
