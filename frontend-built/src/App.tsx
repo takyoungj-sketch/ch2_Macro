@@ -552,14 +552,14 @@ export default function App() {
   const [includePartial, setIncludePartial] = useState(false);
   const [enrich, setEnrich] = useState(false);
   const [categoricalMissing, setCategoricalMissing] = useState<"keep_unknown" | "drop">("keep_unknown");
-  const [enrichConsentOpen, setEnrichConsentOpen] = useState(false);
+  const [pendingLedgerVariable, setPendingLedgerVariable] = useState<"structure_dummy" | "assessed_land_price" | null>(null);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
   /** 마지막 「통계분석」에 실제 쓰인 요청 — 선택만으로 결과 표시가 바뀌지 않게 */
   const [appliedBody, setAppliedBody] = useState<RegressionRunRequest | null>(null);
-  /** 대장보강이 꺼져 있으면 구조 더미는 쓸 수 없다 — 체크 표시·요청이 같은 값을 본다 */
+  /** 연결 안내를 확인하기 전에는 대장 변수를 요청에 포함하지 않는다. */
   const effectiveVars = useMemo<RegressionVariableSpec>(
     () => (enrich ? vars : { ...vars, structure_dummy: false, assessed_land_price: false }),
     [vars, enrich],
@@ -1479,82 +1479,70 @@ export default function App() {
               </p>
               <fieldset className="space-y-2">
                 <legend className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">실거래자료</legend>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
-                {(
-                  [
-                    ["gross_area", "연면적"],
-                    ["land_area", "대지면적"],
-                    ["building_age", "연식"],
-                    ["road_width_dummy", "도로조건 더미"],
-                    ["zone_type_dummy", "용도지역 더미"],
-                    [
-                      "building_use_dummy",
-                      isOnlyDetached(assetType) ? "주택유형 더미" : "건축물용도 더미",
-                    ],
-                    ...(isUnifiedAsset(assetType)
-                      ? ([["asset_type_dummy", "유형 더미"]] as const)
-                      : []),
-                    ...(leafList.length >= 2 || riList.length >= 2
-                      ? ([
-                          [
-                            "region_leaf_dummy",
-                            riList.length >= 2 ? "법정리 더미" : "지역(읍·면·동) 더미",
-                          ],
-                        ] as const)
-                      : []),
-                  ] as const
-                ).map(([key, label]) => (
-                  <label
-                    key={key}
-                    className="flex items-center gap-1"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={Boolean(effectiveVars[key as keyof RegressionVariableSpec])}
-                      onChange={(e) =>
-                        setVars((v) => ({ ...v, [key]: e.target.checked }))
-                      }
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-              </fieldset>
-              <fieldset className="border-t border-slate-200 dark:border-slate-600 pt-2 space-y-2">
-                <legend className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-1">대장자료</legend>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={enrich}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setEnrichConsentOpen(true);
-                        return;
-                      }
-                      setEnrich(false);
-                    }}
-                  />
-                  대장자료 연결
-                </label>
-              </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
-                  {([
-                    ["structure_dummy", "구조 더미"],
-                    ["assessed_land_price", "개별공시지가"],
-                  ] as const).map(([key, label]) => (
-                    <label key={key} className={clsx("flex items-center gap-1", !enrich && "opacity-50")}>
+                  {(
+                    [
+                      ["gross_area", "연면적"],
+                      ["land_area", "대지면적"],
+                      ["building_age", "연식"],
+                      ["road_width_dummy", "도로조건 더미"],
+                      ["zone_type_dummy", "용도지역 더미"],
+                      [
+                        "building_use_dummy",
+                        isOnlyDetached(assetType) ? "주택유형 더미" : "건축물용도 더미",
+                      ],
+                      ...(isUnifiedAsset(assetType)
+                        ? ([["asset_type_dummy", "유형 더미"]] as const)
+                        : []),
+                      ...(leafList.length >= 2 || riList.length >= 2
+                        ? ([
+                            [
+                              "region_leaf_dummy",
+                              riList.length >= 2 ? "법정리 더미" : "지역(읍·면·동) 더미",
+                            ],
+                          ] as const)
+                        : []),
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-1"
+                    >
                       <input
                         type="checkbox"
-                        checked={Boolean(effectiveVars[key])}
-                        disabled={!enrich}
-                        onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
+                        checked={Boolean(effectiveVars[key as keyof RegressionVariableSpec])}
+                        onChange={(e) =>
+                          setVars((v) => ({ ...v, [key]: e.target.checked }))
+                        }
                       />
                       {label}
                     </label>
                   ))}
                 </div>
-                {!enrich && <p className="text-xs text-slate-500 dark:text-slate-400">대장자료를 연결하면 구조·개별공시지가를 선택할 수 있습니다.</p>}
+              </fieldset>
+              <fieldset className="border-t border-slate-200 dark:border-slate-600 pt-2 space-y-2">
+                <legend className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-1">대장자료</legend>
+                <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
+                  {([
+                    ["structure_dummy", "구조 더미"],
+                    ["assessed_land_price", "개별공시지가"],
+                  ] as const).map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(effectiveVars[key])}
+                        onChange={(e) => {
+                          if (e.target.checked && !enrich) {
+                            setPendingLedgerVariable(key);
+                            return;
+                          }
+                          setVars((v) => ({ ...v, [key]: e.target.checked }));
+                        }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
               </fieldset>
             </section>
 
@@ -1968,11 +1956,13 @@ export default function App() {
         summary={txModalSummary}
       />
       <EnrichConsentModal
-        open={enrichConsentOpen}
-        onCancel={() => setEnrichConsentOpen(false)}
+        open={pendingLedgerVariable !== null}
+        onCancel={() => setPendingLedgerVariable(null)}
         onConfirm={() => {
+          if (pendingLedgerVariable === null) return;
           setEnrich(true);
-          setEnrichConsentOpen(false);
+          setVars((v) => ({ ...v, structure_dummy: false, assessed_land_price: false, [pendingLedgerVariable]: true }));
+          setPendingLedgerVariable(null);
         }}
       />
       </div>

@@ -76,7 +76,7 @@ export default function Recommend2Modal({ open, onClose, regBody, assetType }: P
       <div className="h-full min-h-0 space-y-3">
         <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
           이 창은 왼쪽에서 고른 변수와 회귀모형, 결측 거래 제외를 탐색에 쓰지 않습니다.
-          지역·기간·지분·이상치·건축물대장 보강만 표본 조건입니다. 구조와 개별공시지가는
+          지역·기간·지분·이상치·대장자료 연결 여부만 표본 조건입니다. 구조와 개별공시지가는
           보강을 켜고 체크한 경우에만 후보에 넣습니다.
         </p>
 
