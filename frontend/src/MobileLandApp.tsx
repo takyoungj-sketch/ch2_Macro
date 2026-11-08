@@ -6,6 +6,8 @@ import { fetchFreeStats, fetchPaidMatrixYearly, fetchUpperStats } from "./api/cl
 import { rollingMatrixModalPayload } from "./utils/freeStatsV2";
 import { upperToFreeStatsShape } from "./utils/upperTierStats";
 import MatrixYearlyTrendChart from "./components/MatrixYearlyTrendChart";
+import MatrixStatsTable from "./components/MatrixStatsTable";
+import "./mobileLandMatrix.css";
 import type { FreeStatsV2Response, MatrixYearlyRequest } from "./types";
 
 const price = (value: number | null | undefined) => value == null ? "—" : value.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
@@ -32,22 +34,23 @@ export default function MobileLandApp() {
     queryKey: ["mobile-land-rolling", request], enabled: request != null,
     queryFn: () => fetchPaidMatrixYearly(request!),
   });
-  const zones = [...new Set(stats.data?.matrix.map(c => c.zone_type) ?? [])];
-  const categories = [...new Set(stats.data?.matrix.map(c => c.land_category) ?? [])];
-  const cells = new Map(stats.data?.matrix.map(c => [`${c.zone_type}\u0000${c.land_category}`, c.stats]));
   return <MobileStatsShell product="land" search={<MobileRegionSearch token={import.meta.env.VITE_API_TOKEN} selected={region} onSelect={next => { setCell(null); setRegion(next); }} />}>
     {!region && <p className="ch2-field-note">지역을 선택하면 용도×지목 기본통계가 표시됩니다.</p>}
     {region && stats.isPending && <p role="status">기본통계 불러오는 중…</p>}
     {stats.isError && <p role="alert">통계를 불러오지 못했습니다. <button onClick={() => stats.refetch()}>다시 시도</button></p>}
-    {stats.data && <>
-      <p className="ch2-field-note">{stats.data.period_start} ~ {stats.data.period_end} · {stats.data.total.count.toLocaleString()}건 · 평균 만원/㎡<br />셀을 누르면 5년 롤링 추이를 볼 수 있습니다.</p>
-      <table className="ch2-field-table" aria-label="토지 용도×지목 기본통계"><thead><tr><th>용도/지목</th>{categories.map(c => <th key={c}>{c}</th>)}</tr></thead>
-        <tbody>{zones.map(zone => <tr key={zone}><th scope="row">{zone}</th>{categories.map(category => {
-          const value = cells.get(`${zone}\u0000${category}`);
-          return <td key={category}>{value?.count ? <button aria-label={`${zone} ${category} 5년 롤링`} onClick={() => setCell({ zone, category })}>{price(value.mean)}<small>{value.count.toLocaleString()}건</small></button> : "—"}</td>;
-        })}</tr>)}</tbody></table>
+    {stats.data && <section className="ch2-mobile-land-matrix" aria-label="토지 용도×지목 기본통계">
+      <p className="ch2-field-note">{stats.data.period_start} ~ {stats.data.period_end} · {stats.data.total.count.toLocaleString()}건 · 만원/㎡</p>
+      <div className="ch2-mobile-matrix-legend" aria-label="매트릭스 셀 구조 범례">
+        <span>거래수</span><span>최소</span>
+        <span className="ch2-mobile-matrix-legend-mean">평균</span><span>25%값</span>
+        <span>중앙값</span><span>표준편차</span><span>75%값</span>
+        <span>95% 신뢰구간</span><span>최대</span>
+      </div>
+      <p className="ch2-field-note">좌우로 밀어 지목을 확인하고, 수치를 누르면 5년 롤링창이 열립니다.</p>
+      <MatrixStatsTable basicOnly matrix={stats.data.matrix} byZone={stats.data.by_zone} byLandCategory={stats.data.by_land_category}
+        onPaidMatrixCellClick={(zone, category) => setCell({ zone, category })} />
       {stats.data.total.count === 0 && <p>선택한 지역에 해당 기간의 거래가 없습니다.</p>}
-    </>}
+    </section>}
     {cell && <MobileRollingDialog title={`${cell.zone} · ${cell.category}`} subtitle="5년 롤링 · 평균 만원/㎡ · 거래 건수" onClose={() => setCell(null)}>
       {rolling.isPending && <p role="status">롤링 추이 불러오는 중…</p>}
       {rolling.isError && <p role="alert">롤링 추이를 불러오지 못했습니다. <button onClick={() => rolling.refetch()}>다시 시도</button></p>}

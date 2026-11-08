@@ -177,6 +177,8 @@ interface Props {
   onPaidMatrixCellClick?: (zoneType: string, landCategory: string) => void;
   /** 셀 추이 모달 등이 열려 있을 때 전체화면 Esc 닫기 억제 */
   suppressEscapeClose?: boolean;
+  /** 모바일 기본통계: PC와 같은 셀 구성, 별도 도구 모음 없이 본문만 표시. */
+  basicOnly?: boolean;
 }
 
 function cellHl(reliable?: boolean): string {
@@ -654,6 +656,7 @@ export default function MatrixStatsTable({
   showEmbeddedLegend = true,
   onPaidMatrixCellClick,
   suppressEscapeClose: _suppressEscapeClose = false,
+  basicOnly = false,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenSize] = useState(defaultFullscreenSize);
@@ -745,6 +748,10 @@ export default function MatrixStatsTable({
       document.body.style.overflow = prevOverflow;
     };
   }, [fullscreen]);
+
+  if (basicOnly) {
+    return <MatrixStatsTableGrid {...gridProps} scrollClassName="ch2-mobile-pc-matrix min-h-0 flex-1 overflow-auto border border-slate-200 rounded-lg overscroll-contain" />;
+  }
 
   if (cells.length === 0) {
     return (
