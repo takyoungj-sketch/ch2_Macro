@@ -44,18 +44,44 @@ export function builtTxAdminCols(r: BuiltTransactionRow) {
   };
 }
 
+/** 구조 코드의 화면 표기. 요청값·더미 이름은 RC/SRC를 유지한다. */
+export function structureGroupLabel(value?: string | null): string {
+  const label = value?.trim() ?? "";
+  if (label === "RC") return "철콘";
+  if (label === "SRC") return "철골철콘";
+  return label;
+}
+
+export function formatBuiltTxStructure(value?: string | null): string {
+  return structureGroupLabel(value) || "—";
+}
+
 export function builtTxLotHoverTitle(r: BuiltTransactionRow): string | undefined {
   const recovered = r.recovered_lot?.trim();
   if (recovered) return recovered;
   return r.lot_number?.trim() || undefined;
 }
 
+/** 실거래 신고의 건축연도. 없으면 null. 대장 사용승인연도는 넣지 않는다. */
 export function builtTxBuildingYear(r: BuiltTransactionRow): number | null {
   if (r.building_year != null) return r.building_year;
   if (r.contract_year != null && r.building_age != null) {
     return r.contract_year - Math.round(r.building_age);
   }
   return null;
+}
+
+export const APPROVE_YEAR_MARK = "실거래 건축연도가 없어 건축물대장 사용승인연도로 표시합니다.";
+
+/** 목록에 보이는 연도. 실거래 건축연도가 없으면 대장 사용승인연도로 대체한다. */
+export function builtTxDisplayedYear(r: BuiltTransactionRow): { year: number | null; substituted: boolean } {
+  const ledger = builtTxBuildingYear(r);
+  if (ledger != null) return { year: ledger, substituted: false };
+  const approve = r.approve_year;
+  if (approve != null && Number.isFinite(approve) && approve >= 1900 && approve <= 2100) {
+    return { year: approve, substituted: true };
+  }
+  return { year: null, substituted: false };
 }
 
 export type BuiltTxSortKey =
@@ -77,7 +103,10 @@ export type BuiltTxSortKey =
   | "gross_area"
   | "land_area"
   | "building_year"
-  | "road_width";
+  | "road_width"
+  | "alloc_cost"
+  | "alloc_life"
+  | "alloc_land";
 
 export type BuiltTxSortDir = "asc" | "desc";
 
@@ -128,9 +157,13 @@ export function builtTxSortValue(
     case "land_area":
       return r.land_area ?? null;
     case "building_year":
-      return builtTxBuildingYear(r);
+      return builtTxDisplayedYear(r).year;
     case "road_width":
       return r.road_width_label?.trim() || "—";
+    case "alloc_cost":
+    case "alloc_life":
+    case "alloc_land":
+      return null;
     default:
       return null;
   }

@@ -37,6 +37,7 @@ export interface BuiltTransactionRow {
   is_partial_ownership?: boolean;
   partial_ownership_label?: string | null;
   structure_group?: string | null;
+  approve_year?: number | null;
   assessed_land_price?: number | null;
   assessed_land_price_year?: number | null;
   match_tier?: string | null;
