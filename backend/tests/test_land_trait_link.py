@@ -11,8 +11,8 @@ from app.land_trait_link import (
 
 def test_notice_is_the_list_consent_copy():
     assert len(NOTICE) == 2
-    assert "실거래 원장" in NOTICE[0]
-    assert "공시지가" in NOTICE[1]
+    assert "소재지와 필지정보" in NOTICE[0]
+    assert "거래연도" in NOTICE[1] and "전년도" in NOTICE[1]
 
 
 def test_item_fields_keep_a_unique_price_and_label_the_status():

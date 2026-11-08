@@ -1,0 +1,141 @@
+{
+  "operational_counts": [
+    {
+      "link_status": "clean_precontract_traits_differ",
+      "price_status": "none",
+      "n": 125363
+    },
+    {
+      "link_status": "exact",
+      "price_status": "previous_year",
+      "n": 9802
+    },
+    {
+      "link_status": "exact",
+      "price_status": "price_conflict",
+      "n": 15844
+    },
+    {
+      "link_status": "exact",
+      "price_status": "price_missing",
+      "n": 3439
+    },
+    {
+      "link_status": "exact",
+      "price_status": "same_year",
+      "n": 1817278
+    },
+    {
+      "link_status": "label_normalized",
+      "price_status": "previous_year",
+      "n": 114
+    },
+    {
+      "link_status": "label_normalized",
+      "price_status": "price_conflict",
+      "n": 778
+    },
+    {
+      "link_status": "label_normalized",
+      "price_status": "price_missing",
+      "n": 258
+    },
+    {
+      "link_status": "label_normalized",
+      "price_status": "same_year",
+      "n": 69093
+    },
+    {
+      "link_status": "label_normalized_traits_differ",
+      "price_status": "none",
+      "n": 3986
+    },
+    {
+      "link_status": "multiple_candidates",
+      "price_status": "none",
+      "n": 207032
+    },
+    {
+      "link_status": "no_precontract_observation",
+      "price_status": "none",
+      "n": 203001
+    },
+    {
+      "link_status": "other_unmatched",
+      "price_status": "none",
+      "n": 166865
+    },
+    {
+      "link_status": "post_contract_only",
+      "price_status": "none",
+      "n": 62024
+    }
+  ],
+  "conflict_transactions": {
+    "same_reference_month_variation": 339,
+    "between_reference_months_only": 16282,
+    "unresolved_identity_or_orphan": 1
+  },
+  "conflict_parcels": {
+    "same_reference_month_variation": 329,
+    "between_reference_months_only": 16129,
+    "unresolved_identity_or_orphan": 1
+  },
+  "conflict_reference_month_sets": {
+    "1": 333,
+    "1,7": 16288
+  },
+  "different_prices_same_asof_and_period": {
+    "False": 16621
+  },
+  "sample_count": 200,
+  "sample_strata": {
+    "normal": 80,
+    "normalized": 40,
+    "previous_year": 40,
+    "conflict": 40
+  },
+  "sample_checks": {
+    "price_agrees": {
+      "True": 200
+    },
+    "traits_agree": {
+      "True": 200
+    },
+    "trait_date_agrees": {
+      "True": 200
+    },
+    "lot_mask_agrees": {
+      "True": 200
+    },
+    "candidate_unique_agrees": {
+      "True": 200
+    },
+    "later_observation_exists": {
+      "True": 185,
+      "False": 15
+    },
+    "later_precontract_conflict": {
+      "False": 198,
+      "True": 2
+    },
+    "later_precontract_semantic_conflict": {
+      "False": 200
+    }
+  },
+  "sample_sido_count": 19,
+  "sampling": {
+    "method": "For each price/link stratum: row_number by ledger sido prefix ordered by transaction_hash, round robin across prefixes; deterministic diagnostic sample, not a population-weighted accuracy estimate.",
+    "year_counts": {
+      "2019": 30,
+      "2020": 33,
+      "2021": 57,
+      "2022": 15,
+      "2023": 21,
+      "2024": 16,
+      "2025": 21,
+      "2026": 7
+    }
+  },
+  "conflict_orphans": 1
+}

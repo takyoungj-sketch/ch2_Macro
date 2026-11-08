@@ -132,15 +132,19 @@ export function formatTraitStatus(r: MatrixCellTransactionItem): string {
 }
 
 export function formatTraitOfficialPrice(r: MatrixCellTransactionItem): string {
-  if (!r.trait_link_status) return "미계산";
-  if (r.trait_price_status === "same_year" || r.trait_price_status === "previous_year") {
-    if (r.official_price_won == null) return "—";
-    const text = formatWon(r.official_price_won);
-    return r.trait_price_status === "previous_year" ? `${text} 전년` : text;
-  }
-  if (r.trait_price_status === "price_conflict") return "충돌";
-  if (r.trait_price_status === "price_missing") return "없음";
-  return "—";
+  if (!hasTraitOfficialPrice(r)) return "—";
+  return formatWon(r.official_price_won!);
+}
+
+function hasTraitOfficialPrice(r: MatrixCellTransactionItem): boolean {
+  return (r.trait_link_status === "exact" || r.trait_link_status === "label_normalized") &&
+    (r.trait_price_status === "same_year" || r.trait_price_status === "previous_year") &&
+    r.official_price_won != null && Number.isFinite(r.official_price_won) &&
+    r.official_price_year != null && Number.isInteger(r.official_price_year);
+}
+
+export function formatTraitOfficialPriceYear(r: MatrixCellTransactionItem): string | null {
+  return hasTraitOfficialPrice(r) ? `${r.official_price_year}년` : null;
 }
 
 export function formatTraitAsof(r: MatrixCellTransactionItem): string {

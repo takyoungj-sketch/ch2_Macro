@@ -1146,15 +1146,13 @@ export default function PaidMatrixYearlyModal({
                   {txExportError && (
                     <p className="text-[10px] text-red-500">{txExportError}</p>
                   )}
-                  {traitEnrich && txData && !txData.trait_enrich_applied && (
+                  {traitEnrich && !txLoading && !txError && txData && !txData.trait_enrich_applied && (
                     <p className="text-[10px] text-amber-700">
-                      대장 보강 결과를 아직 읽지 못했습니다.
+                      공시지가 자료를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
                     </p>
                   )}
                   {traitEnrich && txData?.trait_enrich_applied && (
-                    <p className="text-[10px] text-slate-500">
-                      토지특성 대장 연결은 검증 전입니다. 금액이 비어 있으면 필지가 하나로 정해지지 않았거나 아직 계산 전입니다.
-                    </p>
+                    <p className="text-[11px] text-slate-600">거래단가 만원/㎡ · 공시지가 원/㎡</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -1170,8 +1168,14 @@ export default function PaidMatrixYearlyModal({
                         setTraitEnrich(false);
                       }}
                     />
-                    토지특성 대장 보강
+                    공시지가 표시
                   </label>
+                  <button
+                    type="button"
+                    aria-label="공시지가 표시 안내"
+                    onClick={() => setTraitConsentOpen(true)}
+                    className="rounded-full border border-slate-300 w-5 h-5 text-xs text-slate-700"
+                  >?</button>
                   {!txLoading && !txError && txData && (
                     <div
                       className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5"

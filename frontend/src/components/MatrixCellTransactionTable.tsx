@@ -5,8 +5,8 @@ import type { MatrixCellTransactionItem } from "../types";
 import {
   formatLandTxCell,
   formatLandTxContractDate,
-  formatTraitAsof,
   formatTraitOfficialPrice,
+  formatTraitOfficialPriceYear,
   formatTraitStatus,
   landTxAdminCols,
   landTxLotHoverTitle,
@@ -50,9 +50,7 @@ const LAND_CATEGORY_COL: ColDef = {
 };
 
 const TRAIT_COLS: ColDef[] = [
-  { key: "trait_status", label: "연결", filterType: "select" },
   { key: "official_price", label: "공시지가", align: "right", filterType: "sort-only" },
-  { key: "trait_asof", label: "특성기준일", filterType: "sort-only" },
 ];
 
 function buildCols(showLandCategory: boolean, showTraitEnrich: boolean): ColDef[] {
@@ -775,27 +773,21 @@ export default function MatrixCellTransactionTable({
                       {formatLandTxCell(r.deal_type)}
                     </td>
                     {showTraitEnrich && (
-                      <>
-                        <td
-                          className="border border-slate-200 px-2 py-1 whitespace-nowrap"
-                          title={r.trait_unverified ? "검증 전 연결" : undefined}
-                        >
-                          {formatTraitStatus(r)}
-                        </td>
                         <td
                           className="border border-slate-200 px-2 py-1 text-right tabular-nums whitespace-nowrap"
                           title={
-                            r.official_price_year != null
+                            formatTraitOfficialPriceYear(r)
                               ? `${r.official_price_year}년 공시지가(원/㎡)`
                               : "원/㎡"
                           }
                         >
                           {formatTraitOfficialPrice(r)}
+                          {formatTraitOfficialPriceYear(r) && (
+                            <span className="block text-[11px] text-slate-600">
+                              {formatTraitOfficialPriceYear(r)}
+                            </span>
+                          )}
                         </td>
-                        <td className="border border-slate-200 px-2 py-1 tabular-nums whitespace-nowrap">
-                          {formatTraitAsof(r)}
-                        </td>
-                      </>
                     )}
                   </tr>
                 );
