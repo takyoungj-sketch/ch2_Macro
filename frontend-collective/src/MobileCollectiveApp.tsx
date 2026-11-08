@@ -7,6 +7,8 @@ import { fetchAllCommercialClusters, fetchCommercialRollingStats, fetchCommercia
 import type { AssetSelectorType, CommercialAssetSelectorType, CommercialClusterRow, RollingStatsResponse, CommercialRollingStatsResponse } from "./types";
 import RollingTrendChart from "./components/RollingTrendChart";
 import AreaRollingView, { RollingScopeToggle, type RollingScope } from "./components/AreaRollingView";
+import { encodeResidentialAssetKinds, toggleResidentialAssetKind, type ResidentialAssetKind } from "./utils/residentialAssetTypes";
+import { encodeCommercialAssetKinds, toggleCommercialAssetKind, type CommercialAssetKind } from "./utils/commercialAssetTypes";
 
 const price = (value: number | null | undefined) => value == null ? "—" : value.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
 type Row = BuildingStatsRow | CommercialClusterRow;
@@ -15,7 +17,10 @@ const key = (row: Row) => "building_key" in row ? row.building_key : row.cluster
 
 export default function MobileCollectiveApp({ commercial = false }: { commercial?: boolean }) {
   const [region, setRegion] = useState<MobileRegion | null>(null);
-  const [asset, setAsset] = useState("all");
+  const [residentialKinds, setResidentialKinds] = useState<ResidentialAssetKind[]>(["apartment"]);
+  const [commercialKinds, setCommercialKinds] = useState<CommercialAssetKind[]>(["collective_shop"]);
+  const asset = commercial ? encodeCommercialAssetKinds(commercialKinds) : encodeResidentialAssetKinds(residentialKinds);
+  const selectedKinds = commercial ? commercialKinds : residentialKinds;
   const [selected, setSelected] = useState<Row | null>(null);
   const [rollScope, setRollScope] = useState<RollingScope>("all");
   const params = region ? {
@@ -45,9 +50,13 @@ export default function MobileCollectiveApp({ commercial = false }: { commercial
     queryFn: async () => commercial ? fetchCommercialAreaRolling(key(selected!), 5) : fetchBuildingAreaRolling(key(selected!), 5),
   });
   const areaLabel = commercial && selected?.asset_type === "collective_factory" ? "면적대" : "면적형";
-  const types = commercial ? [["all", "전체"], ["collective_shop", "집합상가"], ["collective_factory", "집합공장"]] : [["all", "전체"], ["apartment", "아파트"], ["officetel", "오피스텔"], ["rowhouse", "연립다세대"], ["presale", "분양권"]];
+  const types = commercial ? [["collective_shop", "집합상가"], ["collective_factory", "집합공장"]] : [["apartment", "아파트"], ["officetel", "오피스텔"], ["rowhouse", "연립다세대"], ["presale", "분양권"]];
   return <MobileStatsShell product={commercial ? "commercial" : "residential"} search={<MobileRegionSearch token={import.meta.env.VITE_API_TOKEN} selected={region} onSelect={next => { setSelected(null); setRegion(next); }} />}>
-    <div className="ch2-field-type" aria-label="부동산 유형">{types.map(([value, label]) => <button key={value} aria-pressed={asset === value} onClick={() => { setAsset(value!); setSelected(null); }}>{label}</button>)}</div>
+    <div className="ch2-field-type" role="group" aria-label="부동산 유형 (복수 선택)">{types.map(([value, label]) => <button key={value} aria-pressed={(selectedKinds as string[]).includes(value!)} onClick={() => {
+      if (commercial) setCommercialKinds(prev => toggleCommercialAssetKind(prev, value as CommercialAssetKind));
+      else setResidentialKinds(prev => toggleResidentialAssetKind(prev, value as ResidentialAssetKind));
+      setSelected(null);
+    }}>{label}</button>)}</div>
     {!region && <p className="ch2-field-note">지역을 선택하면 {commercial ? "도로명별" : "단지·건물별"} 기본통계가 표시됩니다.</p>}
     {region && stats.isPending && <p role="status">기본통계 불러오는 중…</p>}
     {stats.isError && <p role="alert">통계를 불러오지 못했습니다. <button onClick={() => stats.refetch()}>다시 시도</button></p>}
