@@ -2,6 +2,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useUiColorScheme } from "../useUiColorScheme";
+import MobileUsageGuide from "./MobileUsageGuide";
 import "./mobileStats.css";
 
 export type MobileProduct = "land" | "residential" | "commercial";
@@ -20,6 +21,7 @@ export default function MobileStatsShell({ product, search, children }: {
       <nav aria-label="모바일 서비스 이동">
         {products.map(([key, href, label]) => <a key={key} href={href} aria-current={key === product ? "page" : undefined}>{label}</a>)}
       </nav>
+      <MobileUsageGuide land={product === "land"} />
       <button className="ch2-field-theme" aria-label={isDark ? "밝은 테마로 전환" : "어두운 테마로 전환"} onClick={toggleUiColorScheme}>{isDark ? "☀" : "☾"}</button>
     </header>
     <section className="ch2-field-search-bar" aria-label="분석 지역">{search}</section>

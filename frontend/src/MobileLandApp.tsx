@@ -40,12 +40,6 @@ export default function MobileLandApp() {
     {stats.isError && <p role="alert">통계를 불러오지 못했습니다. <button onClick={() => stats.refetch()}>다시 시도</button></p>}
     {stats.data && <section className="ch2-mobile-land-matrix" aria-label="토지 용도×지목 기본통계">
       <p className="ch2-field-note">{stats.data.period_start} ~ {stats.data.period_end} · {stats.data.total.count.toLocaleString()}건 · 만원/㎡</p>
-      <div className="ch2-mobile-matrix-legend" aria-label="매트릭스 셀 구조 범례">
-        <span>거래수</span><span>최소</span>
-        <span className="ch2-mobile-matrix-legend-mean">평균</span><span>25%값</span>
-        <span>중앙값</span><span>표준편차</span><span>75%값</span>
-        <span>95% 신뢰구간</span><span>최대</span>
-      </div>
       <p className="ch2-field-note">좌우로 밀어 지목을 확인하고, 수치를 누르면 5년 롤링창이 열립니다.</p>
       <MatrixStatsTable basicOnly matrix={stats.data.matrix} byZone={stats.data.by_zone} byLandCategory={stats.data.by_land_category}
         onPaidMatrixCellClick={(zone, category) => setCell({ zone, category })} />
