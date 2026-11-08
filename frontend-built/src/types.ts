@@ -243,6 +243,7 @@ export interface RecommendationPoolCandidate {
   prefix_k?: number;
   key_coefficients?: Record<string, number>;
   structure_score?: number | null;
+  sample_lock_blocks?: string[];
 }
 
 export type TwinValidationVerdictKind = "improved" | "tie" | "worse" | "skipped";
@@ -440,6 +441,8 @@ export interface RegressionRunRequest {
   leaf_level?: "addr3" | "addr4";
   exclude_outliers_iqr: boolean;
   categorical_missing?: "keep_unknown" | "drop";
+  /** 추천 추정. 탐색이 숫자 결측을 뺀 블록. 있으면 범주 빈칸은 미상으로 둔다. */
+  sample_lock_blocks?: string[];
   outlier_iqr_multiplier?: number;
   include_partial?: boolean;
   enrich?: boolean;

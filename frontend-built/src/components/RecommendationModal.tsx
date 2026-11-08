@@ -30,7 +30,19 @@ type PredictTarget = {
   label: string;
   fitN?: number;
   regionCodes?: string[];
+  sampleLockBlocks?: string[];
 };
+
+function recommendationRefitBody(regBody: RegressionRunRequest, target: PredictTarget): RegressionRunRequest {
+  return {
+    ...regBody,
+    variables: target.vars,
+    response_scale: target.scale,
+    categorical_missing: "keep_unknown",
+    ...(target.sampleLockBlocks?.length ? { sample_lock_blocks: target.sampleLockBlocks } : {}),
+    ...(target.regionCodes?.length ? { region_codes: target.regionCodes } : {}),
+  };
+}
 
 type Props = {
   open: boolean;
@@ -249,40 +261,19 @@ export default function RecommendationModal({
 
   useEffect(() => {
     if (!open || !predictTarget) return;
-    predictFitM.mutate({
-      ...regBody,
-      variables: predictTarget.vars,
-      response_scale: predictTarget.scale,
-      ...(predictTarget.regionCodes?.length
-        ? { region_codes: predictTarget.regionCodes }
-        : {}),
-    });
+    predictFitM.mutate(recommendationRefitBody(regBody, predictTarget));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fit when target changes
   }, [open, predictTarget]);
 
   useEffect(() => {
     if (!open || !twin1Target) return;
-    twin1FitM.mutate({
-      ...regBody,
-      variables: twin1Target.vars,
-      response_scale: twin1Target.scale,
-      ...(twin1Target.regionCodes?.length
-        ? { region_codes: twin1Target.regionCodes }
-        : {}),
-    });
+    twin1FitM.mutate(recommendationRefitBody(regBody, twin1Target));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin1 fit when target changes
   }, [open, twin1Target]);
 
   useEffect(() => {
     if (!open || !researchTarget) return;
-    researchFitM.mutate({
-      ...regBody,
-      variables: researchTarget.vars,
-      response_scale: researchTarget.scale,
-      ...(researchTarget.regionCodes?.length
-        ? { region_codes: researchTarget.regionCodes }
-        : {}),
-    });
+    researchFitM.mutate(recommendationRefitBody(regBody, researchTarget));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin2 fit when target changes
   }, [open, researchTarget]);
 
@@ -300,44 +291,26 @@ export default function RecommendationModal({
       label: `Twin 실험2 · ${research.label}`,
       fitN: research.n,
       regionCodes: research.region_codes,
+      sampleLockBlocks: research.sample_lock_blocks?.length
+        ? research.sample_lock_blocks
+        : data.stage1.candidate_pool,
     });
   }, [open, recommendM.data]);
 
-  const predictRegBody = useMemo(() => {
-    if (!predictTarget) return null;
-    return {
-      ...regBody,
-      variables: predictTarget.vars,
-      response_scale: predictTarget.scale,
-      ...(predictTarget.regionCodes?.length
-        ? { region_codes: predictTarget.regionCodes }
-        : {}),
-    };
-  }, [regBody, predictTarget]);
+  const predictRegBody = useMemo(
+    () => (predictTarget ? recommendationRefitBody(regBody, predictTarget) : null),
+    [regBody, predictTarget],
+  );
 
-  const twin1RegBody = useMemo(() => {
-    if (!twin1Target) return null;
-    return {
-      ...regBody,
-      variables: twin1Target.vars,
-      response_scale: twin1Target.scale,
-      ...(twin1Target.regionCodes?.length
-        ? { region_codes: twin1Target.regionCodes }
-        : {}),
-    };
-  }, [regBody, twin1Target]);
+  const twin1RegBody = useMemo(
+    () => (twin1Target ? recommendationRefitBody(regBody, twin1Target) : null),
+    [regBody, twin1Target],
+  );
 
-  const researchRegBody = useMemo(() => {
-    if (!researchTarget) return null;
-    return {
-      ...regBody,
-      variables: researchTarget.vars,
-      response_scale: researchTarget.scale,
-      ...(researchTarget.regionCodes?.length
-        ? { region_codes: researchTarget.regionCodes }
-        : {}),
-    };
-  }, [regBody, researchTarget]);
+  const researchRegBody = useMemo(
+    () => (researchTarget ? recommendationRefitBody(regBody, researchTarget) : null),
+    [regBody, researchTarget],
+  );
 
   const aiRecommendContext = useMemo(() => {
     if (!recommendM.data) return null;
@@ -488,16 +461,29 @@ export default function RecommendationModal({
             onAdopt={recommendM.isPending ? undefined : onAdopt}
             onPredict={recommendM.isPending || twinSelectionChanged ? undefined : (vars, scale, label, opts) => {
               if (recommendM.isPending || (opts?.slot && twinSelectionChanged)) return;
+              const slot = opts?.slot === "twin2" || label.startsWith("Twin 실험2")
+                ? "twin2"
+                : opts?.slot === "twin1" || label.startsWith("Twin 재적합")
+                  ? "twin1"
+                  : "local";
+              const twin1Lock = sourceData?.stage2?.inspect_pool?.sample_lock_blocks;
+              const twin2Lock = sourceData?.stage2?.research?.sample_lock_blocks;
+              const sampleLockBlocks = slot === "twin1"
+                ? (twin1Lock?.length ? twin1Lock : sourceData?.stage2?.inspect_pool?.blocks)
+                : slot === "twin2"
+                  ? (twin2Lock?.length ? twin2Lock : sourceData?.stage1.candidate_pool)
+                  : sourceData?.stage1.candidate_pool;
               const target = {
                 vars,
                 scale,
                 label,
                 fitN: resolveFitN(label, opts?.fitN),
                 regionCodes: opts?.regionCodes,
+                sampleLockBlocks: sampleLockBlocks ?? [],
               };
-              if (opts?.slot === "twin2" || label.startsWith("Twin 실험2")) {
+              if (slot === "twin2") {
                 setResearchTarget(target);
-              } else if (opts?.slot === "twin1" || label.startsWith("Twin 재적합")) {
+              } else if (slot === "twin1") {
                 setTwin1Target(target);
               } else {
                 setPredictTarget(target);

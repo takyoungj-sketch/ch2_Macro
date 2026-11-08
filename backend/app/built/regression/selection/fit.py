@@ -49,6 +49,15 @@ class CvPhase:
 _EMPTY_CV = CvPhase()
 
 
+def search_evaluation_complete(phase: CvPhase) -> bool:
+    """계획한 탐색 연도를 모두 채점했을 때만 순위용 CV-MAPE로 쓴다."""
+    if phase.mape is None or phase.failure_reasons:
+        return False
+    if phase.held_years and phase.folds < len(phase.held_years):
+        return False
+    return True
+
+
 @dataclass
 class BlockFitResult:
     blocks: list[BlockId]

@@ -111,6 +111,7 @@ def _pool_candidate(
         variables=variables,
         prefix_k=int(m.prefix_k or 0),
         key_coefficients=dict(m.key_coefficients or {}),
+        sample_lock_blocks=list(getattr(m, "sample_lock_blocks", None) or []),
     )
 
 
@@ -265,7 +266,7 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
             region_col=inp.region_col,
         )
         if research_metrics is None:
-            research_skipped_reason = "Twin 1위 표본에서 식을 다시 고를 수 없습니다."
+            research_skipped_reason = "선택한 지역 표본에서 식을 다시 고를 수 없습니다."
         else:
             research = _pool_candidate(research_metrics, local_cv=local_search)
 

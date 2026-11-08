@@ -13,6 +13,7 @@ from app.built.regression.selection.fit import (
     fit_scale_candidates,
     pick_explanatory_scale,
     pick_predictive_scale,
+    search_evaluation_complete,
 )
 from app.built.regression.selection.metrics import build_model_comparison_from_fits
 from app.built.schemas import RegressionRunRequest
@@ -49,7 +50,7 @@ def _rank_candidates(
         valid = [(b, f, c) for b, f, c in scored if f.mape is not None]
         valid.sort(key=lambda x: x[1].mape)  # type: ignore[arg-type]
     elif key == "cv_mape":
-        valid = [(b, f, c) for b, f, c in scored if f.cv_mape is not None]
+        valid = [(b, f, c) for b, f, c in scored if search_evaluation_complete(f.cv_search)]
         valid.sort(key=lambda x: x[1].cv_mape)  # type: ignore[arg-type]
     elif key == "bic":
         valid = sorted(scored, key=lambda x: x[1].bic)

@@ -142,8 +142,9 @@ def build_twin_validation_verdict(
     if delta >= epsilon_pp:
         verdict = "improved"
         summary = (
-            f"Local CV-MAPE {local_cv_mape:.2f}% → Twin {compared.cv_mape:.2f}% "
-            f"(Δ {delta:+.2f}%p ≥ ε {epsilon_pp}%p). Twin 채택을 권고합니다."
+            f"추가 지역을 포함한 표본의 CV-MAPE는 {compared.cv_mape:.2f}%이고, "
+            f"원래 지역만은 {local_cv_mape:.2f}%입니다 (Δ {delta:+.2f}%p). "
+            "원래 지역 거래만의 예측이 좋아졌다는 뜻은 아닙니다."
         )
     elif delta <= -epsilon_pp:
         verdict = "worse"

@@ -120,8 +120,9 @@ def build_termination_r2(
     if stage2.primary and stage2.primary.cv_mape_delta is not None:
         if stage2.primary.cv_mape_delta > 0:
             reasons.append(
-                f"Twin pool CV-MAPE {stage2.primary.cv_mape_delta:.1f}%p 개선 "
-                f"({stage2.local_cv_mape:.1f}% → {stage2.primary.cv_mape:.1f}%)"
+                f"추가 지역을 포함한 CV-MAPE가 {stage2.primary.cv_mape_delta:.1f}%p 낮습니다 "
+                f"({stage2.local_cv_mape:.1f}% → {stage2.primary.cv_mape:.1f}%). "
+                "원래 지역만의 예측 개선은 아닙니다."
             )
         else:
             reasons.append("Twin pool 추가 개선 폭 제한적 — 1단계 Local 유지 가능")

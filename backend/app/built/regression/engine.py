@@ -1759,6 +1759,14 @@ def _build_scatter_bundle(
     scatter_df, admin_level, scope_label = _scatter_scope(
         wide_df, req, addr4_city, mode, conn=conn
     )
+    scatter_df = _lock_recommendation_sample(
+        scatter_df,
+        req,
+        admin_level=admin_level,
+        addr4_city=addr4_city,
+        mode=mode,
+        unified=is_unified(req.asset_type),
+    )
     region_col = _region_col_for_scatter(req.variables, admin_level, addr4_city)
     corrs = _correlations(scatter_df, req.variables)
     partials = _partial_regression_plots(
@@ -1835,10 +1843,44 @@ def _window_year_index(wide_df: pd.DataFrame, req: RegressionRunRequest) -> "Yea
     return index if index.available else None
 
 
+def _lock_recommendation_sample(
+    df: pd.DataFrame,
+    req: RegressionRunRequest,
+    *,
+    admin_level: str,
+    addr4_city: bool,
+    mode: CompareMode,
+    unified: bool,
+) -> pd.DataFrame:
+    """추천 추정은 탐색이 고정한 블록 전체의 숫자 결측을 먼저 뺀다."""
+    blocks = [str(b).strip() for b in (req.sample_lock_blocks or []) if str(b).strip()]
+    if not blocks or df.empty:
+        return df
+    from app.built.regression.selection.context import SelectionContext, with_complete_case
+
+    ctx = SelectionContext(
+        df=df,
+        scope_label="",
+        admin_level=admin_level,  # type: ignore[arg-type]
+        addr4_city=addr4_city,
+        mode=mode,
+        unified=unified,
+    )
+    return with_complete_case(ctx, blocks, region_col=None).df
+
+
+def _with_recommendation_missing_policy(req: RegressionRunRequest) -> RegressionRunRequest:
+    blocks = [str(b).strip() for b in (req.sample_lock_blocks or []) if str(b).strip()]
+    if not blocks or req.categorical_missing == "keep_unknown":
+        return req
+    return req.model_copy(update={"categorical_missing": "keep_unknown"})
+
+
 def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     from app.recommendation.scope import built_analysis_scope_from_prepared
 
     wide_df, req, addr4_city, mode, partial_tx_count = _prepare_regression_scope(conn, req)
+    req = _with_recommendation_missing_policy(req)
     unified = is_unified(req.asset_type)
     scale = req.response_scale
     # 시군구 표본 하나로 지수를 세워 focus·상위 비교에 같은 기준시점을 쓴다 (D-075).
@@ -1861,6 +1903,9 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
 
     focus = _focus_admin_level(req, addr4_city)
     focus_df = _scope_for_level(wide_df, req, focus, addr4_city, mode, conn=conn)
+    focus_df = _lock_recommendation_sample(
+        focus_df, req, admin_level=focus, addr4_city=addr4_city, mode=mode, unified=unified
+    )
     focus_label = _label_for_level(req, wide_df, focus, addr4_city)
     primary = _fit_ols(
         focus_df,
@@ -1877,6 +1922,9 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         eup_scope = _eup_scope_for_level(level, focus, req)
         scoped = _scope_for_level(
             wide_df, req, level, addr4_city, mode, eup_scope=eup_scope, conn=conn
+        )
+        scoped = _lock_recommendation_sample(
+            scoped, req, admin_level=level, addr4_city=addr4_city, mode=mode, unified=unified
         )
         label = _label_for_level(
             req, wide_df, level, addr4_city, eup_scope=eup_scope
@@ -1926,10 +1974,15 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
 
     scale = req.response_scale
     wide_df, req, addr4_city, mode, _partial_tx_count = _prepare_regression_scope(conn, req)
+    req = _with_recommendation_missing_policy(req)
     focus = _focus_admin_level(req, addr4_city)
     eup_scope = _eup_scope_for_level(req.admin_level, focus, req)
     df = _scope_for_level(
         wide_df, req, req.admin_level, addr4_city, mode, eup_scope=eup_scope, conn=conn
+    )
+    df = _lock_recommendation_sample(
+        df, req, admin_level=req.admin_level, addr4_city=addr4_city, mode=mode,
+        unified=is_unified(req.asset_type),
     )
 
     scope_label = _label_for_level(

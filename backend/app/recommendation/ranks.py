@@ -91,6 +91,11 @@ def representative_verdict(fit: BlockFitResult) -> tuple[bool, str | None]:
         when = _year_phrase(search.years)
         where = f"{when} " if when else ""
         reasons.append(f"탐색 CV는 {where}{search.n_trades}건입니다.")
+    missed = [year for year in search.held_years if year not in search.years]
+    if search.failure_reasons or missed:
+        when = _year_phrase(tuple(missed or [year for year, _reason in search.failure_reasons]))
+        where = f"{when} " if when else ""
+        reasons.append(f"탐색 CV는 {where}평가를 완료하지 못했습니다.")
     if confirm.held_years and confirm.mape is None:
         held = _year_phrase(confirm.held_years)
         reasons.append(f"마지막 연도({held}) 확인을 계산하지 못했습니다.")

@@ -208,13 +208,12 @@ def fetch_candidate_rows(
     window_years: int | None = None,
     include_partial: bool = False,
     enrich: bool = False,
+    req=None,
 ) -> pd.DataFrame:
-    """anchor 표본과 무관하게 후보 지역 자체의 built 원장 원행을 조회한다.
+    """후보 지역 원장을 조회한다. req가 있으면 분석 화면의 표본 필터를 같이 건다.
 
-    Twin Pooling 후보를 실제로 적합(fit)하려면 anchor 조회 범위 밖에 있는
-    Twin 지역의 원행이 필요하다 — region_counts_from_db와 동일한 이유다.
-    반환 컬럼은 built.regression.engine._fetch_df와 동일하게 맞춰
-    기존 fit_best_scale·with_complete_case를 그대로 재사용할 수 있게 한다.
+    Twin 지역의 원행은 anchor 조회 범위 밖에 있으므로 지역 조건은 따로 둔다.
+    용도지역·건축물용도·도로·면적·연식·IQR은 원래 분석 조건을 유지한다.
     """
     column, clauses, params = _region_where_clauses(
         admin_level=admin_level,
@@ -229,6 +228,19 @@ def fetch_candidate_rows(
     if not column:
         return pd.DataFrame()
 
+    if req is not None:
+        enrich = bool(getattr(req, "enrich", False))
+        from app.built.enrichment_policy import split_zone_filter
+        from app.built.filters import apply_sample_filters_from_request
+
+        apply_sample_filters_from_request(clauses, params, req, skip_zone=enrich)
+        _, outer_zones = split_zone_filter(
+            enrich=enrich,
+            zone_types=list(getattr(req, "zone_types", None) or []),
+        )
+    else:
+        outer_zones = None
+
     from sqlalchemy import text
 
     where = " AND ".join(clauses)
@@ -242,11 +254,17 @@ def fetch_candidate_rows(
     """
     from app.built.enrichment_join import apply_wrapped_zone_columns, wrap_tx_enrichment
 
-    sql = wrap_tx_enrichment(inner, enrich=enrich)
+    sql = wrap_tx_enrichment(inner, enrich=enrich, zone_types=outer_zones or None)
     rows = conn.execute(text(sql), params).mappings().all()
     df = pd.DataFrame(rows)
     if df.empty:
         return df
+    if req is not None and bool(getattr(req, "exclude_outliers_iqr", False)):
+        from app.built.regression.engine import _iqr_filter
+
+        df = _iqr_filter(df, "price", float(getattr(req, "outlier_iqr_multiplier", 3.0) or 3.0))
+        if df.empty:
+            return df
     if enrich:
         return apply_wrapped_zone_columns(df)
     return df.drop(columns=["transaction_hash"], errors="ignore")
