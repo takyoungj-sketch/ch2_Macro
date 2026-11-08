@@ -12,6 +12,7 @@ import pandas as pd
 import statsmodels.api as sm
 
 from app.collective.regression.presentation import enrich_regression_response
+from app.structure_labels import structure_display
 from app.collective.schemas import (
     BuildingFeOption,
     CollectivePredictOptions,
@@ -131,6 +132,11 @@ def _cv_price_metrics(
         if train.size <= X.shape[1] + 1:
             code, reason = "insufficient_training", "설명변수 수에 비해 학습 거래가 부족합니다."
         else:
+            from app.regression_sample_judge import rows_are_identified
+
+            if not rows_are_identified(X[train], X[test]):
+                code, reason = "unseen_category", "검증 거래에 학습되지 않은 범주가 있어 이 분할을 완료로 보지 않습니다."
+        if code is None:
             try:
                 m = sm.OLS(y_fit[train], X[train]).fit()
                 p = np.asarray(m.predict(X[test]), dtype=float)
@@ -243,25 +249,25 @@ def _build_model_comparison(
 
     if not metrics:
         return None
-    basis = "cv" if any(v is not None for v in cv_mape.values()) else "insample"
-
-    def _mape_of(mt: str) -> float:
+    def _mape_of(mt: str, basis: str) -> float:
         m = metrics.get(mt)
         if not m:
             return float("inf")
-        return (
-            m.cv_mape
-            if m.cv_mape is not None
-            else m.mape
-            if m.mape is not None
-            else float("inf")
-        )
+        if basis == "cv" and m.cv_mape is not None:
+            return m.cv_mape
+        return m.mape if m.mape is not None else float("inf")
 
     if "log" in metrics and "linear" in metrics:
-        recommended = "log" if _mape_of("log") <= _mape_of("linear") else "linear"
+        basis = (
+            "cv"
+            if cv_mape.get("log") is not None and cv_mape.get("linear") is not None
+            else "insample"
+        )
+        recommended = "log" if _mape_of("log", basis) <= _mape_of("linear", basis) else "linear"
     else:
         recommended = next(iter(metrics))
-    stars, label = _confidence_rating(_mape_of(recommended), n)
+        basis = "cv" if cv_mape.get(recommended) is not None else "insample"
+    stars, label = _confidence_rating(_mape_of(recommended, basis), n)
     return ModelComparison(
         log=metrics.get("log"),
         linear=metrics.get("linear"),
@@ -273,6 +279,7 @@ def _build_model_comparison(
 
 # 상대 층(단지 max 층 대비)
 _REL_FLOOR_LABELS: dict[str, str] = {
+    "floor_rel_b": "지하",
     "floor_rel_1": "1층",
     "floor_rel_top": "최상층",
     "floor_rel_low": "저층부",
@@ -285,6 +292,8 @@ def relative_floor_group(floor: float, max_floor: float) -> str:
     if pd.isna(floor):
         return "floor_rel_mid"
     f = float(floor)
+    if f < 1:
+        return "floor_rel_b"
     mx = float(max_floor) if pd.notna(max_floor) and float(max_floor) > 0 else f
     if f == 1:
         return "floor_rel_1"
@@ -353,11 +362,21 @@ def row_max_floors(work: pd.DataFrame, fallback: float | None = None) -> pd.Seri
 
 
 def _floor_group_label(floor: float) -> str:
+    if floor < 1:
+        return "floor_grp_b"
     if floor <= 5:
         return "floor_grp_1-5"
     if floor <= 15:
         return "floor_grp_6-15"
     return "floor_grp_16+"
+
+
+_GROUPED_FLOOR_LABELS: dict[str, str] = {
+    "floor_grp_b": "지하",
+    "floor_grp_1-5": "1–5층",
+    "floor_grp_6-15": "6–15층",
+    "floor_grp_16+": "16층+",
+}
 
 
 def _sanitize_key(key: str, prefix: str) -> str:
@@ -378,25 +397,42 @@ def _nested_dong_col(building_key: str, dong: str) -> str:
     return f"dong_{token}"
 
 
+def _explicit_category_dummies(series: pd.Series, prefix: str) -> tuple[pd.DataFrame, list[str], str | None]:
+    """빈 값은 미상이다. 미상은 기준이 아니고, 기준은 이름순 첫 실제 범주다."""
+    from app.regression_missing import UNKNOWN, categorical_dummies, normalize_categories
+
+    normalized = normalize_categories(series)
+    real = sorted(str(value) for value in normalized.unique() if str(value) != UNKNOWN)
+    if not real:
+        return pd.DataFrame(index=series.index), [], None
+    frame, levels, ref = categorical_dummies(series, prefix, reference=real[0])
+    return frame, levels, ref
+
+
+def _as_category(value: object) -> str | None:
+    if value is None:
+        return None
+    from app.regression_missing import normalize_categories
+
+    return str(normalize_categories(pd.Series([value])).iloc[0])
+
+
 def _add_pooled_dong_columns(
     work: pd.DataFrame,
     series: pd.Series,
     meta: RegressionDesignMeta,
     labels: dict[str, str],
 ) -> pd.DataFrame:
-    cats = _dong_cats(series)
-    if len(cats) < 2:
+    dummies, levels, ref = _explicit_category_dummies(series, "dong")
+    if dummies.empty or ref is None:
         return pd.DataFrame(index=work.index)
-    meta.dong_categories = cats
-    meta.dong_reference = cats[0]
+    meta.dong_categories = levels
+    meta.dong_reference = ref
     meta.dong_options = [
-        DongOption(dong=c, label=c, is_reference=(c == cats[0])) for c in cats
+        DongOption(dong=c, label=c, is_reference=(c == ref)) for c in levels
     ]
-    dummies = pd.get_dummies(series, prefix="dong", drop_first=True)
-    if dummies.empty:
-        return pd.DataFrame(index=work.index)
     for c in dummies.columns:
-        labels[c] = f"동 {c.replace('dong_', '')}"
+        labels[c] = f"동 {c.replace('dong_', '', 1)}"
     return dummies
 
 
@@ -407,14 +443,16 @@ def _add_nested_dong_columns(
     warnings: list[str],
 ) -> pd.DataFrame:
     """단지마다 동을 따로 두고, 단지별 기준동 1개는 단지 FE에 흡수한다."""
+    from app.regression_missing import UNKNOWN, normalize_categories
+
     keys = work["building_key"].astype(str)
-    dongs = _clean_dong_values(work["dong"])
+    dongs = normalize_categories(work["dong"])
     parts: list[pd.DataFrame] = []
     options: list[DongOption] = []
     for bk in sorted(keys.unique()):
         mask = keys == bk
         series = dongs[mask]
-        cats = _dong_cats(series)
+        cats = sorted(str(c) for c in series.unique() if str(c) != UNKNOWN)
         if not cats:
             continue
         counts = series[series.isin(cats)].value_counts()
@@ -423,6 +461,18 @@ def _add_nested_dong_columns(
         bname = meta.building_labels.get(bk, bk[:12])
         if len(cats) < 2:
             warnings.append(f"동 더미 없음 — {bname} 동 1개 (단지 FE에 흡수)")
+        unknown = series == UNKNOWN
+        if bool(unknown.any()):
+            col = _nested_dong_col(bk, UNKNOWN)
+            flag = pd.Series(0.0, index=work.index)
+            flag.loc[unknown.index[unknown]] = 1.0
+            work[col] = flag
+            parts.append(work[[col]])
+            labels[col] = f"동 {bname} 미상"
+            meta.dong_fe_map[(bk, UNKNOWN)] = col
+            options.append(
+                DongOption(dong=UNKNOWN, label=f"{bname} 미상", building_key=bk, is_reference=False)
+            )
         for dong in sorted(cats):
             is_ref = dong == ref
             options.append(
@@ -470,6 +520,8 @@ class RegressionDesignMeta:
     building_counts: dict[str, int] = field(default_factory=dict)
     continuous_ranges: dict[str, tuple[float | None, float | None]] = field(default_factory=dict)
     floor_dummy_cols: list[str] = field(default_factory=list)
+    floor_reference_code: str | None = None
+    floor_trained_codes: list[str] = field(default_factory=list)
     structure_reference: str | None = None
     structure_dummy_cols: list[str] = field(default_factory=list)
     asset_type_reference: str | None = None
@@ -513,28 +565,94 @@ _FACTORY_FLOOR_LABELS: dict[str, str] = {
 }
 
 
+def _floor_level_token(floor: float) -> str:
+    value = float(floor)
+    return str(int(value)) if value == int(value) else f"{value:g}"
+
+
+def _categorical_floor_support(
+    levels: pd.Series,
+    columns: list[str],
+    column_name,
+) -> tuple[str | None, list[str]]:
+    """학습에 있는 층 열과, 더미에서 뺀 기준 열."""
+    present: list[str] = []
+    seen: set[str] = set()
+    for value in levels.dropna().unique():
+        name = column_name(value)
+        if not name or name in seen:
+            continue
+        present.append(str(name))
+        seen.add(str(name))
+    if len(present) == 1:
+        return present[0], present
+    column_set = {str(c) for c in columns}
+    omitted = [name for name in present if name not in column_set]
+    return (omitted[0] if len(omitted) == 1 else None), present
+
+
+def _shop_floor_labels() -> dict[str, str]:
+    from app.collective_commercial.floor_index_regression import SHOP_FLOOR_GROUPS
+
+    return {f"shop_{code}": label for label, code, _ in SHOP_FLOOR_GROUPS}
+
+
+def _floor_code_label(code: str) -> str:
+    """더미에서 뺀 층 코드의 화면 이름."""
+    for table in (
+        _REL_FLOOR_LABELS,
+        _GROUPED_FLOOR_LABELS,
+        _ROWHOUSE_FLOOR_LABELS,
+        _FACTORY_FLOOR_LABELS,
+        _shop_floor_labels(),
+    ):
+        if code in table:
+            return table[code]
+    if code.startswith("floor_"):
+        token = code[len("floor_"):]
+        if token.startswith("-"):
+            return f"지하 {token[1:]}층"
+        return f"{token}층"
+    return code
+
+
+def _with_floor_contrast(base: str, reference: str | None) -> str:
+    if reference:
+        return f"{base} ({_floor_code_label(reference)} 대비)"
+    return f"{base} (기준 대비)"
+
+
+def _set_floor_reference_option(opts, meta) -> None:
+    code = getattr(meta, "floor_reference_code", None)
+    if not code or not getattr(meta, "floor_dummy_cols", None):
+        return
+    opts.floor_reference = code
+    opts.floor_reference_label = _floor_code_label(code)
+
+
 def _labeled_floor_dummies(
     codes: pd.Series,
     label_map: dict[str, str],
-) -> tuple[pd.DataFrame, dict[str, str], list[str]]:
+) -> tuple[pd.DataFrame, dict[str, str], list[str], str | None, list[str]]:
     valid = codes.dropna()
     if valid.nunique() < 2:
-        return pd.DataFrame(index=codes.index), {}, []
+        reference, trained = _categorical_floor_support(codes, [], lambda value: str(value))
+        return pd.DataFrame(index=codes.index), {}, [], reference, trained
     dummies = pd.get_dummies(codes, prefix="", prefix_sep="", drop_first=True)
+    dummies.columns = dummies.columns.astype(str)
     missing = codes.isna()
     if missing.any() and not dummies.empty:
         dummies = dummies.astype(float)
         dummies.loc[missing, :] = np.nan
-    labels = {c: f"{label_map.get(c, c)} (기준 대비)" for c in dummies.columns}
-    return dummies, labels, list(dummies.columns)
+    columns = list(dummies.columns)
+    reference, trained = _categorical_floor_support(codes, columns, lambda value: str(value))
+    labels = {c: _with_floor_contrast(label_map.get(c, c), reference) for c in dummies.columns}
+    return dummies, labels, columns, reference, trained
 
 
-def _add_contract_period_columns(
-    work: pd.DataFrame,
-) -> tuple[pd.DataFrame, dict[str, str], str | None]:
-    """반기 더미. 거래가 가장 많은 반기를 뺀다. 반기가 하나면 열을 만들지 않는다."""
+def _period_codes(work: pd.DataFrame) -> pd.Series | None:
     if "contract_year" not in work.columns:
-        return pd.DataFrame(index=work.index), {}, None
+        return None
     months = (
         work["contract_month"]
         if "contract_month" in work.columns
@@ -550,7 +668,16 @@ def _add_contract_period_columns(
             codes.append(str(y))
         else:
             codes.append(f"{y}H{1 if int(month) <= 6 else 2}")
-    series = pd.Series(codes, index=work.index)
+    return pd.Series(codes, index=work.index)
+
+
+def _add_contract_period_columns(
+    work: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[str, str], str | None]:
+    """반기 더미. 거래가 가장 많은 반기를 뺀다. 반기가 하나면 열을 만들지 않는다."""
+    series = _period_codes(work)
+    if series is None:
+        return pd.DataFrame(index=work.index), {}, None
     counts = series.dropna().value_counts()
     if len(counts) < 2:
         return pd.DataFrame(index=work.index), {}, None
@@ -573,17 +700,18 @@ def _add_floor_columns(
     mode: str,
     *,
     max_floor: float | None = None,
-) -> tuple[pd.DataFrame, dict[str, str], list[str]]:
-    """Returns dummies, labels, dummy column names (excl. reference)."""
+) -> tuple[pd.DataFrame, dict[str, str], list[str], str | None, list[str]]:
+    """더미, 라벨, 더미 열, 기준 층 열, 학습에 있는 층 열."""
     labels: dict[str, str] = {}
+    empty = pd.DataFrame(index=work.index)
     if "floor" not in work.columns or not work["floor"].notna().any():
-        return pd.DataFrame(index=work.index), labels, []
+        return empty, labels, [], None, []
 
     if mode == "linear":
         fl = pd.to_numeric(work["floor"], errors="coerce")
         out = fl.to_frame("floor")
         labels["floor"] = "층(선형)"
-        return out, labels, ["floor"]
+        return out, labels, ["floor"], None, []
 
     fl = work["floor"].astype(float)
 
@@ -620,28 +748,49 @@ def _add_floor_columns(
     if mode == "grouped":
         grp = fl.apply(lambda x: _floor_group_label(x) if pd.notna(x) else None)
         dummies = pd.get_dummies(grp, prefix="", prefix_sep="", drop_first=True)
+        column_name = lambda value: str(value)
     else:
         floor_str = fl.apply(
-            lambda x: (
-                str(int(x))
-                if pd.notna(x) and float(x) == int(float(x))
-                else (f"{float(x):g}" if pd.notna(x) else None)
-            )
+            lambda x: _floor_level_token(x) if pd.notna(x) else None
         )
         dummies = pd.get_dummies(floor_str, prefix="floor", drop_first=True)
+        column_name = lambda value: f"floor_{value}"
 
+    dummies.columns = dummies.columns.astype(str)
     dummy_cols = list(dummies.columns)
+    levels = grp if mode == "grouped" else floor_str
+    missing = levels.isna()
+    if missing.any() and not dummies.empty:
+        dummies = dummies.astype(float)
+        dummies.loc[missing, :] = np.nan
+    reference, trained = _categorical_floor_support(levels, dummy_cols, column_name)
     if dummies.empty:
-        return pd.DataFrame(index=work.index), labels, []
+        return pd.DataFrame(index=work.index), labels, [], reference, trained
 
     for c in dummies.columns:
         if c.startswith("floor_grp_"):
-            labels[c] = c.replace("floor_grp_", "층 ") + " (기준 대비)"
+            base = _GROUPED_FLOOR_LABELS.get(c, c)
         elif c.startswith("floor_rel_"):
-            labels[c] = _REL_FLOOR_LABELS.get(c, c) + " (기준 대비)"
+            base = _REL_FLOOR_LABELS.get(c, c)
         else:
-            labels[c] = f"층 {c.replace('floor_', '')} (기준 대비)"
-    return dummies, labels, dummy_cols
+            token = c.replace("floor_", "", 1)
+            base = f"지하 {token[1:]}층" if token.startswith("-") else f"{token}층"
+        labels[c] = _with_floor_contrast(base, reference)
+    return dummies, labels, dummy_cols, reference, trained
+
+
+def _predict_floor_column(floor: float, mode: str, max_floor: float) -> str | None:
+    if mode == "relative":
+        return relative_floor_group(floor, max_floor)
+    if mode == "rowhouse":
+        return rowhouse_floor_group(floor, max_floor)
+    if mode == "shop":
+        return _shop_floor_code(floor)
+    if mode == "factory":
+        return _factory_floor_code(floor)
+    if mode == "grouped":
+        return _floor_group_label(floor)
+    return f"floor_{_floor_level_token(floor)}"
 
 
 def _floor_row_for_predict(
@@ -649,44 +798,30 @@ def _floor_row_for_predict(
     mode: str,
     max_floor: float,
     dummy_cols: list[str],
+    *,
+    reference_code: str | None = None,
+    trained_codes: list[str] | None = None,
 ) -> dict[str, float]:
     out = {c: 0.0 for c in dummy_cols}
-    if floor is None or pd.isna(floor):
-        return out
-    f = float(floor)
     if mode == "linear":
-        if "floor" in out:
-            out["floor"] = f
+        if floor is not None and not pd.isna(floor) and "floor" in out:
+            out["floor"] = float(floor)
         return out
-    if mode == "relative":
-        code = relative_floor_group(f, max_floor)
-        if code in out:
-            out[code] = 1.0
+    trained = set(trained_codes or [])
+    if floor is None or pd.isna(floor):
+        if trained:
+            raise ValueError("모형에 포함된 층을 선택해 주세요.")
         return out
-    if mode == "rowhouse":
-        code = rowhouse_floor_group(f, max_floor)
-        if code and code in out:
-            out[code] = 1.0
+    code = _predict_floor_column(float(floor), mode, max_floor)
+    if trained and (not code or code not in trained):
+        raise ValueError("모형에 포함된 층을 선택해 주세요.")
+    if reference_code and code == reference_code:
         return out
-    if mode == "shop":
-        code = _shop_floor_code(f)
-        if code and code in out:
-            out[code] = 1.0
+    if code and code in out:
+        out[code] = 1.0
         return out
-    if mode == "factory":
-        code = _factory_floor_code(f)
-        if code and code in out:
-            out[code] = 1.0
-        return out
-    if mode == "grouped":
-        grp = _floor_group_label(f)
-        if grp in out:
-            out[grp] = 1.0
-        return out
-    key = str(int(f)) if f == int(f) else f"{f:g}"
-    col = f"floor_{key}"
-    if col in out:
-        out[col] = 1.0
+    if trained:
+        raise ValueError("모형에 포함된 층을 선택해 주세요.")
     return out
 
 
@@ -839,7 +974,7 @@ def _add_structure_dummies(
         col = f"struct_{lv}"
         work[col] = (raw == lv).astype(float)
         parts.append(work[[col]])
-        labels[col] = f"구조 {lv} (기준 대비)"
+        labels[col] = f"구조 {structure_display(lv)} (기준 대비)"
         dummy_cols.append(col)
     meta.structure_dummy_cols = dummy_cols
 
@@ -907,6 +1042,65 @@ def _add_asset_type_dummies(
     meta.asset_type_dummy_cols = dummy_cols
 
 
+def restrict_sparse_training_rows(
+    work: pd.DataFrame,
+    *,
+    group_col: str | None,
+    group_label: str,
+    labels: dict[str, str] | None = None,
+    use_period: bool,
+    minimum: int = 5,
+) -> tuple[pd.DataFrame, list[str]]:
+    """5건 미만 단지·cluster·반기 거래는 기준 범주로 남기지 않고 학습에서 뺀다."""
+    names = labels or {}
+    notes: list[str] = []
+    seen: set[str] = set()
+    current = work
+    for _ in range(40):
+        before = len(current)
+        if group_col and group_col in current.columns:
+            keys = current[group_col].astype(str)
+            if keys.nunique() > 1:
+                counts = keys.value_counts()
+                small = [str(key) for key, count in counts.items() if int(count) < minimum]
+                large = {str(key) for key, count in counts.items() if int(count) >= minimum}
+                if small and large:
+                    for key in small:
+                        note = (
+                            f"{group_label} 제외 — {names.get(key, key[:12])} n={int(counts[key])} "
+                            f"(최소 {minimum}건), 학습에서 제외"
+                        )
+                        if note not in seen:
+                            notes.append(note)
+                            seen.add(note)
+                    current = current.loc[keys.isin(large)].copy()
+        if use_period:
+            series = _period_codes(current)
+            if series is not None:
+                counts = series.dropna().value_counts()
+                large_periods = {str(code) for code, count in counts.items() if int(count) >= minimum}
+                small_periods = [str(code) for code, count in counts.items() if int(count) < minimum]
+                if large_periods and (small_periods or bool(series.isna().any())):
+                    for code in sorted(small_periods):
+                        note = (
+                            f"거래시점 제외 — {code} n={int(counts[code])} "
+                            f"(최소 {minimum}건), 학습에서 제외"
+                        )
+                        if note not in seen:
+                            notes.append(note)
+                            seen.add(note)
+                    missing = int(series.isna().sum())
+                    if missing:
+                        note = f"거래시점 없음 {missing}건, 학습에서 제외"
+                        if note not in seen:
+                            notes.append(note)
+                            seen.add(note)
+                    current = current.loc[series.isin(large_periods)].copy()
+        if len(current) == before:
+            break
+    return current, notes
+
+
 def _build_design_matrix(
     work: pd.DataFrame,
     req: CollectiveRegressionRequest,
@@ -933,6 +1127,24 @@ def _build_design_matrix(
         )
 
     display_names = building_display_names or {}
+    use_building_fe = (
+        cohort_mode
+        and not entering_attrs
+        and "building_key" in work.columns
+        and work["building_key"].nunique() > 1
+    )
+    building_names = {
+        str(key): display_names.get(str(key), str(key)[:12])
+        for key in (work["building_key"].astype(str).unique() if use_building_fe else [])
+    }
+    work, drop_notes = restrict_sparse_training_rows(
+        work,
+        group_col="building_key" if use_building_fe else None,
+        group_label="단지 FE",
+        labels=building_names,
+        use_period=bool(getattr(req.variables, "contract_period", False)),
+    )
+    warnings.extend(drop_notes)
     if "building_key" in work.columns:
         for bk, cnt in work.groupby("building_key").size().items():
             meta.building_counts[str(bk)] = int(cnt)
@@ -967,6 +1179,8 @@ def _build_design_matrix(
             meta.continuous_ranges["building_age"] = (rng.min, rng.max)
 
     floor_dummy_cols: list[str] = []
+    floor_reference_code: str | None = None
+    floor_trained_codes: list[str] = []
     if req.variables.floor and work["floor"].notna().any():
         maxes = row_max_floors(work)
         meta.max_floor = float(maxes.max()) if maxes.notna().any() else None
@@ -974,7 +1188,7 @@ def _build_design_matrix(
             for bk, mx in zip(work["building_key"].astype(str), maxes):
                 if pd.notna(mx):
                     meta.max_floor_by_building[bk] = float(mx)
-        floor_part, floor_labels, floor_dummy_cols = _add_floor_columns(
+        floor_part, floor_labels, floor_dummy_cols, floor_reference_code, floor_trained_codes = _add_floor_columns(
             work, meta.floor_mode, max_floor=meta.max_floor
         )
         if not floor_part.empty:
@@ -1010,16 +1224,13 @@ def _build_design_matrix(
         and "housing_subtype" in work.columns
         and work["housing_subtype"].notna().any()
     ):
-        series = work["housing_subtype"].astype(str).str.strip()
-        cats = sorted(c for c in series.dropna().unique() if c and c not in ("nan", "None"))
-        if len(cats) >= 2:
-            meta.housing_subtype_categories = cats
-            meta.housing_subtype_reference = cats[0]
-            dummies = pd.get_dummies(series, prefix="rights", drop_first=True)
-            if not dummies.empty:
-                parts.append(dummies)
-                for c in dummies.columns:
-                    labels[c] = f"권리 {c.replace('rights_', '')}"
+        dummies, levels, ref = _explicit_category_dummies(work["housing_subtype"], "rights")
+        if not dummies.empty and ref is not None:
+            meta.housing_subtype_categories = levels
+            meta.housing_subtype_reference = ref
+            parts.append(dummies)
+            for c in dummies.columns:
+                labels[c] = f"권리 {c.replace('rights_', '', 1)}"
 
     if "households" in entering_attrs:
         parts.append(work[["households"]].astype(float))
@@ -1047,6 +1258,8 @@ def _build_design_matrix(
 
     meta.column_labels = labels
     meta.floor_dummy_cols = floor_dummy_cols
+    meta.floor_reference_code = floor_reference_code
+    meta.floor_trained_codes = floor_trained_codes
 
     if not parts:
         empty_x = pd.DataFrame(index=work.index)
@@ -1102,6 +1315,8 @@ def _meta_to_predict_options(meta: RegressionDesignMeta, req: CollectiveRegressi
         refs = [meta.asset_type_reference] if meta.asset_type_reference else []
         opts.asset_types = refs + [c.replace("atype_", "", 1) for c in meta.asset_type_dummy_cols]
 
+    _set_floor_reference_option(opts, meta)
+
     if len(meta.building_counts) > 1:
         for bk, cnt in sorted(meta.building_counts.items(), key=lambda x: -x[1]):
             opts.buildings.append(
@@ -1149,7 +1364,7 @@ def _fit_regression(
             warnings=base_warnings + [f"회귀 실패: {exc}"],
         )
 
-    from app.regression_sample_judge import judge_exog, sample_notes
+    from app.regression_sample_judge import blank_unidentified_effects, judge_exog, sample_notes
 
     warnings = list(base_warnings)
     verdict = judge_exog(model.model.exog)
@@ -1185,6 +1400,7 @@ def _fit_regression(
         model_type=model_type,
         price_adj_r_squared=metrics.get("price_adj_r_squared"),
     )
+    enriched = blank_unidentified_effects(enriched, model.model.exog, list(model.params.index))
     coefs = [RegressionCoeff(**row) for row in enriched]
     sig_count = count_significant_coefficients(coefs)
 
@@ -1267,7 +1483,11 @@ def _inputs_to_x_row(
         categories.append(("building_key", [meta.building_reference_key, *meta.building_fe_map], "단지"))
     for name, allowed, label in categories:
         value = getattr(inputs, name)
-        if allowed and value is not None and str(value).strip() not in allowed:
+        if name in ("dong", "housing_subtype"):
+            shown = _as_category(value)
+        else:
+            shown = None if value is None else str(value).strip()
+        if allowed and shown is not None and shown not in allowed:
             raise ValueError(f"모형에 포함된 {label} 값을 선택해 주세요.")
     row = {c: 0.0 for c in X.columns}
     if meta.time_reference:
@@ -1291,18 +1511,21 @@ def _inputs_to_x_row(
         row["building_age"] = float(inputs.building_age)
 
     floor_dummy_cols = meta.floor_dummy_cols
-    if req.variables.floor and floor_dummy_cols:
+    if req.variables.floor and (floor_dummy_cols or meta.floor_trained_codes):
         bk = str(inputs.building_key) if inputs.building_key else ""
         mx = meta.max_floor_by_building.get(bk)
         if mx is None:
             mx = float(meta.max_floor or inputs.floor or 1)
-        floor_vals = _floor_row_for_predict(inputs.floor, meta.floor_mode, mx, floor_dummy_cols)
+        floor_vals = _floor_row_for_predict(
+            inputs.floor, meta.floor_mode, mx, floor_dummy_cols,
+            reference_code=meta.floor_reference_code, trained_codes=meta.floor_trained_codes,
+        )
         for c, v in floor_vals.items():
             if c in row:
                 row[c] = v
 
     if req.variables.dong and inputs.dong is not None:
-        dong = str(inputs.dong).strip()
+        dong = _as_category(inputs.dong) or ""
         if meta.dong_fe_map:
             bk = str(inputs.building_key or meta.building_reference_key or "")
             ref = meta.dong_reference_by_building.get(bk)
@@ -1316,7 +1539,7 @@ def _inputs_to_x_row(
                 row[col] = 1.0
 
     if req.variables.housing_subtype and inputs.housing_subtype is not None:
-        hs = str(inputs.housing_subtype).strip()
+        hs = _as_category(inputs.housing_subtype) or ""
         if meta.housing_subtype_reference and hs != meta.housing_subtype_reference:
             col = f"rights_{hs}"
             if col in row:
@@ -1353,6 +1576,27 @@ def _inputs_to_x_row(
     return pd.Series(row, index=X.columns)
 
 
+def _categorical_drop_columns(variables) -> list[str]:
+    cols: list[str] = []
+    if variables.structure:
+        cols.append("structure_group")
+    if variables.dong:
+        cols.append("dong")
+    if variables.housing_subtype:
+        cols.append("housing_subtype")
+    if getattr(variables, "asset_type_dummy", False):
+        cols.append("asset_type")
+    return cols
+
+
+def _without_categorical_missing(work: pd.DataFrame, req: CollectiveRegressionRequest) -> tuple[pd.DataFrame, int]:
+    from app.regression_missing import drop_unknown_rows
+
+    if req.categorical_missing != "drop":
+        return work, 0
+    return drop_unknown_rows(work, _categorical_drop_columns(req.variables))
+
+
 def _run_regression_core(
     df: pd.DataFrame,
     req: CollectiveRegressionRequest,
@@ -1369,21 +1613,10 @@ def _run_regression_core(
         )
         return None, pd.DataFrame(), RegressionDesignMeta(), resp
 
-    from app.regression_missing import drop_unknown_rows, treatment_label
+    from app.regression_missing import treatment_label
 
     work = _prepare_work(df, req)
-    n_excluded = 0
-    if req.categorical_missing == "drop":
-        cat_cols: list[str] = []
-        if req.variables.structure:
-            cat_cols.append("structure_group")
-        if req.variables.dong:
-            cat_cols.append("dong")
-        if req.variables.housing_subtype:
-            cat_cols.append("housing_subtype")
-        if req.variables.asset_type_dummy:
-            cat_cols.append("asset_type")
-        work, n_excluded = drop_unknown_rows(work, cat_cols)
+    work, n_excluded = _without_categorical_missing(work, req)
     n = len(work)
     if n < 5:
         resp = CollectiveRegressionResponse(
@@ -1496,6 +1729,8 @@ def _subject_pair_mape(
         pred_a = _predict_price(train_y, train_x, xa_m, model_type)
         return _price_mape(yv, pred_b), _price_mape(yv, pred_a), "insample"
 
+    from app.regression_sample_judge import rows_are_identified
+
     idx = np.arange(len(yb))
     rng = np.random.default_rng(42)
     rng.shuffle(idx)
@@ -1510,6 +1745,8 @@ def _subject_pair_mape(
         train_pos = np.setdiff1d(idx, fold, assume_unique=False)
         if train_pos.size <= xb_m.shape[1] + 1:
             continue
+        if not rows_are_identified(xb_m[train_pos], xb_m[fold]):
+            continue
         try:
             pred_b[fold] = _predict_price(yv[train_pos], xb_m[train_pos], xb_m[fold], model_type)
         except Exception:
@@ -1522,10 +1759,13 @@ def _subject_pair_mape(
         y_tr = y_all.loc[x_tr.index]
         if len(y_tr) <= xa_m.shape[1] + 1:
             continue
+        train_after = _with_const(x_tr)
+        if not rows_are_identified(train_after, xa_m[fold]):
+            continue
         try:
             pred_a[fold] = _predict_price(
                 y_tr.to_numpy(dtype=float),
-                _with_const(x_tr),
+                train_after,
                 xa_m[fold],
                 model_type,
             )
@@ -1560,20 +1800,8 @@ def _cohort_augmentation(
     building_display_names: dict[str, str] | None = None,
 ) -> CohortAugmentation | None:
     """단지 고정효과 모형에서, 기준 단지 거래의 전후만 비교한다."""
-    from app.regression_missing import drop_unknown_rows
-
     work = _prepare_work(df, req)
-    if req.categorical_missing == "drop":
-        cat_cols: list[str] = []
-        if req.variables.structure:
-            cat_cols.append("structure_group")
-        if req.variables.dong:
-            cat_cols.append("dong")
-        if req.variables.housing_subtype:
-            cat_cols.append("housing_subtype")
-        if req.variables.asset_type_dummy:
-            cat_cols.append("asset_type")
-        work, _ = drop_unknown_rows(work, cat_cols)
+    work, _ = _without_categorical_missing(work, req)
     if work.empty or "building_key" not in work.columns:
         return None
     keys = work["building_key"].astype(str)
@@ -1750,8 +1978,9 @@ def suggest_collective_regression(
     def build_xy(blocks: list[str]):
         variables = _spec_for_blocks(req, blocks)
         candidate_req = req.model_copy(update={"variables": variables, "model_type": "linear"})
+        frame, _excluded = _without_categorical_missing(work, candidate_req)
         y, x, _labels, _meta, _warnings = _build_design_matrix(
-            work,
+            frame,
             candidate_req,
             cohort_mode=cohort_mode,
             building_display_names=building_display_names,
@@ -1829,10 +2058,13 @@ def predict_regression(
     vals: dict[str, float] = {"const": 1.0}
     vals.update(x_row.to_dict())
     x_df = pd.DataFrame([vals]).reindex(columns=model.params.index, fill_value=0.0)
+
+    from app.regression_sample_judge import identification_note, judge_exog, prediction_is_identified, provision_note
+
+    if not prediction_is_identified(model.model.exog, x_df.iloc[0].to_numpy()):
+        raise ValueError("이 조건은 계수가 한 값으로 정해지지 않아 예측하지 않습니다.")
     frame = model.get_prediction(x_df).summary_frame(alpha=0.05)
     row = frame.iloc[0]
-
-    from app.regression_sample_judge import identification_note, judge_exog, provision_note
 
     warnings = _extrapolation_warnings(meta, inputs)
     predict_verdict = judge_exog(model.model.exog)

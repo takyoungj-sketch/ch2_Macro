@@ -34,25 +34,26 @@ FLOOR_GROUP_LINES = [
 ]
 
 RESIDENTIAL_FLOOR_GROUP_LINES = [
-    "아파트·오피스텔·분양권: 그 단지 최고층 대비 1층·저층부·중층부·고층부·최상층.",
-    "코호트는 표본 전체 최고층이 아니라 단지마다 그 단지의 최고층으로 나눕니다.",
-    "1층 → 화면 지수 100% (표시 기준). p는 거래가 가장 많은 구간 대비입니다.",
-    "저층부 → 그 단지 최고층 대비 하위 30% (1·최상층 제외)",
-    "중층부 → 최고층 대비 30~70%",
-    "고층부 → 최고층 대비 70% 초과 (최상층 제외)",
-    "최상층 → 그 단지 최고층",
+    "아파트·오피스텔·분양권: 선택 기간에 그 단지에서 거래된 최고층 대비 지하·1층·저층부·중층부·고층부·관측 최상층.",
+    "지하는 중층부나 1–5층에 넣지 않습니다. 지하 거래가 있으면 지하 칸입니다.",
+    "코호트는 표본 전체 최고층이 아니라 단지마다 그 단지의 최고 거래층으로 나눕니다.",
+    "화면 100은 이번 결과의 기준 구간입니다. 그 구간이 표본에 있으면 상대층은 1층, 절대구간은 1–5층입니다.",
+    "저층부 → 그 단지 최고 거래층 대비 하위 30% (1·관측 최상층 제외)",
+    "중층부 → 최고 거래층 대비 30~70%",
+    "고층부 → 최고 거래층 대비 70% 초과 (관측 최상층 제외)",
+    "관측 최상층 → 선택 기간에 그 단지에서 거래된 최고층",
 ]
 
 ROWHOUSE_FLOOR_GROUP_LINES = [
-    "연립·다세대 기본: 1층 · 중간층(2층~최고층 바로 아래) · 최상층(그 건물 거래 최고층).",
+    "연립·다세대 기본: 1층 · 중간층(2층~최고층 바로 아래) · 관측 최상층(선택 기간의 최고 거래층).",
     "4~5층에 아파트용 저·중·고를 쓰지 않습니다. 표본이 충분하면 개별 층으로 바꿀 수 있습니다.",
-    "화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비이고, 그 칸의 p는 없습니다.",
+    "화면 100은 이번 결과의 기준 구간입니다. 그 구간이 표본에 있으면 1층입니다. 지수·신뢰구간·p는 그 대비이고, 기준 칸의 p는 없습니다.",
 ]
 
 FACTORY_FLOOR_GROUP_LINES = [
     "공장·창고: 지하 · 1층 · 2층 · 3층 이상. 상가의 고층·초고층 구간을 쓰지 않습니다.",
     "층 정보가 적으면 면적대 탭을 우선합니다.",
-    "화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비입니다.",
+    "화면 100은 이번 결과의 기준 구간입니다. 그 구간이 표본에 있으면 1층입니다. 지수·신뢰구간·p는 그 대비입니다.",
 ]
 
 
@@ -62,19 +63,19 @@ def _controls_human(codes: list[str]) -> list[str]:
 
 RESIDENTIAL_AREA_GROUP_LINES = [
     "전용면적을 30㎡ 단위로 반올림합니다. 예: 84㎡ → 90㎡ 면적형.",
-    "기준(100%)은 이 단지(또는 코호트) 전용면적 중앙값이 속한 면적형입니다.",
+    "기준(100%)은 최종 표본 전용면적 중앙값에 가장 가까운 면적형입니다. 거리가 같으면 더 작은 면적형입니다.",
     "면적형 탭에서는 ln(전용면적)을 통제에서 빼, 면적 효과를 구간 더미로만 한 번 추정합니다.",
 ]
 
 SHOP_AREA_GROUP_LINES = [
     "연면적 구간은 거래 목록과 같습니다. 35㎡ 미만 · 35~50 · 50~100 · 100~300 · 300㎡ 이상.",
-    "기준(100%)은 이 도로 cluster 연면적 중앙값이 속한 구간입니다.",
+    "기준(100%)은 최종 표본 연면적 중앙값에 가장 가까운 구간입니다. 거리가 같으면 더 작은 구간입니다.",
     "면적형 탭에서는 ln(연면적)을 통제에서 빼, 규모 효과를 구간 더미로만 추정합니다.",
 ]
 
 FACTORY_AREA_GROUP_LINES = [
     "연면적 100㎡ 미만 · 100~300㎡ · 300~1000㎡ · 1000㎡ 이상.",
-    "기준(100%)은 이 cluster 연면적 중앙값이 속한 면적대입니다.",
+    "기준(100%)은 최종 표본 연면적 중앙값에 가장 가까운 면적대입니다. 거리가 같으면 더 작은 면적대입니다.",
     "공장 규모 프리미엄을 보는 탭입니다. 층 탭은 참고용입니다.",
 ]
 
@@ -91,33 +92,36 @@ def _preset_answers_residential_floor_index(
     if floor_mode == "factory" or asset_type == "collective_factory":
         floor_how = (
             "공장·창고는 지하·1층·2층·3층 이상입니다. 상가의 고층·초고층 구간을 쓰지 않습니다. "
-            "화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
+            "화면 100은 이번 결과의 기준 구간이고, 지수·신뢰구간·p는 그 대비입니다. 그 구간이 표본에 있으면 1층입니다."
         )
     elif floor_mode == "shop" or asset_type == "collective_shop":
         floor_how = (
             "상가는 지하심층(B2 이하)·지하1층·1층·2층·저층(3~4)·중층(5~9)·고층(10~19)·초고층(20+)입니다. "
-            "지하를 주거 중층부로 넣지 않습니다. 화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
+            "지하를 주거 중층부로 넣지 않습니다. 화면 100은 이번 결과의 기준 구간이고, 지수·신뢰구간·p는 그 대비입니다."
         )
     elif floor_mode == "rowhouse" or asset_type == "rowhouse":
         floor_how = (
-            "연립·다세대 기본은 1층·중간층·최상층입니다. 최상층은 그 건물의 거래 최고층입니다. "
-            "아파트용 저·중·고를 쓰지 않습니다. 화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
+            "연립·다세대 기본은 1층·중간층·관측 최상층입니다. 관측 최상층은 선택 기간의 최고 거래층입니다. "
+            "아파트용 저·중·고를 쓰지 않습니다. 화면 100은 이번 결과의 기준 구간이고, 지수·신뢰구간·p는 그 대비입니다."
         )
     else:
         floor_how = (
-            "아파트는 그 단지 최고층 대비 1층·저층부·중층부·고층부·최상층입니다. "
-            "여러 단지를 합치면 단지마다 그 단지의 최고층으로 나눕니다. "
-            "화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다. 그 칸의 p는 없습니다."
+            "아파트는 선택 기간의 최고 거래층 대비 1층·저층부·중층부·고층부·관측 최상층입니다. "
+            "여러 단지를 합치면 단지마다 그 단지의 최고 거래층으로 나눕니다. "
+            "화면 100은 이번 결과의 기준 구간이고, 지수·신뢰구간·p는 그 대비입니다. 기준 칸의 p는 없습니다. 지하는 별도 칸입니다."
         )
     if asset_type == "collective_factory":
         area_how = "집합공장은 연면적 100 / 300 / 1000㎡ 네 구간입니다. 30㎡ 눈금이 아닙니다."
     elif asset_type == "collective_shop" or (is_cluster and dim == "area"):
         area_how = (
             "상가 면적구간은 거래 목록과 같습니다. 35㎡ 미만 · 35~50 · 50~100 · 100~300 · 300㎡ 이상. "
-            f"기준은 표본 {area_word} 중앙값이 속한 칸입니다."
+            f"기준은 최종 표본 {area_word} 중앙값에 가장 가까운 칸입니다. 거리가 같으면 더 작은 칸입니다."
         )
     else:
-        area_how = f"{area_word}을 30㎡로 반올림한 면적형입니다. 기준은 표본 {area_word} 중앙값이 속한 칸입니다."
+        area_how = (
+            f"{area_word}을 30㎡로 반올림한 면적형입니다. "
+            f"기준은 최종 표본 {area_word} 중앙값에 가장 가까운 칸입니다. 거리가 같으면 더 작은 칸입니다."
+        )
     return [
         {
             "id": "how_floor",
@@ -154,7 +158,7 @@ def _preset_answers_residential_floor_index(
             "answer": (
                 "기준 구간이 100%입니다. 고층부 112%면, 통제한 조건에서 기준(보통 1층 또는 중앙 면적형)보다 "
                 "㎡당 단가가 약 12% 높은 패턴입니다. 95% 구간과 p값을 같이 보세요. "
-                "p는 회귀가 생략한 구간(거래 최다) 대비이며, 화면 1층=100 환산 후에도 그대로입니다."
+                "지수·95% 신뢰구간·p는 화면 기준(보통 1층) 대비입니다. 기준 칸의 p는 없습니다."
             ),
         },
         {
@@ -171,7 +175,7 @@ def _preset_answers_residential_floor_index(
             "answer": (
                 "칸 n<15는 참고용입니다. 구간 n<5는 지수를 안 냅니다. "
                 "전체 n<50이면 탭을 막거나 실험 모드만 허용합니다. "
-                "회귀를 못 맞추면 기준 칸만 100이고 나머지 지수는 비웁니다. "
+                "회귀를 못 맞추거나 비교할 구간이 없으면 모든 지수를 비웁니다. 지수가 나온 결과에서만 기준 칸이 100입니다. "
                 "단지·도로·기간 안의 패턴이지 적정가나 인과가 아닙니다."
             ),
         },
@@ -403,6 +407,10 @@ def _cluster_scope_label(asset_type: str) -> str:
     return "도로(cluster)"
 
 
+def _indexes_published(raw: dict) -> bool:
+    return any(cell.get("index") is not None for cell in (raw.get("cells") or []))
+
+
 def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> list[str]:
     hints: list[str] = []
     n_reg = raw.get("n_regression") or 0
@@ -410,6 +418,14 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
     r2 = raw.get("r_squared")
     ref = raw.get("reference_floor") or "1층"
     reg_ref = raw.get("regression_reference_floor")
+
+    if not _indexes_published(raw):
+        hints.append(
+            f"비교할 구간이 부족해 모든 지수를 내지 않았습니다. 평균 열은 원자료입니다 (n={n_total})."
+        )
+        for w in raw.get("warnings") or []:
+            hints.append(f"⚠ {w}")
+        return hints
 
     if raw.get("method") == "regression_semilog":
         if n_reg:
@@ -447,7 +463,7 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
             hints.append(hint + ".")
     elif raw.get("method") == "reference_only":
         hints.append(
-            f"회귀를 맞출 표본이 부족해 기준({ref})만 100으로 두고 나머지 지수는 비웠습니다. "
+            f"기준({ref})만 100이고 나머지 지수는 비었습니다. "
             f"평균 열은 원자료입니다 (n={n_total})."
         )
     else:
@@ -643,22 +659,29 @@ def build_residential_floor_index_explain(
     floor_mode_label = {
         "shop": "상가 층 (지하·1·2·저·중·고·초고층)",
         "factory": "공장·창고 층 (지하·1·2·3층 이상)",
-        "rowhouse": "연립·다세대 (1층·중간·최상)",
-        "relative": "아파트 상대층 (단지별 최고층 대비 1·저·중·고·최상)",
+        "rowhouse": "연립·다세대 (1층·중간·관측 최상)",
+        "relative": "아파트 상대층 (선택 기간 최고 거래층 대비 1·저·중·고·관측 최상)",
         "dummy": "개별 층 더미",
         "grouped": "절대 구간 (1–5 / 6–15 / 16+)",
     }.get(floor_mode, floor_mode)
     scope_label = "상품군 cluster" if is_factory else ("도로 cluster" if is_cluster else "단지(또는 코호트)")
     area_label = "연면적" if is_cluster else "전용면적"
     spec_prefix = "cluster" if is_cluster else "residential"
-    method = raw.get("method") or "regression_semilog"
+    published = _indexes_published(raw)
+    empty_indexes = "비교할 구간이 부족해 지수를 내지 않았습니다. "
     if dim == "floor":
+        screen = f"화면 기준은 {ref}=100%입니다. " if published else empty_indexes
         how_summary = (
             f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)입니다. "
-            f"층 구간은 {floor_mode_label}이고, 화면 기준은 {ref}=100%입니다. "
+            f"층 구간은 {floor_mode_label}이고, {screen}"
             f"{area_label}·연식·거래시점을 통제한 뒤 층만 비교합니다."
         )
     elif dim == "area":
+        area_basis = (
+            f"기준은 {ref}=100% (표본 {area_label} 중앙값 칸)입니다. "
+            if published
+            else empty_indexes
+        )
         how_summary = (
             f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)입니다. "
             + (
@@ -670,15 +693,18 @@ def build_residential_floor_index_explain(
                     else f"{area_label}을 30㎡로 반올림한 면적형입니다. "
                 )
             )
-            + f"기준은 {ref}=100% (표본 {area_label} 중앙값 칸)입니다. 면적은 구간 더미로만 넣고 연속 ln(면적)은 빼습니다."
+            + area_basis
+            + "면적은 구간 더미로만 넣고 연속 ln(면적)은 빼습니다."
         )
     else:
         how_summary = (
             f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)로 "
-            f"{ref}=100% 기준 {dim_title} 상대 지수를 냅니다."
+            + (
+                f"{ref}=100% 기준 {dim_title} 상대 지수를 냅니다."
+                if published
+                else f"비교할 구간이 부족해 {dim_title} 지수를 내지 않았습니다."
+            )
         )
-    if method == "reference_only":
-        how_summary += " 이번 결과는 회귀 표본이 부족해 기준 칸만 100이고 나머지 지수는 비었습니다."
 
     return {
         "spec_id": f"{spec_prefix}_floor_index_regression_{dim}_v2",
@@ -698,18 +724,33 @@ def build_residential_floor_index_explain(
             + " + Σ γ_g·D_g"
         ),
         "index_rule": (
-            "지수_g = exp(γ_g) × 100. 회귀 omitted = 거래 최다 구간. 층 탭 화면은 1층=100%로 환산."
-            if dim == "floor"
-            else f"지수_g = exp(γ_g) × 100. 기준 {ref}=100% (면적 구간 더미, ln(면적) 미포함)."
+            "비교할 구간이 부족해 지수를 내지 않았습니다."
+            if not published
+            else (
+                f"지수_g = exp(β_g − β_화면기준) × 100. 화면 기준은 {ref}=100이고, 신뢰구간·p도 그 대비입니다."
+                if dim == "floor"
+                else (
+                    f"지수_g = exp(γ_g) × 100. 기준 {ref}=100% (면적 구간 더미, ln(면적) 미포함)."
+                    if dim == "area"
+                    else f"지수_g = exp(γ_g) × 100. 기준 {ref}=100%."
+                )
+            )
         ),
         "reference": ref,
         "floor_groups": floor_lines,
         "controls": controls_h,
-        "interpretation": [
-            "표의 ‘평균’은 그 칸 원자료 평균, ‘지수’는 면적·연식·시점을 맞춘 뒤의 상대 %입니다. 둘이 어긋날 수 있습니다.",
-            f"100보다 낮으면 기준({ref})보다 ㎡당 단가가 낮은 패턴입니다.",
-            "95% CI는 HC3 강건표준오차입니다. 화면의 100과 p는 다른 기준입니다. p는 회귀가 뺀 구간(거래 최다) 대비이고, 그 칸의 p는 없습니다.",
-        ],
+        "interpretation": (
+            [
+                "표의 ‘평균’은 그 칸 원자료 평균입니다.",
+                "비교할 구간이 부족해 모든 지수가 비어 있습니다. 기준 100은 지수가 나온 결과에만 있습니다.",
+            ]
+            if not published
+            else [
+                "표의 ‘평균’은 그 칸 원자료 평균, ‘지수’는 면적·연식·시점을 맞춘 뒤의 상대 %입니다. 둘이 어긋날 수 있습니다.",
+                f"100보다 낮으면 기준({ref})보다 ㎡당 단가가 낮은 패턴입니다.",
+                "95% CI는 화면 기준과의 계수 차이에 대한 HC3 강건표준오차입니다. 지수·신뢰구간·p의 기준은 같습니다. 기준 칸의 p는 없습니다.",
+            ]
+        ),
         "limitations": (
             [
                 "도로·상품군 cluster·기간 안 패턴 — 인과·적정가 아님",

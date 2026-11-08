@@ -13,12 +13,14 @@ from app.collective.regression.engine import (
     _add_floor_columns,
     _duan_smearing,
     _floor_row_for_predict,
+    restrict_sparse_training_rows,
     _sanitize_key,
     count_significant_coefficients,
     _build_model_comparison,
     fit_model_price_metrics,
     resolve_product_floor_mode,
     row_max_floors,
+    _set_floor_reference_option,
 )
 from app.collective.regression.presentation import enrich_regression_response
 from app.collective.schemas import ContinuousRange
@@ -38,6 +40,8 @@ class CommercialRegressionDesignMeta:
     floor_mode: str = "relative"
     max_floor: float | None = None
     floor_dummy_cols: list[str] = field(default_factory=list)
+    floor_reference_code: str | None = None
+    floor_trained_codes: list[str] = field(default_factory=list)
     continuous_ranges: dict[str, tuple[float, float]] = field(default_factory=dict)
     column_labels: dict[str, str] = field(default_factory=dict)
     zone_categories: list[str] = field(default_factory=list)
@@ -130,6 +134,23 @@ def _build_design_matrix(
     parts: list[pd.DataFrame] = []
 
     display_labels = cluster_display_labels or {}
+    use_cluster = (
+        cohort_mode
+        and "cluster_key" in work.columns
+        and work["cluster_key"].astype(str).nunique() > 1
+    )
+    cluster_names = {
+        str(key): display_labels.get(str(key), str(key)[:12])
+        for key in (work["cluster_key"].astype(str).unique() if use_cluster else [])
+    }
+    work, drop_notes = restrict_sparse_training_rows(
+        work,
+        group_col="cluster_key" if use_cluster else None,
+        group_label="cluster FE",
+        labels=cluster_names,
+        use_period=bool(getattr(req.variables, "contract_period", False)),
+    )
+    warnings.extend(drop_notes)
     if "cluster_key" in work.columns:
         for ck, cnt in work.groupby("cluster_key").size().items():
             meta.cluster_counts[str(ck)] = int(cnt)
@@ -184,10 +205,12 @@ def _build_design_matrix(
             meta.continuous_ranges["road_code"] = rng
 
     floor_dummy_cols: list[str] = []
+    floor_reference_code: str | None = None
+    floor_trained_codes: list[str] = []
     if req.variables.floor and work["floor"].notna().any():
         maxes = row_max_floors(work)
         meta.max_floor = float(maxes.max()) if maxes.notna().any() else None
-        floor_part, floor_labels, floor_dummy_cols = _add_floor_columns(
+        floor_part, floor_labels, floor_dummy_cols, floor_reference_code, floor_trained_codes = _add_floor_columns(
             work, meta.floor_mode, max_floor=meta.max_floor
         )
         if not floor_part.empty:
@@ -241,6 +264,8 @@ def _build_design_matrix(
 
     meta.column_labels = labels
     meta.floor_dummy_cols = floor_dummy_cols
+    meta.floor_reference_code = floor_reference_code
+    meta.floor_trained_codes = floor_trained_codes
 
     if not parts:
         empty_x = pd.DataFrame(index=work.index)
@@ -284,6 +309,7 @@ def _meta_to_predict_options(
     if req.variables.road_width and meta.road_width_categories:
         opts.road_width_labels = meta.road_width_categories
         opts.road_width_reference = meta.road_width_reference
+    _set_floor_reference_option(opts, meta)
 
     return opts
 
@@ -370,9 +396,12 @@ def _inputs_to_x_row(
             raise ValueError("개별공시지가(원/㎡)를 입력해 주세요.")
         row["assessed_land_price"] = float(inputs.assessed_land_price)
 
-    if req.variables.floor and meta.floor_dummy_cols:
+    if req.variables.floor and (meta.floor_dummy_cols or meta.floor_trained_codes):
         mx = float(meta.max_floor or inputs.floor or 1)
-        floor_vals = _floor_row_for_predict(inputs.floor, meta.floor_mode, mx, meta.floor_dummy_cols)
+        floor_vals = _floor_row_for_predict(
+            inputs.floor, meta.floor_mode, mx, meta.floor_dummy_cols,
+            reference_code=meta.floor_reference_code, trained_codes=meta.floor_trained_codes,
+        )
         for c, v in floor_vals.items():
             if c in row:
                 row[c] = v
@@ -464,7 +493,7 @@ def _run_regression_core(
         )
         return None, X, meta, resp
 
-    from app.regression_sample_judge import judge_exog, sample_notes
+    from app.regression_sample_judge import blank_unidentified_effects, judge_exog, sample_notes
 
     verdict = judge_exog(model.model.exog)
     notes = sample_notes(verdict)
@@ -500,6 +529,7 @@ def _run_regression_core(
         model_type=model_type,
         price_adj_r_squared=metrics.get("price_adj_r_squared"),
     )
+    enriched = blank_unidentified_effects(enriched, model.model.exog, list(model.params.index))
     coefs = [RegressionCoeff(**row) for row in enriched]
     sig_count = count_significant_coefficients(coefs)
 
@@ -739,10 +769,13 @@ def predict_commercial_regression(
     vals: dict[str, float] = {"const": 1.0}
     vals.update(x_row.to_dict())
     x_df = pd.DataFrame([vals]).reindex(columns=model.params.index, fill_value=0.0)
+
+    from app.regression_sample_judge import identification_note, judge_exog, prediction_is_identified, provision_note
+
+    if not prediction_is_identified(model.model.exog, x_df.iloc[0].to_numpy()):
+        raise ValueError("이 조건은 계수가 한 값으로 정해지지 않아 예측하지 않습니다.")
     frame = model.get_prediction(x_df).summary_frame(alpha=0.05)
     row = frame.iloc[0]
-
-    from app.regression_sample_judge import identification_note, judge_exog, provision_note
 
     warnings = _extrapolation_warnings(meta, inputs)
     predict_verdict = judge_exog(model.model.exog)

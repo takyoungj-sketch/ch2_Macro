@@ -5,6 +5,8 @@ from __future__ import annotations
 import math
 from typing import Literal, Sequence
 
+from app.structure_labels import structure_display
+
 ModelType = Literal["log", "linear"]
 
 EQUATION_SIG_P = 0.1
@@ -143,6 +145,17 @@ def _unit_suffix(name: str) -> str:
     return ""
 
 
+def _named_contrast(label: str) -> str:
+    """층 라벨의 '(10층 대비)'만 효과 문장에 쓴다. 일반 더미는 기준 대비다."""
+    text = str(label).strip()
+    if not text.endswith(")") or "(" not in text:
+        return "기준 대비"
+    phrase = text[text.rfind("(") + 1:-1].strip()
+    if phrase in {"기준 대비", "최다 반기 대비"} or not phrase.endswith("대비"):
+        return "기준 대비"
+    return phrase
+
+
 def _coef_attr(c, attr: str, default=None):
     if isinstance(c, dict):
         return c.get(attr, default)
@@ -158,10 +171,14 @@ def short_display_label(label: str) -> str:
     for suffix in (" (최다 반기 대비)", "(최다 반기 대비)"):
         if s.endswith(suffix):
             s = s[: -len(suffix)].strip()
+    structure = False
     for prefix in ("거래시점 ", "용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "):
         if s.startswith(prefix) and len(s) > len(prefix):
+            structure = prefix == "구조 "
             s = s[len(prefix):].strip()
             break
+    if structure:
+        s = structure_display(s)
     if s.startswith("층 ") and len(s) > 2:
         s = s[2:].strip()
     return s or label
@@ -239,6 +256,7 @@ def interpret_coefficient(
 
     unit = _unit_suffix(name)
     step = f"1{unit} " if unit else "1단위 "
+    contrast = _named_contrast(label)
 
     if model_type == "log":
         try:
@@ -247,11 +265,11 @@ def interpret_coefficient(
             return "역변환 값이 계산 범위를 넘어 효과를 표시하지 않습니다. 모형과 계수를 확인하세요."
         if _is_continuous(name):
             return f"{step}증가 시 {target_label} 약 {pct}"
-        return f"기준 대비 약 {pct}"
+        return f"{contrast} 약 {pct}"
 
     if _is_continuous(name):
         return f"{step}증가 시 {_fmt_manwon(coef, target_unit)}"
-    return f"기준 대비 {_fmt_manwon(coef, target_unit)}"
+    return f"{contrast} {_fmt_manwon(coef, target_unit)}"
 
 
 def enrich_regression_response(

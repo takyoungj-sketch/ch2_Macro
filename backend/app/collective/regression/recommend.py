@@ -48,6 +48,10 @@ def _fit_scales(y: pd.Series, x: pd.DataFrame) -> list[dict]:
             model = sm.OLS(y_fit, xv, missing="drop").fit()
         except Exception:
             continue
+        from app.regression_sample_judge import judge_exog
+
+        if judge_exog(model.model.exog).tier == "blocked":
+            continue
         pred = _insample_price_pred(model, xv, model_type)
         if not np.isfinite(pred).all():
             continue

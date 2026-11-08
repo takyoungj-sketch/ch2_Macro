@@ -42,6 +42,10 @@ def unordered_connection(monkeypatch):
     state = {"order": np.arange(len(rows)), "count": len(rows)}
 
     def execute(*args, **kwargs):
+        statement = args[0] if args else ""
+        sql = str(getattr(statement, "text", statement))
+        if "information_schema.columns" in sql:
+            return SimpleNamespace(scalar=lambda: 1)
         result = [rows[int(i)].copy() for i in state["order"] if i < state["count"]]
         return SimpleNamespace(mappings=lambda: SimpleNamespace(all=lambda: result))
 
@@ -200,3 +204,90 @@ def test_regression_recommendations_and_prediction_ignore_row_order(
         if baseline is None:
             baseline = actual
         assert actual == baseline
+
+
+def _synthetic_region(n=64):
+    import pandas as pd
+    rng = np.random.default_rng(22)
+    work = pd.DataFrame({
+        "building_key": [f"b{i}" for i in range(n)],
+        "asset_type": ["apartment" if i % 2 else "officetel" for i in range(n)],
+        "match_tier": ["A"] * n,
+        "match_rule": [""] * n,
+        "n_tx": [10] * n,
+        "households": rng.uniform(100, 1000, n),
+        "max_floor": rng.uniform(5, 30, n),
+        "building_age": rng.uniform(0, 30, n),
+        "parking_per_household": rng.uniform(0.5, 2, n),
+        "assessed_land_price": rng.uniform(100000, 1000000, n),
+        "structure_group": ["RC" if i % 2 else "SRC" for i in range(n)],
+        "builder_group": ["A"] * n,
+        "addr1": ["서울특별시"] * n,
+        "addr2": ["강남구"] * n,
+        "addr3": ["삼성동"] * n,
+        "addr4": [""] * n,
+    })
+    work["median"] = (
+        300 + work.households * 0.5 + work.assessed_land_price * 0.0002
+        + (work.structure_group == "SRC") * 50 + rng.normal(0, 5, n)
+    )
+    return work
+
+
+def test_missing_core_fit_does_not_publish_a_core_delta():
+    work = _synthetic_region()
+    train, hold = engine._split_hold(work.index)
+    variables = RegionalRegressionVariables(
+        households=False, max_floor=False, building_age=False, parking=False,
+        asset_type_dummy=False, structure=True, assessed_land_price=True,
+    )
+    blocks = engine._block_contrib(work, train, hold, variables, "linear", "equal")
+    assert blocks
+    assert all(block.delta_mape_vs_core is None for block in blocks)
+    assert all("핵심 블록 대비" not in (block.note or "") for block in blocks)
+
+
+def test_partial_validation_stays_limited_in_extension_and_ranks_after_available():
+    from unittest.mock import patch
+    work = _synthetic_region()
+    train, hold = engine._split_hold(work.index)
+    work.loc[hold[:1], "asset_type"] = "rowhouse"
+    req = RegionalRegressionRunRequest(
+        addr1="서울특별시", addr2="강남구",
+        variables=RegionalRegressionVariables(
+            households=True, max_floor=False, building_age=False, parking=False, asset_type_dummy=True,
+        ),
+        region_addrs=["서울특별시|강남구|삼성동"],
+        evaluation_region_addrs=["서울특별시|강남구|삼성동"],
+    )
+    comparison = engine._extension_comparison(work, req)
+    assert comparison.status == "partial"
+    assert comparison.mape_before is not None and comparison.mape_after is not None
+    assert comparison.reason
+    with patch(
+        "app.collective.regression.recommend.iter_block_subsets",
+        return_value=[["households"], ["households", "asset_type_dummy"]],
+    ):
+        candidates = engine.suggest_regional_regression(work, req, unified=True)
+    predictive = [row for row in candidates if row.purpose == "predictive"]
+    assert predictive[0].validation is not None and predictive[0].validation.status == "available"
+    partials = [row for row in predictive if row.validation and row.validation.status == "partial"]
+    available = [row for row in predictive if row.validation and row.validation.status == "available"]
+    assert available and partials
+    assert max(row.rank for row in available) < min(row.rank for row in partials)
+
+
+@pytest.mark.parametrize("max_floor", [0, -1])
+def test_regional_prediction_rejects_nonpositive_max_floor(unordered_connection, max_floor):
+    conn, _ = unordered_connection
+    with pytest.raises(ValueError, match="최고층"):
+        engine.predict_regional(conn, request(), RegionalRegressionPredictInputs(
+            households=220, max_floor=max_floor, building_age=10, asset_type="apartment"))
+
+
+def test_regional_prediction_keeps_zero_parking(unordered_connection):
+    conn, _ = unordered_connection
+    req = request().model_copy(update={"variables": RegionalRegressionVariables(parking=True)})
+    result = engine.predict_regional(conn, req, RegionalRegressionPredictInputs(
+        households=220, max_floor=15, building_age=10, parking_per_household=0, asset_type="apartment"))
+    assert result["y_hat"] > 0

@@ -965,9 +965,10 @@ export default function RegionalRegressionModal(props: Props) {
             <SampleFunnel sample={data.sample} />
             {data.extension_comparison && <section className="rounded border border-slate-200 dark:border-slate-600 p-3 space-y-1 text-xs">
               <p className="font-semibold">기존 지역의 같은 단지로 확장 전후 비교</p>
-              {data.extension_comparison.status === "available" ? <>
+              {data.extension_comparison.status === "available" || data.extension_comparison.status === "partial" ? <>
                 <p>검증 {data.extension_comparison.evaluation_n}곳 · 확장 전 학습 {data.extension_comparison.fit_before_n}곳 · 확장 후 학습 {data.extension_comparison.fit_after_n}곳</p>
                 <p>선정용 검증 MAPE: 확장 전 {fmt(data.extension_comparison.mape_before, 1)}% → 확장 후 {fmt(data.extension_comparison.mape_after, 1)}%</p>
+                {data.extension_comparison.status === "partial" && data.extension_comparison.reason && <p className="text-amber-800 dark:text-amber-300">{data.extension_comparison.reason}</p>}
                 <p className="text-slate-500 dark:text-slate-400">양쪽 모두 같은 검증 단지를 학습에서 제외한 별도 비교입니다. 아래 전체 범위 모형의 분할과 다르며, 확장 선택에 참고하는 수치로 독립 확인 결과는 아닙니다.</p>
               </> : <p>{data.extension_comparison.reason ?? "동일 대상 비교를 제공하지 않습니다."}</p>}
             </section>}

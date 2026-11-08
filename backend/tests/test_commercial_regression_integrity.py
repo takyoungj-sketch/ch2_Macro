@@ -157,6 +157,52 @@ def test_single_road_routes_forward_date_bounds_and_order(endpoint, monkeypatch)
     assert "ORDER BY id" in str(db.execute.call_args.args[0])
 
 
+def test_single_floor_index_forwards_rolling_dates(monkeypatch):
+    seen = {}
+
+    def where(**kwargs):
+        seen.update(kwargs)
+        return "TRUE", {"cluster_key": "road"}
+
+    monkeypatch.setattr(router, "_tx_where", where)
+    monkeypatch.setattr(router, "_cluster_display_label", lambda *args: "도로")
+    monkeypatch.setattr(
+        router,
+        "evaluate_analysis_gates",
+        lambda *args, **kwargs: SimpleNamespace(
+            floor_index_eligible=True,
+            regression_eligible=True,
+            count_total=80,
+            count_recent=80,
+            messages=[],
+        ),
+    )
+    monkeypatch.setattr(
+        router,
+        "compute_residential_floor_index_regression",
+        lambda *args, **kwargs: {
+            "dimension": "floor",
+            "method": "reference_only",
+            "floor_mode": "shop",
+            "reference_floor": "1층",
+            "controls": [],
+            "n_total": 80,
+            "cells": [],
+            "warnings": [],
+        },
+    )
+    db = MagicMock()
+    db.execute.return_value.mappings.return_value.all.return_value = sample().to_dict("records")
+    router.cluster_floor_index(
+        "road",
+        db,
+        contract_date_from=date(2021, 10, 1),
+        contract_date_to=date(2026, 9, 30),
+    )
+    assert seen["contract_date_from"] == date(2021, 10, 1)
+    assert seen["contract_date_to"] == date(2026, 9, 30)
+
+
 def test_date_filter_uses_exact_bounds():
     where, params = router._tx_where(contract_date_from=date(2021, 10, 1), contract_date_to=date(2026, 9, 30))
     assert "contract_date" in where

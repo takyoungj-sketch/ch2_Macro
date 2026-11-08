@@ -147,9 +147,10 @@ class RegionalModelCandidate(BaseModel):
 
 
 class RegionalExtensionComparison(BaseModel):
-    status: Literal["available", "unavailable"]
+    status: Literal["available", "partial", "unavailable"]
     reason: Optional[str] = None
     evaluation_n: int = 0
+    evaluation_by_type: dict[str, int] = Field(default_factory=dict)
     fit_before_n: int = 0
     fit_after_n: int = 0
     mape_before: Optional[float] = None
