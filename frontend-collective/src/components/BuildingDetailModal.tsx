@@ -213,6 +213,27 @@ function DanjiLandPriceRow({
   );
 }
 
+function AttributeSourceHelp() {
+  return (
+    <AnalysisHelpPanel
+      className="ml-1 h-4 w-4 text-[10px]"
+      title="속성 출처"
+      hideMetadata
+      explain={{
+        spec_id: "collective.attribute_source",
+        spec_version: "1",
+        title: "속성 출처",
+        summary:
+          "1차는 K-apt에서 구하고, 없는 값은 인터넷에서 구했습니다. 인터넷 값의 정확성은 보장하지 못합니다.",
+        interpretation: [],
+        limitations: [],
+        interpretation_hints: [],
+        presets: [],
+      }}
+    />
+  );
+}
+
 function DanjiAttributesPanel({
   data,
   assetType,
@@ -236,6 +257,7 @@ function DanjiAttributesPanel({
     >
       <p>
         <span className="font-semibold">{data.source_label}</span>
+        <AttributeSourceHelp />
         <span> · 매칭 {match.tier_label}</span>
         <span>
           {" "}
@@ -248,7 +270,8 @@ function DanjiAttributesPanel({
         <p>
           표제부 {danjiNumber(scale?.dong_count)}동 합산 · 사용승인{" "}
           {danjiNumber(match.approved_year)}년 · 실거래 건축 {danjiNumber(match.building_year)}년
-          {match.year_diff != null ? ` (차이 ${match.year_diff}년)` : ""} · 시공사 없음
+          {match.year_diff != null ? ` (차이 ${match.year_diff}년)` : ""}
+          {builder?.raw ? "" : " · 시공사 없음"}
         </p>
       )}
       {data.matched && match.tier !== "T" && (
@@ -344,7 +367,7 @@ function DanjiAttributesPanel({
         <table className="w-full text-xs border-collapse modal-inner-table">
           <tbody>
             <tr>
-              <th className={DANJI_TH}>{match.tier === "T" ? "시공사 원문" : "시공사 원문 (K-apt)"}</th>
+              <th className={DANJI_TH}>시공사</th>
               <td className={DANJI_TD}>{danjiText(builder?.raw)}</td>
             </tr>
             <tr>
