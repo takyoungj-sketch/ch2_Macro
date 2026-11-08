@@ -29,7 +29,7 @@ export type RecommendStagePanelProps = {
   researchPredictActiveLabel?: string | null;
   regionNameByCode?: Record<string, string>;
   onRunTwin?: () => void;
-  twinChoices?: { code: string; rank: number; label: string }[];
+  twinChoices?: { code: string; rank: number; label: string; similarityScore?: number | null }[];
   checkedTwinCodes?: string[];
   resultTwinCodes?: string[];
   twinSelectionChanged?: boolean;

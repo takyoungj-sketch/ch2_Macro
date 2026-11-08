@@ -14,7 +14,7 @@ import { fetchProfileTwinNeighbors, runRegression, twinProfileForBuiltAsset } fr
 import { buildBuiltRecommendContext } from "../api/aiClient";
 import { BUILT_RECOMMEND_HELP } from "../utils/builtAnalysisHelp";
 import type { ProfileLinkTarget } from "../utils/profileLink";
-import { mapProfileTwinNeighbors, resolveTwinAnchorFromRequest } from "../utils/profileLink";
+import { mapProfileTwinNeighbors, resolveTwinAnchorFromRequest, profileTwinFullName } from "../utils/profileLink";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
@@ -127,7 +127,7 @@ export default function RecommendationModal({
     const map: Record<string, string> = {};
     for (const n of twinQ.data?.neighbors ?? []) {
       const code = (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim();
-      const name = n.twin_beopjungri_name || n.twin_eupmyeondong_name || n.twin_sigungu_name;
+      const name = profileTwinFullName(n);
       if (code && name) map[code] = name;
     }
     return map;
@@ -138,8 +138,8 @@ export default function RecommendationModal({
       (twinQ.data?.neighbors ?? [])
         .map((n) => {
           const code = (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim();
-          const name = n.twin_beopjungri_name || n.twin_eupmyeondong_name || n.twin_sigungu_name || code;
-          return { code, rank: n.rank, label: name };
+          const name = profileTwinFullName(n) || "지역명 미제공";
+          return { code, rank: n.rank, label: name, similarityScore: n.similarity_score };
         })
         .filter((row) => row.code),
     [twinQ.data],

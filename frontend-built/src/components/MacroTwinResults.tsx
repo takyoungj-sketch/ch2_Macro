@@ -12,6 +12,16 @@ const blocks = (names: string[]) => names.map(n => BLOCKS[n] ?? "추가 변수")
 const value = (v?: number | null, digits = 2, unit = "") => v != null && Number.isFinite(v) ? `${v.toLocaleString("ko-KR", { minimumFractionDigits: digits, maximumFractionDigits: digits })}${unit}` : "—";
 
 const TwinHelpContent = createReadableHelpContent(() => undefined);
+function TwinRegionHelp() {
+  const explain: AnalysisExplain = {
+    spec_id: "built_twin_regions_ui", spec_version: "1", title: "쌍둥이 지역과 유사도",
+    summary: "쌍둥이 지역은 선택 지역과 특성이 비슷한 지역을 지역프로필에서 찾은 추가 분석 후보입니다. 반드시 인접한 지역은 아닙니다.",
+    interpretation: ["지역프로필에서 제공한 순위와 유사도를 그대로 표시합니다. 유사도는 지역 특성의 비슷한 정도이며, 거래가격이나 회귀모형의 정확도를 뜻하지 않습니다.", "체크한 지역은 다음 확장 실행에 요청할 후보입니다. 실제 모형에 포함된 지역은 Twin1·Twin2 결과에서 확인해 주세요.", "Twin1은 지역을 추가해 기존 식을 다시 적합하고, Twin2는 확장 표본에서 변수 조합을 다시 탐색합니다."],
+    limitations: ["유사도가 높아도 확장으로 예측 성능이 좋아진다고 보장할 수 없습니다. 적합 표본과 검증 결과를 함께 확인해 주세요."],
+    interpretation_hints: [], presets: [],
+  };
+  return <AnalysisHelpPanel explain={explain} />;
+}
 function TwinHelp() {
   const explain: AnalysisExplain = {
     spec_id: "built_twin_comparison_ui", spec_version: "1", title: "쌍둥이 확장 비교 기준",
@@ -73,26 +83,14 @@ export default function MacroTwinResults(props: RecommendStagePanelProps & { onO
     </details>;
   }
   return <div role="tabpanel" aria-label="쌍둥이 확장 결과" className="space-y-4 pt-3">
-    <section className="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-950/20">
-      <div className="flex items-center gap-2"><h3 className="text-base font-semibold">Local·Twin1·Twin2 비교</h3><TwinHelp /></div>
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"><table className="w-full min-w-[560px] text-sm">
-        <thead className="bg-slate-100 dark:bg-slate-900"><tr><th className="px-3 py-2 text-left font-medium">지표</th>{modelValues.map(m => <th key={m.title} className="px-3 py-2 text-center font-semibold">{m.title}</th>)}</tr></thead>
-        <tbody className="bg-white/60 dark:bg-slate-900/40">
-          {([ ["상태", (m: typeof modelValues[number]) => m.status], ["적합 표본 수", (m: typeof modelValues[number]) => value(m.n, 0)], ["조정 R²", (m: typeof modelValues[number]) => value(m.adj, 3)], ["탐색 CV-MAPE", (m: typeof modelValues[number]) => value(m.search, 2, "%")], ["확인 CV-MAPE", (m: typeof modelValues[number]) => value(m.confirm, 2, "%")], ["척도", (m: typeof modelValues[number]) => m.scale ? formatResponseScale(m.scale) : "—"] ] as const).map(([label, display]) => <tr key={label} className="border-t border-slate-200 dark:border-slate-700"><th className="px-3 py-2 text-left font-medium">{label}</th>{modelValues.map(m => <td key={m.title} className="px-3 py-2 text-center tabular-nums">{display(m)}</td>)}</tr>)}
-        </tbody>
-      </table></div>
-      <p className="text-sm text-slate-600 dark:text-slate-300">모형별 표본과 검증 조건이 다를 수 있습니다. 수치만으로 성능 우열을 판단하지 마세요.</p>
-      {stage1.representative_confirmed === false && <p className="text-sm text-amber-800 dark:text-amber-300">Local은 탐색 1위 후보입니다. 대표 예측모형은 미확정입니다.</p>}
-      {stage2?.research_ran && <p className="text-sm text-amber-800 dark:text-amber-300">Twin2 탐색 오차는 독립적인 확인 검증 결과가 아닙니다.</p>}
-      {minePrimary && <details className="text-sm"><summary className="cursor-pointer font-medium">기본회귀 결과도 확인하기</summary><p className="mt-2 leading-relaxed">{formatResponseScale(mineScale)} · 적합 {value(minePrimary.n, 0)}건 · 조정 R² {value(minePrimary.adj_r_squared, 3)} · 학습 MAPE {value(minePrimary.mape, 2, "%")}</p><p className="mt-1 text-slate-500 dark:text-slate-400">기본회귀와 확장 모형은 분석 조건과 평가 표본이 다를 수 있습니다.</p></details>}
-    </section>
     <Card title="추가 지역" status={`${checkedTwinCodes.length}개 선택`} description="다음 실행에 추가할 지역을 선택합니다.">
+      <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300">쌍둥이 지역과 유사도<TwinRegionHelp /></div>
       <div className="space-y-1 text-sm"><p><strong>현재 선택</strong> · {currentRegions}</p><p className="text-slate-500 dark:text-slate-400"><strong>마지막 완료 결과의 선택</strong> · {requestedRegions}</p></div>
       {twinSelectionChanged && <p role="status" className="text-sm text-amber-800 dark:text-amber-300">설정이 변경됐습니다. 아래 결과는 마지막 실행 기준이며, 다시 실행해야 새 선택이 반영됩니다.</p>}
       {twinCandidateStatus === "loading" && <p role="status" className="text-sm">유사 지역 후보를 불러오는 중입니다.</p>}
       {twinCandidateStatus === "none" && <p className="text-sm">현재 분석 범위에서는 추가할 쌍둥이 지역 후보를 제공하지 않습니다.</p>}
-      {twinChoices.length > 0 && <details className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><summary className="cursor-pointer text-sm font-medium">추가 지역 선택표 · 후보 {twinChoices.length}개</summary>
-        <div className="mt-3 overflow-x-auto"><table className="w-full text-sm"><thead><tr>{["선택", "순위", "지역"].map(t => <th key={t} className="px-3 py-2 text-left font-medium">{t}</th>)}</tr></thead><tbody>{twinChoices.map(row => <tr key={row.code} className="border-t border-slate-200 dark:border-slate-700"><td className="px-3 py-2"><input type="checkbox" checked={checkedTwinCodes.includes(row.code)} onChange={() => onToggleTwinCode?.(row.code)} disabled={busy} aria-label={`${row.rank}위 ${row.label}`} /></td><td className="px-3 py-2 tabular-nums">{row.rank}</td><td className="px-3 py-2">{row.label}</td></tr>)}</tbody></table></div>
+      {twinChoices.length > 0 && <details open className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><summary className="cursor-pointer text-sm font-medium">추가 지역 선택표 · 후보 {twinChoices.length}개</summary>
+        <div className="mt-3 overflow-x-auto"><table className="w-full text-sm"><thead><tr>{["선택", "순위", "지역", "유사도"].map(t => <th key={t} className="px-3 py-2 text-left font-medium">{t}</th>)}</tr></thead><tbody>{twinChoices.map(row => <tr key={row.code} className="border-t border-slate-200 dark:border-slate-700"><td className="px-3 py-2"><input type="checkbox" checked={checkedTwinCodes.includes(row.code)} onChange={() => onToggleTwinCode?.(row.code)} disabled={busy} aria-label={`${row.rank}위 ${row.label}`} /></td><td className="px-3 py-2 tabular-nums">{row.rank}</td><td className="px-3 py-2 whitespace-normal break-words">{row.label}</td><td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{row.similarityScore != null && Number.isFinite(row.similarityScore) ? value(row.similarityScore * 100, 1, "%") : "—"}</td></tr>)}</tbody></table></div>
       </details>}
       <button type="button" className="btn btn-primary text-sm" disabled={!canRun || twinRunning} onClick={onRunTwin}>{twinRunning ? "Twin1 계산 중…" : "Twin1 통합회귀 실행"}</button>
     </Card>
@@ -133,6 +131,20 @@ export default function MacroTwinResults(props: RecommendStagePanelProps & { onO
       {stage1.provision_notes?.map(note => <p key={note}>{note}</p>)}
       {data.termination.reasons.map((reason, index) => <p key={index}>{reason}</p>)}
     </div></details>
+    <details className="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-950/20">
+      <summary className="cursor-pointer text-base font-semibold">Local·Twin1·Twin2 비교</summary>
+      <div className="flex items-center gap-2 text-sm">비교 기준<TwinHelp /></div>
+      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"><table className="w-full min-w-[560px] text-sm">
+        <thead className="bg-slate-100 dark:bg-slate-900"><tr><th className="px-3 py-2 text-left font-medium">지표</th>{modelValues.map(m => <th key={m.title} className="px-3 py-2 text-center font-semibold">{m.title}</th>)}</tr></thead>
+        <tbody className="bg-white/60 dark:bg-slate-900/40">
+          {([ ["상태", (m: typeof modelValues[number]) => m.status], ["적합 표본 수", (m: typeof modelValues[number]) => value(m.n, 0)], ["조정 R²", (m: typeof modelValues[number]) => value(m.adj, 3)], ["탐색 CV-MAPE", (m: typeof modelValues[number]) => value(m.search, 2, "%")], ["확인 CV-MAPE", (m: typeof modelValues[number]) => value(m.confirm, 2, "%")], ["척도", (m: typeof modelValues[number]) => m.scale ? formatResponseScale(m.scale) : "—"] ] as const).map(([label, display]) => <tr key={label} className="border-t border-slate-200 dark:border-slate-700"><th className="px-3 py-2 text-left font-medium">{label}</th>{modelValues.map(m => <td key={m.title} className="px-3 py-2 text-center tabular-nums">{display(m)}</td>)}</tr>)}
+        </tbody>
+      </table></div>
+      <p className="text-sm text-slate-600 dark:text-slate-300">모형별 표본과 검증 조건이 다를 수 있습니다. 수치만으로 성능 우열을 판단하지 마세요.</p>
+      {stage1.representative_confirmed === false && <p className="text-sm text-amber-800 dark:text-amber-300">Local은 탐색 1위 후보입니다. 대표 예측모형은 미확정입니다.</p>}
+      {stage2?.research_ran && <p className="text-sm text-amber-800 dark:text-amber-300">Twin2 탐색 오차는 독립적인 확인 검증 결과가 아닙니다.</p>}
+      {minePrimary && <details className="text-sm"><summary className="cursor-pointer font-medium">기본회귀 결과도 확인하기</summary><p className="mt-2 leading-relaxed">{formatResponseScale(mineScale)} · 적합 {value(minePrimary.n, 0)}건 · 조정 R² {value(minePrimary.adj_r_squared, 3)} · 학습 MAPE {value(minePrimary.mape, 2, "%")}</p><p className="mt-1 text-slate-500 dark:text-slate-400">기본회귀와 확장 모형은 분석 조건과 평가 표본이 다를 수 있습니다.</p></details>}
+    </details>
   </div>;
 }
 
