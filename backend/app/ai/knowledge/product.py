@@ -755,7 +755,13 @@ def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
     elif key == "land":
         parts.append(
             "land: 용도지역×지목 매트릭스 셀 회귀·장기추세·유료 필지 분석. "
-            "셀별 n·Adj R²·모델(log/선형)은 Bundle facts만 인용."
+            "셀별 n·Adj R²·모델(log/선형)은 Bundle facts만 인용.\n"
+            "land 이상치 제외(IQR): 칸별 단가에 Tukey 울타리를 쓴다. 하한 Q1-k×IQR, 상한 Q3+k×IQR 밖을 뺀다. "
+            "k=1.5는 더 많이, k=3은 더 적게 잘라낸다. 저가 임야처럼 낮은 단가가 몰리고 오른쪽 꼬리가 긴 분포에서는 "
+            "하한이 0 이하(음수)가 되기 쉬워 저가 거래는 거의 잘리지 않고 사실상 비싼 쪽만 잘린다. "
+            "그래서 이런 지역에서 k를 바꾸면 주로 고가 거래가 얼마나 남는지가 달라진다. "
+            "k=1.5는 고가를 더 많이 빼서 평균을 낮추고, k=3은 고가를 더 남긴다. "
+            "'k=3이 저가 거래를 보존한다'는 설명은 이런 분포에서는 맞지 않는다."
         )
     elif key == "collective":
         parts.append(format_function_cards(app="collective"))

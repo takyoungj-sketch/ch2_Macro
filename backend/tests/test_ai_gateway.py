@@ -1117,3 +1117,13 @@ def test_rate_limit_keys_logged_in_user_by_id(monkeypatch):
     monkeypatch.setattr("app.platform.jwt_util.decode_access_token", lambda token: {"sub": "42"})
     req = _fake_request({"Authorization": "Bearer t", "X-Real-IP": "198.51.100.7"}, "127.0.0.1")
     assert _client_key(req) == "user:42"
+
+
+def test_account_usage_accepts_qa_token(_gate_client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "qa_audit_token", "secret-token")
+    monkeypatch.setattr(settings, "ai_subscription_quota_enabled", False)
+    assert _gate_client.get("/api/admin/ai-usage/accounts").status_code in (401, 403)
+    ok = _gate_client.get("/api/admin/ai-usage/accounts", headers={"X-Qa-Audit-Token": "secret-token"})
+    assert ok.status_code == 200 and ok.json()["enabled"] is False

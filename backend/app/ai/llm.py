@@ -169,7 +169,12 @@ def _openai_chat(
     }
     if json_response:
         body["response_format"] = {"type": "json_object"}
-    body["max_completion_tokens" if model.lower().startswith(("gpt-5", "o1", "o3", "o4")) else "max_tokens"] = settings.ai_max_output_tokens
+    reasoning_model = model.lower().startswith(("gpt-5", "o1", "o3", "o4"))
+    body["max_completion_tokens" if reasoning_model else "max_tokens"] = settings.ai_max_output_tokens
+    effort = (getattr(settings, "ai_reasoning_effort", "") or "").strip().lower()
+    if reasoning_model and effort in ("minimal", "low", "medium", "high"):
+        # 2026-11-10 측정: 출력 토큰 대부분이 숨은 추론이고 지연이 그에 비례한다.
+        body["reasoning_effort"] = effort
     # gpt-5* 계열은 temperature 커스텀 미지원 (default 1만 허용)
     if not model.lower().startswith("gpt-5"):
         body["temperature"] = temperature

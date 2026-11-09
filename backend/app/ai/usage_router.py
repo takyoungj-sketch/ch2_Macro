@@ -19,9 +19,8 @@ def account_usage(request: Request):
     from app.ai import allowances as q
     from app.platform.db import get_platform_engine
     from sqlalchemy import select, func
-    user = q.request_user(request)
-    if user is None or user.role != "admin":
-        raise HTTPException(403, "관리자만 이용할 수 있습니다.")
+    # 관리자 세션 또는 설정된 QA 토큰(랩 화면). 다른 관리자 API와 같은 기준.
+    require_admin_access(request)
     if not settings.ai_subscription_quota_enabled:
         return {"enabled": False, "balances": [], "costs": []}
     engine = get_platform_engine()

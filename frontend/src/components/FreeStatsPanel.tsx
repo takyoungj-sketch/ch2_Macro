@@ -428,6 +428,11 @@ export default function FreeStatsPanel() {
         filterRequest={trendRequest}
         aiRegionLabel={aiRegion.label || data.beopjungri_name}
         aiAsOfMonth={data.as_of_month}
+        aiCellStats={
+          (data.matrix ?? []).find(
+            (cell) => cell.zone_type === trendModal?.zoneType && cell.land_category === trendModal?.landCategory,
+          )?.stats ?? null
+        }
       />
     </div>
   );

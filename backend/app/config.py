@@ -99,6 +99,8 @@ class Settings(BaseSettings):
     #: Enable only after db/077_platform_ai_allowances.sql and client rollout.
     ai_subscription_quota_enabled: bool = Field(default=False, validation_alias="AI_SUBSCRIPTION_QUOTA_ENABLED")
     ai_max_output_tokens: int = Field(default=8000, ge=512, le=16000, validation_alias="AI_MAX_OUTPUT_TOKENS")
+    #: gpt-5·o 계열 추론 강도(minimal|low|medium|high). 비우면 모델 기본값(medium).
+    ai_reasoning_effort: str = Field(default="low", validation_alias="AI_REASONING_EFFORT")
     ai_paid_emergency_stop: bool = Field(default=False, validation_alias="AI_PAID_EMERGENCY_STOP")
     #: AI2 프로토콜 랩(`/api/lab/ai2/*`). 운영 기본 비활성. 켜도 관리자 전용.
     ai2_lab_enabled: bool = Field(default=False, validation_alias="AI2_LAB_ENABLED")

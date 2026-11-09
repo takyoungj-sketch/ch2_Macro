@@ -108,6 +108,8 @@ export function buildLandMatrixTrendContext(
     isRolling?: boolean;
     asOfMonth?: string | null;
     scope?: LandAiScopeInput;
+    /** 그 칸의 분석 기간 전체 통계(매트릭스 칸 값). 대표값·면적 곱 계산의 기준. */
+    cellStats?: StatsResult | null;
   },
 ): AiContextPayload {
   return {
@@ -123,6 +125,7 @@ export function buildLandMatrixTrendContext(
       period_kind: opts.isRolling ? "rolling" : "calendar",
       zone_type: opts.zoneType,
       land_category: opts.landCategory,
+      cell_total: opts.cellStats ? cellStats(opts.cellStats) : null,
       reliable_min_n: LAND_RELIABLE_MIN_N,
     },
   };

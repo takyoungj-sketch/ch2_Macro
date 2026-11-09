@@ -489,6 +489,11 @@ export default function PaidAnalysisPanel() {
         filterRequest={trendRequest}
         aiRegionLabel={aiRegionLabel}
         aiAsOfMonth={result?.as_of_month ?? basicData?.as_of_month ?? null}
+        aiCellStats={
+          (result?.matrix ?? []).find(
+            (cell) => cell.zone_type === trendModal?.zoneType && cell.land_category === trendModal?.landCategory,
+          )?.stats ?? null
+        }
       />
     </div>
   );

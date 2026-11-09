@@ -42,12 +42,13 @@ p값을 우연일 확률이나 귀무가설이 참일 확률로 말하지 마세
 단가와 총액, 통제한 관계와 실제 분포, 연관과 원인을 구분하세요. 가격·비용·수익을 서로 바꿔 부르지 마세요.
 단가가 면적과 반대로 움직이는 연관을 규모의 경제, 비용 절감, 수익, 인과와 같다고 말하지 마세요. 사용자가 그렇다고 하면 아니라고 말하고 차이를 설명하세요.
 지역회귀는 그 지역 단지의 기간 중앙단가 모형입니다. 열려 있는 화면이 거래 회귀이면 그 식과 섞지 말고, 지역회귀의 표본 수·계수·적합도를 만들지 마세요.
-사거나 팔라는 질문에는 그 결론을 낼 수 없다는 답만 하세요. 점검 목록, 다음 단계, 감정평가 안내는 붙이지 마세요.
+사거나 팔라는 질문에는 자료로 그 결론을 낼 수 없다고 먼저 말하고, 지금 화면 자료로 알 수 있는 것을 1~2문장 덧붙이세요. 점검 목록, 다음 단계, 감정평가 안내는 붙이지 마세요.
 원인을 물으면 일반적인 관계와 화면 추세를 함께 쓰되, 원인 설명은 '가설'이라고 밝히고 인과를 검증한 것처럼 말하지 마세요. 금리·정책·뉴스 같은 최신 외부 자료는 조회하지 않았으니 확인했다거나 발표됐다고 단정하지 마세요.
 현재 화면과 이전 결과는 sources의 별도 ID입니다. 섞지 마세요. 어느 쪽인지 정하기 어려울 때만 짧게 되묻으세요.
 화면의 실측 숫자는 {{current.f0}}처럼 제공된 참조만 쓰세요. 참조에 없는 관측 숫자와 차트 패턴은 만들지 마세요. 일반 통계의 상수와 예시는 화면에서 본 값처럼 쓰지 마세요. 사용자가 질문에 쓴 숫자는 그대로 써도 됩니다.
-{{current.f0}}은 '지표명 값'을 넣습니다. 문장에 지표명을 이미 썼으면 {{current.f0|value}}로 값과 단위만 넣으세요.
-계산은 직접 하지 마세요. 면적 곱하기 같은 산술이 필요하면 {{calc:current.f3*5000}}처럼 식을 쓰면 서버가 계산해 넣습니다. 식에는 참조, 질문에 나온 숫자, + - * /, 괄호만 씁니다. 가능하면 중앙값 하나보다 25%~75% 분위수 범위를 함께 계산하세요. 계산값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아니라고 밝히고, 접근성·경사·형상·이용상황 같은 개별요인에 따라 달라진다고 한 줄 붙이세요. 개별 부동산의 적정가격을 확정하는 표현은 쓰지 마세요.
+참조 {{current.f0}} 자리에는 값과 단위만 들어갑니다(예: 1.7만원/㎡, 50건). 지표명·연도·칸 이름은 문장에 직접 쓰세요. 지표명까지 넣고 싶을 때만 {{current.f0|label}}을 씁니다.
+sources.current의 facts가 비어 있으면 지금 화면의 통계가 AI에 전달되지 않은 것입니다. 그렇다고 말하고 숫자를 만들지 마세요. previous는 사용자가 앞선 분석을 가리킬 때만 쓰고, 쓸 때는 이전 분석의 값이라고 밝히세요.
+계산은 직접 하지 마세요. 면적 곱하기 같은 산술이 필요하면 {{calc:current.f3*5000}}처럼 식을 쓰면 서버가 계산해 넣습니다. 식에는 참조, 질문에 나온 숫자, + - * /, 괄호만 씁니다. 계산 기준은 칸 전체(분석 기간 전체)의 중앙값과 25%~75% 분위수를 기본으로 쓰세요. 특정 연도 값은 사용자가 그 연도를 물을 때만 쓰고, 부분 연도·소표본 값으로는 계산하지 마세요. 가능하면 중앙값 하나보다 25%~75% 분위수 범위를 함께 계산하세요. 계산값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아니라고 밝히고, 접근성·경사·형상·이용상황 같은 개별요인에 따라 달라진다고 한 줄 붙이세요. 개별 부동산의 적정가격을 확정하는 표현은 쓰지 마세요.
 간단히 물으면 간단히 답하세요. 해석·요약·비교를 요청하면 주요 특징, 해석상 주의점, 필요할 때 추가로 볼 비교 순서로 쓰세요. 숫자를 표처럼 모두 나열하지 말고 범위·최고·최저·변화 방향으로 요약하세요.
 notes에 부분 연도, 소표본(15건 미만), 넓은 신뢰구간이 있으면 해석할 때 반드시 언급하세요. 부분 연도나 소표본의 평균 차이를 가격 상승·하락으로 단정하지 마세요. 평균과 중앙값이 크게 다르면 분포가 한쪽으로 치우쳤다고 짚으세요.
 sources의 text_refs는 보고서 본문 출처입니다. 본문을 그대로 반복하지 말고 질문에 맞게 풀어 설명하세요. 본문 수치는 실제 기재된 값 그대로 쓰고 같은 문장 안의 마침표 앞에 해당 참조를 붙이세요. 본문 참조는 화면의 근거 패널에서 확인할 수 있으며 답변 본문에는 원문을 자동 삽입하지 않습니다. 수치형 참조는 기존처럼 숫자 자리에서 사용합니다.
@@ -63,7 +64,7 @@ refusal은 범위 밖 질문만입니다.
 
 # {{current.f3}} 은 '지표명 값', {{current.f3|value}} 는 값+단위만 넣는다.
 # calc.fN 은 서버가 {{calc:<식>}} 을 계산해 만든 내부 참조다(모델이 직접 쓰지 않는다).
-_REF = re.compile(r"\{\{((?:current|previous|base|calc)\.f\d+)(?:\|value)?\}\}")
+_REF = re.compile(r"\{\{((?:current|previous|base|calc)\.f\d+)(?:\|value|\|label)?\}\}")
 _CALC = re.compile(r"\{\{calc:([^{}]{1,200})\}\}")
 # 참조 없는 숫자가 이 표현과 같은 문장에 있으면 화면 관측을 주장한 것으로 본다.
 _OBSERVATION_MARKERS = (
@@ -73,12 +74,15 @@ _OBSERVATION_MARKERS = (
 # 가상 예시·조건문 표지. 단위 붙은 숫자라도 이 문장은 예시로 본다.
 _HYPOTHETICAL_MARKERS = ("예를 들어", "예컨대", "가령", "예시", "가상", "만약", "라면", "이라면", "가정", "이면", "경우")
 _DATA_UNIT = re.compile(r"\d\s*(?:건|만원|억|원|㎡|%|퍼센트)")
-_CAUTION_KEY = "적정가격이 아"
+# 모델이 이미 적정가격 주의를 썼으면 서버 문구를 다시 붙이지 않는다.
+_CAUTION_RE = re.compile(r"적정\s*가격|적정\s*가치|감정\s*평가\s*액")
 _CALC_CAUTION = ("이 값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아닙니다. "
                  "접근성·경사·형상·이용상황 같은 개별요인에 따라 실제 가격은 달라질 수 있습니다.")
 _UNRELATED = re.compile(r"(?:오늘\s*)?(?:저녁|점심)\s*메뉴\s*(?:추천해\s*줘|추천해주세요)|(?:오늘\s*)?날씨\s*(?:알려줘|알려주세요)")
 _UNOBSERVED = ("규모의 경제", "생산비용", "생산 비용", "인과")
 _AFFIRM = ("맞습니다", "맞아요", "맞네요", "맞는 말", "있다고 할 수", "관찰된다", "관찰됩니다", "일치합니다", "말할 수 있")
+# 사용자가 앞선 분석을 명시적으로 가리키는 표현.
+_ASKS_PREVIOUS = re.compile(r"아까|이전|앞서|앞의|방금|전에\s*(?:본|봤|분석)|지난\s*(?:분석|결과)|그\s*결과|그\s*분석")
 _FOLLOWUP = re.compile(r"^\s*(?:그럼|그렇다면|그러면|그런데|그렇다는)")
 _APP_WORDS = {
     "land": ("토지", "지목"),
@@ -285,11 +289,12 @@ def _land_matrix(result: ScreenEvidence, raw: dict, scope: Any) -> None:
         if len(zone) >= 2:
             result.observation_terms.append(zone)
         result.number(f"{label} 거래", cell.get("count"), "건")
-        for key, metric in (("mean", "평균"), ("median", "중앙값"), ("p25", "25% 분위"), ("p75", "75% 분위")):
+        for key, metric in (("mean", "평균"), ("median", "중앙값")):
             result.number(f"{label} 단가 {metric}", cell.get(key), "만원/㎡")
         if index < _LAND_DETAIL_CELLS:
-            for key, metric in (("min", "최소"), ("max", "최대"), ("ci_lower", "평균 95% 신뢰구간 하한"),
-                                ("ci_upper", "평균 95% 신뢰구간 상한")):
+            # 입력 크기 관리: 분위수·범위·신뢰구간은 거래 많은 상위 칸만 보낸다.
+            for key, metric in (("p25", "25% 분위"), ("p75", "75% 분위"), ("min", "최소"), ("max", "최대"),
+                                ("ci_lower", "평균 95% 신뢰구간 하한"), ("ci_upper", "평균 95% 신뢰구간 상한")):
                 result.number(f"{label} 단가 {metric}", cell.get(key), "만원/㎡")
         if cell.get("is_reliable") is False:
             small.append(label)
@@ -818,6 +823,16 @@ def _trend(result: ScreenEvidence, raw: dict) -> None:
         result.identifiers.extend([cell, str(raw["zone_type"]), str(raw["land_category"])])
         if len(str(raw["zone_type"])) >= 2:
             result.observation_terms.append(str(raw["zone_type"]))
+        total = raw.get("cell_total") if isinstance(raw.get("cell_total"), dict) else None
+        if total:
+            result.notes.append(
+                f"'{cell} 칸 전체' 값은 분석 기간 전체 기준이다. 칸의 대표값·면적 곱 계산에는 연도별 값보다 이 값을 먼저 쓴다."
+            )
+            result.number(f"{cell} 칸 전체 거래", total.get("count"), "건")
+            for key, name in (("mean", "평균"), ("median", "중앙값"), ("p25", "25% 분위"), ("p75", "75% 분위"),
+                              ("min", "최소"), ("max", "최대"), ("ci_lower", "평균 95% 신뢰구간 하한"),
+                              ("ci_upper", "평균 95% 신뢰구간 상한")):
+                result.number(f"{cell} 칸 전체 단가 {name}", total.get(key), "만원/㎡")
     for row in rows:
         period = str(row.get("chart_label") or row.get("year") or row.get("period_end") or "구간")[:80]
         if isinstance(row.get("year"), int) and not row.get("chart_label"):
@@ -1158,7 +1173,7 @@ def _render(draft: dict, sources: dict[str, ScreenEvidence], issues: list[str] |
         for unit in ("만원/㎡", "개월", "만원", "퍼센트", "㎡", "건", "개", "년", "%"):
             if fact.endswith(unit):
                 # 서버 삽입값에 이미 포함된 동일 단위의 중복만 정규화한다.
-                pattern = r"\{\{" + re.escape(ref) + r"(\|value)?\}\}\s*" + re.escape(unit)
+                pattern = r"\{\{" + re.escape(ref) + r"(\|value|\|label)?\}\}\s*" + re.escape(unit)
                 answer = re.sub(pattern, lambda m: "{{" + ref + (m.group(1) or "") + "}}", answer)
                 checked_units = re.sub(pattern, lambda m: "{{" + ref + (m.group(1) or "") + "}}", checked_units)
                 break
@@ -1192,8 +1207,9 @@ def _render(draft: dict, sources: dict[str, ScreenEvidence], issues: list[str] |
             label=f"{scope} · {fact}", ref=ref, confidence="medium",
         ))
         label = fact.rsplit(" ", 1)[0]
+        # {{ref|label}} 로 지표명까지 넣을 때만, 바로 앞에 모델이 쓴 같은 지표명을 지운다.
         answer = re.sub(
-            rf"(?<!\w){re.escape(label)}(?:은|는|이|가)?\s*(?:[=:])?\s*(?={re.escape('{{' + ref + '}}')})",
+            rf"(?<!\w){re.escape(label)}(?:은|는|이|가)?\s*(?:[=:])?\s*(?={re.escape('{{' + ref + '|label}}')})",
             "", answer,
         )
 
@@ -1202,21 +1218,29 @@ def _render(draft: dict, sources: dict[str, ScreenEvidence], issues: list[str] |
         index = int(match[1].rsplit("f", 1)[1])
         if index in sources[source].text_fact_ids:
             return ""  # Full prose stays in evidence, not repeated in the answer.
-        if source == "calc" or match.group(0).endswith("|value}}"):
-            return sources[source].values.get(index, fact.rsplit(" ", 1)[-1])
-        if source == "previous" or len(used) > 1:
-            scope = sources[source].context["scope"].get("region_label") or (
-                "이전 분석" if source == "previous" else "현재 화면"
-            )
+        value = sources[source].values.get(index, fact.rsplit(" ", 1)[-1])
+        if source == "calc":
+            return value
+        full = match.group(0).endswith("|label}}")
+        if source == "previous":
+            # 이전 분석 값은 항상 출처를 밝힌다(현재 화면 값으로 오인 방지).
+            scope = sources[source].context["scope"].get("region_label") or "선택 범위"
+            return f"{fact if full else value} (이전 분석 · {scope})"
+        if "previous" in used:
+            # 이전 분석과 함께 인용하면 현재 값에도 출처를 붙여 비교가 헷갈리지 않게 한다.
+            scope = sources[source].context["scope"].get("region_label") or "선택 범위"
+            return f"{fact if full else value} (현재 화면 · {scope})"
+        if full and len(used) > 1:
+            scope = sources[source].context["scope"].get("region_label") or "현재 화면"
             return f"{scope}의 {fact}"
-        return fact
+        return fact if full else value
 
     displayed = _REF.sub(insert, answer).strip()
     if any(int(ref.rsplit("f", 1)[1]) in sources[references[ref][0]].text_fact_ids for ref in ids):
         displayed = re.sub(r"[ \t]+([.,;:!?])", r"\1", displayed)
     if not displayed:
         return reject("empty_answer_after_references")
-    if calc_used and _CAUTION_KEY not in displayed:
+    if calc_used and not _CAUTION_RE.search(displayed):
         displayed += "\n\n" + _CALC_CAUTION
     return displayed, evidence, next(iter(used)) if len(used) == 1 else None
 
@@ -1345,7 +1369,11 @@ def _answer_land(req: AiChatRequest, session: AiSession, question: QuestionLog) 
     if _unrelated(req.message):
         question.validation = "refusal"
         return _refuse(session, req, current, "그 질문은 CH2와 통계 밖이라 답하지 않습니다.")
-    sources = _sources(req.message, current, session.dialogue_evidence)
+    previous = session.dialogue_evidence
+    if previous is not None and not current.facts and not _ASKS_PREVIOUS.search(req.message):
+        # 새로고침 등으로 지금 화면 통계가 비었는데 이전 분석 숫자로 답하지 않는다(T7).
+        previous = None
+    sources = _sources(req.message, current, previous)
     focus = current
     message = req.message.lower()
     apps = [app for app, names in _APP_WORDS.items() if any(name in message for name in names)]

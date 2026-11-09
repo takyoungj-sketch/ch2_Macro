@@ -21,6 +21,7 @@ import type {
   MatrixCellTransactionsResponse,
   MatrixYearlyRequest,
   MatrixYearlyStat,
+  StatsResult,
 } from "../types";
 import { parseApiError, parseApiErrorAsync } from "../utils/apiError";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
@@ -119,6 +120,8 @@ interface Props {
   aiRegionLabel?: string;
   /** 기준월(YYYY-MM-01). 만년력 추이에서 기준월이 속한 해를 부분 연도로 표시한다. */
   aiAsOfMonth?: string | null;
+  /** 이 칸의 분석 기간 전체 통계(매트릭스 칸 값) — AI 계산 기준 */
+  aiCellStats?: StatsResult | null;
 }
 
 type PanelMode = "trend" | "longTerm" | "histogram" | "transactions" | "regression";
@@ -180,6 +183,7 @@ export default function PaidMatrixYearlyModal({
   scopeNote,
   aiRegionLabel,
   aiAsOfMonth,
+  aiCellStats,
 }: Props) {
   const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
@@ -318,6 +322,7 @@ export default function PaidMatrixYearlyModal({
         metric: isRolling ? rollMetric : "mean",
         isRolling,
         asOfMonth: aiAsOfMonth ?? null,
+        cellStats: aiCellStats ?? null,
         scope: {
           regionLabel: aiScopeLabel,
           regionCodes: filterRequest?.region_codes ?? filterRequest?.region_selections?.map((unit) => unit.code) ?? null,
@@ -332,7 +337,7 @@ export default function PaidMatrixYearlyModal({
       return buildLandLongTermContext(ltData, { regionLabel: aiScopeLabel });
     }
     return null;
-  }, [panel, aiRegressionContext, sortedRows, ltData, aiScopeLabel, zoneType, landCategory, isRolling, rollMetric, aiAsOfMonth, filterRequest]);
+  }, [panel, aiRegressionContext, sortedRows, ltData, aiScopeLabel, zoneType, landCategory, isRolling, rollMetric, aiAsOfMonth, aiCellStats, filterRequest]);
 
   useEffect(() => {
     if (sortedRows.length === 0) return;

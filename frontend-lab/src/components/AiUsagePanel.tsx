@@ -11,15 +11,20 @@ export default function AiUsagePanel() {
     queryKey: ["ai-usage"],
     queryFn: () => fetchAiUsage(),
     refetchInterval: 15_000,
+    // 401/403 을 재시도하면 15초 가까이 "불러오는 중"으로 보인다.
+    retry: false,
   });
 
   if (q.isLoading) {
     return <p className="max-w-3xl mx-auto px-4 py-8 text-sm text-slate-500">불러오는 중…</p>;
   }
   if (q.error) {
+    const status = (q.error as { response?: { status?: number } }).response?.status;
     return (
       <p className="max-w-3xl mx-auto px-4 py-8 text-sm text-red-600">
-        사용량 API를 읽지 못했습니다. 백엔드가 켜져 있는지 확인하세요.
+        {status === 401 || status === 403
+          ? "관리자 인증이 필요합니다. QA 점검 패널에서 QA 토큰을 저장한 뒤 다시 열어 주세요."
+          : "사용량 API를 읽지 못했습니다. 백엔드가 켜져 있는지 확인하세요."}
       </p>
     );
   }
