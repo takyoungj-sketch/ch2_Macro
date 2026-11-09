@@ -344,7 +344,7 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 **Promote dump 호환 (2026-08-09):**
 
 - Windows PG18 **custom `-Fc` dump** → VPS 기본 `/usr/bin/pg_restore`(PG16) **실패** → `/usr/lib/postgresql/18/bin/pg_restore` 사용 또는 **plain SQL `.sql.gz`** ( `transaction_timeout` 등 PG18 전용 GUC 줄 제거 후 `psql` ).
-- 스크립트: `scripts/monthly/dump_land_for_promote.py` → `backups/land_stats_promote_{cycle}.sql.gz`
+- `py scripts/monthly/dump_land_for_promote.py --cycle-id 202608`은 `backups/land_stats_promote_202608.sql.gz`에 저장한다. 출력 경로를 바꾸려면 `--output`을 지정한다. 작업 ID는 파일명에 쓰이고 덤프 범위는 `land_stats` 전체다.
 - VPS: `deploy/scripts/promote_restore.sh` (PG18 bin·`as_of` 자동·pre-backup은 `/tmp` 경유)
 
 **2608 Promote 완료 (2026-08-09):** 로컬 검증 DB(`as_of=2026-07-01`, 7월 거래 17,985건) → VPS `land_stats` restore → `/health.latest_as_of_month=2026-07-01`.
@@ -373,7 +373,7 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 | 시도 건수 스냅샷 | `py scripts\monthly\snapshot_land_tx_counts.py --output clean_snapshots\{cycle}\land_tx_counts_after.json` |
 | 스냅샷 비교 | `py scripts\monthly\compare_count_snapshots.py --before … --after …` |
 | **Promote 게이트** | `py pipeline\verify_monthly_integrity.py --as-of YYYY-MM-01` |
-| **Promote dump** | `py scripts\monthly\dump_land_for_promote.py` → `backups\land_stats_promote_{cycle}.sql.gz` |
+| **Promote dump** | `py scripts\monthly\dump_land_for_promote.py --cycle-id YYYYMM` → `backups\land_stats_promote_{cycle}.sql.gz` |
 | xlsx 복구 (group 없음) | `py scripts\monthly\run_monthly_cycle.py --cycle-id YYYYMM` 후 §7.1 수동 |
 
 ---

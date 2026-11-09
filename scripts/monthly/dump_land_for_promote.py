@@ -1,38 +1,30 @@
-"""Stream pg_dump plain SQL, strip PG18-only GUC lines, gzip for VPS restore."""
-import gzip
-import os
-import subprocess
-import sys
+"""Dump the local land_stats database for a monthly promote cycle."""
+from __future__ import annotations
 
-OUT = "E:/ch2/ch2_Macro/backups/land_stats_promote_202608.sql.gz"
-PG_DUMP = r"C:\Program Files\PostgreSQL\18\bin\pg_dump.exe"
-SKIP_SUBSTRINGS = (
-    b"transaction_timeout",
-    b"\\restrict",
-    b"\\unrestrict",
-)
+import argparse
+from pathlib import Path
 
-env = os.environ.copy()
-# PGPASSWORD set by caller
+from cycle_utils import _validate_cycle_id
+from dump_db_for_promote import dump_database
 
-proc = subprocess.Popen(
-    [PG_DUMP, "-h", "localhost", "-U", "postgres", "-d", "land_stats", "-Fp", "--no-owner", "--no-acl"],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-)
-assert proc.stdout is not None
-written = 0
-with gzip.open(OUT, "wb", compresslevel=6) as gz:
-    for line in proc.stdout:
-        if any(s in line for s in SKIP_SUBSTRINGS):
-            continue
-        gz.write(line)
-        written += 1
-        if written % 500000 == 0:
-            print(f"lines={written}", flush=True)
-err = proc.stderr.read() if proc.stderr else b""
-rc = proc.wait()
-print(f"exit={rc} lines={written} out={OUT}")
-if rc != 0:
-    print(err.decode("utf-8", errors="replace")[:2000], file=sys.stderr)
-    sys.exit(rc)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="VPS 복원용 land_stats 전체 덤프")
+    parser.add_argument(
+        "--cycle-id", required=True, metavar="YYYYMM",
+        help="월간 작업 ID. 기본 파일명에 쓰이며 덤프 범위는 land_stats 전체입니다.",
+    )
+    parser.add_argument("-o", "--output", type=Path, help="출력 .sql.gz 경로")
+    args = parser.parse_args()
+    try:
+        _validate_cycle_id(args.cycle_id)
+    except ValueError as exc:
+        parser.error(str(exc))
+    output = args.output or REPO_ROOT / "backups" / f"land_stats_promote_{args.cycle_id}.sql.gz"
+    return dump_database("land_stats", output)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
