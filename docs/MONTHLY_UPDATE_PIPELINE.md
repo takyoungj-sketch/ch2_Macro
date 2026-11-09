@@ -174,7 +174,7 @@ python backend/scripts/clear_analysis_cache.py --with-base-cache
 Windows PG18 `-Fc` → VPS PG16 `pg_restore` 는 실패할 수 있다. **plain `sql.gz`** + `deploy/scripts/promote_restore.sh` (SOP §9.4).
 
 ```powershell
-py scripts/monthly/dump_land_for_promote.py
+py scripts/monthly/dump_land_for_promote.py --cycle-id 202608
 # VPS restore 후
 curl -sf https://macro.ch2data.com/api/  # 또는 VPS: curl http://127.0.0.1:8000/health
 ```
