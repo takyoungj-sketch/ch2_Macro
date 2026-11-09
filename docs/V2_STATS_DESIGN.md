@@ -39,7 +39,7 @@
 - **웹 UI “기준일” (표시 전용)**: 사용자가 “지금 몇 월 갱분인지” 직관적으로 보게 하기 위해, API 필드 **`stats_reference_date`** = **`as_of_month`의 다음 달 1일**을 내려준다.  
   - 예: `as_of_month = 2025-12-01` (12월 말까지 반영) → `stats_reference_date = 2026-01-01`.  
   - DB 키·집계 스냅샷은 여전히 `as_of_month`; 화면 강조는 `stats_reference_date`.
-- **웹 API 기본 `as_of_month`**: 쿼리/body에 생략 시 — (1) 환경변수 `STATS_V2_DEFAULT_AS_OF_MONTH` 가 있으면 그 값, (2) 없으면 **요청 시점** 기준 **직전 달 1일** (`default_as_of_month_for_service`). 파이프라인 `build_stats_v2.py` 의 env 미설정 기본과 동일 규칙이다.
+- **웹 API 기본 `as_of_month`**: 쿼리/body에서 생략하면 운영 고정값, 로컬 가정일 설정, 최신 월간 완료 기록 순으로 선택한다. 완료 기록이 없는 기존 DB에서는 요청 지역·창·축에 해당하는 최신 사전집계를 찾는다. 월간 스크립트는 기본·상위 사전집계의 3·5·7년 지목·지목군과 무결성 검증이 끝난 뒤 완료 기준월을 기록한다.
 - **확장**: 이후 사용자/관리자가 과거 `as_of_month`를 고르면, 동일 테이블에서 `WHERE as_of_month = ?` 로 조회하면 된다.
 
 ---

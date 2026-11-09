@@ -59,11 +59,11 @@ class Settings(BaseSettings):
     #: 값이 있으면 `X-Qa-Audit-Token` 필요. 공개 앱과 분리.
     qa_audit_token: str = Field(default="", validation_alias="QA_AUDIT_TOKEN")
 
-    #: 무료 V2 API: 요청에 as_of_month 없을 때. None 이면 요청 시점 기준 직전 달 1일(§3).
+    #: V2 API 운영 고정 기준월. None 이면 최신 완료 집계월을 사용한다.
     stats_v2_default_as_of_month: Optional[date] = Field(
         default=None,
         validation_alias="STATS_V2_DEFAULT_AS_OF_MONTH",
-        description="고정 시 우선. 미설정 시 동적 직전 달(as_of_month_for_service)",
+        description="고정 시 우선. 미설정 시 최신 완료 집계월",
     )
     #: 로컬·검증: «오늘» 대신 이 날짜로 직전 달 as_of_month 를 계산. 예: 2026-01-01 → 2025-12-01.
     #: stats_v2_default_as_of_month 가 있으면 그쪽이 우선(이 필드는 무시).

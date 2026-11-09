@@ -89,7 +89,8 @@ def _prepare_df(rows: list[dict], req: "LandRegressionRequest") -> tuple[pd.Data
     df["area_sqm"] = df["area_sqm"].astype(float)
     df["contract_year"] = df["contract_year"].astype(int)
 
-    if req.exclude_outliers_iqr:
+    # 셀 원장 조회에서 이미 단가 IQR을 적용했다면 같은 기준을 다시 계산하지 않는다.
+    if req.exclude_outliers_iqr and not req.exclude_outlier:
         px = df["unit_price_per_sqm"].values
         q1, q3 = np.percentile(px, 25), np.percentile(px, 75)
         iqr = q3 - q1

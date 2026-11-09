@@ -118,7 +118,7 @@ export function buildFreeStatsExplain(ctx: FreeStatsExplainContext): AnalysisExp
         id: "year-table",
         question: "연도별 표의 연도는?",
         answer:
-          "contract_date 가 속한 달력 연도입니다. 롤링 창 첫·끝 해는 1/1~12/31 전체가 아니라 창 경계에 맞게 잘릴 수 있습니다.",
+          "연도별 참고표는 각 달력 연도(1월~12월)를 요약합니다. 매트릭스는 선택한 롤링 구간의 시작일부터 종료일까지 집계하므로 양 끝 연도의 기간과 거래 건수가 다를 수 있습니다.",
       },
     ],
   };

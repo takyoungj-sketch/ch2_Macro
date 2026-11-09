@@ -20,9 +20,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db import get_db
 from app.jimok_group import display_land_key, matrix_mode_to_col_axis
+from app.land_stats_snapshot import preferred_land_stats_month
 from app.population_query import attach_population_year_end_for_upper_level
 from app.region_canonical import expand_to_ledger_codes, resolve_to_canonical
 from app.routers.free import _stats_dict_to_result
@@ -398,12 +398,26 @@ def _row_to_stats(r) -> StatsResult:
     )
 
 
-def _resolve_as_of(explicit: Optional[date]) -> date:
-    return (
-        explicit
-        or settings.stats_v2_default_as_of_month
-        or default_as_of_month_for_service(settings.stats_v2_assumed_today)
-    )
+def _resolve_as_of(
+    db: Session, *, explicit: date | None, level: RegionLevel, code: str,
+    window_years: int, col_axis: str,
+) -> date:
+    preferred = preferred_land_stats_month(db, explicit)
+    if preferred is not None:
+        return preferred
+    latest = db.execute(text("""
+        SELECT as_of_month
+        FROM land_upper_stats_v2
+        WHERE region_level = :level AND region_code = :code
+          AND window_years = :w AND col_axis = :axis
+          AND zone_type = 'ALL' AND land_category = 'ALL'
+        ORDER BY as_of_month DESC
+        LIMIT 1
+    """), {"level": level, "code": code, "w": window_years, "axis": col_axis}).scalar()
+    if latest is not None:
+        return latest
+    # 이 지역의 사전집계가 없는 경우에도 최신 적재월 기준으로 원장 폴백.
+    return db.execute(text("SELECT MAX(as_of_month) FROM land_upper_stats_v2")).scalar() or default_as_of_month_for_service()
 
 
 def _fetch_zone_cat_rows(
@@ -605,9 +619,12 @@ def get_upper_stats(
             status_code=422,
             detail="as_of_month 는 YYYY-MM-01 형태여야 합니다.",
         )
-    as_of = _resolve_as_of(as_of_month)
-    period_start, period_end = period_bounds_for_window(as_of, window_years)
     col_axis = matrix_mode_to_col_axis(matrix_mode)
+    as_of = _resolve_as_of(
+        db, explicit=as_of_month, level=level, code=code,
+        window_years=window_years, col_axis=col_axis,
+    )
+    period_start, period_end = period_bounds_for_window(as_of, window_years)
 
     rows = _fetch_zone_cat_rows(
         db,

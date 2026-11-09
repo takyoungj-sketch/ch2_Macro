@@ -47,12 +47,12 @@ async def _lifespan(app: FastAPI):
     """앱 시작/종료 훅 (FastAPI 0.93+ 권장 방식 — 구 `@app.on_event` 대체)."""
     from app.v2_stats_windows import default_as_of_month_for_service
 
-    eff = settings.stats_v2_default_as_of_month or default_as_of_month_for_service(
-        settings.stats_v2_assumed_today
-    )
+    eff = settings.stats_v2_default_as_of_month
+    if eff is None and settings.stats_v2_assumed_today is not None:
+        eff = default_as_of_month_for_service(settings.stats_v2_assumed_today)
     _LOG.info(
         "V2 API 기본 as_of_month=%s (STATS_V2_DEFAULT_AS_OF_MONTH=%s, STATS_V2_ASSUMED_TODAY=%s)",
-        eff,
+        eff or "latest completed snapshot",
         settings.stats_v2_default_as_of_month,
         settings.stats_v2_assumed_today,
     )

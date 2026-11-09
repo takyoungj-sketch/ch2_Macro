@@ -48,7 +48,6 @@ export default function FreeStatsPanel() {
   const statsDisplayKick = useAppStore((s) => s.statsDisplayKick);
   const syncPaidBasicStatsMeta = useAppStore((s) => s.syncPaidBasicStatsMeta);
   const setPaidRequest = useAppStore((s) => s.setPaidRequest);
-  const paidBasicBaseKey = useAppStore((s) => s.paidBasicBaseKey);
   const freeStatsWindowYears = useAppStore((s) =>
     normalizeFreeStatsWindowYears(s.freeStatsWindowYears)
   );
@@ -222,7 +221,6 @@ export default function FreeStatsPanel() {
         return;
       }
 
-      const baseKey = statsData.analysis_base_key ?? paidBasicBaseKey;
       const rollingExtras = rollingMatrixModalPayload(statsData);
 
       /**
@@ -247,10 +245,11 @@ export default function FreeStatsPanel() {
               .filter(Boolean) ?? resolvedCodes;
 
       const body: MatrixYearlyRequest = {
+        basic_stats_cell: true,
         region_selections: upperScope != null ? [upperScope] : null,
         region_codes: codesForTrend,
         ...rollingExtras,
-        base_cache_key: baseKey,
+        base_cache_key: statsData.analysis_base_key ?? null,
         road_conditions: null,
         area_categories: null,
         area_sqm_min: null,
@@ -262,7 +261,7 @@ export default function FreeStatsPanel() {
         outlier_iqr_multiplier: 3,
         zone_type: zoneType,
         land_category: landCategory,
-        matrix_mode: matrixMode,
+        matrix_mode: statsData.matrix_mode ?? matrixMode,
       };
 
       setTrendModal({ zoneType, landCategory });
@@ -279,7 +278,7 @@ export default function FreeStatsPanel() {
         setTrendLoading(false);
       }
     },
-    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey, useUpper, upperSingle, matrixMode]
+    [isPaidBasic, resolvedCodes, data, useUpper, upperSingle, matrixMode]
   );
 
   if (regionsLoading)
@@ -427,7 +426,7 @@ export default function FreeStatsPanel() {
         error={trendError}
         zoneType={trendModal?.zoneType ?? ""}
         landCategory={trendModal?.landCategory ?? ""}
-        matrixMode={matrixMode}
+        matrixMode={trendRequest?.matrix_mode}
         rows={trendRows}
         filterRequest={trendRequest}
       />

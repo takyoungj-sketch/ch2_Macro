@@ -20,7 +20,7 @@ import { parseApiError } from "../utils/apiError";
 import {
   calendarYearReferenceRows,
 } from "../utils/freeStatsV2";
-import { buildPaidPayload, clearRollingMatrixFields } from "../utils/paidAnalysisPayload";
+import { buildPaidPayload, paidFilterSignature } from "../utils/paidAnalysisPayload";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
 import { shouldUseBulkStats } from "../utils/statsFetchStrategy";
@@ -40,7 +40,6 @@ export default function PaidAnalysisPanel() {
   const paidRoadExcluded = useAppStore((s) => s.paidRoadExcluded);
   const paidAreaExcluded = useAppStore((s) => s.paidAreaExcluded);
   const paidDealTypeExcluded = useAppStore((s) => s.paidDealTypeExcluded);
-  const paidBasicBaseKey = useAppStore((s) => s.paidBasicBaseKey);
   const freeStatsWindowYears = useAppStore((s) =>
     normalizeFreeStatsWindowYears(s.freeStatsWindowYears)
   );
@@ -55,7 +54,11 @@ export default function PaidAnalysisPanel() {
   const paidFilteredAnalysisScopeNotice = useAppStore((s) => s.paidFilteredAnalysisScopeNotice);
 
   const matrixMode: MatrixMode =
-    paidRequest.matrix_mode === "group" ? "group" : "category";
+    (result?.request.matrix_mode ?? paidRequest.matrix_mode) === "group" ? "group" : "category";
+  const filtersChanged = result !== null
+    && paidFilterSignature(result.request) !== paidFilterSignature(
+      buildPaidPayload(paidRequest, [], paidRoadExcluded, paidAreaExcluded, paidDealTypeExcluded)
+    );
 
   const [trendModal, setTrendModal] = useState<{
     zoneType: string;
@@ -65,6 +68,7 @@ export default function PaidAnalysisPanel() {
   const [trendError, setTrendError] = useState<string | null>(null);
   const [trendRows, setTrendRows] = useState<MatrixYearlyStat[]>([]);
   const [trendRequest, setTrendRequest] = useState<MatrixYearlyRequest | null>(null);
+  const trendRequestId = useRef(0);
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: REGIONS_CATALOG_QUERY_KEY,
@@ -94,6 +98,7 @@ export default function PaidAnalysisPanel() {
     const prev = prevRegionScopeKey.current;
     prevRegionScopeKey.current = regionScopeKey;
     if (prev === null || prev === regionScopeKey) return;
+    trendRequestId.current += 1;
     setPaidRequest({ matrix_mode: "category" });
     setTrendModal(null);
     setTrendRequest(null);
@@ -203,6 +208,7 @@ export default function PaidAnalysisPanel() {
   }, [paidBulkBeopjungriCodes, basicData?.beopjungri_code, resolvedCodes, useUpperPaidBasic]);
 
   const closeTrend = () => {
+    trendRequestId.current += 1;
     setTrendModal(null);
     setTrendRequest(null);
     setTrendLoading(false);
@@ -212,29 +218,14 @@ export default function PaidAnalysisPanel() {
 
   const openMatrixTrend = useCallback(
     async (zoneType: string, landCategory: string) => {
-      if (resolvedCodes.length === 0) {
-        setTrendError("먼저 분석할 지역을 선택하세요.");
-        setTrendModal({ zoneType, landCategory });
-        setTrendRequest(null);
-        setTrendLoading(false);
-        return;
-      }
-
-      const cacheKey = basicData?.analysis_base_key ?? paidBasicBaseKey;
-      /** 매트릭스 모달은 필터 선택 연도·조건과 동일해야 함 — 기본통계 V2 롤링(contract_date 버킷)은 합치지 않는다 */
-      const base = buildPaidPayload(
-        clearRollingMatrixFields(paidRequest),
-        codesForPaidMatrix,
-        paidRoadExcluded,
-        paidAreaExcluded,
-        paidDealTypeExcluded,
-        cacheKey
-      );
+      if (!result) return;
+      const requestId = ++trendRequestId.current;
       const body: MatrixYearlyRequest = {
-        ...base,
+        ...result.request,
+        // 서버가 실제로 펼친 법정코드 범위를 재사용한다.
+        region_selections: result.request.region_codes?.length ? null : result.request.region_selections,
         zone_type: zoneType,
         land_category: landCategory,
-        matrix_mode: matrixMode,
       };
 
       setTrendModal({ zoneType, landCategory });
@@ -244,24 +235,14 @@ export default function PaidAnalysisPanel() {
       setTrendRows([]);
       try {
         const data = await fetchPaidMatrixYearly(body);
-        setTrendRows(data.rows ?? []);
+        if (trendRequestId.current === requestId) setTrendRows(data.rows ?? []);
       } catch (e) {
-        setTrendError(parseApiError(e).message);
+        if (trendRequestId.current === requestId) setTrendError(parseApiError(e).message);
       } finally {
-        setTrendLoading(false);
+        if (trendRequestId.current === requestId) setTrendLoading(false);
       }
     },
-    [
-      basicData,
-      paidBasicBaseKey,
-      paidRequest,
-      paidRoadExcluded,
-      paidAreaExcluded,
-      paidDealTypeExcluded,
-      codesForPaidMatrix,
-      matrixMode,
-      resolvedCodes.length,
-    ]
+    [result]
   );
 
   const switchMatrixMode = useCallback(
@@ -415,10 +396,16 @@ export default function PaidAnalysisPanel() {
                 disabled={resolvedCodes.length === 0 || isLoading}
                 className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40"
               >
-                동일 조건 재실행
+                {filtersChanged ? "현재 필터로 재실행" : "동일 조건 재실행"}
               </button>
             </div>
           </div>
+
+          {filtersChanged && (
+            <p role="status" className="text-xs text-amber-800">
+              필터가 변경됐습니다. 현재 표와 칸 상세는 마지막으로 실행한 조건을 표시합니다.
+            </p>
+          )}
 
           {paidFilteredAnalysisScopeNotice ? (
             <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed">
@@ -465,7 +452,7 @@ export default function PaidAnalysisPanel() {
         error={trendError}
         zoneType={trendModal?.zoneType ?? ""}
         landCategory={trendModal?.landCategory ?? ""}
-        matrixMode={matrixMode}
+        matrixMode={trendRequest?.matrix_mode}
         rows={trendRows}
         filterRequest={trendRequest}
       />

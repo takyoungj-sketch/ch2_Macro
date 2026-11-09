@@ -181,6 +181,7 @@ export interface MatrixYearlyStat {
 }
 
 export interface MatrixYearlyRequest extends PaidAnalysisRequest {
+  basic_stats_cell?: boolean;
   zone_type: string;
   land_category: string;
   /** category=지목 셀, group=지목군 셀 */
