@@ -30,6 +30,13 @@ import YearlyStatsTable from "./YearlyStatsTable";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { filteredAnalysisResultTitle } from "../constants/landAnalysisLabels";
 import RegionalProfileLink from "./RegionalProfileLink";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import {
+  buildLandMatrixContext,
+  landFiltersFromRequest,
+  landPeriodFromRequest,
+  landRegionFullLabel,
+} from "../api/aiContext";
 
 export default function PaidAnalysisPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -257,6 +264,33 @@ export default function PaidAnalysisPanel() {
     ]
   );
 
+  /** AI 문맥: 실행된 요청(result.request) 기준. 화면의 현재 필터 입력값이 아니다. */
+  const aiRegion = useMemo(() => landRegionFullLabel(tierSelection, regions), [tierSelection, regions]);
+  const aiRegionLabel = aiRegion.label || basicData?.beopjungri_name || "";
+  const aiFilteredContext = useMemo(() => {
+    if (!result) return null;
+    const executed = result.request;
+    return buildLandMatrixContext({
+      resultKind: "filtered",
+      scope: {
+        regionLabel: aiRegionLabel,
+        regionLevel: aiRegion.level,
+        regionCodes: executed.region_codes ?? executed.region_selections?.map((unit) => unit.code) ?? null,
+        period: landPeriodFromRequest(executed),
+        filters: landFiltersFromRequest(executed),
+        asOfMonth: result.as_of_month ?? basicData?.as_of_month ?? null,
+        statsReferenceDate: result.stats_reference_date ?? basicData?.stats_reference_date ?? null,
+      },
+      matrixMode,
+      matrix: result.matrix,
+      byZone: result.by_zone,
+      byLandCategory: result.by_land_category,
+      byYear: result.by_year,
+      total: result.total,
+      filtersChanged,
+    });
+  }, [result, aiRegionLabel, aiRegion.level, basicData?.as_of_month, basicData?.stats_reference_date, matrixMode, filtersChanged]);
+
   const legendExplain = useMemo(() => buildMatrixLegendExplain(), []);
   const basicStatsExplain = useMemo(
     () =>
@@ -375,6 +409,10 @@ export default function PaidAnalysisPanel() {
         </div>
       )}
 
+      {!isLoading && status === "success" && result && aiFilteredContext && (
+        <PublishAiContext context={aiFilteredContext} />
+      )}
+
       {!isLoading && status === "success" && result && (
         <div className="bg-white rounded-xl shadow-sm p-5 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -449,6 +487,8 @@ export default function PaidAnalysisPanel() {
         matrixMode={trendRequest?.matrix_mode}
         rows={trendRows}
         filterRequest={trendRequest}
+        aiRegionLabel={aiRegionLabel}
+        aiAsOfMonth={result?.as_of_month ?? basicData?.as_of_month ?? null}
       />
     </div>
   );

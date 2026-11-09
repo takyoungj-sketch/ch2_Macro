@@ -14,6 +14,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app.admin_auth import admin_access_status, is_admin_path
 from app.platform.db import get_platform_session_factory
 from app.platform.entitlements import apply_staff_entitlements, list_entitlements
 from app.platform.jwt_util import COOKIE_NAME, decode_access_token
@@ -33,8 +34,6 @@ _ALWAYS_OPEN_PREFIXES = (
     "/api/platform/",
     "/api/map/",
     "/api/geocode/",
-    "/api/admin/",
-    "/api/lab/",
     "/api/built/lab/",
     "/api/free/v2/regions",
     "/api/free/v2/meta/",
@@ -243,6 +242,13 @@ def caller_access(request: Request) -> str:
 async def product_gate_response(request: Request) -> JSONResponse | None:
     body: object = None
     path = request.url.path
+    if request.method != "OPTIONS" and is_admin_path(path):
+        # 관리자·랩 API: 구독 여부와 무관하게 관리자 세션 또는 QA 토큰만 연다.
+        status = admin_access_status(request)
+        if status is None:
+            return None
+        detail = "관리자 로그인이 필요합니다." if status == 401 else "관리자만 이용할 수 있습니다."
+        return JSONResponse(status_code=status, content={"detail": detail})
     if request.method == "POST" and path in {
         "/api/paid/matrix-yearly",
         "/api/free/v2/stats/bulk",

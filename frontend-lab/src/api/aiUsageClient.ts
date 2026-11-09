@@ -34,6 +34,17 @@ export type AiUsageSnapshot = {
   warning?: string | null;
   requested_model?: string;
   recent: AiUsageEvent[];
+  /** 질문 단위 집계 (2026-11-09 §5.6) */
+  questions?: {
+    questions: number;
+    answered_with_llm: number;
+    avg_llm_calls: number | null;
+    avg_krw: number | null;
+    latency_p50_ms: number | null;
+    latency_p90_ms: number | null;
+    validation: Record<string, number>;
+  };
+  limit_warnings?: string[];
 };
 
 export async function fetchAiUsage(month?: string): Promise<AiUsageSnapshot> {

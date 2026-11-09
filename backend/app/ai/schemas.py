@@ -91,6 +91,12 @@ class AiScope(BaseModel):
     region_codes: list[str] = Field(default_factory=list)
     asset_type: Optional[str] = None
     filters: dict[str, Any] = Field(default_factory=dict)
+    # 토지 매트릭스 공통 scope (2026-11-09 지시서 §5.1)
+    region_level: Optional[str] = None
+    region_code_count: Optional[int] = None
+    period: dict[str, Any] = Field(default_factory=dict)
+    as_of_month: Optional[str] = None
+    stats_reference_date: Optional[str] = None
 
 
 class AiContext(BaseModel):

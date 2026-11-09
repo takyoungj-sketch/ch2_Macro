@@ -1033,3 +1033,87 @@ def test_regression_results_still_use_engine_numbers():
     )
     assert "73" in resp.answer or "0.72" in resp.answer or "연식" in resp.answer
     assert "단지별 거래 요약" not in resp.answer
+
+
+# --- 2026-11-09 지시서 §5.5: 관리자·랩 API 와 요청 제한 키 -----------------
+
+
+@pytest.fixture
+def _gate_client(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.config import settings
+    from app.main import app
+
+    monkeypatch.setattr(settings, "api_token", "")
+    monkeypatch.setattr(settings, "qa_audit_token", "")
+    monkeypatch.setattr(settings, "local_dev_access", False)
+    return TestClient(app)
+
+
+@pytest.mark.parametrize("method,path", [
+    ("post", "/api/lab/ai2/turn"),
+    ("get", "/api/admin/ai-usage"),
+    ("get", "/api/admin/land-twin/regions"),
+    ("post", "/api/admin/land-twin/run"),
+])
+def test_admin_and_lab_routes_reject_anonymous(_gate_client, method, path):
+    kwargs = {"json": {"use_llm": True, "region_code": "x"}} if method == "post" else {}
+    res = getattr(_gate_client, method)(path, **kwargs)
+    assert res.status_code in (401, 403, 404)
+    assert res.status_code != 200
+
+
+def test_unset_qa_token_does_not_open_admin_usage(_gate_client):
+    res = _gate_client.get("/api/admin/ai-usage", headers={"X-Qa-Audit-Token": ""})
+    assert res.status_code in (401, 403)
+
+
+def test_configured_qa_token_opens_admin_usage(_gate_client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "qa_audit_token", "secret-token")
+    monkeypatch.setattr("app.ai.usage_router.month_snapshot", lambda month=None: {"month": "2026-11"})
+    assert _gate_client.get("/api/admin/ai-usage", headers={"X-Qa-Audit-Token": "wrong"}).status_code == 401
+    ok = _gate_client.get("/api/admin/ai-usage", headers={"X-Qa-Audit-Token": "secret-token"})
+    assert ok.status_code == 200
+
+
+def test_ai2_lab_is_disabled_by_default():
+    from app.config import Settings
+
+    assert Settings.model_fields["ai2_lab_enabled"].default is False
+
+
+def _fake_request(headers: dict[str, str], peer: str):
+    from starlette.requests import Request
+
+    scope = {
+        "type": "http", "method": "POST", "path": "/api/ai/chat", "query_string": b"",
+        "headers": [(k.lower().encode(), v.encode()) for k, v in headers.items()],
+        "client": (peer, 1234),
+    }
+    return Request(scope)
+
+
+def test_rate_limit_ignores_spoofed_forwarded_for():
+    from app.ai.rate_limit import _client_key
+
+    req = _fake_request({"X-Forwarded-For": "1.2.3.4"}, "203.0.113.9")
+    assert _client_key(req) == "ip:203.0.113.9"
+
+
+def test_rate_limit_uses_real_ip_only_from_trusted_proxy():
+    from app.ai.rate_limit import _client_key
+
+    assert _client_key(_fake_request({"X-Real-IP": "198.51.100.7"}, "127.0.0.1")) == "ip:198.51.100.7"
+    assert _client_key(_fake_request({"X-Real-IP": "198.51.100.7"}, "203.0.113.9")) == "ip:203.0.113.9"
+    assert _client_key(_fake_request({"X-Real-IP": "not-an-ip"}, "127.0.0.1")) == "ip:127.0.0.1"
+
+
+def test_rate_limit_keys_logged_in_user_by_id(monkeypatch):
+    from app.ai.rate_limit import _client_key
+
+    monkeypatch.setattr("app.platform.jwt_util.decode_access_token", lambda token: {"sub": "42"})
+    req = _fake_request({"Authorization": "Bearer t", "X-Real-IP": "198.51.100.7"}, "127.0.0.1")
+    assert _client_key(req) == "user:42"

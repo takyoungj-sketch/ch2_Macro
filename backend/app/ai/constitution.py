@@ -1,10 +1,15 @@
-"""CH2 AI 헌법 — 시스템 프롬프트·금지 패턴·고정 면책."""
+"""CH2 AI 헌법 — 시스템 프롬프트·금지 패턴·고정 면책.
+
+legacy: 제품 대화 경로(`dialogue.answer_land`)의 현행 정책은 docs/CH2_AI_CONSTITUTION.md v3 다.
+이 모듈의 Router·거절 패턴은 explain·옛 orchestrator 경로만 쓴다.
+"""
 
 from __future__ import annotations
 
 import re
 
-CONSTITUTION_VERSION = "2.1"
+# /api/ai/health 에 보이는 현행 정책 버전(docs/CH2_AI_CONSTITUTION.md).
+CONSTITUTION_VERSION = "3.0"
 
 SYSTEM_PERSONALITY = """당신은 CH2 Macro의 분석 보조 AI입니다.
 
@@ -116,6 +121,7 @@ REFUSAL_DISCLAIMER = (
     "개별 물건의 적정성·투자 여부는 전문가의 현장 조사와 판단이 필요합니다."
 )
 
+# legacy: not used by dialogue.answer_land
 # 가격판단·투자·전망 — Refusal (Opinion으로 보내지 않음)
 _REFUSAL_PATTERNS: list[re.Pattern[str]] = [
     re.compile(p, re.I)
@@ -272,6 +278,7 @@ _INVESTMENT_RECOMMEND_PATTERNS: list[re.Pattern[str]] = [
 ]
 
 
+# legacy: not used by dialogue.answer_land
 def is_refusal_message(message: str) -> bool:
     text = message.strip()
     if any(p.search(text) for p in _INVESTMENT_RECOMMEND_PATTERNS):
@@ -319,6 +326,7 @@ def is_statistical_methodology_question(message: str) -> bool:
     return False
 
 
+# legacy: not used by dialogue.answer_land
 def classify_route(message: str) -> str:
     """refusal | ch2 | explain | statistics | opinion | offer_external"""
     if is_refusal_message(message):

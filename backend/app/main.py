@@ -167,6 +167,9 @@ from app.ai.usage_router import router as ai_usage_router
 app.include_router(ai_router, prefix="/api")
 app.include_router(ai_usage_router, prefix="/api")
 _LOG.info("CH2 AI API 활성: /api/ai/* · /api/admin/ai-usage")
+from app.ai.usage_log import log_limit_warnings
+
+log_limit_warnings()
 
 from app.insight.router import router as insight_router
 
@@ -179,9 +182,12 @@ from app.land_lab.twin_router import router as land_twin_router
 app.include_router(parcel_lab_router, prefix="/api")
 app.include_router(land_twin_router, prefix="/api")
 
-from app.ai2.router import router as ai2_router
+if settings.ai2_lab_enabled:
+    # 운영 기본값은 비활성. 켜도 /api/lab/* 는 관리자 전용이다.
+    from app.ai2.router import router as ai2_router
 
-app.include_router(ai2_router, prefix="/api")
+    app.include_router(ai2_router, prefix="/api")
+    _LOG.info("AI2 랩 API 활성(관리자): /api/lab/ai2/*")
 _LOG.info("대장DB 조회 API 활성(관리자·로컬): /api/admin/parcel/status")
 _LOG.info("토지 쌍둥이 실험 API 활성(관리자): /api/admin/land-twin")
 

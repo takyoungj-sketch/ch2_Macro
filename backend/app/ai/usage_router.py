@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
+
+from app.admin_auth import require_admin_access
 
 from app.config import settings
 from app.ai.usage_log import month_snapshot
@@ -34,21 +36,11 @@ def account_usage(request: Request):
             "costs": [dict(r) for r in costs], "pending": [dict(r) for r in pending]}
 
 
-def _require_admin(x_qa_audit_token: str | None) -> None:
-    expected = (settings.qa_audit_token or "").strip()
-    if not expected:
-        return
-    if (x_qa_audit_token or "").strip() != expected:
-        raise HTTPException(status_code=401, detail="X-Qa-Audit-Token 이 없거나 잘못되었습니다.")
-
-
 @router.get("/")
 @router.get("")
-def get_usage(
-    month: str | None = None,
-    x_qa_audit_token: str | None = Header(default=None, alias="X-Qa-Audit-Token"),
-) -> dict[str, Any]:
-    _require_admin(x_qa_audit_token)
+def get_usage(request: Request, month: str | None = None) -> dict[str, Any]:
+    # 관리자 세션 또는 설정된 QA 토큰만. 토큰 미설정 시 토큰 경로는 거부한다.
+    require_admin_access(request)
     if month and (len(month) != 7 or month[4] != "-"):
         raise HTTPException(status_code=400, detail="month는 YYYY-MM")
     snap = month_snapshot(month)

@@ -56,7 +56,28 @@ export default function AiUsagePanel() {
           )}
         </p>
         {d.warning ? <p className="text-sm text-amber-800 dark:text-amber-200">{d.warning}</p> : null}
+        {(d.limit_warnings ?? []).map((w, i) => (
+          <p key={i} className="text-sm text-amber-800 dark:text-amber-200">{w}</p>
+        ))}
       </div>
+
+      {d.questions ? (
+        <div className="card p-4 space-y-1">
+          <p className="text-xs text-slate-500">질문 단위 (질문 문장은 저장하지 않음)</p>
+          <p className="text-sm">
+            질문 {d.questions.questions}건 · LLM 사용 {d.questions.answered_with_llm}건 · 질문당 호출{" "}
+            {d.questions.avg_llm_calls ?? "—"}회 · 질문당 원가 {d.questions.avg_krw == null ? "—" : fmtKrw(d.questions.avg_krw)}
+          </p>
+          <p className="text-sm">
+            지연 p50 {d.questions.latency_p50_ms == null ? "—" : `${(d.questions.latency_p50_ms / 1000).toFixed(1)}초`} · p90{" "}
+            {d.questions.latency_p90_ms == null ? "—" : `${(d.questions.latency_p90_ms / 1000).toFixed(1)}초`}
+          </p>
+          <p className="text-xs text-slate-500">
+            검증 결과:{" "}
+            {Object.entries(d.questions.validation).map(([k, v]) => `${k} ${v}`).join(" · ") || "—"}
+          </p>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="card p-4">

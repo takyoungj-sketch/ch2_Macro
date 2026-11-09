@@ -6,10 +6,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.admin_auth import require_admin_access
 from app.db import get_db
 from app.land_lab.land_twin import list_sigungu, run_sigungu
 
-router = APIRouter(prefix="/admin/land-twin", tags=["admin-land-twin"], include_in_schema=False)
+router = APIRouter(
+    prefix="/admin/land-twin",
+    tags=["admin-land-twin"],
+    include_in_schema=False,
+    dependencies=[Depends(require_admin_access)],
+)
 
 
 @router.get("/regions")

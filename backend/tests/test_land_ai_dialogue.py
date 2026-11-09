@@ -341,7 +341,7 @@ def test_repeated_metric_name_is_inserted_once(monkeypatch):
     assert result.answer.count("조정 R²") == 1
 
 
-def test_unasked_cause_list_is_removed(monkeypatch):
+def test_labeled_hypothesis_is_kept(monkeypatch):
     def once(*, user, system, json_response, timeout=45):
         assert json_response
         return json.dumps({
@@ -351,7 +351,8 @@ def test_unasked_cause_list_is_removed(monkeypatch):
 
     monkeypatch.setattr("app.ai.dialogue.llm._openai_chat", once)
     result = ask("면적 계수가 음수면 단가가 낮다는 거지?", regression())
-    assert "가설" not in result.answer and "외곽" not in result.answer
+    # 2026-11-09 §5.2: 가설 문장을 서버가 자동 삭제하지 않는다. '가설' 표시만 요구한다.
+    assert "가설" in result.answer and "외곽" in result.answer
     assert "인과는 아닙니다" in result.answer
 
 
@@ -445,12 +446,12 @@ def test_any_land_panel_uses_same_dialogue_and_repair(monkeypatch, panel, facts,
     assert expected in result.answer and "999" not in result.answer
 
 
-def test_failed_reply_is_not_spliced_into_a_different_conclusion(monkeypatch):
+def test_unverified_sentence_is_dropped_and_verified_sentence_kept(monkeypatch):
     fake_model(monkeypatch, lambda _: ("screen", "{{current.f0}}입니다. 검증 MAPE는 77%입니다."))
     result = ask("이 결과를 어떻게 봐?", regression())
-    assert "적합 표본 120건" not in result.answer
+    # 검증되지 않은 문장만 제거하고, 검증된 문장은 남긴다(§5.2-3).
     assert "77%" not in result.answer
-    assert not result.llm_used
+    assert result.answer.startswith("적합 표본 120건")
 
 
 
@@ -472,7 +473,9 @@ def test_mixed_knowledge_and_screen_refs_are_validated(monkeypatch):
 def test_symbolic_allowance_does_not_admit_observed_numbers(monkeypatch, text):
     fake_model(monkeypatch, lambda _: ("screen", "{{current.f2}}. " + text))
     result = ask("설명해줘", regression())
-    assert not result.llm_used
+    # 재작성도 실패하면 위반 문장만 빠지고 검증된 문장은 남는다(§5.2-3).
+    assert text not in result.answer
+    assert "log(면적) 계수 -0.24" in result.answer
 
 
 def test_repair_preserves_conclusion_without_partial_recovery(monkeypatch):
@@ -495,7 +498,7 @@ def test_referenced_elasticity_can_explain_unit_change(monkeypatch):
 def test_numbers_cannot_borrow_other_sentences_evidence(monkeypatch):
     fake_model(monkeypatch, lambda _: ("screen", "{{current.f2}}입니다. 추정 단가는 0.24만원입니다."))
     result = ask("설명해줘", regression())
-    assert not result.llm_used
+    assert "0.24만원" not in result.answer and "추정 단가" not in result.answer
 
 
 @pytest.mark.parametrize(("claim", "accepted"), [("0.416", True), ("0.4159", True), ("0.417", False), ("0.4", False), ("1", False)])
@@ -555,3 +558,275 @@ def test_current_question_is_last_conversation_turn(monkeypatch):
     first = ask("회귀식의 적정성은?", regression())
     second = ask("미상 범주와 결측 제외의 차이는?", regression(), first.session_id)
     assert second.llm_used
+
+
+# --- 2026-11-09 지시서 §5.1~§5.4, §5.6 ---------------------------------------
+
+from decimal import Decimal
+
+
+def land_matrix(**extra):
+    """영춘면 필터 분석 결과(T1) 형태의 화면 문맥."""
+    facts = {
+        "result_kind": "filtered",
+        "matrix_mode": "category",
+        "land_axis": "지목",
+        "total": {"count": 412, "mean": 2.4, "median": 1.9},
+        "cells": [
+            {"zone_type": "보관", "land_category": "임", "count": 50, "mean": 1.7, "median": 1.2,
+             "p25": 0.8, "p75": 2.1, "min": 0.2, "max": 6.3, "ci_lower": 1.3, "ci_upper": 2.1, "is_reliable": True},
+            {"zone_type": "계관", "land_category": "전", "count": 9, "mean": 3.1, "median": 2.9,
+             "p25": 2.2, "p75": 3.6, "is_reliable": False},
+        ],
+        "omitted_cells": 3,
+        "by_zone": [{"label": "보관", "count": 120, "mean": 1.9, "median": 1.4}],
+        "by_land_category": [{"label": "임", "count": 200, "mean": 1.5, "median": 1.1}],
+        "by_year": [{"year": 2026, "count": 70, "unit_price_per_sqm": 2.5}],
+        "filters_changed": False,
+        "reliable_min_n": 15,
+        **extra,
+    }
+    return AiContext(
+        app="land", panel="LandMatrix",
+        scope=AiScope(
+            region_label="충청북도 단양군 영춘면", region_level="eupmyeondong",
+            period={"kind": "calendar", "years": [2021, 2022, 2023, 2024, 2025, 2026]},
+            filters={"exclude_outlier": True, "outlier_iqr_multiplier": 1.5, "exclude_partial": False,
+                     "matrix_mode": "category"},
+            as_of_month="2026-10-01",
+        ),
+        facts=facts,
+    )
+
+
+def trend_cell():
+    rows = [
+        {"year": 2021, "count": 22, "mean": 2.8, "median": 2.5},
+        {"year": 2024, "count": 15, "mean": 2.6, "median": 2.4, "is_small_sample": False},
+        {"year": 2025, "count": 12, "mean": 2.9, "median": 2.7, "is_small_sample": True},
+        {"year": 2026, "count": 18, "mean": 3.2, "median": 3.0, "is_partial_period": True, "covered_months": 10},
+    ]
+    return AiContext(app="land", panel="TrendCard", scope=AiScope(region_label="영춘면 · 계관 × 전"),
+                     facts={"rows": rows, "trend_metric": "mean", "zone_type": "계관", "land_category": "전"})
+
+
+def counting_model(monkeypatch, choose):
+    calls = {"n": 0}
+
+    def draft(*, user, system, json_response, timeout=45):
+        calls["n"] += 1
+        kind, answer = choose(json.loads(user))
+        return json.dumps({"kind": kind, "answer": answer}, ensure_ascii=False)
+
+    monkeypatch.setattr("app.ai.dialogue.llm._openai_chat", draft)
+    return calls
+
+
+def _fact(payload, prefix):
+    return next(k for k, v in payload["sources"]["current"]["facts"].items() if v.startswith(prefix))
+
+
+def test_land_matrix_context_sends_every_cell_scope_and_small_sample_notes():
+    from app.ai.dialogue import _screen
+
+    evidence = _screen(land_matrix())
+    facts = " | ".join(evidence.facts)
+    assert "보관 × 임 거래 50건" in facts and "보관 × 임 단가 평균 1.7만원/㎡" in facts
+    assert "계관 × 전 단가 75% 분위 3.6만원/㎡" in facts
+    assert "이상치 IQR 배수 1.5" in facts
+    assert evidence.context["지역"] == "충청북도 단양군 영춘면"
+    assert "2021" in evidence.context["기간"] and evidence.context["기준월"] == "2026-10-01"
+    notes = " ".join(evidence.notes)
+    assert "소표본 칸: 계관 × 전" in notes and "3개는 전달하지 않았다" in notes
+    assert "보관 × 임" in evidence.identifiers
+
+
+def test_t1_filtered_matrix_cell_is_answered_with_one_call(monkeypatch):
+    def choose(payload):
+        mean = _fact(payload, "보관 × 임 단가 평균")
+        count = _fact(payload, "보관 × 임 거래")
+        return "screen", "보관 × 임 칸의 평균 단가는 {{" + mean + "|value}}, 거래는 {{" + count + "|value}}입니다."
+
+    calls = counting_model(monkeypatch, choose)
+    result = ask("지금 화면의 보관 용도지역 임야 칸 평균 단가와 거래 수는?", land_matrix())
+    assert result.llm_used and calls["n"] == 1
+    assert result.answer == "보관 × 임 칸의 평균 단가는 1.7만원/㎡, 거래는 50건입니다."
+    assert "영춘면" in result.evidence[0].label
+
+
+def test_t2_question_numbers_are_allowed_without_reference(monkeypatch):
+    answer = ("IQR 1.5는 사분위범위의 1.5배 밖을 이상치로 보고, 3은 더 바깥만 잘라 덜 엄격합니다. "
+              "저가 임야가 많아 오른쪽 꼬리가 긴 분포에서는 하한이 음수가 되어 사실상 고가 쪽만 잘립니다.")
+    calls = counting_model(monkeypatch, lambda _: ("knowledge", answer))
+    result = ask("이상치 제외에서 IQR 1.5와 3은 무슨 차이야? 저가 임야가 많은 지역에서는?", land_matrix())
+    assert result.llm_used and calls["n"] == 1
+    assert result.answer == answer
+
+
+def test_general_example_numbers_are_allowed(monkeypatch):
+    answer = "예를 들어 평균이 100이고 중앙값이 80이면 오른쪽으로 긴 꼬리가 있다는 뜻이에요."
+    calls = counting_model(monkeypatch, lambda _: ("knowledge", answer))
+    result = ask("평균과 중앙값이 다르면 무슨 뜻이야?", land_matrix())
+    assert result.answer == answer and calls["n"] == 1
+
+
+@pytest.mark.parametrize("sentence", [
+    "영춘면의 평균 단가는 2.3만원/㎡입니다.",
+    "보관 × 임 칸은 거래 47건입니다.",
+    "현재 화면에서 가장 비싼 칸은 9.9만원/㎡입니다.",
+])
+def test_observation_with_unreferenced_number_is_rejected(sentence):
+    from app.ai.dialogue import _render, _screen, number_policy
+
+    sources = {"current": _screen(land_matrix())}
+    issues = []
+    policy = number_policy("평균 단가 알려줘", sources, ["일반 문서"])
+    assert _render({"kind": "knowledge", "answer": sentence}, sources, issues, policy) is None
+    assert issues and issues[0].startswith("unverified_numeric_passage")
+
+
+def test_repair_prompt_no_longer_forbids_arabic_numerals():
+    from app.ai.dialogue import _repair_feedback, _screen
+
+    feedback = _repair_feedback({"kind": "screen", "answer": "표본은 999건입니다."}, {"current": _screen(regression())})
+    assert "아라비아 숫자" not in feedback
+
+
+def test_general_check_llm_call_is_gone():
+    import app.ai.dialogue as dialogue
+
+    assert not hasattr(dialogue, "_check_general_numbers")
+    assert not hasattr(dialogue, "_drop_causes")
+
+
+def test_t3_trend_notes_mark_partial_year_and_small_sample(monkeypatch):
+    def choose(payload):
+        notes = " ".join(payload["sources"]["current"]["notes"])
+        assert "2026년은 기준월까지만 집계된 부분 연도" in notes and "10월까지" in notes
+        assert "2025년은 거래 15건 미만인 소표본" in notes
+        hi = _fact(payload, "2026년 단가 평균")
+        lo = _fact(payload, "2024년 단가 평균")
+        n26 = _fact(payload, "2026년 거래 수")
+        return "screen", ("가장 높은 해는 2026년({{" + hi + "|value}}), 가장 낮은 해는 2024년({{" + lo + "|value}})입니다. "
+                          "다만 2026년은 10월까지 {{" + n26 + "|value}}이라 가격 상승으로 바로 해석하기 어렵습니다.")
+
+    calls = counting_model(monkeypatch, choose)
+    result = ask("이 칸의 연도별 평균 단가 추이 요약, 가장 높은 해와 낮은 해는?", trend_cell())
+    assert result.llm_used and calls["n"] == 1
+    assert "2026년(3.2만원/㎡)" in result.answer and "10월까지 18건" in result.answer
+
+
+def test_t4_calc_reference_is_computed_by_server_with_caution(monkeypatch):
+    def choose(payload):
+        med = _fact(payload, "보관 × 임 단가 중앙값")
+        p25 = _fact(payload, "보관 × 임 단가 25% 분위")
+        p75 = _fact(payload, "보관 × 임 단가 75% 분위")
+        return "screen", ("중앙값 기준 {{calc:" + med + "*5000}}이고, 25%~75% 분위 기준으로는 "
+                          "{{calc:" + p25 + "*5000}}~{{calc:" + p75 + "*5000}}입니다.")
+
+    calls = counting_model(monkeypatch, choose)
+    result = ask("이 칸 중앙값으로 5,000㎡ 임야면 얼마 정도야?", land_matrix())
+    assert result.llm_used and calls["n"] == 1
+    assert "6,000만원" in result.answer and "4,000만원~1억 500만원" in result.answer
+    assert "적정가격이 아닙니다" in result.answer and "개별요인" in result.answer
+    assert any(item.label.startswith("산술 계산") for item in result.evidence)
+
+
+@pytest.mark.parametrize("expr", ["current.f0*7777", "__import__('os')", "current.f999*5000", "5000*2"])
+def test_calc_rejects_unsafe_or_unasked_expressions(expr):
+    from app.ai.dialogue import _render, _screen, number_policy
+
+    sources = {"current": _screen(land_matrix())}
+    issues = []
+    policy = number_policy("5,000㎡면 얼마야?", sources)
+    assert _render({"kind": "screen", "answer": "약 {{calc:" + expr + "}}입니다."}, sources, issues, policy) is None
+    assert issues[0].startswith(("invalid_calc", "invalid_reference"))
+
+
+@pytest.mark.parametrize(("value", "unit", "shown"), [
+    (Decimal("6000"), "만원", "6,000만원"),
+    (Decimal("16000"), "만원", "1억 6,000만원"),
+    (Decimal("20000"), "만원", "2억원"),
+    (Decimal("1234.5"), "", "1,235"),
+    (Decimal("3.456"), "만원/㎡", "3.46만원/㎡"),
+])
+def test_amount_formatting(value, unit, shown):
+    from app.ai.dialogue import format_amount
+
+    assert format_amount(value, unit) == shown
+
+
+def test_t5_buy_question_short_answer_passes(monkeypatch):
+    answer = "이 자료만으로는 지금 사도 되는지 결론을 낼 수 없어요. 화면은 지역 거래 통계일 뿐 개별 토지의 조건을 반영하지 않습니다."
+    calls = counting_model(monkeypatch, lambda _: ("knowledge", answer))
+    result = ask("이 동네 땅 지금 사도 돼?", land_matrix())
+    assert result.answer == answer and calls["n"] == 1
+
+
+def test_t6_unrelated_question_uses_zero_calls(monkeypatch):
+    calls = counting_model(monkeypatch, lambda _: ("knowledge", "x"))
+    result = ask("오늘 점심 메뉴 추천해줘", land_matrix())
+    assert result.route == "refusal" and calls["n"] == 0
+
+
+def test_t7_missing_screen_context_says_so(monkeypatch):
+    counting_model(monkeypatch, lambda _: ("screen", "평균 단가는 3.1만원/㎡입니다."))
+    result = ask("평균 단가 얼마야?", AiContext(app="land", panel="LandMatrix"))
+    assert "3.1" not in result.answer
+    assert "전달되지 않았습니다" in result.answer and "지역 미선택" not in result.answer
+
+
+def test_question_log_records_calls_and_validation(monkeypatch, tmp_path):
+    from app.config import settings
+    from app.ai.usage_log import question_stats
+
+    monkeypatch.setattr(settings, "ai_usage_log_dir", str(tmp_path))
+    counting_model(monkeypatch, lambda _: ("knowledge", "교란변수는 두 변수 모두와 관련된 제3의 변수예요."))
+    ask("교란변수가 뭐야?", land_matrix())
+    rows = [json.loads(line) for path in tmp_path.glob("questions-*.jsonl")
+            for line in path.read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 1
+    assert rows[0]["llm_calls"] == 1 and rows[0]["validation"] == "pass" and rows[0]["panel"] == "LandMatrix"
+    assert "교란변수" not in json.dumps(rows[0], ensure_ascii=False)
+    stats = question_stats()
+    assert stats["questions"] == 1 and stats["avg_llm_calls"] == 1
+
+
+# --- Opus 검토 보완: kind 무관 단위 검사, 용도지역명 관측 표지어 -------------------
+
+
+@pytest.mark.parametrize("sentence", [
+    "평균 단가는 2.3만원/㎡입니다.",          # knowledge 로 표시해도 단위 붙은 미참조 숫자
+    "보관은 거래가 47건으로 가장 많습니다.",    # 화면 용도지역명 + 미참조 숫자
+    "계관 평균은 3.9 정도입니다.",             # 단위 없어도 용도지역명과 같은 문장
+])
+def test_unit_and_zone_name_checks_apply_to_knowledge_kind(sentence):
+    from app.ai.dialogue import _render, _screen, number_policy
+
+    sources = {"current": _screen(land_matrix())}
+    issues = []
+    policy = number_policy("이 화면 설명해줘", sources, ["일반 문서"])
+    assert _render({"kind": "knowledge", "answer": sentence}, sources, issues, policy) is None
+    assert issues[0].startswith("unverified_numeric_passage")
+
+
+@pytest.mark.parametrize("sentence", [
+    "예를 들어 거래가 30건뿐이면 평균이 크게 흔들릴 수 있어요.",
+    "표본이 15건 미만이면 소표본으로 봅니다.",
+    "가령 단가가 2만원/㎡인 토지 5,000㎡라면 총액은 1억원이에요.",
+])
+def test_hypothetical_unit_numbers_still_allowed(sentence):
+    from app.ai.dialogue import _render, _screen, number_policy
+
+    sources = {"current": _screen(land_matrix())}
+    policy = number_policy("일반적으로 어떻게 봐?", sources, ["일반 문서"])
+    assert _render({"kind": "knowledge", "answer": sentence}, sources, policy=policy) is not None
+
+
+def test_trend_zone_name_is_an_observation_marker():
+    from app.ai.dialogue import _render, _screen, number_policy
+
+    sources = {"current": _screen(trend_cell())}
+    issues = []
+    policy = number_policy("추이 요약해줘", sources)
+    assert _render({"kind": "knowledge", "answer": "계관 칸은 꾸준히 4.1 수준입니다."}, sources, issues, policy) is None

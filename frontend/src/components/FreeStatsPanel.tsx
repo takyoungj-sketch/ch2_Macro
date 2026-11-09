@@ -35,7 +35,7 @@ import YearlyStatsTable from "./YearlyStatsTable";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import RegionalProfileLink from "./RegionalProfileLink";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
-import { buildLandMatrixOverviewContext } from "../api/aiContext";
+import { buildLandMatrixContext, landRegionFullLabel } from "../api/aiContext";
 
 export default function FreeStatsPanel() {
   const narrow = useNarrowScreen();
@@ -181,6 +181,8 @@ export default function FreeStatsPanel() {
     if (cal && cal.length > 0) return cal;
     return data.by_year ?? [];
   }, [data]);
+
+  const aiRegion = useMemo(() => landRegionFullLabel(tierSelection, regions), [tierSelection, regions]);
 
   const closeTrend = () => {
     setTrendModal(null);
@@ -329,14 +331,28 @@ export default function FreeStatsPanel() {
   return (
     <div className={narrow ? "bg-white rounded-xl shadow-sm p-2 space-y-2" : "bg-white rounded-xl shadow-sm p-5 space-y-5"}>
         <PublishAiContext
-          context={buildLandMatrixOverviewContext({
-            regionLabel: data.beopjungri_name,
-            windowYears: freeStatsWindowYears,
-            txCount: data.total?.count ?? 0,
-            matrixMode,
+          context={buildLandMatrixContext({
+            resultKind: "basic",
+            scope: {
+              regionLabel: aiRegion.label || data.beopjungri_name,
+              regionLevel: aiRegion.level,
+              regionCodes: resolvedCodes,
+              period: {
+                kind: "rolling",
+                period_start: data.period_start,
+                period_end: data.period_end,
+                window_years: data.window_years ?? freeStatsWindowYears,
+              },
+              filters: { exclude_outlier: false, exclude_partial: false },
+              asOfMonth: data.as_of_month,
+              statsReferenceDate: data.stats_reference_date,
+            },
+            matrixMode: data.matrix_mode ?? matrixMode,
             matrix: data.matrix ?? [],
             byZone: data.by_zone,
             byLandCategory: data.by_land_category,
+            byYear: yearlyRowsFreeReference,
+            total: data.total,
           })}
         />
         {useUpper &&
@@ -410,6 +426,8 @@ export default function FreeStatsPanel() {
         matrixMode={trendRequest?.matrix_mode}
         rows={trendRows}
         filterRequest={trendRequest}
+        aiRegionLabel={aiRegion.label || data.beopjungri_name}
+        aiAsOfMonth={data.as_of_month}
       />
     </div>
   );

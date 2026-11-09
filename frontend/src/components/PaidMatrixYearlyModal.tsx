@@ -28,6 +28,8 @@ import {
   buildLandLongTermContext,
   buildLandMatrixTrendContext,
   buildLandRegressionContext,
+  landFiltersFromRequest,
+  landPeriodFromRequest,
 } from "../api/aiContext";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
@@ -113,6 +115,10 @@ interface Props {
   filterRequest: MatrixYearlyRequest | null;
   /** 적용 범위 안내(기본: 필터 분석 기준 문구) */
   scopeNote?: string;
+  /** AI 문맥 지역명 (예: "충청북도 단양군 영춘면") */
+  aiRegionLabel?: string;
+  /** 기준월(YYYY-MM-01). 만년력 추이에서 기준월이 속한 해를 부분 연도로 표시한다. */
+  aiAsOfMonth?: string | null;
 }
 
 type PanelMode = "trend" | "longTerm" | "histogram" | "transactions" | "regression";
@@ -172,6 +178,8 @@ export default function PaidMatrixYearlyModal({
   rows,
   filterRequest,
   scopeNote,
+  aiRegionLabel,
+  aiAsOfMonth,
 }: Props) {
   const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
@@ -284,32 +292,45 @@ export default function PaidMatrixYearlyModal({
     [filterRequest, rows],
   );
 
+  /** AI 문맥 라벨: 지역명 · 칸(또는 범위 안내). 지역명이 없으면 칸만 보인다. */
+  const aiScopeLabel = [aiRegionLabel?.trim(), scopeNote?.trim() || `${zoneType} × ${landCategory}`]
+    .filter(Boolean)
+    .join(" · ");
   const aiRegressionContext = useMemo(() => {
     if (!regResult) return null;
-    const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
     return buildLandRegressionContext(regResult, {
-      regionLabel: label,
+      regionLabel: aiScopeLabel,
       zoneType,
       landCategory,
       modelType: regModelType,
     });
-  }, [regResult, scopeNote, zoneType, landCategory, regModelType]);
+  }, [regResult, aiScopeLabel, zoneType, landCategory, regModelType]);
 
   const aiPanelContext = useMemo(() => {
-    const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
     if (panel === "regression" && aiRegressionContext) return aiRegressionContext;
     if (panel === "trend" && sortedRows.length > 0) {
       return buildLandMatrixTrendContext(sortedRows, {
-        regionLabel: label,
+        regionLabel: aiScopeLabel,
         zoneType,
         landCategory,
+        metric: isRolling ? rollMetric : "mean",
+        isRolling,
+        asOfMonth: aiAsOfMonth ?? null,
+        scope: {
+          regionLabel: aiScopeLabel,
+          regionCodes: filterRequest?.region_codes ?? filterRequest?.region_selections?.map((unit) => unit.code) ?? null,
+          period: landPeriodFromRequest(filterRequest),
+          filters: landFiltersFromRequest(filterRequest),
+          asOfMonth: aiAsOfMonth ?? null,
+          statsReferenceDate: filterRequest?.rolling_stats_reference_date ?? null,
+        },
       });
     }
     if (panel === "longTerm" && ltData && ltData.series.length > 0) {
-      return buildLandLongTermContext(ltData, { regionLabel: label });
+      return buildLandLongTermContext(ltData, { regionLabel: aiScopeLabel });
     }
     return null;
-  }, [panel, aiRegressionContext, sortedRows, ltData, scopeNote, zoneType, landCategory]);
+  }, [panel, aiRegressionContext, sortedRows, ltData, aiScopeLabel, zoneType, landCategory, isRolling, rollMetric, aiAsOfMonth, filterRequest]);
 
   useEffect(() => {
     if (sortedRows.length === 0) return;

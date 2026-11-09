@@ -609,6 +609,8 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
     ),
 }
 
+# 2026-11-09: 기본통계·필터 분석 매트릭스 전체 문맥. 안내 문구는 기존 토지 매트릭스와 같다.
+PANEL_CAPABILITIES["LandMatrix"] = PANEL_CAPABILITIES["PaidMatrixCell"]
 _DEFAULT_CAPABILITY = PANEL_CAPABILITIES["RegressionCard"]
 
 

@@ -26,13 +26,17 @@ type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResp
 
 function answerContextLabel(context: AiContextPayload): string {
   const app = { land: "토지", built: "복합", collective: "집합", rent: "임대", profile: "지역프로필", insight: "Insight" }[context.app];
-  const panel = { RegressionCard: "회귀분석", PredictionCard: "예측 결과", BuildingList: "건물 목록", SangkwonCard: "상권분석", ModelSelectionModal: "모형 탐색", ModelCompareModal: "모형 비교" }[context.panel] || "현재 분석 화면";
+  const panel = { RegressionCard: "회귀분석", LandMatrix: context.facts?.result_kind === "filtered" ? "필터 분석 매트릭스" : "용도×지목 매트릭스", TrendCard: "추세", PredictionCard: "예측 결과", BuildingList: "건물 목록", SangkwonCard: "상권분석", ModelSelectionModal: "모형 탐색", ModelCompareModal: "모형 비교" }[context.panel] || "현재 분석 화면";
   const filters = context.scope?.filters ?? {};
   const facts = (context.facts?.primary ?? context.facts) as Record<string, unknown>;
   const years = filters.window_years ?? facts?.window_years;
   const period = filters.period ?? filters.as_of_month ?? facts?.as_of_month;
   const label = context.app === "insight" ? insightCatalog.find(item => item.panel === context.panel)?.title || "보고서 목록" : context.panel === "RentBuildingDetail" ? "임대 건물 상세" : panel;
-  return [app, context.scope?.region_label || "지역 미선택", context.scope?.asset_type, label, years != null ? `${years}년 구간` : null, typeof period === "string" ? period : null].filter(Boolean).join(" · ");
+  // 화면 문맥이 비어 있으면 "지역 미선택"이 아니라 실제 상태를 보인다.
+  const delivered = Object.keys(context.facts ?? {}).some((key) => key !== "base_screen");
+  if (!context.scope?.region_label && !delivered) return [app, "이 화면의 통계가 AI에 전달되지 않았습니다"].filter(Boolean).join(" · ");
+  const windowYears = years ?? (context.scope?.period as Record<string, unknown> | undefined)?.window_years;
+  return [app, context.scope?.region_label || "지역 미선택", context.scope?.asset_type, label, windowYears != null ? `${windowYears}년 구간` : null, typeof period === "string" ? period : null].filter(Boolean).join(" · ");
 }
 
 const PANEL_DISCLAIMER = "본 답변은 시장통계 해석이며 감정평가를 대체하지 않습니다.";
