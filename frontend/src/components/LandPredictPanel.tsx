@@ -13,7 +13,7 @@ import type {
   LandRegressionResponse,
   LandRegressionVariables,
 } from "../types";
-import { AnalysisHelpPanel } from "@ch2/analysis-help";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import {
   ESTIMATE_COPY,
   StatisticalEstimateCaption,

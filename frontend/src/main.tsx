@@ -3,8 +3,10 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { applyColorScheme, readStoredColorScheme } from "@ch2/macro-shell/displayUi";
 import { ProductAccessProvider } from "@ch2/macro-shell/productAccess";
+import { StatsGlossaryPresentationProvider } from "@ch2/stats-glossary";
 import App from "./App";
 import MobileLandApp from "./MobileLandApp";
+import StatsGlossaryHelp from "./components/StatsGlossaryHelp";
 import { useMobileScreen } from "@ch2/macro-shell/mobile/useMobileScreen";
 import "./index.css";
 
@@ -22,7 +24,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <ProductAccessProvider>
-        <Root />
+        <StatsGlossaryPresentationProvider component={StatsGlossaryHelp}>
+          <Root />
+        </StatsGlossaryPresentationProvider>
       </ProductAccessProvider>
     </QueryClientProvider>
   </React.StrictMode>

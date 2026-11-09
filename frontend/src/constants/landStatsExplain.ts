@@ -1,561 +1,161 @@
-import type { AnalysisExplain, PaidAnalysisRequest, PaidAnalysisResponse } from "../types";
-import type { FreeStatsV2Response } from "../types";
+import type { AnalysisExplain, PaidAnalysisRequest, PaidAnalysisResponse, FreeStatsV2Response } from "../types";
 import { statsAsOfLabel } from "../utils/freeStatsV2";
 
-/** 국토부 원장 → DB 거래 정제 파이프라인 (거래목록·통계 공통). */
-export function buildLedgerPipelineExplain(): AnalysisExplain {
+const UNIT_PRICE = "단가(만원/㎡) = 거래금액(만원) ÷ 계약면적(㎡)";
+function help(
+  id: string,
+  title: string,
+  summary: string,
+  interpretation: string[],
+  limitations: string[],
+  extra: Partial<AnalysisExplain> = {},
+): AnalysisExplain {
   return {
-    spec_id: "land.ledger_pipeline.v1",
+    spec_id: id,
     spec_version: "1.0",
-    title: "국토부 원본 → 거래 DB 정제 과정",
-    summary:
-      "통계·거래목록은 국토교통부 실거래가 공개 원본(CSV/엑셀)을 일정한 규칙으로 정제한 land_transactions 를 사용합니다. " +
-      "아래 단계를 거친 뒤에만 집계·목록에 포함됩니다.",
-    floor_groups: [
-      "1) 수집·적재: 시도·연도별 원본 파일 → land_transactions (원본 행 보존)",
-      "2) 유효성: 계약면적·거래금액·법정동코드·계약일 등 필수값 검증 → is_valid",
-      "3) 해제 제외: 동일 물건에 대한 해제(취소) 신고 행은 is_cancelled=true 로 표시하고 통계·목록에서 제외",
-      "4) 중복 정리: 동일 물건·계약 조건으로 판단되는 중복 신고는 transaction_hash 기준으로 묶고, 최신 신고 1건만 유효 표본으로 남김",
-      "5) 표시 필드: 지번(lot_display), 계약일, 지분·거래유형 등 UI 표시용 컬럼 채움",
-      "6) 사전집계: 기본통계(V2)·매트릭스·장기추세 등 용도별 마트 테이블 생성",
-    ],
-    controls: [
-      "통계·목록 공통 포함: is_valid=true, is_cancelled=false, unit_price_per_sqm IS NOT NULL",
-      "필터분석·목록 추가: 선택 연도·도로·면적·용도·지목·지분·IQR 이상치 등 사용자 필터",
-    ],
-    interpretation: [
-      "원본 건수와 화면 건수가 다를 수 있습니다 — 해제·중복·유효성 미달 행이 빠지기 때문입니다.",
-      "월간 갱신 시 최근 분기 CSV를 다시 받아 같은 키로 UPSERT 하며 해제·정정분을 반영합니다.",
-    ],
-    limitations: [
-      "중복 판정은 설계된 business key(법정동·지번·계약·면적·금액 등)에 따릅니다. 국토부 신고 오류·지번 표기 차이는 자동으로 합치지 못할 수 있습니다.",
-      "행정구역 코드·명칭 변경(통·폐합)은 v1에서 완전 remap 하지 않습니다 — 장기추세·과거 연도 해석 시 주의.",
-    ],
+    title,
+    summary,
+    interpretation,
+    limitations,
     interpretation_hints: [],
-    presets: [
-      {
-        id: "cancel",
-        question: "해제 신고란?",
-        answer:
-          "국토부 공개 데이터에 「해제」로 표시된 거래입니다. 동일 물건의 정상 신고가 함께 있으면 정상 신고는 유지하고, 해제 행만 통계에서 뺍니다.",
-      },
-      {
-        id: "dedupe",
-        question: "중복은 어떻게 판단하나요?",
-        answer:
-          "법정동·지번·계약일·면적·금액 등을 조합한 transaction_hash 가 같으면 동일 거래의 반복 신고로 보고, 계약일·id 기준 최신 1건만 남깁니다.",
-      },
-    ],
+    presets: [],
+    controls: [],
+    floor_groups: [],
+    ...extra,
   };
+}
+
+export function buildLedgerPipelineExplain(): AnalysisExplain {
+  return help("land.ledger_pipeline.v1", "토지 거래자료 정리 기준",
+    "국토교통부 실거래가 공개자료를 정리해 통계와 거래목록에 사용합니다. 계약 취소·중복 신고·필수 정보 누락 등에 따라 원본 건수와 화면의 거래 수는 다를 수 있습니다.",
+    ["계약면적·거래금액·지역·계약일 등 필수 정보가 유효한 거래를 사용합니다.", "해제 신고된 거래는 통계와 목록에서 제외합니다.", "정정·해제 신고는 자료 갱신 때 반영되므로 과거 수치가 달라질 수 있습니다."],
+    ["원본 신고 오류나 지번 표기 차이를 모두 자동으로 바로잡을 수는 없습니다.", "행정구역이 개편된 지역은 선택한 지역 단위와 자료 기간을 함께 확인해 주세요."],
+    { controls: ["통계와 거래목록에는 유효성 검사를 통과하고 단가를 계산할 수 있는 거래를 포함합니다.", "필터분석과 거래목록에는 사용자가 선택한 연도·도로·면적·용도지역·지목·지분·이상치 조건을 추가로 적용합니다."],
+      floor_groups: ["원본 자료를 수집하고 필수 정보의 유효성을 확인합니다.", "해제 신고를 제외하고 동일 거래의 반복 신고를 정리합니다.", "지번·계약일·지분·거래유형 등 화면 표시 정보를 정리합니다.", "분석 목적에 맞게 기본통계와 연도별 통계를 집계합니다."],
+      presets: [{ id: "cancel", question: "해제 신고란 무엇인가요?", answer: "계약이 해제됐다고 신고된 거래입니다. 정상 신고와 해제 신고가 함께 있으면 해제 신고 행을 통계에서 제외합니다." },
+        { id: "dedupe", question: "중복 신고는 어떻게 정리하나요?", answer: "법정동·지번·계약일·면적·금액 등을 조합한 기준으로 동일 거래의 반복 신고를 묶고 최신 신고 한 건을 남깁니다. 원본의 표기 차이는 자동으로 합쳐지지 않을 수 있습니다." }] });
 }
 
 export interface FreeStatsExplainContext {
-  data: FreeStatsV2Response;
-  viewMode: "free" | "paid";
-  isPaidBasic: boolean;
-  windowYears: 3 | 5 | 7;
-  useUpper: boolean;
-  upperLevelLabel?: string;
+  data: FreeStatsV2Response; viewMode: "free" | "paid"; isPaidBasic: boolean; windowYears: 3 | 5 | 7; useUpper: boolean; upperLevelLabel?: string;
 }
-
 export function buildFreeStatsExplain(ctx: FreeStatsExplainContext): AnalysisExplain {
-  const asOf = statsAsOfLabel(ctx.data) ?? "—";
-  const modeLabel = ctx.isPaidBasic ? "기본 통계 보기" : "토지 통계";
-  const period = `${ctx.data.period_start?.slice(0, 10) ?? "?"} ~ ${ctx.data.period_end?.slice(0, 10) ?? "?"}`;
-
-  const hints = [
-    `기준: ${asOf}`,
-    `롤링 창: 최근 ${ctx.windowYears}년 (contract_date 기준)`,
-    `집계 구간: ${period}`,
-    `표본: ${ctx.data.total.count.toLocaleString("ko-KR")}건`,
-  ];
-  if (ctx.useUpper && ctx.upperLevelLabel) {
-    hints.push(`상위 행정 집계: ${ctx.upperLevelLabel} (산하 법정동·리 합산)`);
-  }
-
-  return {
-    spec_id: "land.free_stats_v2.v1",
-    spec_version: "1.0",
-    title: `${modeLabel} — 화면 구성`,
-    summary:
-      "선택 지역의 토지 실거래를 **직전 달 말 기준**으로 잡은 롤링 3·5년 창 안에서 요약합니다. " +
-      "상단 연도별 표·범례·용도×지목 매트릭스는 **동일 표본·동일 기간**을 다른 각도로 보여 줍니다.",
-    formula:
-      "단가(만원/㎡) = 거래금액(만원) ÷ 계약면적(㎡)\n" +
-      "매트릭스 셀 = 선택 구간 × 법정동·리 × 용도지역 × 지목 교차 표본",
-    reference: "land_basic_stats_v2 또는 상위 land_upper_stats_v2 (as_of_month 스냅샷)",
-    floor_groups: [
-      "총거래 표(연도별): 달력 연도별 건수·총액·면적·가중 단가 + 연말 인구(별도 population_stats, 12월만)",
-      "용도×지목 매트릭스: 각 셀 5행 — 거래수/최소 | 평균·25% | 중위 | 표준편차·75% | 95%신뢰구간·최대",
-      "ALL×ALL 칸: 해당 지역 전체 용도·지목 합산 요약",
-    ],
-    controls: [
-      "포함: is_valid, 해제 제외, 단가 산출 가능 거래",
-      "미적용: 도로·면적구분·지분·IQR 등 유료 필터 (기본통계 단계)",
-      "연말 인구: stats_month=12 인 population_stats 만 합산 (없는 연도는 빈 칸)",
-    ],
-    interpretation: [
-      "「YYYY년 M월 말 기준」은 DB에 적재된 최신 V2 스냅샷(as_of_month)을 뜻합니다.",
-      `롤링 ${ctx.windowYears}년 창은 기준일 직전 ${ctx.windowYears}년간 contract_date 가 걸친 거래입니다.`,
-      "매트릭스에서 n≥15 건은 신뢰 구간(연한 강조), n<5 건은 흐리게 표시됩니다.",
-      ctx.isPaidBasic
-        ? "기본통계 보기 후 「필터 분석 실행」을 누르면 연도·도로 등 고급 필터가 적용된 별도 결과로 이동합니다."
-        : "「필터 분석 실행」으로 고급 필터 결과를 볼 수 있습니다.",
-    ],
-    limitations: [
-      "사전집계(V2)에 없는 법정코드는 합산에서 자동 제외될 수 있습니다(amber 안내).",
-      "상위 행정(시·군·구 등)만 선택 시 법정동·리별 매트릭스가 아닌 상위 합산 통계입니다.",
-    ],
-    interpretation_hints: hints,
-    presets: [
-      {
-        id: "vs-filter",
-        question: "필터 분석과 무엇이 다른가요?",
-        answer:
-          "기본통계는 롤링 3·5년·필터 없음. 필터분석은 선택 연도 칩·도로·면적·이상치·지분 등을 적용한 live 집계입니다.",
-      },
-      {
-        id: "year-table",
-        question: "연도별 표의 연도는?",
-        answer:
-          "연도별 참고표는 각 달력 연도(1월~12월)를 요약합니다. 매트릭스는 선택한 롤링 구간의 시작일부터 종료일까지 집계하므로 양 끝 연도의 기간과 거래 건수가 다를 수 있습니다.",
-      },
-    ],
-  };
+  const period = `${ctx.data.period_start?.slice(0, 10) ?? "시작일 미제공"} ~ ${ctx.data.period_end?.slice(0, 10) ?? "종료일 미제공"}`;
+  return help("land.free_stats_v2.v1", "토지 기본통계 읽기",
+    `선택 지역의 최근 ${ctx.windowYears}년 토지 거래를 요약합니다. 연도별 표와 용도지역 × 지목 분석표에서 거래 규모와 단가 분포를 살펴볼 수 있습니다.`,
+    ["평균·중앙값·분위수 단가는 만원/㎡ 단위입니다. 연도별 표의 가중 단가와 구분해서 읽어 주세요.", "롤링 구간은 계약일 기준입니다. 첫해와 마지막 해가 1월~12월 전체를 포함하지 않을 수 있습니다.", "도로·면적·지분·이상치 등의 추가 조건은 필터분석에서 확인할 수 있습니다."],
+    ["상위 행정구역만 선택하면 산하 지역을 합산한 통계입니다.", "자료가 없어 표시되지 않는 값과 거래 수가 0인 경우를 구분해 주세요."],
+    { formula: UNIT_PRICE, controls: ["유효한 거래 중 해제 신고를 제외하고 단가를 계산할 수 있는 거래를 집계합니다.", "기본통계에는 도로·면적·지분·IQR 등의 추가 필터를 적용하지 않습니다.", "연도별 인구는 별도 인구자료의 연말 값을 사용합니다. 자료가 없는 연도는 빈칸으로 표시합니다."],
+      floor_groups: ["연도별 표에서 거래 수·총거래금액·계약면적과 가중 단가를 확인합니다.", "분석표는 용도지역과 지목 또는 지목군별 거래를 나눠 보여줍니다. 칸 안의 값은 범례 도움말에서 확인해 주세요."],
+      interpretation_hints: [`기준: ${statsAsOfLabel(ctx.data) ?? "미제공"}`, `롤링 구간: 최근 ${ctx.windowYears}년 · 계약일 기준`, `집계 기간: ${period}`, `표본: ${ctx.data.total.count.toLocaleString("ko-KR")}건`, ...(ctx.useUpper && ctx.upperLevelLabel ? [`상위 행정구역 합산: ${ctx.upperLevelLabel}`] : [])],
+      presets: [
+        {
+          id: "vs-filter",
+          question: "필터분석과 무엇이 다른가요?",
+          answer: "기본통계 매트릭스는 선택한 롤링 구간의 거래를 요약합니다. 필터분석은 선택 연도와 도로·면적·지분·이상치 등 추가 조건을 적용하므로 기간과 표본이 다를 수 있습니다.",
+        },
+        {
+          id: "year-table",
+          question: "연도별 표는 어느 날짜를 기준으로 하나요?",
+          answer: "연도별 참고표는 각 달력 연도(1월~12월)를 요약합니다. 매트릭스는 선택한 롤링 구간의 시작일부터 종료일까지 집계하므로 양 끝 연도의 기간과 거래 건수가 다를 수 있습니다.",
+        },
+      ],
+    });
 }
 
-export interface PaidFilteredExplainContext {
-  result: PaidAnalysisResponse;
-  regionLabel?: string;
-}
-
+export interface PaidFilteredExplainContext { result: PaidAnalysisResponse; regionLabel?: string }
 export function buildPaidFilteredExplain(ctx: PaidFilteredExplainContext): AnalysisExplain {
   const req = ctx.result.request;
-  const asOf = statsAsOfLabel(ctx.result) ?? "—";
-  const years =
-    req.years && req.years.length > 0
-      ? req.years.slice().sort((a, b) => a - b).join(", ")
-      : req.year_from != null && req.year_to != null
-        ? `${req.year_from}~${req.year_to}`
-        : "전체";
-
-  const hints = [
-    `기준: ${asOf}`,
-    `선택 연도: ${years}`,
-    `표본: ${ctx.result.total.count.toLocaleString("ko-KR")}건`,
-    `이상치 제외: ${req.exclude_outlier ? `적용 (IQR×${req.outlier_iqr_multiplier})` : "안 함"}`,
-    `지분거래: ${req.exclude_partial ? "제외" : "포함"}`,
-    req.deal_types?.length
-      ? `거래유형: ${req.deal_types.join(", ")}`
-      : "거래유형: 중개거래·직거래 전체",
-  ];
-  if (ctx.regionLabel) hints.push(`지역: ${ctx.regionLabel}`);
-
-  return {
-    spec_id: "land.paid_filtered.v1",
-    spec_version: "1.0",
-    title: "필터 분석 결과 — 화면 구성",
-    summary:
-      "좌측에서 고른 지역·연도·도로·면적·용도·지목·지분·이상치 조건을 **land_transactions 에 live 적용**한 표본으로 " +
-      "용도×지목 매트릭스를 만듭니다. 기본통계 보기와 **기간 축·표본이 다를 수** 있습니다.",
-    formula:
-      "단가(만원/㎡) = 거래금액(만원) ÷ 계약면적(㎡)\n" +
-      "매트릭스 = 필터 통과 거래만 zone_type × land_category 교차 집계",
-    reference: "land_transactions (실시간 GROUP BY, base_cache_key 사용 시 기본통계 후보 고정)",
-    floor_groups: [
-      "상단(기본통계 보기): 롤링 3·5년 V2 사전집계 — 필터 없음",
-      "필터 분석 결과: 선택 연도(만년력) + 고급 필터 적용 live 집계",
-      "매트릭스 칸 클릭 → 연도별 추이·단가 분포·거래목록·장기추세 모달",
-    ],
-    controls: filterControlsList(req),
-    interpretation: [
-      "연도 칩은 contract_year(만년력) 기준입니다 — 기본통계의 롤링 contract_date 창과 다릅니다.",
-      "200곳 초과·상위 단일 선택 등 일부 범위는 bulk API 대신 상위 사전집계·실시간 집계로 전환될 수 있습니다(amber 안내).",
-      "매트릭스 칸을 클릭하면 해당 용도×지목에 한정된 상세 분석 모달이 열립니다.",
-    ],
-    limitations: [
-      "필터 조합에 따라 표본이 매우 작아지면 단가·분위수가 불안정합니다(n<15 참고).",
-      "base_cache_key 가 있으면 기본통계 후보 집합 안에서만 필터가 적용됩니다.",
-    ],
-    interpretation_hints: hints,
-    presets: [
-      {
-        id: "outlier",
-        question: "IQR 이상치 제외는?",
-        answer:
-          "선택한 용도×지목 칸(또는 전체 표본)의 단가 분포에서 Tukey 펜스(IQR×배수) 밖 값을 제외합니다. 거래목록·분포 탭에도 동일 정책이 적용됩니다.",
-      },
-    ],
-  };
+  let period = "계약연도 전체";
+  if (req.rolling_matrix_period_start && req.rolling_matrix_period_end) {
+    period = `계약일 ${req.rolling_matrix_period_start}~${req.rolling_matrix_period_end}`;
+  } else if (req.years?.length) {
+    period = `계약연도 ${[...req.years].sort((a, b) => a - b).join(", ")}`;
+  } else if (req.year_from != null || req.year_to != null) {
+    period = `계약연도 ${req.year_from ?? "최초"}~${req.year_to ?? "최근"}`;
+  }
+  return help("land.paid_filtered.v1", "필터분석 결과 읽기",
+    "선택한 지역·연도와 추가 조건을 만족하는 거래의 단가 분포를 보여줍니다. 기본통계와 기간이나 표본이 다를 수 있습니다.",
+    ["적용 기간은 마지막으로 성공한 분석 요청에서 가져옵니다. 연도 선택은 계약연도 기준이며 롤링 범위는 계약일 기준입니다.", "분석표의 칸을 누르면 같은 분석 조건으로 해당 용도지역과 지목의 추이·분포·거래목록을 확인할 수 있습니다."],
+    ["거래가 적은 칸은 단가와 분위수가 크게 달라질 수 있습니다.", "기본통계에서 정한 후보 거래를 유지하는 분석에서는 그 후보 안에서 필터를 적용합니다."],
+    { formula: UNIT_PRICE, controls: filterControlsList(req), interpretation_hints: [`기준: ${statsAsOfLabel(ctx.result) ?? "미제공"}`, `적용 기간 ${period}`, `표본: ${ctx.result.total.count.toLocaleString("ko-KR")}건`, `이상치 제외: ${req.exclude_outlier ? `적용 · IQR ${req.outlier_iqr_multiplier}배` : "적용 안 함"}`, `지분거래: ${req.exclude_partial ? "제외" : "포함"}`, `거래유형: ${req.deal_types?.length ? req.deal_types.join(", ") : "중개거래·직거래 전체"}`, ...(ctx.regionLabel ? [`지역: ${ctx.regionLabel}`] : [])],
+      presets: [{ id: "outlier", question: "이상치 제외는 무엇인가요?", answer: "단가 분포의 25%~75% 구간 폭에 선택한 배수를 적용해 범위를 크게 벗어난 거래를 제외합니다. 선택한 거래목록·분포에도 같은 정책을 적용합니다. 제외된 거래가 잘못된 신고라는 뜻은 아닙니다." }] });
 }
-
 function filterControlsList(req: PaidAnalysisRequest): string[] {
-  const items: string[] = [
-    "포함: is_valid, 해제 제외, 단가 not null",
-  ];
+  const items = ["유효한 거래 중 해제 신고를 제외하고 단가를 계산할 수 있는 거래를 사용합니다."];
   if (req.road_conditions?.length) items.push(`도로: ${req.road_conditions.join(", ")}`);
   if (req.deal_types?.length) items.push(`거래유형: ${req.deal_types.join(", ")}`);
   if (req.area_categories?.length) items.push(`면적구분: ${req.area_categories.join(", ")}`);
-  if (req.area_sqm_min != null || req.area_sqm_max != null) {
-    items.push(
-      `면적(㎡): ${req.area_sqm_min ?? "—"} ~ ${req.area_sqm_max ?? "—"}`,
-    );
-  }
-  if (req.zone_types?.length) items.push(`용도지역 필터: ${req.zone_types.join(", ")}`);
-  if (req.land_categories?.length) items.push(`지목 필터: ${req.land_categories.join(", ")}`);
+  if (req.area_sqm_min != null || req.area_sqm_max != null) items.push(`면적(㎡): ${req.area_sqm_min ?? "제한 없음"} ~ ${req.area_sqm_max ?? "제한 없음"}`);
+  if (req.zone_types?.length) items.push(`용도지역: ${req.zone_types.join(", ")}`);
+  if (req.land_categories?.length) items.push(`지목: ${req.land_categories.join(", ")}`);
   return items;
 }
 
 export function buildMatrixLegendExplain(): AnalysisExplain {
-  return {
-    spec_id: "land.matrix_legend.v1",
-    spec_version: "1.1",
-    title: "용도×지목 매트릭스 — 셀 수치 의미",
-    summary:
-      "각 용도지역(행) × 지목(열) 교차 칸은 **5개 가격 통계 행**으로 구성됩니다. " +
-      "왼쪽 열은 해당 칸 표본의 분포 요약, 오른쪽 열은 보조 분위·극값입니다.",
-    formula: "단가(만원/㎡) = 거래금액(만원) ÷ 계약면적(㎡)",
-    floor_groups: [
-      "1행: 거래수(n) · 최소(min)",
-      "2~3행: 평균(같은 지목 열의 거래수 분위별 파랑) · 25%분위(p25) / 중위(median, 굵게)",
-      "4행: 표준편차(std) · 75%분위(p75)",
-      "5행: 95% 신뢰구간(평균 t-구간) · 최대(max)",
-    ],
-    controls: [],
-    interpretation: [
-      "평균·중위·분위는 모두 **만원/㎡** 단위입니다.",
-      "거래수 0이면 「—」 표시(0으로 두지 않음).",
-      "n≥15: 신뢰 구간 강조(연한 녹색 배경), n<5: 흐린 표시.",
-      "평균 숫자의 진하기는 같은 지목 열 안에서 거래가 많은 정도입니다. 상위 30%는 진한 파랑, 중간 40%는 기본 파랑, 하위 30%는 회청색입니다. 가격의 높낮이나 표본이 충분하다는 뜻은 아닙니다. 그 열에서 거래가 있는 칸이 5곳 미만이면 모두 기본 파랑입니다. 15건 이상인 옅은 녹색 배경이 표본 기준입니다.",
-      "행·열 머리(용도지역·지목)의 건수·평균은 해당 축 **전체 합산**입니다.",
-    ],
-    limitations: [
-      "극단값(대형 필지 등)은 평균을 끌어올릴 수 있어 중위·분위와 함께 보세요.",
-      "95% 신뢰구간은 **평균** 기준이며 중위값 구간이 아닙니다.",
-    ],
-    interpretation_hints: [],
-    presets: [
-      {
-        id: "mean-vs-median",
-        question: "평균 vs 중위?",
-        answer: "평균은 소수 고가 거래에 민감합니다. 중위(50%)는 대표값으로 더 안정적일 때가 많습니다.",
-      },
-      {
-        id: "ci",
-        question: "95% 신뢰구간은?",
-        answer: "해당 칸 표본 평균 단가의 t-구간 추정치입니다. n이 작으면 구간이 넓어집니다.",
-      },
-    ],
-  };
+  return help("land.matrix_legend.v1", "분석표의 수치와 색상",
+    "용도지역과 지목이 만나는 각 칸에서 거래 수와 단가 분포를 함께 확인할 수 있습니다. 단가의 단위는 만원/㎡입니다.",
+    ["중앙값은 가운데 거래의 단가입니다. 평균과 차이가 크면 분포가 한쪽으로 치우쳤을 수 있습니다.", "평균 숫자의 파란색 진하기는 같은 지목 열 안에서 거래가 많은 정도입니다. 가격의 높낮이를 뜻하지 않습니다.", "연한 녹색 배경은 15건 이상인 칸의 표본 기준 표시입니다. 5건 미만인 칸은 흐리게 표시합니다."],
+    ["95% 신뢰구간은 평균 단가에 대한 범위이며 중앙값의 범위가 아닙니다.", "표본 수나 강조색이 개별 필지의 가격 정확성을 보장하지는 않습니다."],
+    { formula: UNIT_PRICE, floor_groups: ["1행: 거래 수 · 최솟값", "2~3행: 평균 · 25% 값 / 중앙값", "4행: 표준편차 · 75% 값", "5행: 평균의 95% 신뢰구간 · 최댓값"], controls: ["평균 숫자의 진하기는 거래 수 상위 30%·중간 40%·하위 30%에 따라 구분합니다. 해당 열에서 거래가 있는 칸이 5곳 미만이면 같은 기본 파랑으로 표시합니다.", "행·열 머리의 거래 수와 평균은 해당 축 전체의 합산 결과입니다.", "거래가 없거나 값을 제공하지 않는 칸은 대시로 표시하며 0원으로 채우지 않습니다."], presets: [{ id: "ci", question: "평균의 95% 신뢰구간은 무엇인가요?", answer: "표본으로 추정한 평균 단가의 불확실성을 나타내는 t-구간입니다. 개별 필지의 거래 단가 범위가 아니며, 표본이 적으면 넓어질 수 있습니다." }] });
 }
-
 export function buildMatrixTableExplain(): AnalysisExplain {
-  return {
-    spec_id: "land.matrix_table.v1",
-    spec_version: "1.0",
-    title: "용도×지목 분석표 — 읽는 법",
-    summary:
-      "선택 지역·기간·필터 조건을 만족하는 거래를 용도지역(세로)과 지목(가로)으로 교차 집계한 표입니다. " +
-      "범례(?)에서 각 수치의 의미를 확인할 수 있습니다.",
-    interpretation: [
-      "칸을 클릭하면(유료 필터분석) 해당 용도×지목의 연도별 추이·분포·거래목록·장기추세를 볼 수 있습니다.",
-      "전체화면 버튼으로 넓게 볼 수 있습니다.",
-      "「미지정」「기타」 칸은 원장에 용도·지목이 비어 있거나 축약 규칙에 해당하는 표본입니다.",
-    ],
-    limitations: [
-      "ALL×ALL 은 전체 합산이며, 개별 칸 합과 일치하지 않을 수 있습니다(9조합 GROUPING SETS).",
-    ],
-    interpretation_hints: [],
-    presets: [],
-    controls: [],
-    floor_groups: [],
-  };
+  return help("land.matrix_table.v1", "용도지역 × 지목 분석표",
+    "선택한 거래를 용도지역(행)과 지목 또는 지목군(열)으로 나눠 비교하는 표입니다.",
+    ["칸 안의 수치와 색상은 범례 도움말에서 확인해 주세요.", "상세 보기가 가능한 칸을 누르면 해당 거래의 추이·분포·목록을 볼 수 있습니다.", "미지정·기타는 원자료의 분류 정보가 없거나 분류 규칙에 따라 묶인 거래입니다."],
+    ["전체 합산 칸과 개별 칸의 단순 합은 다를 수 있습니다. 표에 표시된 분석 범위를 확인해 주세요.", "표본이 적은 칸은 평균뿐 아니라 중앙값·분위수도 신중하게 읽어 주세요."]);
 }
 
-export interface TransactionListExplainContext {
-  zoneType: string;
-  landCategory: string;
-  total?: number;
-  /** 모달에 실제 로드된 건수(1만 상한) */
-  loadedCount?: number;
-  excludeOutlier: boolean;
-  outlierMultiplier: number;
-  filterSummary?: string;
+export interface TransactionListExplainContext { zoneType: string; landCategory: string; total?: number; loadedCount?: number; excludeOutlier: boolean; outlierMultiplier: number; filterSummary?: string }
+function transactionHints(ctx: TransactionListExplainContext): string[] {
+  return [`용도지역 × 지목: ${ctx.zoneType} · ${ctx.landCategory}`, ...(ctx.total != null ? [`전체 조회 대상: ${ctx.total.toLocaleString("ko-KR")}건`] : []), ...(ctx.loadedCount != null ? [`화면에 불러온 거래: ${ctx.loadedCount.toLocaleString("ko-KR")}건`] : []), `이상치 제외: ${ctx.excludeOutlier ? `적용 · IQR ${ctx.outlierMultiplier}배` : "적용 안 함"}`];
 }
-
-export function buildTransactionListExplain(
-  ctx: TransactionListExplainContext,
-): AnalysisExplain {
-  const truncated =
-    ctx.total != null &&
-    ctx.loadedCount != null &&
-    ctx.total > ctx.loadedCount;
-  const hints: string[] = [
-    `용도×지목: ${ctx.zoneType} · ${ctx.landCategory}`,
-    ctx.total != null ? `표본: ${ctx.total.toLocaleString("ko-KR")}건` : "",
-    truncated
-      ? `모달 로드: ${ctx.loadedCount!.toLocaleString("ko-KR")}건 (1만 상한)`
-      : "",
-    `이상치 제외: ${ctx.excludeOutlier ? `적용 (IQR×${ctx.outlierMultiplier})` : "안 함"}`,
-  ].filter(Boolean);
-
-  const pipeline = buildLedgerPipelineExplain();
-
-  return {
-    spec_id: "land.tx_list.v1",
-    spec_version: "1.0",
-    title: "거래 목록 — 데이터·산출 방법",
-    summary:
-      "필터분석(또는 매트릭스 칸)과 **동일 조건**을 land_transactions 에 적용한 뒤, " +
-      "최신 계약 순으로 조회합니다. 모달은 **최대 1만 건**까지 일괄 로드해 필터·정렬합니다. " +
-      "CSV 내보내기는 동일 필터의 **전체 건**입니다.",
-    formula: "단가(만원/㎡) = 거래금액(만원) ÷ 계약면적(㎡)",
-    reference: "land_transactions + region_codes (beopjungri_name)",
-    floor_groups: pipeline.floor_groups,
-    controls: [
-      ...(ctx.filterSummary ? [ctx.filterSummary] : []),
-      "목록·CSV 공통: is_valid, 해제 제외, 단가 not null",
-      ctx.excludeOutlier
-        ? `이상치 제외: 해당 칸 단가 IQR×${ctx.outlierMultiplier} 밖 거래 제외`
-        : "이상치 제외: 미적용",
-      "모달 목록: 클라이언트 필터·정렬·페이지(100건/페이지)",
-    ],
-    interpretation: [
-      "계약일: contract_date 가 있으면 yyyy-MM-dd, 없으면 연·월(YYYY.MM) 표시.",
-      "지번·지분·유형은 정제 단계에서 채운 표시 필드입니다(원본 지번 문자열).",
-      "목록은 모달 필터와 동기화되며, 장기추세·기본통계 표본과 다를 수 있습니다.",
-      "집계 탭에서 행을 클릭하면 해당 축 값으로 목록 필터가 적용됩니다.",
-    ],
-    limitations: [
-      ...pipeline.limitations,
-      "모달 목록·집계는 **1만 건 상한** — 초과분은 CSV 또는 필터 범위 축소로 확인.",
-    ],
-    interpretation_hints: hints,
-    presets: pipeline.presets,
-  };
+export function buildTransactionListExplain(ctx: TransactionListExplainContext): AnalysisExplain {
+  return help("land.tx_list.v1", "거래목록 이용 방법",
+    "현재 분석 조건에 해당하는 거래를 최신 계약 순으로 보여줍니다. 화면에서는 최대 1만 건을 불러와 필터와 정렬을 적용합니다.",
+    ["계약일·지번·면적·지분·거래유형 등 개별 거래의 조건을 확인해 주세요.", "계약일이 없는 자료는 계약 연·월로 표시될 수 있습니다.", "집계표의 행이나 칸을 선택하면 해당 조건으로 거래목록을 좁힐 수 있습니다."],
+    ["전체 조회 대상이 1만 건을 넘으면 화면의 목록과 집계는 불러온 거래만 반영합니다. CSV는 같은 분석 조건으로 최대 5만 건까지 내보낼 수 있습니다.", "기본통계나 장기 추세와 기간·필터가 다르면 거래 수가 달라질 수 있습니다."],
+    { formula: UNIT_PRICE, controls: [...(ctx.filterSummary ? [ctx.filterSummary] : []), "화면의 목록은 불러온 거래에 필터·정렬을 적용하고 한 페이지에 25건씩 표시합니다.", `이상치 제외: ${ctx.excludeOutlier ? `단가 분포의 IQR ${ctx.outlierMultiplier}배 기준` : "적용 안 함"}`], interpretation_hints: transactionHints(ctx), presets: buildLedgerPipelineExplain().presets });
 }
-
-export function buildTransactionAggregateExplain(
-  ctx: TransactionListExplainContext,
-): AnalysisExplain {
-  const truncated =
-    ctx.total != null &&
-    ctx.loadedCount != null &&
-    ctx.total > ctx.loadedCount;
-  const hints: string[] = [
-    `용도×지목: ${ctx.zoneType} · ${ctx.landCategory}`,
-    ctx.total != null ? `DB 표본: ${ctx.total.toLocaleString("ko-KR")}건` : "",
-    truncated
-      ? `집계 대상: ${ctx.loadedCount!.toLocaleString("ko-KR")}건 (로드분만)`
-      : ctx.loadedCount != null
-        ? `집계 대상: ${ctx.loadedCount.toLocaleString("ko-KR")}건`
-        : "",
-    `이상치 제외: ${ctx.excludeOutlier ? `적용 (IQR×${ctx.outlierMultiplier})` : "안 함"}`,
-  ].filter(Boolean);
-
-  const pipeline = buildLedgerPipelineExplain();
-
-  return {
-    spec_id: "land.tx_aggregate.v2",
-    spec_version: "2.0",
-    title: "거래 집계 — 피벗 Lite",
-    summary:
-      "거래 목록과 **동일 API·동일 필터**로 받은 건을 **1축 요약** 또는 **2축 교차표**로 집계합니다. " +
-      "**추가 서버 호출 없음** — 이미 로드된 items 에서만 계산합니다.",
-    formula:
-      "그룹별 건수 · 중앙/평균 단가(만원/㎡) · 면적합(㎡). " +
-      "2축 셀: 건수 + 중앙 단가. 단가 = 거래금액(만원) ÷ 계약면적(㎡).",
-    reference: "land_transactions (모달 bulk load) — docs/LAND_TX_AGGREGATE_DESIGN.md",
-    floor_groups: pipeline.floor_groups,
-    controls: [
-      "1축: 읍·면·동(기본) · 동·리 · 도로 · 거래유형 · 계약연도 · (지목군) 지목",
-      "2축: 행·열 축 선택 + preset (읍·면·동×거래유형·도로·연도·지목)",
-      "정렬: 건수 내림차순 → 라벨 가나다",
-      "1축 행 / 2축 셀·행·열 헤더 클릭 → 거래 목록 필터",
-    ],
-    interpretation: [
-      "**읍·면·동** — 하위 행정구역별 단가·거래량 비교(주 사용).",
-      "**2축 교차** — 동×거래유형 등 조건 조합으로 「이 동만 비싼 이유」 탐색.",
-      "교차표 셀: 위=건수, 아래=중앙 단가(만원/㎡).",
-      "중앙 단가는 소표본에서 평균보다 이상치에 덜 민감합니다.",
-    ],
-    limitations: [
-      "1만 건 상한 — 전체 표본과 집계가 다를 수 있음(CSV·범위 축소 권장).",
-      "2축도 클라이언트 집계 — DB 전수·1만+ 칸은 Phase 2b(서버 GROUP BY) 검토.",
-      "집계는 로드된 건 기준이며 DB 재집계가 아닙니다.",
-    ],
-    interpretation_hints: hints,
-    presets: pipeline.presets,
-  };
+export function buildTransactionAggregateExplain(ctx: TransactionListExplainContext): AnalysisExplain {
+  return help("land.tx_aggregate.v2", "거래 집계표 읽기",
+    "거래목록에 불러온 자료를 한 가지 기준으로 묶거나 두 가지 기준의 교차표로 요약합니다.",
+    ["읍·면·동·도로·거래유형·계약연도 등 묶을 기준을 선택할 수 있습니다.", "교차표는 거래 수와 중앙단가를 표시합니다. 단위는 만원/㎡입니다.", "행·칸·머리글을 선택하면 해당 조건으로 거래목록을 좁힐 수 있습니다."],
+    ["집계는 화면에 불러온 거래만 사용합니다. 1만 건을 넘는 전체 조회 대상의 집계와 다를 수 있습니다.", "거래 구성이 다르면 단가가 달라질 수 있습니다. 표의 차이만으로 특정 조건의 인과적 효과를 판단하지 마세요."],
+    { formula: UNIT_PRICE, controls: ["한 가지 기준의 집계에는 거래 수·중앙단가·평균단가·면적 합계를 표시합니다.", "기본 정렬은 거래 수가 많은 순이며 같은 건수에서는 이름순입니다.", ...(ctx.filterSummary ? [ctx.filterSummary] : [])], interpretation_hints: transactionHints(ctx) });
 }
-
 export function buildMatrixCellTrendExplain(isRolling: boolean): AnalysisExplain {
-  return {
-    spec_id: "land.matrix_cell_trend.v1",
-    spec_version: "1.0",
-    title: isRolling ? "롤링 구간별 추이" : "선택 연도별 추이",
-    summary: isRolling
-      ? "기본통계 롤링 창을 12개월 버킷으로 나눈 구간별 단가·거래수 추이입니다. 평균 또는 같은 표본의 중앙값·25%·75%를 볼 수 있습니다."
-      : "필터분석에서 선택한 **만년력 연도**별 평균 단가·거래수 추이입니다.",
-    interpretation: [
-      isRolling
-        ? "파란 실선은 선택한 평균 또는 중앙값(만원/㎡)입니다. 중앙값에서 25·75를 켜면 주황 선은 그 구간 거래의 25%·75%입니다."
-        : "파란 실선: 평균 단가(만원/㎡), 점선: 거래 건수.",
-      "동일 필터·이상치 정책이 분포·거래목록 탭과 공유됩니다.",
-      isRolling
-        ? "이 값은 장기 추세 탭의 만년력 연도 값과 표본이 다릅니다. 장기 추세에는 도로·면적·이상치·지분 필터가 없습니다."
-        : "",
-    ].filter(Boolean),
-    limitations: ["연도·구간에 거래가 없으면 점이 비어 있습니다."],
-    interpretation_hints: [],
-    presets: [],
-    controls: [],
-    floor_groups: [],
-  };
+  return help("land.matrix_cell_trend.v1", isRolling ? "롤링 구간별 추이" : "선택 연도별 추이",
+    isRolling ? "롤링 기간을 12개월 구간으로 나눠 단가와 거래 수의 흐름을 보여줍니다." : "선택한 계약연도별 평균 단가와 거래 수의 흐름을 보여줍니다.",
+    [isRolling ? "평균 또는 중앙값을 선택할 수 있습니다. 중앙값에서 25·75 표시를 켜면 같은 표본의 25%·75% 값도 볼 수 있습니다." : "실선은 평균 단가, 점선은 거래 수입니다.", "단가의 단위는 만원/㎡입니다. 분포·거래목록과 같은 필터·이상치 정책을 사용합니다."],
+    ["거래가 없는 연도나 구간은 점이 비어 있습니다.", "장기 추세는 달력 연도별 자료이며 추가 필터가 다를 수 있습니다. 같은 기간·표본인지 확인한 뒤 비교해 주세요."]);
 }
-
 export function buildHistogramExplain(): AnalysisExplain {
-  return {
-    spec_id: "land.matrix_histogram.v1",
-    spec_version: "1.0",
-    title: "단가 분포 히스토그램",
-    summary:
-      "선택한 표본 범위(전체 연도/특정 연·구간)에서 **만원/㎡** 단가의 빈도 분포와, 같은 표본의 박스플롯입니다.",
-    interpretation: [
-      "가로축: 단가 구간, 세로축: 거래 건수.",
-      "막대 위 상자는 같은 표본의 25%–75%입니다. 파란 선은 중앙값, 수염은 최소·최대입니다.",
-      "이상치 제외가 켜져 있으면 목록·추이와 같이 IQR 밖을 뺀 뒤 막대와 박스를 함께 그립니다.",
-      "특정 롤링 구간의 25%·중앙값·75%는 롤링 구간 탭의 그 구간 값과 같습니다. 구간 전체는 그 구간들을 합친 표본입니다.",
-    ],
-    limitations: [
-      "구간 경계는 자동 등분이며 소수 표본에서는 모양이 불안정할 수 있습니다.",
-      "1건이면 최소·25%·중앙값·75%·최대가 한 값으로 겹칩니다.",
-    ],
-    interpretation_hints: [],
-    presets: [],
-    controls: [],
-    floor_groups: [],
-  };
+  return help("land.matrix_histogram.v1", "단가 분포 읽기",
+    "선택한 거래가 어느 단가 구간에 모여 있는지 막대와 박스플롯으로 보여줍니다.",
+    ["가로축은 단가(만원/㎡), 세로축은 거래 수입니다.", "상자는 25%~75% 구간, 파란 선은 중앙값, 수염은 최솟값과 최댓값입니다.", "이상치 제외를 선택하면 같은 조건의 거래를 제외한 뒤 막대와 박스플롯을 함께 그립니다."],
+    ["표본이 적으면 그래프 모양이 불안정할 수 있습니다. 한 건이면 여러 통계값이 같은 위치에 겹칩니다.", "특정 구간의 분포와 여러 구간을 합친 전체 분포는 구분해서 읽어 주세요."]);
 }
 
-/** 셀 모달 · 회귀 탭 */
-export const LAND_REGRESSION_HELP: AnalysisExplain = {
-  spec_id: "land.regression.v1",
-  spec_version: "1.0",
-  title: "토지 셀 회귀 (용도×지목)",
-  summary:
-    "선택한 용도지역×지목 셀·필터 표본에서 단가(또는 log 단가) OLS를 적합합니다. " +
-    "면적·도로·거래유형·지분·연도·법정동 FE 등을 선택해 가격 형성 패턴을 읽습니다.",
-  formula: "단가(또는 log 단가) ~ 면적·도로·거래유형·지분·연도추세·법정동 FE …",
-  interpretation: [
-    "Adj R²·계수·유의성은 이 셀·필터 안의 통계적 패턴입니다.",
-    "로그 모형은 % 변화 해석에 가깝고, 선형은 만원/㎡ 단위입니다.",
-    "산점도로 통제 전(r)과 통제 후(β)를 비교하세요.",
-  ],
-  limitations: ["인과·적정가 아님", "셀 n·필터에 민감", "IQR 제외는 표본을 줄입니다"],
-  interpretation_hints: [],
-  presets: [
-    {
-      id: "log_vs_linear",
-      question: "log와 선형 중 무엇을 쓰나요?",
-      answer:
-        "단가 분포 왜도가 크면 log를, 해석을 만원/㎡로 직관적으로 보고 싶으면 선형을 검토합니다. 둘 다 돌려 비교하는 것이 안전합니다.",
-    },
-  ],
-  controls: [],
-  floor_groups: [],
-};
-
-export const LAND_PREDICT_HELP: AnalysisExplain = {
-  spec_id: "land.predict.v1",
-  spec_version: "2.0",
-  title: "토지 회귀 예측",
-  summary:
-    "적합된 회귀식으로 입력값을 고정한 **한 점 통계적 추정**. 평균 추정범위(CI)·개별 거래 예측범위(PI)는 모형의 불확실성 참고입니다.",
-  formula: "ŷ = Xβ",
-  interpretation: [
-    "통계적 추정값: 선택한 거래자료와 회귀모형의 중심값입니다. AVM·감정평가액이 아닙니다.",
-    "95% 평균 추정범위: 이 조건에서 평균적인 가격수준.",
-    "95% 개별 거래 예측범위: 개별 거래 변동까지 포함한 통계적 범위.",
-    "학습 범위(min~max) 밖 입력은 외삽입니다.",
-  ],
-  limitations: ["적정가·감정 아님", "셀·필터 표본에 종속", "범위는 가액을 보증하지 않음"],
-  interpretation_hints: [],
-  presets: [
-    {
-      id: "pi_ci",
-      question: "평균 추정범위와 개별 거래 예측범위 차이는?",
-      answer:
-        "평균 추정범위(CI)는 평균 가격수준의 정밀도만 봅니다. 개별 거래 예측범위(PI)는 개별 거래 변동을 포함합니다. 실제 필지 가액이 반드시 그 안에 있다는 뜻이 아닙니다.",
-    },
-  ],
-  controls: [],
-  floor_groups: [],
-};
-
-export const LAND_MODEL_SUGGEST_HELP: AnalysisExplain = {
-  spec_id: "land.model_suggest.v1",
-  spec_version: "1.0",
-  title: "토지 모형 추천",
-  summary:
-    "같은 표본에서 변수 블록 조합을 평가해 **설명형(AIC)** · **예측형(MAPE)** 목적별 후보를 보여 줍니다. 「최적 식」이 아니라 참고이며, Twin Validation은 복합(확장)만 있습니다.",
-  formula: "후보 subset OLS → AIC / MAPE 순위 (깊이: 표준)",
-  interpretation: [
-    "설명형 탭: AIC 상위 — 적합·간결 균형.",
-    "예측형 탭: MAPE 상위 — in-sample 예측 오차 최소화 (CV-MAPE는 복합).",
-    "채택은 사용자가 판단합니다.",
-  ],
-  limitations: ["in-sample 기준", "적정가 아님", "n이 작으면 불안정"],
-  interpretation_hints: [],
-  presets: [],
-  controls: [],
-  floor_groups: [],
-};
-
-export const LAND_SCATTER_RAW_HELP: AnalysisExplain = {
-  spec_id: "land.scatter_raw.v1",
-  spec_version: "1.0",
-  title: "상관관계 (통제 전)",
-  summary: "원시 X vs 단가(만원/㎡) 산점도·Pearson r — **실제 거래 분포** 탐색.",
-  formula: "r = corr(X, 단가)",
-  interpretation: [
-    "다른 변수 영향이 섞여 있습니다.",
-    "r과 β가 다르면 **부분회귀도** 탭으로 전환하세요.",
-  ],
-  limitations: ["인과 해석 불가"],
-  interpretation_hints: [],
-  presets: [
-    {
-      id: "why_raw",
-      question: "왜 통제 전도 필요한가요?",
-      answer:
-        "현장 데이터의 **실제 모양**을 먼저 봅니다. 통제 후만 보면 시장 분포 감각이 약해질 수 있어 둘 다 제공합니다.",
-    },
-  ],
-  controls: [],
-  floor_groups: [],
-};
-
-export const LAND_SCATTER_PARTIAL_HELP: AnalysisExplain = {
-  spec_id: "land.scatter_partial.v1",
-  spec_version: "1.0",
-  title: "부분회귀도 (통제 후)",
-  summary: "모형과 동일하게 다른 변수를 제거한 **잔차 vs 잔차**. 기울기 = 회귀 β.",
-  formula: "Y잔차 vs X잔차 (Added Variable Plot)",
-  interpretation: [
-    "기울기는 해당 변수의 회귀계수 β와 같습니다. 전체 모형의 잔차 분포·영향 거래를 진단하는 그림과는 다릅니다.",
-    "파란 기울기선 = OLS β.",
-    "부분 R² = 통제 후 추가 설명력 참고.",
-  ],
-  limitations: ["연속 변수만", "log 모형은 log(단가) 잔차 공간"],
-  interpretation_hints: [],
-  presets: [
-    {
-      id: "beta_line",
-      question: "파란 기울기선은?",
-      answer: "원점 기준 직선의 기울기가 **회귀 β**와 같습니다.",
-    },
-  ],
-  controls: [],
-  floor_groups: [],
-};
+export const LAND_REGRESSION_HELP = help("land.regression.v1", "토지 회귀 결과 읽기",
+  "현재 용도지역·지목과 분석 조건에 해당하는 거래로 변수와 토지 단가의 관계를 분석합니다.",
+  ["분석 대상은 거래금액이 아닌 단가 또는 로그 단가입니다. 선형모형의 단가는 만원/㎡ 단위입니다.", "선택한 변수라도 자료가 부족하거나 값에 차이가 없으면 제외될 수 있습니다. 실제 포함 변수와 기준 범주를 결과에서 확인해 주세요.", "결정계수와 학습 오차는 이 표본 안의 결과입니다. 새로운 거래의 정확도를 보장하지 않습니다."],
+  ["계수는 통계적 관계이며 인과관계나 개별 필지의 적정가격을 뜻하지 않습니다.", "개별공시지가를 사용하면 해당 정보가 있는 표본만 분석에 남을 수 있습니다. 지분거래의 공시지가는 임의로 보강하거나 채우지 않습니다."],
+  { formula: "단가 또는 로그 단가 ~ 선택한 변수", controls: ["면적·도로조건·거래유형·지분·연도·법정동 등 선택한 변수를 사용합니다.", "결측치와 이상치 처리에 따라 실제 적합 거래 수가 달라질 수 있습니다.", "법정동 고정효과는 기준 동과의 단가 수준 차이를 구분하는 변수입니다."], presets: [{ id: "log_vs_linear", question: "선형모형과 로그모형은 어떻게 읽나요?", answer: "선형모형은 단가의 차이를 원래 단위로, 로그모형은 상대적인 변화를 중심으로 읽습니다. 변수에도 로그를 적용했는지 확인하고 계수 표의 효과 해석을 참고해 주세요. 모형 종류만으로 정확도를 판단하지 마세요." }] });
+export const LAND_PREDICT_HELP = help("land.predict.v1", "토지 조건별 추정",
+  "적합한 회귀모형에 조건을 입력해 통계적 추정 단가와 범위를 확인합니다. 단위는 만원/㎡입니다.",
+  ["모형에 계약연도나 거래유형 효과가 포함되면 추정에 사용할 조건을 입력하거나 선택합니다.", "연도추세가 없으면 현재 시점으로 보정하지 않습니다. 거래유형 효과가 없으면 유형별 가격을 구분할 수 없습니다.", "95% 평균 추정범위는 입력 조건에서 평균적인 단가 수준의 불확실성입니다.", "95% 개별 거래 예측범위는 개별 거래의 변동까지 고려합니다.", "분석에 사용한 변수의 범위를 벗어난 입력은 외삽이므로 결과를 신중하게 읽어 주세요."],
+  ["이 결과는 AVM에 의한 가격평가가 아닌, 회귀모형의 통계적 참고값입니다.", "표시한 범위가 실제 거래 단가를 보장하지는 않습니다."],
+  { formula: "추정값 = 입력 조건과 회귀계수로 계산한 값", presets: [{ id: "pi_ci", question: "두 범위는 어떻게 다른가요?", answer: "평균 추정범위는 평균적인 단가 수준의 불확실성을, 개별 거래 예측범위는 개별 거래의 변동까지 고려합니다. 둘 다 개별 필지의 적정가격을 보장하는 범위는 아닙니다." }] });
+export const LAND_MODEL_SUGGEST_HELP = help("land.model_suggest.v1", "토지 모형 추천 읽기",
+  "같은 거래 표본에서 변수 조합을 비교하고 AIC가 낮은 후보부터 보여줍니다.",
+  ["AIC는 적합도와 모형의 복잡도를 함께 고려합니다.", "선택한 후보의 실제 변수와 적용 후 분석 조건을 함께 확인해 주세요."],
+  ["표본과 종속변수 척도가 다른 지표는 직접 비교하지 마세요.", "후보 순위가 개별 필지의 가격 정확성을 보장하지는 않습니다."]);
+export const LAND_SCATTER_RAW_HELP = help("land.scatter_raw.v1", "상관관계 · 다른 변수 고려 전",
+  "각 변수와 토지 단가가 실제 거래에서 어떻게 함께 분포하는지 보여줍니다.",
+  ["가로축의 변수와 세로축의 단위, 거래 수를 먼저 확인해 주세요.", "상관계수 r은 두 변수의 선형적인 관계를 나타냅니다. 다른 변수의 영향은 함께 섞여 있습니다."],
+  ["상관관계만으로 인과관계를 판단할 수 없습니다. 다른 변수의 영향을 고려한 관계는 부분회귀도에서 확인해 주세요."], { formula: "r = 변수와 단가 사이의 상관계수" });
+export const LAND_SCATTER_PARTIAL_HELP = help("land.scatter_partial.v1", "부분회귀도 · 다른 변수 고려 후",
+  "모형에 포함된 다른 변수의 영향을 각각 제거한 뒤, 관심 변수와 단가의 관계를 살펴봅니다.",
+  ["파란 선의 기울기는 해당 변수의 회귀계수와 같습니다.", "부분 R²는 다른 변수를 고려한 뒤 관심 변수가 추가로 설명하는 정도를 참고하는 값입니다."],
+  ["연속 변수에 제공하며, 로그모형에서는 로그 단가의 잔차를 사용합니다.", "모형 전체의 오차 분포나 영향 거래를 진단하는 잔차 진단과는 다릅니다."], { formula: "다른 변수의 영향을 제거한 관심 변수와 단가의 잔차를 비교합니다." });
