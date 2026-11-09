@@ -46,7 +46,6 @@ _MACRO_PREFIXES = (
     "/api/regional-profile/",
     "/api/insight/",
     "/api/ai/",
-    "/api/ai3/",
 )
 
 

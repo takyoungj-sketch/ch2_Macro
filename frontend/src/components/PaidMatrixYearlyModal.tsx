@@ -303,8 +303,10 @@ export default function PaidMatrixYearlyModal({
       zoneType,
       landCategory,
       modelType: regModelType,
+      controlsChanged: regControlsStale,
+      request: regBody,
     });
-  }, [regResult, aiScopeLabel, zoneType, landCategory, regModelType]);
+  }, [regResult, aiScopeLabel, zoneType, landCategory, regModelType, regControlsStale, regBody]);
 
   const aiPanelContext = useMemo(() => {
     if (panel === "regression" && aiRegressionContext) return aiRegressionContext;

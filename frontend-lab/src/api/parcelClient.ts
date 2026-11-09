@@ -1,12 +1,11 @@
 import axios from "axios";
-import { readQaToken } from "./qaClient";
+import { adminHeaders } from "./qaClient";
 
 function parcelApi() {
-  const token = readQaToken();
   return axios.create({
     baseURL: "/api/admin/parcel",
     timeout: 60_000,
-    headers: token ? { "X-Qa-Audit-Token": token } : undefined,
+    headers: adminHeaders(),
   });
 }
 

@@ -104,11 +104,6 @@ class Settings(BaseSettings):
     ai2_lab_enabled: bool = Field(default=False, validation_alias="AI2_LAB_ENABLED")
     #: AI 요청 제한에서 X-Real-IP 를 믿을 직접 접속 주소(쉼표 구분). nginx 가 같은 호스트일 때 loopback.
     ai_trusted_proxies: str = Field(default="127.0.0.1,::1", validation_alias="AI_TRUSTED_PROXIES")
-    # AI3 독립 로컬 시험. 기존 AI·AI2의 활성 여부와 무관하다.
-    ai3_enabled: bool = Field(default=False, validation_alias="AI3_ENABLED")
-    ai3_access_token: str = Field(default="", validation_alias="AI3_ACCESS_TOKEN")
-    ai3_monthly_call_limit: int = Field(default=40, ge=1, validation_alias="AI3_MONTHLY_CALL_LIMIT")
-    ai3_session_ttl_seconds: int = Field(default=86400, ge=60, validation_alias="AI3_SESSION_TTL_SECONDS")
     #: CH2 AI — Tavily 웹 검색 (없으면 DuckDuckGo Instant 폴백)
     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
     #: 카카오 Local API (FieldNote 주소 지오코딩 프록시)

@@ -1,10 +1,14 @@
 import axios from "axios";
+import { adminHeaders } from "./qaClient";
 
-const token = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
   baseURL: "/api/admin/land-twin",
   timeout: 60_000,
-  headers: token ? { "X-Api-Token": token } : undefined,
+});
+// 관리자 API: QA 토큰을 요청마다 읽어 붙인다.
+api.interceptors.request.use((config) => {
+  Object.entries(adminHeaders()).forEach(([key, value]) => config.headers.set(key, value));
+  return config;
 });
 
 export type LandTwinRegion = { region_code: string; label: string };

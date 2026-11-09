@@ -1,6 +1,7 @@
 import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import type {
   LandRegressionPredictResponse,
+  LandRegressionRequest,
   LandRegressionResponse,
   LongTermTrendResponse,
   MatrixCell,
@@ -19,18 +20,34 @@ export function buildLandRegressionContext(
     zoneType: string;
     landCategory: string;
     modelType: "log" | "linear";
+    /** 회귀 실행 뒤 조건이 바뀌었으면 화면 결과는 마지막 실행 기준이다. */
+    controlsChanged?: boolean;
+    /** 마지막으로 실행한 회귀 요청 */
+    request?: LandRegressionRequest | null;
   },
 ): AiContextPayload {
   return {
     app: "land",
     panel: "LandRegressionTab",
     purpose: "statistics",
-    scope: { region_label: opts.regionLabel },
+    scope: {
+      region_label: opts.regionLabel,
+      region_codes: opts.request?.region_codes ?? opts.request?.region_selections?.map((region) => region.code) ?? undefined,
+      filters: {
+        year_from: opts.request?.year_from,
+        year_to: opts.request?.year_to,
+        years: opts.request?.years,
+        zone_type: opts.zoneType,
+        land_category: opts.landCategory,
+      },
+    },
     facts: {
       ...regData,
       zone_type: opts.zoneType,
       land_category: opts.landCategory,
-      model_type: opts.modelType,
+      model_type: regData.model_type ?? opts.modelType,
+      requested_model_type: opts.modelType,
+      controls_changed: Boolean(opts.controlsChanged),
     },
   };
 }

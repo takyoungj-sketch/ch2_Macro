@@ -53,6 +53,15 @@
 
 - 사용자가 배포만 요청: 변경 범위에 맞는 파일만 commit (전체 `git add .` 지양).
 - `.env`, `*.pem`, 대용량 원본 커밋 금지.
+- 에이전트가 만든 커밋에는 `Co-Authored-By:` 줄로 작성 에이전트를 밝힌다.
+
+---
+
+## 작업 폴더 (에이전트 여럿이 같은 저장소를 쓸 때)
+
+- 에이전트마다 별도 worktree를 쓴다. 예: `git worktree add ../ch2_Macro-<작업명> origin/main -b <브랜치>`.
+- 작업 시작 전에 반드시 `git fetch && git log HEAD..origin/main` 으로 최신 상태를 확인한다. 뒤처져 있으면 최신 main 에서 다시 시작한다.
+- 원래 폴더 `D:/ch2/ch2_Macro` 에 커밋하지 않은 변경을 남기지 않는다.
 
 ---
 

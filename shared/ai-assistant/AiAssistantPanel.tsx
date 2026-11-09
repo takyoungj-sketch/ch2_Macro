@@ -496,7 +496,11 @@ function AiAssistantModal({
         setSessionId(resp.session_id);
         const capturedTrust = deriveTrustFromContext(context);
         setLastMeta({ ...resp, trust_level: resp.trust_level ?? capturedTrust.level, trust_sources: resp.trust_sources?.length ? resp.trust_sources : capturedTrust.sources });
-        setMessages((m: ChatMessage[]) => [...m, { role: "assistant", text: resp.answer, meta: resp, contextLabel, contextDetails }]);
+        // 답변이 실제로 근거로 삼은 범위(현재 화면 또는 직전 분석)를 보인다.
+        const replyLabel = resp.answer_context
+          ? answerContextLabel({ ...context, ...resp.answer_context, facts: { reply: true } })
+          : contextLabel;
+        setMessages((m: ChatMessage[]) => [...m, { role: "assistant", text: resp.answer, meta: resp, contextLabel: replyLabel, contextDetails: replyLabel }]);
       } catch (e) {
         if (isAiChatAborted(e) || ac.signal.aborted) {
           setError(null);
@@ -679,7 +683,7 @@ function AiAssistantModal({
                 m.role === "user" ? "bg-white/70 dark:bg-slate-800/40" : "bg-transparent",
               )}
             >
-              {m.contextLabel && <p className="text-[0.75em] text-slate-500 mb-1 break-words" title={m.contextDetails}>질문 당시 범위: {m.contextLabel}</p>}
+              {m.contextLabel && <p className="text-[0.75em] text-slate-500 mb-1 break-words" title={m.contextDetails}>{m.role === "user" ? "질문 당시 범위" : "답변 기준 범위"}: {m.contextLabel}</p>}
               {m.role === "user" ? (
                 <div className="flex gap-2.5">
                   <div

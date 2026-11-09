@@ -1,10 +1,14 @@
 import axios from "axios";
+import { adminHeaders } from "./qaClient";
 
-const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
   baseURL: "/api",
   timeout: 30_000,
-  headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
+});
+// 관리자 API: QA 토큰을 요청마다 읽어 붙인다(패널에서 토큰을 바꿔도 반영).
+api.interceptors.request.use((config) => {
+  Object.entries(adminHeaders()).forEach(([key, value]) => config.headers.set(key, value));
+  return config;
 });
 
 export type AiUsageEvent = {

@@ -18,12 +18,24 @@ export function writeQaToken(token: string) {
   }
 }
 
+/**
+ * `/api/admin/*`, `/api/lab/*` 공통 헤더. 서버는 관리자 세션 또는 `X-Qa-Audit-Token` 만 연다.
+ * 토큰은 QA·대장DB 패널에서 저장한 값을 요청 시점에 읽는다. 랩은 nginx 기본인증 뒤에 있다.
+ */
+export function adminHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra ?? {}) };
+  const apiToken = (import.meta.env.VITE_API_TOKEN ?? "").trim();
+  if (apiToken) headers["X-Api-Token"] = apiToken;
+  const qaToken = readQaToken();
+  if (qaToken) headers["X-Qa-Audit-Token"] = qaToken;
+  return headers;
+}
+
 function qaApi() {
-  const token = readQaToken();
   return axios.create({
     baseURL: "/api/admin/qa",
     timeout: 180_000,
-    headers: token ? { "X-Qa-Audit-Token": token } : undefined,
+    headers: adminHeaders(),
   });
 }
 

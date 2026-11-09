@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { adminHeaders } from "../api/qaClient";
 
 type Action = {
   kind: string;
@@ -204,7 +205,7 @@ export default function Ai2ProtocolLab() {
     Object.assign(body, extra);
     const res = await fetch("/api/lab/ai2/turn", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: adminHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     });
     if (!res.ok) {
