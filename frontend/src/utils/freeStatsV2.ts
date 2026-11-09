@@ -31,16 +31,6 @@ export function viteOptionalV2AsOfMonth(): string | undefined {
   }
 }
 
-/** V2 응답의 contract_date 구간(일 단위)이 걸치는 달력 연도 범위 → 필터 연동/매트릭스 연도 요청에 사용 */
-export function v2PeriodToYearRange(
-  data: Pick<FreeStatsV2Response, "period_start" | "period_end">
-): { year_from: number; year_to: number } {
-  const yf = Number(String(data.period_start).slice(0, 4));
-  const yt = Number(String(data.period_end).slice(0, 4));
-  if (!Number.isFinite(yf) || !Number.isFinite(yt)) return { year_from: 0, year_to: 0 };
-  return { year_from: yf, year_to: yt };
-}
-
 /**
  * DECISIONS D-002 / D-006 — `as_of_month`(YYYY-MM-01 또는 stats_reference_date 호환) 를
  * 사용자 친화 라벨 「YYYY년 M월 말 기준」으로 변환.

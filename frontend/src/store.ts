@@ -9,10 +9,7 @@ import {
   MAX_SIDO_TIER_CHIP,
   MAX_SIGUNGU_TIER_CHIP,
 } from "./constants/tierPickLimits";
-import {
-  getDefaultPaidSelectedYears,
-  getPaidYearButtonYears,
-} from "./constants/paidFilters";
+import { getDefaultPaidSelectedYears } from "./constants/paidFilters";
 import { landPickIsSingle } from "./regionPickMode";
 import type {
   FreeStatsWindowYears,
@@ -164,7 +161,7 @@ interface AppState {
   togglePaidAreaExclude: (area: string) => void;
   togglePaidDealTypeExclude: (dealType: string) => void;
   togglePaidYear: (year: number) => void;
-  resetPaidExcluded: () => void;
+  resetPaidFilters: () => void;
 }
 
 const defaultPaidRequest: PaidAnalysisRequest = {
@@ -172,7 +169,6 @@ const defaultPaidRequest: PaidAnalysisRequest = {
   region_codes: null,
   year_from: null,
   year_to: null,
-  years: getDefaultPaidSelectedYears(),
   road_conditions: null,
   area_categories: null,
   area_sqm_min: null,
@@ -193,13 +189,12 @@ function tierOnlyBeopjungri(codes: readonly string[]): TierCodes {
   };
 }
 
-/** 필터 분석 UI·요청을 초기 상태로 (기본 통계 보기 복귀 시) */
-function defaultPaidFilterState(): Pick<
+function defaultPaidFilterState(windowYears: FreeStatsWindowYears = 5): Pick<
   AppState,
   "paidRequest" | "paidRoadExcluded" | "paidAreaExcluded" | "paidDealTypeExcluded"
 > {
   return {
-    paidRequest: { ...defaultPaidRequest },
+    paidRequest: { ...defaultPaidRequest, years: getDefaultPaidSelectedYears(windowYears) },
     paidRoadExcluded: [],
     paidAreaExcluded: [],
     paidDealTypeExcluded: [],
@@ -211,10 +206,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   regionSegments: [...EMPTY_REGION_SEGMENTS],
   tierSelection: emptyTierCodes(),
   paidSubSigunguPickOrder: [],
-  paidRequest: { ...defaultPaidRequest },
-  paidRoadExcluded: [],
-  paidAreaExcluded: [],
-  paidDealTypeExcluded: [],
+  ...defaultPaidFilterState(),
   paidBasicStatsKick: 0,
   statsDisplayScopeKey: null,
   statsDisplayKick: 0,
@@ -238,30 +230,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   setFreeStatsWindowYears: (y) =>
-    set((s) => {
-      const w = normalizeFreeStatsWindowYears(y);
-      const newOptions = getPaidYearButtonYears(w);
-      const optSet = new Set(newOptions);
-      const cur = s.paidRequest.years ?? [];
-      const kept = cur.filter((yr) => optSet.has(yr));
-      let years: number[];
-      if (kept.length > 0) {
-        const minKept = Math.min(...kept);
-        const older = newOptions.filter((yr) => yr < minKept && !kept.includes(yr));
-        years = [...older, ...kept].sort((a, b) => a - b);
-      } else {
-        years = getDefaultPaidSelectedYears(w);
-      }
-      return {
-        freeStatsWindowYears: w,
-        paidRequest: {
-          ...s.paidRequest,
-          years,
-          year_from: null,
-          year_to: null,
-        },
-      };
-    }),
+    set({ freeStatsWindowYears: normalizeFreeStatsWindowYears(y) }),
 
   setRegionSegment: (idx, value) =>
     set((s) => {
@@ -597,7 +566,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   kickPaidBasicStatsAnalysis: (flattenTierToBeops) =>
-    set(() => {
+    set((s) => {
       const flatCodes =
         flattenTierToBeops != null && flattenTierToBeops.length > 0
           ? normalizeAndSortCodes(flattenTierToBeops).slice(0, MAX_BEOPJUNGRI_PICK)
@@ -617,12 +586,11 @@ export const useAppStore = create<AppState>((set, get) => ({
           : {};
       return {
         ...tierPart,
-        ...defaultPaidFilterState(),
         paidResultView: "basic",
         paidBasicBaseKey: null,
         paidBulkBeopjungriCodes: null,
         paidAnalysisStatus: "idle",
-        paidAnalysisResult: null,
+        paidAnalysisRequestId: s.paidAnalysisRequestId + 1,
         paidAnalysisError: null,
         paidAnalysisStartedAt: null,
         paidFilteredAnalysisScopeNotice: null,
@@ -745,14 +713,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().paidAnalysisRequestId !== reqId) return;
     set({ paidFilteredAnalysisScopeNotice: scopeNotice });
 
-    const st = get();
     const payload = buildPaidPayload(
-      st.paidRequest,
+      s0.paidRequest,
       codes,
-      st.paidRoadExcluded,
-      st.paidAreaExcluded,
-      st.paidDealTypeExcluded,
-      st.paidBasicBaseKey
+      s0.paidRoadExcluded,
+      s0.paidAreaExcluded,
+      s0.paidDealTypeExcluded,
+      get().paidBasicBaseKey
     );
     try {
       const data = await runPaidAnalysisApi(payload);
@@ -830,5 +797,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
     }),
 
-  resetPaidExcluded: () => set(defaultPaidFilterState()),
+  resetPaidFilters: () =>
+    set((s) => {
+      const defaults = defaultPaidFilterState(s.freeStatsWindowYears);
+      return {
+        ...defaults,
+        paidRequest: { ...defaults.paidRequest, matrix_mode: s.paidRequest.matrix_mode },
+      };
+    }),
 }));

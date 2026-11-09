@@ -1,4 +1,4 @@
-import type { PaidAnalysisRequest } from "../types";
+import type { MatrixYearlyRequest, PaidAnalysisRequest } from "../types";
 import { mergePaidExcludedIntoRequest } from "./paidFiltersMap";
 
 export function buildPaidPayload(
@@ -25,6 +25,20 @@ export function buildPaidPayload(
     year_from: useYears ? null : merged.year_from,
     year_to: useYears ? null : merged.year_to,
     years: useYears ? [...ys].sort((a, b) => a - b) : merged.years,
+  };
+}
+
+export function buildPaidMatrixCellRequest(
+  applied: PaidAnalysisRequest,
+  zoneType: string,
+  landCategory: string,
+): MatrixYearlyRequest {
+  return {
+    ...applied,
+    // 서버가 실제로 펼친 법정코드 범위를 재사용한다.
+    region_selections: applied.region_codes?.length ? null : applied.region_selections,
+    zone_type: zoneType,
+    land_category: landCategory,
   };
 }
 

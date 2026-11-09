@@ -8,7 +8,6 @@ import {
   fetchUpperStats,
 } from "../api/client";
 import { MATRIX_MODE_LABEL, type MatrixMode } from "../constants/jimokGroup";
-import { yearsRangeInclusive } from "../constants/paidFilters";
 import {
   basicStatsActionLabel,
   rollingStatsCaption,
@@ -24,7 +23,6 @@ import { parseApiError } from "../utils/apiError";
 import {
   calendarYearReferenceRows,
   rollingMatrixModalPayload,
-  v2PeriodToYearRange,
 } from "../utils/freeStatsV2";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { statsScopeKeyFromBeopjungriCodes } from "../utils/statsScopeKey";
@@ -47,7 +45,6 @@ export default function FreeStatsPanel() {
   const statsDisplayScopeKey = useAppStore((s) => s.statsDisplayScopeKey);
   const statsDisplayKick = useAppStore((s) => s.statsDisplayKick);
   const syncPaidBasicStatsMeta = useAppStore((s) => s.syncPaidBasicStatsMeta);
-  const setPaidRequest = useAppStore((s) => s.setPaidRequest);
   const freeStatsWindowYears = useAppStore((s) =>
     normalizeFreeStatsWindowYears(s.freeStatsWindowYears)
   );
@@ -90,13 +87,12 @@ export default function FreeStatsPanel() {
     prevRegionScopeKey.current = regionScopeKey;
     if (prev === null || prev === regionScopeKey) return;
     setMatrixMode("category");
-    setPaidRequest({ matrix_mode: "category" });
     setTrendModal(null);
     setTrendRequest(null);
     setTrendLoading(false);
     setTrendError(null);
     setTrendRows([]);
-  }, [regionScopeKey, setPaidRequest]);
+  }, [regionScopeKey]);
 
   const isPaidBasic = paidResultView === "basic";
   /** 단일 상위 행정(시도·시군구·읍면동·city) — upper mart 경로 (D-028) */
@@ -178,21 +174,6 @@ export default function FreeStatsPanel() {
       beopjungri_code: data.beopjungri_code ?? null,
     });
   }, [data, isPaidBasic, useUpper, syncPaidBasicStatsMeta]);
-
-  /** 기본 통계 창과 동일 연도(period 달력 연도 범위)로 필터 칩 동기화 */
-  useEffect(() => {
-    if (!isPaidBasic || data == null) return;
-    const { year_from, year_to } = v2PeriodToYearRange(data);
-    const next = yearsRangeInclusive(year_from, year_to);
-    if (next.length === 0) return;
-    setPaidRequest({ years: next, year_from: null, year_to: null });
-  }, [
-    isPaidBasic,
-    paidBasicStatsKick,
-    data?.period_start,
-    data?.period_end,
-    setPaidRequest,
-  ]);
 
   const yearlyRowsFreeReference = useMemo(() => {
     if (!data) return [];

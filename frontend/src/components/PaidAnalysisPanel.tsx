@@ -20,7 +20,7 @@ import { parseApiError } from "../utils/apiError";
 import {
   calendarYearReferenceRows,
 } from "../utils/freeStatsV2";
-import { buildPaidPayload, paidFilterSignature } from "../utils/paidAnalysisPayload";
+import { buildPaidMatrixCellRequest, buildPaidPayload, paidFilterSignature } from "../utils/paidAnalysisPayload";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
 import { shouldUseBulkStats } from "../utils/statsFetchStrategy";
@@ -220,13 +220,7 @@ export default function PaidAnalysisPanel() {
     async (zoneType: string, landCategory: string) => {
       if (!result) return;
       const requestId = ++trendRequestId.current;
-      const body: MatrixYearlyRequest = {
-        ...result.request,
-        // 서버가 실제로 펼친 법정코드 범위를 재사용한다.
-        region_selections: result.request.region_codes?.length ? null : result.request.region_selections,
-        zone_type: zoneType,
-        land_category: landCategory,
-      };
+      const body = buildPaidMatrixCellRequest(result.request, zoneType, landCategory);
 
       setTrendModal({ zoneType, landCategory });
       setTrendRequest(body);
