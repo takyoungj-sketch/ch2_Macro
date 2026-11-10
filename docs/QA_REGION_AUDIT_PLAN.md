@@ -391,6 +391,7 @@ py scripts/qa/audit_region.py --domain built_enriched --region-code 43113 --year
 - 복합 보강: `backend/app/qa_audit/built_enriched.py` — 원장 WRITE 없음. 대분류 용도지역 0건 실패 (D-047)
 - 런 JSON: `logs/qa_audit/` (git 제외)
 - DB 저장: `--save` → 집합은 `collective_stats.qa_audit_run`, 복합은 `built_stats.qa_audit_run`
+- 설치 시 [이력 마이그레이션](../db/062_qa_audit_run.sql)을 두 DB에 각각 테이블 소유자 권한으로 적용한다. 이력 GET은 SELECT만, 저장 요청은 INSERT만 실행한다.
 - HTTP: `POST /api/admin/qa/specified` · `/random` · `GET /runs` — body/`domain` (`collective_apt` 기본 · `built_enriched`). 헤더 `X-Qa-Audit-Token` (`QA_AUDIT_TOKEN`). 토큰이 비어 있으면 통과(로컬). OpenAPI 비공개.
 - 관리 UI: [`CH2_LAB_HUB.md`](./CH2_LAB_HUB.md) · http://localhost:5179/lab/?tool=qa
 - 공개 게이트웨이·제품 AI에 진입점 없음. 관리 UI는 `/lab/?tool=qa`.

@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import settings
 from app.qa_audit.engine import run_random, run_specified
+from app.qa_audit.store import list_runs
+
+_LOG = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/qa", tags=["admin-qa"], include_in_schema=False)
 
@@ -113,13 +118,11 @@ def get_runs(
     x_qa_audit_token: str | None = Header(default=None, alias="X-Qa-Audit-Token"),
 ) -> dict[str, Any]:
     _require_token(x_qa_audit_token)
-    from app.qa_audit.store import ensure_table, list_runs
-
     engine, domain = _engine_for(domain or "collective_apt")
     try:
-        with engine.begin() as conn:
-            ensure_table(conn)
+        with engine.connect() as conn:
             items = list_runs(conn, limit=min(max(limit, 1), 50), domain=domain)
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=503, detail=f"qa_audit_run 조회 실패: {exc}") from exc
+    except SQLAlchemyError as exc:
+        _LOG.warning("QA history query failed for %s (%s)", domain, type(exc).__name__)
+        raise HTTPException(status_code=503, detail="QA 이력을 조회할 수 없습니다.") from exc
     return {"items": items}

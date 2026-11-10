@@ -241,10 +241,7 @@ def _persist(engine, run: dict[str, Any], *, save_db: bool) -> dict[str, Any]:
     path = write_json_log(run)
     run["log_path"] = str(path)
     if save_db:
-        from app.qa_audit.store import ensure_table
-
         with engine.begin() as conn:
-            ensure_table(conn)
             run_id = insert_run(conn, run)
         run["id"] = run_id
     return run
