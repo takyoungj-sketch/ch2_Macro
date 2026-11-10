@@ -5,7 +5,7 @@
 > **기준 루트:** 저장소 루트. 예: `C:\ch2\ch2_Macro` · `E:\ch2\ch2_Macro`.
 >
 > **SSOT:** `scripts/monthly/run_built_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
-> 축약·보강 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) — 실거래 달 skip-enrich 기본. 이 SOP의 xlsx 러너 이름으로 월간을 돌리지 말 것.  
+> 축약·보강 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) — 실거래 달 신규 대장 공급 기본. 이 SOP의 xlsx 러너 이름으로 월간을 돌리지 말 것.
 > xlsx/`run_built_monthly_cycle` 은 복구·레거시. git deploy ≠ 월갱신.
 
 관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md) (토지), [`BUILT_RESEARCH_MVP.md`](BUILT_RESEARCH_MVP.md) (로컬 실행)
@@ -98,7 +98,7 @@ xlsx 복구만: `raw\복합부동산\{cycle_id}\` 3종 정제 xlsx 또는 `--use
 py scripts\monthly\run_built_cycle_csv.py --cycle-id YYYYMM
 ```
 
-동작: CSV UPSERT → stale hash purge → `build_scope_stats`(원장만) → skip-enrich 기본 → 동결 검증. `--enrich` 는 D-051 전 운영에 쓰지 않음.
+동작: CSV UPSERT → stale hash purge → `build_scope_stats`(원장만) → 신규 해시 ENGINE_V2 공급 → 동결 검증.
 
 ### 5.2b xlsx 복구
 
@@ -207,5 +207,4 @@ py scripts\monthly\run_built_monthly_cycle.py --cycle-id YYYYMM --use-legacy-def
 
 ## 11. 미구현 — 축약·enrich
 
-CSV 러너는 마트 뒤 **skip-enrich 기본**. `--enrich`는 D-051 전 운영 적재에 쓰지 않는다. 동결 검증·purge FK는 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md).
-
+CSV 러너는 마트 뒤 신규 해시 ENGINE_V2 공급이 기본이다. 동결 검증·purge FK는 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md).

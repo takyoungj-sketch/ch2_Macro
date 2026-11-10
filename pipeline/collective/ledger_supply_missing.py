@@ -33,10 +33,13 @@ NEW_KEYS = text("""
 """)
 
 
-def missing_records(db, start, stop):
+def missing_records(db, start, stop, *, keys=None):
+    selected = keys
     with db.connect() as conn:
         conn.execute(text("SET TRANSACTION READ ONLY"))
         keys = [dict(row) for row in conn.execute(NEW_KEYS, {"start": start, "stop": stop}).mappings()]
+        if selected is not None:
+            keys = [row for row in keys if (row["building_key"], row["asset_type"]) in selected]
         missing = {(row["building_key"], row["asset_type"]) for row in keys if not row["supplied"]}
         if not missing:
             return keys, [], {}

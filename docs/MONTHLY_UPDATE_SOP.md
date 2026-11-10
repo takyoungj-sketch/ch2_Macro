@@ -6,7 +6,15 @@
 >
 > **운영 SSOT:** 1페이지 [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
 > **매월 러너:** `scripts/monthly/run_land_cycle_csv.py` — V2 windows **3,5,7** · §7.1 group · cache TRUNCATE 포함.  
-> 축약대장·보강 달력(실거래 달 skip-enrich 기본): [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md).  
+> 신규 해시 대장 연결과 축약대장 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md).
+
+### 월간 신규 대장 공급
+
+1. 실행 순서는 토지 → 복합 → 집합이다. 각 러너는 재적재 전의 키를 해당 작업월의 기준 파일에 저장하고, 원장·마트 작업 뒤에 새로 생긴 해시 또는 주거 집합 건물 키만 계산한다.
+2. 토지는 V1, 복합은 ENGINE_V2, 주거 집합은 동결 slim 대표필지 가격을 사용한다. 기존 공급 행을 덮지 않는다. 재적재로 없어진 해시는 공급표에 보존하고 고아로 표시한다.
+3. 공급 단계가 실패하면 공급 트랜잭션을 롤백하고 경고를 남긴다. 일반 월간 작업은 계속된다. 명시적으로 공급을 건너뛰려면 러너에 `--skip-enrich`를 붙인다.
+4. 결과는 `clean_snapshots/YYYYMM/ledger_supply/*_coverage.json`에서 확인한다. 계약월별 연결·대상 건수와 연결률을 비교하며 최근월이 직전 3개월 단순 평균보다 10%p 이상 낮으면 경고한다. 같은 작업월을 재시도할 때는 첫 기준 파일을 사용한다.
+
 > `run_monthly_cycle.py`(xlsx)는 **복구·레거시** — §5·§6 명령으로 월간을 시작하지 말 것. git deploy ≠ 월갱신 (Promote 필수).
 
 ---

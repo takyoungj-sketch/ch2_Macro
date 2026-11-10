@@ -100,13 +100,15 @@ def classify(code, rows, pairs, db):
                         conflict_loader=lambda prefix, targets: _conflicts(db, prefix, targets))[0]
 
 
-def missing_records(engine, start, stop, since=None):
+def missing_records(engine, start, stop, since=None, *, keys=None):
     with engine.connect() as conn:
         conn.execute(text("SET TRANSACTION READ ONLY"))
         pairs = v1.load_pairs(conn)
         rows = [dict(row) for row in conn.execute(
             FETCH, {"start": start, "stop": stop, "since": since}
         ).mappings()]
+    if keys is not None:
+        rows = [row for row in rows if str(row["transaction_hash"]).strip() in keys]
     records = []
     with closing(sqlite3.connect(LEDGER.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         db.execute("PRAGMA query_only=ON")

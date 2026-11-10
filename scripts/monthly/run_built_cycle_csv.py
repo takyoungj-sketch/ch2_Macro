@@ -9,7 +9,7 @@
   1) import_molit UPSERT (--paths-file, region_codes refresh, --seen-hashes-file)
   2) 창에서 CSV에 없는 해시만 DELETE (purge --keep-hashes-file)
   3) build_scope_stats (--as-of cycle 매핑) — 원장만, 보강 컬럼 없음
-  4) enrich: 기본 skip. --enrich 이면 미상 hash만 (ON CONFLICT DO NOTHING)
+  4) enrich: 신규 해시만 ENGINE_V2 공급 (ON CONFLICT DO NOTHING)
   5) 동결 검증 · 스냅샷 JSON
 """
 
@@ -27,6 +27,8 @@ from pathlib import Path
 _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
+
+from ledger_supply_step import ledger_step  # noqa: E402
 
 from cycle_utils import (  # noqa: E402
     collection_yyyymm_range_from_cycle_id,
@@ -104,7 +106,7 @@ def _write_manifest(cycle_id: str, raw_dirs: dict[str, Path], csv_paths: list[Pa
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="복합부동산 월간 CSV cycle (UPSERT → mart → skip-enrich)")
+    p = argparse.ArgumentParser(description="복합부동산 월간 CSV cycle (UPSERT → mart → ENGINE_V2)")
     p.add_argument("--cycle-id", required=True, help="YYYYMM (예: 202607)")
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--skip-purge", action="store_true")
@@ -115,12 +117,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--skip-enrich",
         action="store_true",
-        help="마트 뒤 enrich 생략. 플래그 없이도 기본은 skip",
+        help="마트 뒤 신규 해시 대장 공급 생략",
     )
     p.add_argument(
         "--enrich",
         action="store_true",
-        help="마트 뒤 미상 hash만 recover_from_parcel --apply-enrichment. D-051 전 운영 적재 금지",
+        help="신규 해시 대장 공급 (기본값)",
     )
     p.add_argument(
         "--retry-unmatched",
@@ -134,7 +136,7 @@ def build_parser() -> argparse.ArgumentParser:
 def should_run_enrich(*, enrich: bool, skip_enrich: bool) -> bool:
     if skip_enrich:
         return False
-    return bool(enrich)
+    return True
 
 
 def main() -> None:
@@ -164,13 +166,15 @@ def main() -> None:
 
     if args.dry_run:
         log.info(
-            "dry-run: ingest 후 stale purge. skip-enrich 기본. hashes → %s",
+            "dry-run: ingest 후 stale purge 후 신규 해시 대장 공급. hashes → %s",
             hashes_file,
         )
         log.info("dry-run: ingest/stats/enrich 생략")
         return
 
     cycle_t0 = time.perf_counter()
+    do_enrich = should_run_enrich(enrich=args.enrich, skip_enrich=args.skip_enrich)
+    supply_ready = do_enrich and ledger_step(REPO, PY, log, "built", "capture", cycle, y_from, y_to)
 
     if not args.skip_ingest:
         ingest_cmd = [
@@ -228,24 +232,8 @@ def main() -> None:
             [PY, str(_SCRIPT_DIR / "verify_built_enrichment_freeze.py"), "--dump", str(freeze_before)],
         )
 
-    do_enrich = should_run_enrich(enrich=args.enrich, skip_enrich=args.skip_enrich)
-    if do_enrich:
-        _run(
-            "recover_from_parcel enrich",
-            [
-                PY,
-                "-m",
-                "built.recover_from_parcel",
-                "--sido",
-                "all",
-                "--min-year",
-                "2019",
-                "--apply-enrichment",
-            ],
-            cwd=PIPELINE,
-        )
-    else:
-        log.info("skip-enrich: 마트는 원장만. 미상 INSERT 안 함 (D-051 전)")
+    if supply_ready:
+        ledger_step(REPO, PY, log, "built", "apply", cycle, y_from, y_to)
 
     if not args.skip_freeze_check:
         _run(

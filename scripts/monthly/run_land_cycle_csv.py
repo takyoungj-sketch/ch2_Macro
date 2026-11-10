@@ -34,6 +34,8 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
+from ledger_supply_step import ledger_step  # noqa: E402
+
 from cycle_utils import (  # noqa: E402
     collection_yyyymm_range_from_cycle_id,
     resolve_land_csv_raw_dir,
@@ -194,6 +196,7 @@ def main() -> None:
     p.add_argument("--skip-ddl", action="store_true")
     p.add_argument("--skip-dedupe", action="store_true")
     p.add_argument("--skip-stats", action="store_true")
+    p.add_argument("--skip-enrich", action="store_true", help="신규 토지 대장 연결 생략")
     p.add_argument(
         "--skip-cache-clear",
         action="store_true",
@@ -269,6 +272,7 @@ def main() -> None:
         log.info("dry-run 완료 (jimok group: build_stats_v2/upper group + annual + verify 예정)")
         return
 
+    supply_ready = not args.skip_enrich and ledger_step(REPO, PY, log, "land", "capture", cycle, y_from, y_to)
     if not args.skip_ddl:
         _apply_ddl(dry_run=False)
 
@@ -330,6 +334,9 @@ def main() -> None:
         )
         if not args.skip_jimok_group:
             _run_jimok_group_pipeline(v2_as)
+
+    if supply_ready:
+        ledger_step(REPO, PY, log, "land", "apply", cycle, y_from, y_to)
 
     # dedupe 안에도 truncate가 있으나, stats 재구축 중 API가 캐시를 다시 채울 수 있음.
     # cycle 종료 직전 한 번 더 비워 Facts First(H2)를 보장한다.

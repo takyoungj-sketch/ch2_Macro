@@ -48,25 +48,25 @@ def main() -> int:
     coll = REPO / "scripts/monthly/run_collective_cycle_csv.py"
     if built.is_file():
         bsrc = built.read_text(encoding="utf-8")
-        skip_ok = "skip-enrich" in bsrc and "should_run_enrich" in bsrc
+        skip_ok = "skip-enrich" in bsrc and "ledger_step" in bsrc
         mart_ok = "built_transaction_enrichment" not in (
             REPO / "pipeline/built/build_scope_stats.py"
         ).read_text(encoding="utf-8")
-        print(f"[{'OK' if skip_ok else 'FAIL'}] built CSV skip-enrich default (opt-in --enrich)")
+        print(f"[{'OK' if skip_ok else 'FAIL'}] built CSV new-key supply default (--skip-enrich to skip)")
         print(f"[{'OK' if mart_ok else 'FAIL'}] built_scope_stats is ledger-only")
         if not skip_ok or not mart_ok:
             ok = False
     if coll.is_file():
         csrc = coll.read_text(encoding="utf-8")
-        c_ok = "enrich-new-keys" in csrc and "should_run_enrich" in csrc
-        print(f"[{'OK' if c_ok else 'FAIL'}] collective CSV skip-enrich default (opt-in --enrich-new-keys)")
+        c_ok = "skip-enrich" in csrc and "ledger_step" in csrc
+        print(f"[{'OK' if c_ok else 'FAIL'}] collective CSV residential new-key supply default")
         if not c_ok:
             ok = False
     if land.is_file():
         src = land.read_text(encoding="utf-8")
         win_ok = '"3,5,7"' in src or "'3,5,7'" in src
         print(f"[{'OK' if win_ok else 'FAIL'}] land V2 windows include 3,5,7")
-        if not win_ok:
+        if not win_ok or 'ledger_step' not in src:
             ok = False
 
     print("=== result:", "PASS" if ok else "FAIL", "===")

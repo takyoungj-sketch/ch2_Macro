@@ -1,11 +1,10 @@
 # 축약대장 · 보강 — 월간 운영 SSOT
 
-> 상태: **정책 확정 · P3 러너** (D-050). 실거래 달은 skip-enrich 기본. 운영 promote는 P4 후.
+> 실거래 달은 신규 대장 공급을 기본 실행한다. 운영에는 검증한 결과표를 월간 승격한다.
 > 설계: [`PARCEL_MASTER_DESIGN.md`](PARCEL_MASTER_DESIGN.md) §7 · 구현: [`PARCEL_MASTER_IMPLEMENTATION.md`](PARCEL_MASTER_IMPLEMENTATION.md)
 > 실거래 러너 SSOT는 그대로 [`MONTHLY_UPDATE_CHECKLIST.md`](MONTHLY_UPDATE_CHECKLIST.md)다. 이 문서는 **대장 달력과 enrich**만 더한다.
-> 체크리스트·SOP에 적힌 enrich 단계는 지금 실행하지 않는다.
 
-원칙: git/deploy ≠ 월갱신. `parcel_master`는 VPS에 올리지 않는다. 올라가는 것은 도메인 결과 테이블뿐이다. 복합 보강 운영 적재는 D-051 동의 게이트 뒤 P5이며, **지금은 운영 0행이 맞다.**
+제품 서버에는 도메인 결과표를 공급한다. 월간 연결 원천은 로컬 동결 원장과 slim이다.
 
 ---
 
@@ -13,7 +12,7 @@
 
 | 이번 cycle 종류 | 하는 일 | 하지 않는 일 |
 |---|---|---|
-| **실거래 달** (매월) | MOLIT 12개월 창 재적재, 신규 hash만 enrich(구현 후), 동결 검증, 결과 promote | 표제부·AL_D* 재다운로드, `parcel_master` dump |
+| **실거래 달** (매월) | MOLIT 12개월 창 재적재, 신규 해시·주거 집합 키 대장 연결, 동결 검증, 결과 promote | 표제부·AL_D* 재다운로드, `parcel_master` dump |
 | **K-apt 달** (매월, 실거래와 같은 주) | 단지·PNU 파일 갱신 → `builder_master.pnu` | 표제부 재스캔 |
 | **대장 달** (분기) | 표제부·총괄 신본 → `building` 스냅샷 INSERT, `ledger_snapshot` 기록, `--retry-unmatched` | 확정 enrichment 재매칭 |
 | **공부 달** (연 1회) | AL_D155 · AL_D003 · AL_D151 적재, 공시지가 마트 최신값 재파생 | 전국 3,900만 필지 |
@@ -23,17 +22,16 @@
 ```mermaid
 flowchart TD
   molit[MOLIT CSV 월] --> land[run_land_cycle_csv]
-  land --> built[run_built_cycle_csv]
+  land --> enrichL[토지 V1 신규 해시]
+  enrichL --> built[run_built_cycle_csv]
   built --> martB[build_scope_stats 원장만]
-  martB --> enrichB[skip-enrich 기본]
+  martB --> enrichB[복합 ENGINE_V2 신규 해시]
   enrichB --> coll[run_collective_cycle_csv]
-  coll --> enrichC[skip-enrich 기본 / --enrich-new-keys]
+  coll --> enrichC[주거 집합 slim 신규 키]
   enrichC --> promo[Promote 결과만 VPS]
   title[표제부 분기] --> snap[ledger_snapshot]
   zone[AL_D155 D003 D151 연1회] --> snap
   kapt[K-apt 월] --> snap
-  snap --> enrichB
-  snap --> enrichC
 ```
 
 ---
@@ -55,19 +53,14 @@ flowchart TD
 
 ---
 
-## 3. 복합 enrich (러너 자리 · 기본 skip)
+## 3. 토지·복합 신규 해시 연결
 
-범위: `contract_year >= 2019`. 2018년 이전 보강 행은 DELETE(범위 축소이지 재매칭이 아님).
+월간 러너는 원장 재적재 전에 거래 해시 집합을 저장한다. 적재 뒤 **새 해시 중 공급표에 없는 것**만 기존 토지 V1 또는 복합 ENGINE_V2로 계산한다. 같은 해시의 재적재는 신규 거래로 세지 않는다. 격리 worktree에서 복합을 돌릴 때는 기존 표제부·총괄 캐시 경로를 `CH2_BUILT_REGISTER_CACHE` 환경 변수로 지정할 수 있다.
 
-현재 러너 [`scripts/monthly/run_built_cycle_csv.py`](../scripts/monthly/run_built_cycle_csv.py): UPSERT → stale purge → `build_scope_stats` → **skip-enrich 기본** → 동결 검증. `--year-from 2021`은 ingest 필터이고 보강 범위(2019)와 다르다.
-
-목표 순서:
-
-1. 최근 12개월 거래는 **해시 유지 UPSERT**. 통째 DELETE 금지.
-2. `build_scope_stats` (원장만. 보강 컬럼 없음)
-3. enrich: `built_transaction_enrichment`에 없는 hash만, 2019+. 확정 행 `ON CONFLICT DO NOTHING`
-4. 검증: 확정 행 중 값이 바뀐 건수 = 0 · 고아 보강 행 수 기록
-5. Promote는 D-051 통과 후 `built_transaction_enrichment` 포함
+1. 원장·마트 작업 뒤 신규 결과를 한 도메인 트랜잭션으로 삽입한다. 기존 값의 동결을 확인한다.
+2. 원장에서 사라진 해시는 토지의 `orphaned`, 복합의 `supply_hold='orphaned'`로 표시한다. 옛 행을 보존하고 새 해시는 독립적으로 연결한다.
+3. 결과와 계약월별 연결률은 `clean_snapshots/YYYYMM/ledger_supply/`에 저장한다. 가장 최근 계약월이 직전 3개월 평균보다 10%p 이상 낮으면 경고한다.
+4. 실패 시 공급 단계는 롤백하고 월간 작업을 계속한다. `--skip-enrich`는 명시적으로 공급만 건너뛴다.
 
 ### 3.1 purge × FK
 
@@ -88,17 +81,11 @@ flowchart TD
 
 ---
 
-## 4. 집합 enrich
+## 4. 주거 집합 신규 키 연결
 
-매칭은 결정론이라 키 동결이 필요 없다. 값이 매달 바뀌면 사용자는 흔들림으로 본다.
+아파트·연립다세대·오피스텔의 신규 `building_key`만 현행 대표필지와 동결 slim의 기준연도 가격으로 채운다. 기존 가격은 유지하며 대표필지나 기준연도 가격이 없으면 결측 건수를 기록한다.
 
-- 신규 `building_key`만 PNU·표제부 조인 INSERT (`python -m collective.enrich_new_keys`)
-- 기존 A·B·C는 덮지 않음 (`ON CONFLICT DO NOTHING`, title fill은 blocked tiers)
-- T등급은 대장 달에만 표제부 신본으로 갱신 (`python -m parcel_master.apply_title_fill --refresh-t`)
-- 공시지가 마트는 공부 달에 `parcel_land_price` 최신 연도로 재파생 (`python -m collective.import_assessed_land_price --from-parcel-master`). 거래연도 정합 없음
-- 비주거 집합은 속성 테이블이 없다. 같은 러너의 skip-enrich가 마트만 돌린다
-
-러너 [`run_collective_cycle_csv.py`](../scripts/monthly/run_collective_cycle_csv.py)는 **skip-enrich 기본**. `--enrich-new-keys`만 실거래 달 신규 키 INSERT. `--refresh-title-t`·`--refresh-land-price`는 거절.
+K-apt와 표제부 T등급 갱신은 각각 별도 작업이다. 비주거 집합·임대는 월간 대장 공급 범위에서 제외한다.
 
 ---
 
@@ -116,27 +103,24 @@ flowchart TD
 
 ## 6. 검증
 
-[`scripts/monthly/verify_built_enrichment_freeze.py`](../scripts/monthly/verify_built_enrichment_freeze.py). 러너가 마트·(skip)enrich 뒤에 호출한다. 값 변경·확정 행 삭제는 실패. 고아·커버리지·상위 용도지역은 리포트(고아는 기본 비실패).
+[`scripts/monthly/verify_built_enrichment_freeze.py`](../scripts/monthly/verify_built_enrichment_freeze.py). 러너가 마트와 대장 공급 단계 뒤에 호출한다. 값 변경·확정 행 삭제는 실패. 고아·커버리지·상위 용도지역은 리포트(고아는 기본 비실패).
 
 ---
 
 ## 7. 다운로드 후 적재 명령
 
-실거래 달은 skip-enrich 기본. 주석 줄은 대장·공부·신규 키 opt-in.
+실거래 달은 토지 → 복합 → 집합 순으로 실행한다. 주석 줄은 별도 수동 작업이다.
 
 ```text
-# 실거래 달 — skip-enrich 기본
+# 실거래 달 — 신규 대장 공급 기본
+py scripts/monthly/run_land_cycle_csv.py --cycle-id YYYYMM
 py scripts/monthly/run_built_cycle_csv.py --cycle-id YYYYMM
 py scripts/monthly/run_collective_cycle_csv.py --cycle-id YYYYMM
-
-# 집합 신규 키만 (A·B·C 유지)
-# py scripts/monthly/run_collective_cycle_csv.py --cycle-id YYYYMM --enrich-new-keys
-# python -m collective.enrich_new_keys --dry-run
 
 # 대장 달 미상(복합) · T 갱신(집합)
 # python -m built.recover_from_parcel --sido all --min-year 2019 --retry-unmatched
 # python -m parcel_master.apply_title_fill --refresh-t
 
 # 공부 달 공시지가
-# python -m collective.import_assessed_land_price --from-parcel-master
+# python -m collective.import_assessed_land_price --from-slim
 ```

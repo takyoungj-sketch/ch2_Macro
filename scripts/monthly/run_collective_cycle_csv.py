@@ -23,6 +23,8 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
+from ledger_supply_step import ledger_step  # noqa: E402
+
 from cycle_utils import (  # noqa: E402
     collection_yyyymm_range_from_cycle_id,
     resolve_csv_subdir,
@@ -47,6 +49,8 @@ log = logging.getLogger(__name__)
 def _run(phase: str, cmd: list[str], *, cwd: Path | None = None) -> None:
     log.info("[%s] %s", phase, " ".join(cmd))
     t0 = time.perf_counter()
+    do_enrich = should_run_enrich(enrich_new_keys=args.enrich_new_keys, skip_enrich=args.skip_enrich)
+    supply_ready = do_enrich and ledger_step(REPO, PY, log, "collective", "capture", cycle, y_from, y_to)
     kw = {"cwd": str(cwd)} if cwd else {}
     subprocess.run(cmd, check=True, **kw)
     log.info("[%s] %.1fs (%.2f분)", phase, time.perf_counter() - t0, (time.perf_counter() - t0) / 60)
@@ -105,12 +109,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--skip-enrich",
         action="store_true",
-        help="마트 뒤 신규 키 조인 생략. 플래그 없이도 기본은 skip",
+        help="마트 뒤 주거 집합 신규 키 공시지가 공급 생략",
     )
     p.add_argument(
         "--enrich-new-keys",
         action="store_true",
-        help="속성 없는 building_key만 INSERT. A·B·C 안 덮음",
+        help="주거 집합 신규 키의 대표필지 공시지가 공급 (기본값)",
     )
     p.add_argument(
         "--refresh-title-t",
@@ -128,7 +132,7 @@ def build_parser() -> argparse.ArgumentParser:
 def should_run_enrich(*, enrich_new_keys: bool, skip_enrich: bool) -> bool:
     if skip_enrich:
         return False
-    return bool(enrich_new_keys)
+    return True
 
 
 def main() -> None:
@@ -170,10 +174,12 @@ def main() -> None:
                 [PY, str(PIPELINE / "purge_collective_contract_window.py"), "--cycle-id", cycle, "--dry-run"],
                 cwd=PIPELINE,
             )
-        log.info("dry-run: ingest/stats 생략. skip-enrich 기본")
+        log.info("dry-run: ingest/stats 및 신규 키 공급 생략")
         return
 
     t0 = time.perf_counter()
+    do_enrich = should_run_enrich(enrich_new_keys=args.enrich_new_keys, skip_enrich=args.skip_enrich)
+    supply_ready = do_enrich and ledger_step(REPO, PY, log, "collective", "capture", cycle, y_from, y_to)
 
     if not args.skip_purge:
         _run(
@@ -241,14 +247,8 @@ def main() -> None:
                 cwd=PIPELINE,
             )
 
-    if should_run_enrich(enrich_new_keys=args.enrich_new_keys, skip_enrich=args.skip_enrich):
-        _run(
-            "enrich_new_keys",
-            [PY, "-m", "collective.enrich_new_keys"],
-            cwd=PIPELINE,
-        )
-    else:
-        log.info("skip-enrich: 신규 키 조인 안 함. A·B·C 유지. 비주거 집합은 속성 테이블 없음")
+    if supply_ready:
+        ledger_step(REPO, PY, log, "collective", "apply", cycle, y_from, y_to)
 
     snap_out = REPO / "clean_snapshots" / cycle / "collective" / "collective_tx_counts_after.json"
     _run(

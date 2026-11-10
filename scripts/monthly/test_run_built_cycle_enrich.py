@@ -1,4 +1,4 @@
-"""built 월간 러너 — skip-enrich 기본, 동결 지문 비교."""
+"""built 월간 러너 — 신규 대장 공급 기본, 동결 지문 비교."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ from run_built_cycle_csv import build_parser, should_run_enrich  # noqa: E402
 from verify_built_enrichment_freeze import compare_fingerprints, fingerprint  # noqa: E402
 
 
-def test_enrich_off_by_default():
+def test_enrich_on_by_default():
     ns = build_parser().parse_args(["--cycle-id", "202609"])
     assert ns.enrich is False
     assert ns.skip_enrich is False
-    assert should_run_enrich(enrich=ns.enrich, skip_enrich=ns.skip_enrich) is False
+    assert should_run_enrich(enrich=ns.enrich, skip_enrich=ns.skip_enrich) is True
 
 
 def test_enrich_opt_in():

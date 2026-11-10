@@ -116,8 +116,10 @@ def project(headers, values, dependencies, cycle):
     return records, statuses
 
 
-def missing_records(db, start, stop, cycle, *, since=None, cache=None, workers=3):
+def missing_records(db, start, stop, cycle, *, since=None, cache=None, workers=3, keys=None):
     rows = missing_inputs(db, start, stop, since)
+    if keys is not None:
+        rows = rows[rows["transaction_hash"].str.strip().isin(keys)].reset_index(drop=True)
     if rows.empty:
         return rows, [], {}
     heads, vals, deps, _ = engine.compute(rows, engine.Defn(cycle=cycle), workers=workers, cache=cache)

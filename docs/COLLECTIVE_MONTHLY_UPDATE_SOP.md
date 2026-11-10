@@ -4,7 +4,7 @@
 > **기준 루트:** 저장소 루트. 예: `C:\ch2\ch2_Macro` · `E:\ch2\ch2_Macro`.
 >
 > **SSOT:** `scripts/monthly/run_collective_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
-> 축약·K-apt·공시지가 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4. 실거래 러너 skip-enrich 기본.  
+> 축약·K-apt·공시지가 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4. 실거래 러너 주거 신규 키 공시지가 공급 기본.
 > xlsx 경로는 복구·레거시. git deploy ≠ 월갱신.
 
 관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md), [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md), [`COLLECTIVE_RESEARCH_MVP.md`](COLLECTIVE_RESEARCH_MVP.md), [`COLLECTIVE_PRESALE_BUILDING_KEY.md`](COLLECTIVE_PRESALE_BUILDING_KEY.md)
@@ -103,4 +103,3 @@ py scripts\monthly\compare_collective_count_snapshots.py --before ... --after ..
 - xlsx Selenium 수집 — 복구만. 월간은 CSV 수집기.
 - `contract_month` 정밀 12개월 창 — 잔여.
 - 축약 enrich · K-apt 월 갱신 · 공시지가 재파생 — [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4·§7. **체크리스트 완주 범위에 칸을 넣지 않음** (빼는 결정).
-

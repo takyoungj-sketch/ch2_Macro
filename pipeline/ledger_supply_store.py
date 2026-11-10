@@ -81,13 +81,12 @@ def insert_sql(domain, payload, *, window=None):
     """
 
 
-def append(conn, domain, records):
+def append(conn, domain, records, *, window=None):
     """One caller-owned transaction. Existing rows retain their published values."""
-    statement = text(insert_sql(domain, "CAST(:payload AS jsonb)"))
-    inserted = 0
-    for start in range(0, len(records), 1000):
-        payload = json.dumps(records[start:start + 1000], default=str)
-        inserted += conn.execute(statement, {"payload": payload}).rowcount
+    if not records:
+        return 0
+    statement = text(insert_sql(domain, "CAST(:payload AS jsonb)", window=window))
+    inserted = conn.execute(statement, {"payload": json.dumps(records, default=str)}).rowcount
     if inserted != len(records):
         raise RuntimeError(f"Expected {len(records)} {domain} inserts, got {inserted}; no supply committed")
     return inserted
