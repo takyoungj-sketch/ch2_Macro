@@ -137,7 +137,13 @@ def _verdicts(code, batch, pairs, db, cutoff=None):
     rows = _load_rows(db, code, batch, pairs)
     plates, index = _plates(rows, cutoff)
     records, _ = v1._classify(code, plates, index, pairs, batch, conflict_loader=_conflict_loader(db, cutoff))
-    return {record["transaction_hash"]: record["link_status"] for record in records}
+    return {
+        record["transaction_hash"]: (
+            record["link_status"],
+            (record["ledger_beopjungri_code"], record["recovered_lot"]),
+        )
+        for record in records
+    }
 
 
 def run(start: str, stop: str, cutoff: str, out: Path, sido: set[str] | None) -> dict:
@@ -153,9 +159,9 @@ def run(start: str, stop: str, cutoff: str, out: Path, sido: set[str] | None) ->
     month_of = {str(row["transaction_hash"]).strip(): str(row["contract_date"])[:7] for row in fetched}
     sido_of = {str(row["transaction_hash"]).strip(): str(row["sigungu_code"])[:2] for row in fetched}
 
-    full: dict[str, str] = {}
-    dropped: dict[str, str] = {}
-    gen: dict[str, str] = {}
+    full: dict[str, tuple] = {}
+    dropped: dict[str, tuple] = {}
+    gen: dict[str, tuple] = {}
     started = time.perf_counter()
     uri = LEDGER.resolve().as_uri() + "?mode=ro"
     with closing(sqlite3.connect(uri, uri=True)) as db:
@@ -173,8 +179,28 @@ def run(start: str, stop: str, cutoff: str, out: Path, sido: set[str] | None) ->
             if number % 25 == 0:
                 print(f"{number} sigungu {time.perf_counter() - started:.0f}s", flush=True)
 
-    for key, status in full.items():
-        gen.setdefault(key, status)
+    for key, verdict in full.items():
+        gen.setdefault(key, verdict)
+
+    moves = Counter()
+    moves_by_sido = defaultdict(Counter)
+    for key, (before, parcel_before) in dropped.items():
+        after, parcel_after = full[key]
+        was, now = before in LINKED, after in LINKED
+        if was and now:
+            move = "linked_parcel_changed" if parcel_before != parcel_after else "linked_same_parcel"
+        elif was:
+            move = "linked_to_unlinked"
+        elif now:
+            move = "unlinked_to_linked"
+        else:
+            move = "unlinked_reason_changed" if before != after else "unlinked_same"
+        moves[move] += 1
+        moves_by_sido[sido_of[key]][move] += 1
+
+    full = {key: verdict[0] for key, verdict in full.items()}
+    dropped = {key: verdict[0] for key, verdict in dropped.items()}
+    gen = {key: verdict[0] for key, verdict in gen.items()}
 
     def tally(verdicts, group_of):
         result = defaultdict(Counter)
@@ -236,6 +262,8 @@ def run(start: str, stop: str, cutoff: str, out: Path, sido: set[str] | None) ->
         },
         "status_by_sido_full": tally(full, sido_of),
         "status_by_sido_code_gen": tally(gen, sido_of),
+        "drop_last_to_full_moves": dict(moves.most_common()),
+        "drop_last_to_full_moves_by_sido": {k: dict(v) for k, v in sorted(moves_by_sido.items())},
         "drop_last_to_full_transitions": dict(transitions.most_common()),
         "drop_last_to_full_by_month": {m: dict(c.most_common()) for m, c in sorted(transitions_by_month.items())},
         "full_vs_stored": dict(agree.most_common()),
@@ -257,7 +285,7 @@ def main() -> None:
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     report = run(args.start, args.stop, args.cutoff, args.out, set(args.sido) if args.sido else None)
-    print(json.dumps({k: report[k] for k in ("judged", "full_vs_stored", "drop_last_to_full_transitions", "code_gen_changes", "seconds")}, ensure_ascii=False))
+    print(json.dumps({k: report[k] for k in ("judged", "full_vs_stored", "drop_last_to_full_moves", "drop_last_to_full_transitions", "code_gen_changes", "seconds")}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

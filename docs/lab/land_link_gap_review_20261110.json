@@ -1,0 +1,1372 @@
+{
+ "created": "2026-11-10",
+ "rule_version": "LAND_CODE_HISTORY_LAYER_V1+LAND_LINK_RULE_V1",
+ "read_only": true,
+ "link_table_written": false,
+ "rejudge_shadow": {
+  "rule_version": "LAND_CODE_HISTORY_LAYER_V1+LAND_LINK_RULE_V1",
+  "mode": "shadow_rejudge_read_only",
+  "window": [
+   "2026-04-01",
+   "2026-11-01"
+  ],
+  "cutoff_dropped_from": "2026-07-20",
+  "sido_filter": null,
+  "transactions_fetched": 176474,
+  "judged": 118263,
+  "ledger_prefixes_without_parcels": [
+   "12"
+  ],
+  "linked_rate": {
+   "drop_last": {
+    "2026-04": {
+     "judged": 22473,
+     "linked": 17071,
+     "rate": 75.96
+    },
+    "2026-05": {
+     "judged": 18494,
+     "linked": 14453,
+     "rate": 78.15
+    },
+    "2026-06": {
+     "judged": 19855,
+     "linked": 15799,
+     "rate": 79.57
+    },
+    "2026-07": {
+     "judged": 15910,
+     "linked": 9972,
+     "rate": 62.68
+    },
+    "2026-08": {
+     "judged": 14766,
+     "linked": 9447,
+     "rate": 63.98
+    },
+    "2026-09": {
+     "judged": 14103,
+     "linked": 9367,
+     "rate": 66.42
+    },
+    "2026-10": {
+     "judged": 12662,
+     "linked": 8198,
+     "rate": 64.74
+    }
+   },
+   "full": {
+    "2026-04": {
+     "judged": 22473,
+     "linked": 17071,
+     "rate": 75.96
+    },
+    "2026-05": {
+     "judged": 18494,
+     "linked": 14453,
+     "rate": 78.15
+    },
+    "2026-06": {
+     "judged": 19855,
+     "linked": 15799,
+     "rate": 79.57
+    },
+    "2026-07": {
+     "judged": 15910,
+     "linked": 9915,
+     "rate": 62.32
+    },
+    "2026-08": {
+     "judged": 14766,
+     "linked": 9245,
+     "rate": 62.61
+    },
+    "2026-09": {
+     "judged": 14103,
+     "linked": 9185,
+     "rate": 65.13
+    },
+    "2026-10": {
+     "judged": 12662,
+     "linked": 8077,
+     "rate": 63.79
+    }
+   },
+   "code_gen": {
+    "2026-04": {
+     "judged": 22473,
+     "linked": 17071,
+     "rate": 75.96
+    },
+    "2026-05": {
+     "judged": 18494,
+     "linked": 14453,
+     "rate": 78.15
+    },
+    "2026-06": {
+     "judged": 19855,
+     "linked": 15799,
+     "rate": 79.57
+    },
+    "2026-07": {
+     "judged": 15910,
+     "linked": 11937,
+     "rate": 75.03
+    },
+    "2026-08": {
+     "judged": 14766,
+     "linked": 11162,
+     "rate": 75.59
+    },
+    "2026-09": {
+     "judged": 14103,
+     "linked": 10823,
+     "rate": 76.74
+    },
+    "2026-10": {
+     "judged": 12662,
+     "linked": 9948,
+     "rate": 78.57
+    }
+   }
+  },
+  "status_by_month": {
+   "drop_last": {
+    "2026-04": {
+     "clean_precontract_traits_differ": 327,
+     "multiple_candidates": 1863,
+     "exact": 17071,
+     "no_precontract_observation": 709,
+     "other_unmatched": 2503
+    },
+    "2026-05": {
+     "exact": 14453,
+     "multiple_candidates": 1566,
+     "clean_precontract_traits_differ": 94,
+     "no_precontract_observation": 158,
+     "other_unmatched": 2223
+    },
+    "2026-06": {
+     "exact": 15799,
+     "multiple_candidates": 1639,
+     "other_unmatched": 2417
+    },
+    "2026-07": {
+     "exact": 9972,
+     "multiple_candidates": 1177,
+     "other_unmatched": 4761
+    },
+    "2026-08": {
+     "exact": 9447,
+     "multiple_candidates": 1069,
+     "other_unmatched": 4250
+    },
+    "2026-09": {
+     "exact": 9367,
+     "multiple_candidates": 940,
+     "other_unmatched": 3796
+    },
+    "2026-10": {
+     "exact": 8198,
+     "multiple_candidates": 767,
+     "other_unmatched": 3697
+    }
+   },
+   "full": {
+    "2026-04": {
+     "clean_precontract_traits_differ": 327,
+     "multiple_candidates": 1863,
+     "exact": 17071,
+     "no_precontract_observation": 757,
+     "other_unmatched": 2455
+    },
+    "2026-05": {
+     "exact": 14453,
+     "multiple_candidates": 1566,
+     "clean_precontract_traits_differ": 95,
+     "no_precontract_observation": 204,
+     "other_unmatched": 2176
+    },
+    "2026-06": {
+     "exact": 15799,
+     "multiple_candidates": 1639,
+     "other_unmatched": 2393,
+     "no_precontract_observation": 21,
+     "clean_precontract_traits_differ": 3
+    },
+    "2026-07": {
+     "exact": 9915,
+     "multiple_candidates": 1168,
+     "other_unmatched": 4810,
+     "no_precontract_observation": 17
+    },
+    "2026-08": {
+     "exact": 9245,
+     "multiple_candidates": 1049,
+     "other_unmatched": 4472
+    },
+    "2026-09": {
+     "exact": 9185,
+     "multiple_candidates": 941,
+     "other_unmatched": 3977
+    },
+    "2026-10": {
+     "exact": 8077,
+     "multiple_candidates": 763,
+     "other_unmatched": 3822
+    }
+   }
+  },
+  "status_by_sido_full": {
+   "11": {
+    "exact": 635,
+    "clean_precontract_traits_differ": 2,
+    "multiple_candidates": 320,
+    "no_precontract_observation": 3,
+    "other_unmatched": 51
+   },
+   "12": {
+    "other_unmatched": 9892,
+    "exact": 8427,
+    "multiple_candidates": 990,
+    "no_precontract_observation": 70,
+    "clean_precontract_traits_differ": 78
+   },
+   "26": {
+    "exact": 608,
+    "other_unmatched": 112,
+    "multiple_candidates": 388,
+    "clean_precontract_traits_differ": 3,
+    "no_precontract_observation": 10
+   },
+   "27": {
+    "exact": 556,
+    "multiple_candidates": 92,
+    "other_unmatched": 220,
+    "no_precontract_observation": 5,
+    "clean_precontract_traits_differ": 1
+   },
+   "28": {
+    "no_precontract_observation": 138,
+    "other_unmatched": 325,
+    "multiple_candidates": 215,
+    "exact": 1003,
+    "clean_precontract_traits_differ": 5
+   },
+   "30": {
+    "multiple_candidates": 66,
+    "exact": 304,
+    "other_unmatched": 135,
+    "no_precontract_observation": 1,
+    "clean_precontract_traits_differ": 2
+   },
+   "31": {
+    "other_unmatched": 157,
+    "exact": 819,
+    "multiple_candidates": 121,
+    "no_precontract_observation": 7,
+    "clean_precontract_traits_differ": 4
+   },
+   "36": {
+    "other_unmatched": 129,
+    "exact": 287,
+    "multiple_candidates": 34,
+    "no_precontract_observation": 7,
+    "clean_precontract_traits_differ": 1
+   },
+   "41": {
+    "no_precontract_observation": 385,
+    "multiple_candidates": 1566,
+    "exact": 12010,
+    "other_unmatched": 2833,
+    "clean_precontract_traits_differ": 64
+   },
+   "43": {
+    "exact": 6620,
+    "other_unmatched": 1330,
+    "no_precontract_observation": 72,
+    "multiple_candidates": 416,
+    "clean_precontract_traits_differ": 39
+   },
+   "44": {
+    "exact": 11524,
+    "other_unmatched": 2090,
+    "multiple_candidates": 927,
+    "clean_precontract_traits_differ": 51,
+    "no_precontract_observation": 52
+   },
+   "47": {
+    "exact": 12497,
+    "multiple_candidates": 938,
+    "clean_precontract_traits_differ": 58,
+    "other_unmatched": 1957,
+    "no_precontract_observation": 54
+   },
+   "48": {
+    "exact": 10344,
+    "multiple_candidates": 1009,
+    "other_unmatched": 1397,
+    "clean_precontract_traits_differ": 47,
+    "no_precontract_observation": 47
+   },
+   "50": {
+    "exact": 1267,
+    "multiple_candidates": 195,
+    "other_unmatched": 437,
+    "clean_precontract_traits_differ": 10,
+    "no_precontract_observation": 10
+   },
+   "51": {
+    "other_unmatched": 1387,
+    "multiple_candidates": 759,
+    "exact": 6882,
+    "no_precontract_observation": 55,
+    "clean_precontract_traits_differ": 28
+   },
+   "52": {
+    "exact": 9962,
+    "other_unmatched": 1653,
+    "multiple_candidates": 953,
+    "no_precontract_observation": 83,
+    "clean_precontract_traits_differ": 32
+   }
+  },
+  "status_by_sido_code_gen": {
+   "11": {
+    "exact": 635,
+    "clean_precontract_traits_differ": 2,
+    "multiple_candidates": 320,
+    "no_precontract_observation": 3,
+    "other_unmatched": 51
+   },
+   "12": {
+    "exact": 15875,
+    "other_unmatched": 1597,
+    "multiple_candidates": 1837,
+    "no_precontract_observation": 70,
+    "clean_precontract_traits_differ": 78
+   },
+   "26": {
+    "exact": 608,
+    "other_unmatched": 112,
+    "multiple_candidates": 388,
+    "clean_precontract_traits_differ": 3,
+    "no_precontract_observation": 10
+   },
+   "27": {
+    "exact": 556,
+    "multiple_candidates": 92,
+    "other_unmatched": 220,
+    "no_precontract_observation": 5,
+    "clean_precontract_traits_differ": 1
+   },
+   "28": {
+    "no_precontract_observation": 138,
+    "other_unmatched": 325,
+    "multiple_candidates": 215,
+    "exact": 1003,
+    "clean_precontract_traits_differ": 5
+   },
+   "30": {
+    "multiple_candidates": 66,
+    "exact": 304,
+    "other_unmatched": 135,
+    "no_precontract_observation": 1,
+    "clean_precontract_traits_differ": 2
+   },
+   "31": {
+    "other_unmatched": 157,
+    "exact": 819,
+    "multiple_candidates": 121,
+    "no_precontract_observation": 7,
+    "clean_precontract_traits_differ": 4
+   },
+   "36": {
+    "other_unmatched": 129,
+    "exact": 287,
+    "multiple_candidates": 34,
+    "no_precontract_observation": 7,
+    "clean_precontract_traits_differ": 1
+   },
+   "41": {
+    "no_precontract_observation": 385,
+    "multiple_candidates": 1566,
+    "exact": 12010,
+    "other_unmatched": 2833,
+    "clean_precontract_traits_differ": 64
+   },
+   "43": {
+    "exact": 6620,
+    "other_unmatched": 1330,
+    "no_precontract_observation": 72,
+    "multiple_candidates": 416,
+    "clean_precontract_traits_differ": 39
+   },
+   "44": {
+    "exact": 11524,
+    "other_unmatched": 2090,
+    "multiple_candidates": 927,
+    "clean_precontract_traits_differ": 51,
+    "no_precontract_observation": 52
+   },
+   "47": {
+    "exact": 12497,
+    "multiple_candidates": 938,
+    "clean_precontract_traits_differ": 58,
+    "other_unmatched": 1957,
+    "no_precontract_observation": 54
+   },
+   "48": {
+    "exact": 10344,
+    "multiple_candidates": 1009,
+    "other_unmatched": 1397,
+    "clean_precontract_traits_differ": 47,
+    "no_precontract_observation": 47
+   },
+   "50": {
+    "exact": 1267,
+    "multiple_candidates": 195,
+    "other_unmatched": 437,
+    "clean_precontract_traits_differ": 10,
+    "no_precontract_observation": 10
+   },
+   "51": {
+    "other_unmatched": 1387,
+    "multiple_candidates": 759,
+    "exact": 6882,
+    "no_precontract_observation": 55,
+    "clean_precontract_traits_differ": 28
+   },
+   "52": {
+    "exact": 9962,
+    "other_unmatched": 1653,
+    "multiple_candidates": 953,
+    "no_precontract_observation": 83,
+    "clean_precontract_traits_differ": 32
+   }
+  },
+  "drop_last_to_full_moves": {
+   "linked_same_parcel": 83591,
+   "unlinked_same": 33622,
+   "linked_to_unlinked": 715,
+   "unlinked_reason_changed": 181,
+   "unlinked_to_linked": 153,
+   "linked_parcel_changed": 1
+  },
+  "drop_last_to_full_moves_by_sido": {
+   "11": {
+    "linked_same_parcel": 635,
+    "unlinked_same": 373,
+    "linked_to_unlinked": 3
+   },
+   "12": {
+    "unlinked_same": 11030,
+    "linked_same_parcel": 8427
+   },
+   "26": {
+    "linked_same_parcel": 605,
+    "linked_to_unlinked": 27,
+    "unlinked_same": 484,
+    "unlinked_to_linked": 3,
+    "unlinked_reason_changed": 2
+   },
+   "27": {
+    "linked_same_parcel": 556,
+    "unlinked_same": 313,
+    "linked_to_unlinked": 5
+   },
+   "28": {
+    "unlinked_reason_changed": 160,
+    "unlinked_same": 510,
+    "unlinked_to_linked": 94,
+    "linked_same_parcel": 909,
+    "linked_to_unlinked": 13
+   },
+   "30": {
+    "unlinked_same": 199,
+    "linked_same_parcel": 301,
+    "linked_parcel_changed": 1,
+    "unlinked_to_linked": 2,
+    "linked_to_unlinked": 5
+   },
+   "31": {
+    "unlinked_same": 285,
+    "linked_same_parcel": 819,
+    "linked_to_unlinked": 4
+   },
+   "36": {
+    "unlinked_same": 168,
+    "linked_same_parcel": 287,
+    "linked_to_unlinked": 3
+   },
+   "41": {
+    "unlinked_same": 4683,
+    "linked_same_parcel": 11994,
+    "linked_to_unlinked": 158,
+    "unlinked_to_linked": 16,
+    "unlinked_reason_changed": 7
+   },
+   "43": {
+    "linked_same_parcel": 6618,
+    "unlinked_same": 1805,
+    "linked_to_unlinked": 52,
+    "unlinked_to_linked": 2
+   },
+   "44": {
+    "linked_same_parcel": 11510,
+    "unlinked_same": 3030,
+    "linked_to_unlinked": 88,
+    "unlinked_to_linked": 14,
+    "unlinked_reason_changed": 2
+   },
+   "47": {
+    "linked_same_parcel": 12494,
+    "unlinked_same": 2949,
+    "linked_to_unlinked": 54,
+    "unlinked_reason_changed": 4,
+    "unlinked_to_linked": 3
+   },
+   "48": {
+    "linked_same_parcel": 10334,
+    "unlinked_same": 2323,
+    "linked_to_unlinked": 175,
+    "unlinked_reason_changed": 2,
+    "unlinked_to_linked": 10
+   },
+   "50": {
+    "linked_same_parcel": 1266,
+    "unlinked_same": 646,
+    "linked_to_unlinked": 5,
+    "unlinked_reason_changed": 1,
+    "unlinked_to_linked": 1
+   },
+   "51": {
+    "unlinked_same": 2167,
+    "linked_same_parcel": 6878,
+    "linked_to_unlinked": 60,
+    "unlinked_to_linked": 4,
+    "unlinked_reason_changed": 2
+   },
+   "52": {
+    "linked_same_parcel": 9958,
+    "unlinked_same": 2657,
+    "linked_to_unlinked": 63,
+    "unlinked_reason_changed": 1,
+    "unlinked_to_linked": 4
+   }
+  },
+  "drop_last_to_full_transitions": {
+   "exact -> other_unmatched": 702,
+   "other_unmatched -> no_precontract_observation": 134,
+   "other_unmatched -> exact": 99,
+   "multiple_candidates -> exact": 54,
+   "other_unmatched -> multiple_candidates": 25,
+   "multiple_candidates -> other_unmatched": 16,
+   "exact -> multiple_candidates": 13,
+   "other_unmatched -> clean_precontract_traits_differ": 4,
+   "no_precontract_observation -> other_unmatched": 2
+  },
+  "drop_last_to_full_by_month": {
+   "2026-04": {
+    "other_unmatched -> no_precontract_observation": 50,
+    "no_precontract_observation -> other_unmatched": 2
+   },
+   "2026-05": {
+    "other_unmatched -> no_precontract_observation": 46,
+    "other_unmatched -> clean_precontract_traits_differ": 1
+   },
+   "2026-06": {
+    "other_unmatched -> no_precontract_observation": 21,
+    "other_unmatched -> clean_precontract_traits_differ": 3
+   },
+   "2026-07": {
+    "exact -> other_unmatched": 79,
+    "other_unmatched -> no_precontract_observation": 17,
+    "other_unmatched -> exact": 15,
+    "multiple_candidates -> exact": 7,
+    "multiple_candidates -> other_unmatched": 3,
+    "other_unmatched -> multiple_candidates": 1
+   },
+   "2026-08": {
+    "exact -> other_unmatched": 257,
+    "other_unmatched -> exact": 32,
+    "multiple_candidates -> exact": 30,
+    "other_unmatched -> multiple_candidates": 8,
+    "exact -> multiple_candidates": 7,
+    "multiple_candidates -> other_unmatched": 5
+   },
+   "2026-09": {
+    "exact -> other_unmatched": 222,
+    "other_unmatched -> exact": 33,
+    "other_unmatched -> multiple_candidates": 14,
+    "multiple_candidates -> exact": 10,
+    "multiple_candidates -> other_unmatched": 6,
+    "exact -> multiple_candidates": 3
+   },
+   "2026-10": {
+    "exact -> other_unmatched": 144,
+    "other_unmatched -> exact": 19,
+    "multiple_candidates -> exact": 7,
+    "exact -> multiple_candidates": 3,
+    "other_unmatched -> multiple_candidates": 2,
+    "multiple_candidates -> other_unmatched": 2
+   }
+  },
+  "full_vs_stored": {
+   "same": 117882,
+   "stored_missing": 369,
+   "stored exact / shadow other_unmatched": 4,
+   "stored multiple_candidates / shadow other_unmatched": 3,
+   "stored exact / shadow multiple_candidates": 2,
+   "stored multiple_candidates / shadow exact": 1,
+   "stored other_unmatched / shadow exact": 1,
+   "stored other_unmatched / shadow multiple_candidates": 1
+  },
+  "code_gen_changes": {
+   "other_unmatched -> exact": 7448,
+   "other_unmatched -> multiple_candidates": 847
+  },
+  "seconds": 2670,
+  "link_table_written": false
+ },
+ "gap_probe": {
+  "rule_version": "LAND_CODE_HISTORY_LAYER_V1+LAND_LINK_RULE_V1",
+  "mode": "gap_probe_read_only",
+  "window": [
+   "2026-04-01",
+   "2026-11-01"
+  ],
+  "sido_filter": null,
+  "status": {
+   "exact": 83745,
+   "other_unmatched": 24105,
+   "multiple_candidates": 8989,
+   "no_precontract_observation": 999,
+   "clean_precontract_traits_differ": 425
+  },
+  "other_unmatched_buckets": {
+   "a_no_parcel_with_mask": 9205,
+   "a_area_differs": 8792,
+   "a_area_near_same_jimok": 2845,
+   "b_latest_zone_differs": 1502,
+   "a_jimok_differs": 811,
+   "b_latest_jimok_or_area_changed": 478,
+   "b_inconsistent_latest_plate": 298,
+   "c_later_multiple": 150,
+   "b_no_precontract_plate": 22,
+   "b_latest_zone_blank_or_unmapped": 2
+  },
+  "other_unmatched_by_sido": {
+   "11": {
+    "a_area_near_same_jimok": 23,
+    "b_latest_zone_differs": 19,
+    "a_area_differs": 7,
+    "a_jimok_differs": 2
+   },
+   "12": {
+    "a_no_parcel_with_mask": 9163,
+    "a_area_differs": 408,
+    "a_area_near_same_jimok": 155,
+    "b_latest_zone_differs": 101,
+    "a_jimok_differs": 59,
+    "b_latest_jimok_or_area_changed": 3,
+    "c_later_multiple": 2,
+    "b_inconsistent_latest_plate": 1
+   },
+   "26": {
+    "a_area_differs": 41,
+    "a_area_near_same_jimok": 27,
+    "b_latest_zone_differs": 20,
+    "b_inconsistent_latest_plate": 16,
+    "b_latest_jimok_or_area_changed": 7,
+    "c_later_multiple": 1
+   },
+   "27": {
+    "a_area_differs": 107,
+    "b_latest_zone_differs": 72,
+    "a_area_near_same_jimok": 17,
+    "a_jimok_differs": 16,
+    "b_latest_jimok_or_area_changed": 7,
+    "b_inconsistent_latest_plate": 1
+   },
+   "28": {
+    "a_area_differs": 154,
+    "a_area_near_same_jimok": 66,
+    "b_latest_zone_differs": 45,
+    "c_later_multiple": 37,
+    "b_latest_jimok_or_area_changed": 15,
+    "a_jimok_differs": 3,
+    "b_no_precontract_plate": 2,
+    "a_no_parcel_with_mask": 2,
+    "b_inconsistent_latest_plate": 1
+   },
+   "30": {
+    "b_latest_zone_differs": 79,
+    "a_area_differs": 34,
+    "a_area_near_same_jimok": 14,
+    "b_latest_jimok_or_area_changed": 6,
+    "b_inconsistent_latest_plate": 1,
+    "a_jimok_differs": 1
+   },
+   "31": {
+    "a_area_differs": 79,
+    "b_latest_zone_differs": 46,
+    "a_area_near_same_jimok": 26,
+    "b_latest_jimok_or_area_changed": 4,
+    "a_jimok_differs": 2
+   },
+   "36": {
+    "a_area_differs": 105,
+    "a_area_near_same_jimok": 16,
+    "c_later_multiple": 2,
+    "a_jimok_differs": 2,
+    "b_latest_jimok_or_area_changed": 2,
+    "b_inconsistent_latest_plate": 1,
+    "b_latest_zone_differs": 1
+   },
+   "41": {
+    "a_area_differs": 1672,
+    "a_area_near_same_jimok": 588,
+    "b_latest_zone_differs": 294,
+    "b_latest_jimok_or_area_changed": 105,
+    "c_later_multiple": 66,
+    "b_inconsistent_latest_plate": 53,
+    "a_jimok_differs": 39,
+    "b_no_precontract_plate": 9,
+    "a_no_parcel_with_mask": 7
+   },
+   "43": {
+    "a_area_differs": 848,
+    "a_area_near_same_jimok": 227,
+    "b_latest_zone_differs": 128,
+    "a_jimok_differs": 43,
+    "b_latest_jimok_or_area_changed": 42,
+    "b_inconsistent_latest_plate": 18,
+    "c_later_multiple": 14,
+    "a_no_parcel_with_mask": 9,
+    "b_no_precontract_plate": 1
+   },
+   "44": {
+    "a_area_differs": 1293,
+    "a_area_near_same_jimok": 415,
+    "a_jimok_differs": 146,
+    "b_latest_zone_differs": 123,
+    "b_latest_jimok_or_area_changed": 57,
+    "b_inconsistent_latest_plate": 47,
+    "c_later_multiple": 4,
+    "b_no_precontract_plate": 3,
+    "b_latest_zone_blank_or_unmapped": 1,
+    "a_no_parcel_with_mask": 1
+   },
+   "47": {
+    "a_area_differs": 1227,
+    "a_area_near_same_jimok": 313,
+    "b_latest_zone_differs": 160,
+    "a_jimok_differs": 159,
+    "b_latest_jimok_or_area_changed": 56,
+    "b_inconsistent_latest_plate": 30,
+    "a_no_parcel_with_mask": 7,
+    "c_later_multiple": 4,
+    "b_no_precontract_plate": 1
+   },
+   "48": {
+    "a_area_differs": 740,
+    "a_area_near_same_jimok": 254,
+    "b_latest_zone_differs": 191,
+    "b_inconsistent_latest_plate": 87,
+    "a_jimok_differs": 61,
+    "b_latest_jimok_or_area_changed": 60,
+    "c_later_multiple": 3,
+    "b_no_precontract_plate": 1
+   },
+   "50": {
+    "a_area_differs": 217,
+    "a_jimok_differs": 105,
+    "a_area_near_same_jimok": 81,
+    "b_latest_zone_differs": 20,
+    "b_latest_jimok_or_area_changed": 6,
+    "b_inconsistent_latest_plate": 4,
+    "c_later_multiple": 4
+   },
+   "51": {
+    "a_area_differs": 828,
+    "a_area_near_same_jimok": 340,
+    "b_latest_zone_differs": 77,
+    "b_latest_jimok_or_area_changed": 57,
+    "a_jimok_differs": 53,
+    "b_inconsistent_latest_plate": 22,
+    "c_later_multiple": 6,
+    "b_no_precontract_plate": 3,
+    "b_latest_zone_blank_or_unmapped": 1
+   },
+   "52": {
+    "a_area_differs": 1032,
+    "a_area_near_same_jimok": 283,
+    "b_latest_zone_differs": 126,
+    "a_jimok_differs": 120,
+    "b_latest_jimok_or_area_changed": 51,
+    "b_inconsistent_latest_plate": 16,
+    "a_no_parcel_with_mask": 16,
+    "c_later_multiple": 7,
+    "b_no_precontract_plate": 2
+   }
+  },
+  "other_unmatched_by_month": {
+   "2026-04": {
+    "a_area_differs": 1459,
+    "a_area_near_same_jimok": 502,
+    "b_latest_zone_differs": 231,
+    "a_jimok_differs": 100,
+    "c_later_multiple": 95,
+    "b_latest_jimok_or_area_changed": 37,
+    "b_no_precontract_plate": 18,
+    "a_no_parcel_with_mask": 10,
+    "b_inconsistent_latest_plate": 2,
+    "b_latest_zone_blank_or_unmapped": 1
+   },
+   "2026-05": {
+    "a_area_differs": 1398,
+    "a_area_near_same_jimok": 432,
+    "b_latest_zone_differs": 166,
+    "a_jimok_differs": 88,
+    "c_later_multiple": 37,
+    "a_no_parcel_with_mask": 29,
+    "b_latest_jimok_or_area_changed": 21,
+    "b_no_precontract_plate": 4,
+    "b_inconsistent_latest_plate": 1
+   },
+   "2026-06": {
+    "a_area_differs": 1420,
+    "a_area_near_same_jimok": 460,
+    "b_latest_zone_differs": 317,
+    "a_jimok_differs": 148,
+    "b_latest_jimok_or_area_changed": 27,
+    "c_later_multiple": 13,
+    "a_no_parcel_with_mask": 7,
+    "b_inconsistent_latest_plate": 1
+   },
+   "2026-07": {
+    "a_no_parcel_with_mask": 2483,
+    "a_area_differs": 1508,
+    "a_area_near_same_jimok": 451,
+    "b_latest_zone_differs": 174,
+    "a_jimok_differs": 93,
+    "b_latest_jimok_or_area_changed": 70,
+    "b_inconsistent_latest_plate": 26,
+    "c_later_multiple": 5
+   },
+   "2026-08": {
+    "a_no_parcel_with_mask": 2332,
+    "a_area_differs": 1140,
+    "a_area_near_same_jimok": 359,
+    "b_latest_zone_differs": 264,
+    "b_inconsistent_latest_plate": 149,
+    "b_latest_jimok_or_area_changed": 116,
+    "a_jimok_differs": 112
+   },
+   "2026-09": {
+    "a_no_parcel_with_mask": 2038,
+    "a_area_differs": 1032,
+    "a_area_near_same_jimok": 384,
+    "b_latest_zone_differs": 215,
+    "b_latest_jimok_or_area_changed": 120,
+    "a_jimok_differs": 118,
+    "b_inconsistent_latest_plate": 70
+   },
+   "2026-10": {
+    "a_no_parcel_with_mask": 2306,
+    "a_area_differs": 835,
+    "a_area_near_same_jimok": 257,
+    "a_jimok_differs": 152,
+    "b_latest_zone_differs": 135,
+    "b_latest_jimok_or_area_changed": 87,
+    "b_inconsistent_latest_plate": 49,
+    "b_latest_zone_blank_or_unmapped": 1
+   }
+  },
+  "conflict_only_parcels_in_scanned_ranges": 359,
+  "unlinked_with_conflict_only_match": {},
+  "seconds": 1350,
+  "link_table_written": false
+ },
+ "denominator_by_month": {
+  "2025-01": {
+   "task_sql": {
+    "n": 17242,
+    "multiple_candidates": 1336,
+    "linked": 12390,
+    "priced": 11775,
+    "exact": 12390,
+    "no_precontract_observation": 1525,
+    "clean_precontract_traits_differ": 790,
+    "other_unmatched": 792,
+    "(no_row)": 409,
+    "excl:unsupported_zone": 402
+   },
+   "nonshare": 18439,
+   "linked_nonshare": 12390,
+   "priced_nonshare": 11775,
+   "all": 25330,
+   "linked_all": 12391,
+   "screen_eligible": 16840,
+   "screen_linked": 12390,
+   "screen_rate": 73.57
+  },
+  "2025-02": {
+   "task_sql": {
+    "n": 21654,
+    "no_precontract_observation": 1606,
+    "linked": 15951,
+    "priced": 15279,
+    "multiple_candidates": 1654,
+    "exact": 15951,
+    "other_unmatched": 943,
+    "clean_precontract_traits_differ": 1030,
+    "(no_row)": 470,
+    "excl:unsupported_zone": 466
+   },
+   "nonshare": 22977,
+   "linked_nonshare": 15951,
+   "priced_nonshare": 15279,
+   "all": 31349,
+   "linked_all": 15952,
+   "screen_eligible": 21188,
+   "screen_linked": 15951,
+   "screen_rate": 75.28
+  },
+  "2025-03": {
+   "task_sql": {
+    "n": 26644,
+    "multiple_candidates": 2154,
+    "linked": 20053,
+    "priced": 19398,
+    "exact": 20053,
+    "other_unmatched": 1086,
+    "clean_precontract_traits_differ": 1023,
+    "no_precontract_observation": 1819,
+    "(no_row)": 509,
+    "excl:unsupported_zone": 504
+   },
+   "nonshare": 28235,
+   "linked_nonshare": 20053,
+   "priced_nonshare": 19398,
+   "all": 37356,
+   "linked_all": 20053,
+   "screen_eligible": 26140,
+   "screen_linked": 20053,
+   "screen_rate": 76.71
+  },
+  "2025-04": {
+   "task_sql": {
+    "n": 25933,
+    "multiple_candidates": 2030,
+    "linked": 19058,
+    "priced": 18543,
+    "exact": 19058,
+    "clean_precontract_traits_differ": 1163,
+    "no_precontract_observation": 2145,
+    "other_unmatched": 991,
+    "(no_row)": 546,
+    "excl:unsupported_zone": 531
+   },
+   "nonshare": 27549,
+   "linked_nonshare": 19058,
+   "priced_nonshare": 18543,
+   "all": 37648,
+   "linked_all": 19062,
+   "screen_eligible": 25402,
+   "screen_linked": 19058,
+   "screen_rate": 75.03
+  },
+  "2025-05": {
+   "task_sql": {
+    "n": 21961,
+    "multiple_candidates": 1842,
+    "linked": 15519,
+    "priced": 15277,
+    "exact": 15519,
+    "clean_precontract_traits_differ": 967,
+    "no_precontract_observation": 2254,
+    "other_unmatched": 937,
+    "(no_row)": 442,
+    "excl:unsupported_zone": 437
+   },
+   "nonshare": 24692,
+   "linked_nonshare": 15519,
+   "priced_nonshare": 15277,
+   "all": 35257,
+   "linked_all": 15519,
+   "screen_eligible": 21524,
+   "screen_linked": 15519,
+   "screen_rate": 72.1
+  },
+  "2025-06": {
+   "task_sql": {
+    "n": 21258,
+    "multiple_candidates": 1679,
+    "linked": 14998,
+    "priced": 14870,
+    "clean_precontract_traits_differ": 1025,
+    "exact": 14998,
+    "no_precontract_observation": 2187,
+    "other_unmatched": 920,
+    "(no_row)": 449,
+    "excl:unsupported_zone": 445
+   },
+   "nonshare": 23970,
+   "linked_nonshare": 14998,
+   "priced_nonshare": 14870,
+   "all": 33946,
+   "linked_all": 15000,
+   "screen_eligible": 20813,
+   "screen_linked": 14998,
+   "screen_rate": 72.06
+  },
+  "2025-07": {
+   "task_sql": {
+    "n": 20380,
+    "exact": 13935,
+    "linked": 13935,
+    "priced": 13655,
+    "clean_precontract_traits_differ": 1013,
+    "no_precontract_observation": 2297,
+    "multiple_candidates": 1758,
+    "other_unmatched": 980,
+    "excl:unsupported_zone": 389,
+    "(no_row)": 397
+   },
+   "nonshare": 21866,
+   "linked_nonshare": 13935,
+   "priced_nonshare": 13655,
+   "all": 31818,
+   "linked_all": 13936,
+   "screen_eligible": 19991,
+   "screen_linked": 13935,
+   "screen_rate": 69.71
+  },
+  "2025-08": {
+   "task_sql": {
+    "n": 17898,
+    "exact": 12747,
+    "linked": 12747,
+    "priced": 12706,
+    "no_precontract_observation": 1699,
+    "multiple_candidates": 1427,
+    "other_unmatched": 911,
+    "clean_precontract_traits_differ": 698,
+    "(no_row)": 416,
+    "excl:unsupported_zone": 408
+   },
+   "nonshare": 19163,
+   "linked_nonshare": 12747,
+   "priced_nonshare": 12706,
+   "all": 27361,
+   "linked_all": 12747,
+   "screen_eligible": 17490,
+   "screen_linked": 12747,
+   "screen_rate": 72.88
+  },
+  "2025-09": {
+   "task_sql": {
+    "n": 18540,
+    "exact": 13256,
+    "linked": 13256,
+    "priced": 13208,
+    "multiple_candidates": 1509,
+    "no_precontract_observation": 1682,
+    "other_unmatched": 971,
+    "clean_precontract_traits_differ": 725,
+    "(no_row)": 397,
+    "excl:unsupported_zone": 387
+   },
+   "nonshare": 19974,
+   "linked_nonshare": 13256,
+   "priced_nonshare": 13208,
+   "all": 28789,
+   "linked_all": 13256,
+   "screen_eligible": 18153,
+   "screen_linked": 13256,
+   "screen_rate": 73.02
+  },
+  "2025-10": {
+   "task_sql": {
+    "n": 16500,
+    "clean_precontract_traits_differ": 572,
+    "linked": 11827,
+    "priced": 11775,
+    "multiple_candidates": 1491,
+    "exact": 11827,
+    "no_precontract_observation": 1449,
+    "other_unmatched": 747,
+    "(no_row)": 414,
+    "excl:unsupported_zone": 400
+   },
+   "nonshare": 17646,
+   "linked_nonshare": 11827,
+   "priced_nonshare": 11775,
+   "all": 25066,
+   "linked_all": 11827,
+   "screen_eligible": 16100,
+   "screen_linked": 11827,
+   "screen_rate": 73.46
+  },
+  "2025-11": {
+   "task_sql": {
+    "n": 21018,
+    "clean_precontract_traits_differ": 715,
+    "linked": 15423,
+    "priced": 15388,
+    "no_precontract_observation": 1779,
+    "other_unmatched": 889,
+    "exact": 15423,
+    "multiple_candidates": 1669,
+    "(no_row)": 543,
+    "excl:unsupported_zone": 535
+   },
+   "nonshare": 22442,
+   "linked_nonshare": 15423,
+   "priced_nonshare": 15388,
+   "all": 30781,
+   "linked_all": 15423,
+   "screen_eligible": 20483,
+   "screen_linked": 15423,
+   "screen_rate": 75.3
+  },
+  "2025-12": {
+   "task_sql": {
+    "n": 25599,
+    "no_precontract_observation": 2091,
+    "linked": 18752,
+    "priced": 18659,
+    "clean_precontract_traits_differ": 966,
+    "multiple_candidates": 1994,
+    "exact": 18752,
+    "other_unmatched": 1190,
+    "(no_row)": 606,
+    "excl:unsupported_zone": 585
+   },
+   "nonshare": 27084,
+   "linked_nonshare": 18752,
+   "priced_nonshare": 18659,
+   "all": 36402,
+   "linked_all": 18752,
+   "screen_eligible": 25014,
+   "screen_linked": 18752,
+   "screen_rate": 74.97
+  },
+  "2026-01": {
+   "task_sql": {
+    "n": 21097,
+    "no_precontract_observation": 1328,
+    "linked": 15619,
+    "priced": 15602,
+    "other_unmatched": 1425,
+    "multiple_candidates": 1629,
+    "exact": 15619,
+    "clean_precontract_traits_differ": 568,
+    "(no_row)": 528,
+    "excl:unsupported_zone": 510
+   },
+   "nonshare": 22378,
+   "linked_nonshare": 15619,
+   "priced_nonshare": 15602,
+   "all": 31264,
+   "linked_all": 15620,
+   "screen_eligible": 20587,
+   "screen_linked": 15619,
+   "screen_rate": 75.87
+  },
+  "2026-02": {
+   "task_sql": {
+    "n": 17806,
+    "no_precontract_observation": 773,
+    "linked": 13187,
+    "priced": 13171,
+    "multiple_candidates": 1464,
+    "clean_precontract_traits_differ": 384,
+    "exact": 13187,
+    "other_unmatched": 1587,
+    "(no_row)": 411,
+    "excl:unsupported_zone": 384
+   },
+   "nonshare": 18900,
+   "linked_nonshare": 13187,
+   "priced_nonshare": 13171,
+   "all": 25340,
+   "linked_all": 13187,
+   "screen_eligible": 17422,
+   "screen_linked": 13187,
+   "screen_rate": 75.69
+  },
+  "2026-03": {
+   "task_sql": {
+    "n": 25054,
+    "multiple_candidates": 1955,
+    "linked": 18812,
+    "priced": 18797,
+    "other_unmatched": 2257,
+    "no_precontract_observation": 914,
+    "exact": 18812,
+    "clean_precontract_traits_differ": 513,
+    "(no_row)": 603,
+    "excl:unsupported_zone": 567
+   },
+   "nonshare": 26300,
+   "linked_nonshare": 18812,
+   "priced_nonshare": 18797,
+   "all": 36118,
+   "linked_all": 18812,
+   "screen_eligible": 24487,
+   "screen_linked": 18812,
+   "screen_rate": 76.82
+  },
+  "2026-04": {
+   "task_sql": {
+    "n": 22954,
+    "other_unmatched": 2439,
+    "linked": 17063,
+    "priced": 17050,
+    "no_precontract_observation": 756,
+    "exact": 17063,
+    "multiple_candidates": 1863,
+    "clean_precontract_traits_differ": 327,
+    "(no_row)": 506,
+    "excl:unsupported_zone": 481
+   },
+   "nonshare": 24003,
+   "linked_nonshare": 17063,
+   "priced_nonshare": 17050,
+   "all": 32592,
+   "linked_all": 17063,
+   "screen_eligible": 22473,
+   "screen_linked": 17063,
+   "screen_rate": 75.93
+  },
+  "2026-05": {
+   "task_sql": {
+    "n": 18899,
+    "multiple_candidates": 1563,
+    "linked": 14441,
+    "priced": 14422,
+    "exact": 14441,
+    "other_unmatched": 2166,
+    "no_precontract_observation": 203,
+    "clean_precontract_traits_differ": 95,
+    "(no_row)": 431,
+    "excl:unsupported_zone": 405
+   },
+   "nonshare": 19845,
+   "linked_nonshare": 14441,
+   "priced_nonshare": 14422,
+   "all": 27562,
+   "linked_all": 14441,
+   "screen_eligible": 18494,
+   "screen_linked": 14441,
+   "screen_rate": 78.08
+  },
+  "2026-06": {
+   "task_sql": {
+    "n": 20350,
+    "multiple_candidates": 1639,
+    "linked": 15776,
+    "priced": 15765,
+    "exact": 15776,
+    "other_unmatched": 2382,
+    "no_precontract_observation": 21,
+    "(no_row)": 529,
+    "excl:unsupported_zone": 495,
+    "clean_precontract_traits_differ": 3
+   },
+   "nonshare": 21317,
+   "linked_nonshare": 15776,
+   "priced_nonshare": 15765,
+   "all": 29413,
+   "linked_all": 15776,
+   "screen_eligible": 19855,
+   "screen_linked": 15776,
+   "screen_rate": 79.46
+  },
+  "2026-07": {
+   "task_sql": {
+    "n": 16276,
+    "other_unmatched": 4742,
+    "linked": 9895,
+    "priced": 9875,
+    "exact": 9895,
+    "multiple_candidates": 1164,
+    "no_precontract_observation": 17,
+    "(no_row)": 458,
+    "excl:unsupported_zone": 366
+   },
+   "nonshare": 17107,
+   "linked_nonshare": 9895,
+   "priced_nonshare": 9875,
+   "all": 24998,
+   "linked_all": 9895,
+   "screen_eligible": 15910,
+   "screen_linked": 9895,
+   "screen_rate": 62.19
+  },
+  "2026-08": {
+   "task_sql": {
+    "n": 15042,
+    "other_unmatched": 4395,
+    "linked": 9140,
+    "priced": 9127,
+    "multiple_candidates": 1040,
+    "exact": 9140,
+    "(no_row)": 467,
+    "excl:unsupported_zone": 276
+   },
+   "nonshare": 15632,
+   "linked_nonshare": 9140,
+   "priced_nonshare": 9127,
+   "all": 22558,
+   "linked_all": 9140,
+   "screen_eligible": 14766,
+   "screen_linked": 9140,
+   "screen_rate": 61.9
+  },
+  "2026-09": {
+   "task_sql": {
+    "n": 14402,
+    "other_unmatched": 3977,
+    "linked": 9187,
+    "priced": 9172,
+    "exact": 9187,
+    "multiple_candidates": 939,
+    "(no_row)": 299,
+    "excl:unsupported_zone": 299
+   },
+   "nonshare": 14820,
+   "linked_nonshare": 9187,
+   "priced_nonshare": 9172,
+   "all": 21165,
+   "linked_all": 9187,
+   "screen_eligible": 14103,
+   "screen_linked": 9187,
+   "screen_rate": 65.14
+  },
+  "2026-10": {
+   "task_sql": {
+    "n": 12958,
+    "exact": 8077,
+    "linked": 8077,
+    "priced": 8070,
+    "other_unmatched": 3822,
+    "multiple_candidates": 763,
+    "(no_row)": 296,
+    "excl:unsupported_zone": 296
+   },
+   "nonshare": 13142,
+   "linked_nonshare": 8077,
+   "priced_nonshare": 8070,
+   "all": 18186,
+   "linked_all": 8077,
+   "screen_eligible": 12662,
+   "screen_linked": 8077,
+   "screen_rate": 63.79
+  }
+ },
+ "denominator_note": "screen = monthly_ledger_supply.coverage(): linked(exact+label_normalized, not orphaned) / V1-eligible (exclusion_reason empty, 10-digit bjd, 5-digit sigungu, 64-char hash)"
+}
