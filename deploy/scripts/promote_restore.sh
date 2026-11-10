@@ -6,6 +6,9 @@
 set -euo pipefail
 
 INPUT="${1:?dump path required}"
+REPO_ROOT="${CH2_PROMOTE_REPO_ROOT:-/opt/ch2_Macro}"
+BACKUP_DIR="${CH2_PROMOTE_BACKUP_DIR:-/var/backups/ch2}"
+ENV_FILE="$REPO_ROOT/backend/.env"
 # Optional: explicit month after restore (default = latest completed monthly publication)
 AS_OF_OVERRIDE="${2:-}"
 MONTH_PATTERN='^[0-9]{4}-(0[1-9]|1[0-2])-01$'
@@ -14,8 +17,8 @@ if [[ -n "$AS_OF_OVERRIDE" && ! "$AS_OF_OVERRIDE" =~ $MONTH_PATTERN ]]; then
   exit 1
 fi
 TS="$(date +%Y%m%d_%H%M)"
-LOG="/var/backups/ch2/restore_${TS}.log"
-PRE="/tmp/land_stats_vps_pre_promote_${TS}.dump"
+LOG="$BACKUP_DIR/restore_${TS}.log"
+PRE="${TMPDIR:-/tmp}/land_stats_vps_pre_promote_${TS}.dump"
 PG18_BIN="/usr/lib/postgresql/18/bin"
 if [[ -x "${PG18_BIN}/pg_dump" ]]; then
   PG_DUMP="${PG18_BIN}/pg_dump"
@@ -25,10 +28,25 @@ else
   PG_RESTORE="pg_restore"
 fi
 
+# Check the artifact and configuration before stopping the service.
+if [[ ! -f "$INPUT" || ! -s "$INPUT" ]]; then
+  echo "ERROR: missing or empty Promote dump" >&2
+  exit 1
+fi
+if [[ ! -d "$BACKUP_DIR" || ! -w "$BACKUP_DIR" || ! -f "$ENV_FILE" || ! -w "$ENV_FILE" ]]; then
+  echo "ERROR: backup directory or backend configuration is not writable" >&2
+  exit 1
+fi
+case "$INPUT" in
+  *.sql.gz) gzip -t -- "$INPUT" ;;
+  *.sql) [[ -r "$INPUT" ]] || { echo "ERROR: unreadable Promote SQL" >&2; exit 1; } ;;
+  *) sudo -u postgres "$PG_RESTORE" --list "$INPUT" >/dev/null ;;
+esac
+
 echo "==> VPS pre-promote backup (custom format, $PG_DUMP)"
 sudo -u postgres "$PG_DUMP" -Fc --no-owner --no-acl -f "$PRE" land_stats
-sudo mv "$PRE" "/var/backups/ch2/land_stats_vps_pre_promote_${TS}.dump"
-ls -lh "/var/backups/ch2/land_stats_vps_pre_promote_${TS}.dump"
+sudo mv "$PRE" "$BACKUP_DIR/land_stats_vps_pre_promote_${TS}.dump"
+ls -lh "$BACKUP_DIR/land_stats_vps_pre_promote_${TS}.dump"
 
 echo "==> stop backend"
 sudo systemctl stop ch2-macro-backend
@@ -73,7 +91,6 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ch2app;
 GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO ch2app;
 SQL
 
-ENV_FILE="/opt/ch2_Macro/backend/.env"
 if [[ -z "$AS_OF_OVERRIDE" ]]; then
   PUB_TABLE="$(sudo -u postgres psql -XAt -v ON_ERROR_STOP=1 -d land_stats -c "SELECT to_regclass('public.land_stats_v2_publications');")"
   if [[ -n "$PUB_TABLE" ]]; then
@@ -94,15 +111,21 @@ else
   echo "STATS_V2_DEFAULT_AS_OF_MONTH=${AS_OF_OVERRIDE}" >> "$ENV_FILE"
 fi
 
-echo "==> redeploy"
-if [[ -x /opt/ch2_Macro/deploy/scripts/redeploy.sh ]]; then
-  bash /opt/ch2_Macro/deploy/scripts/redeploy.sh main
+echo "==> restart backend"
+if [[ -e "$REPO_ROOT/.git" && -x "$REPO_ROOT/deploy/scripts/redeploy.sh" ]]; then
+  bash "$REPO_ROOT/deploy/scripts/redeploy.sh" main
 else
-  echo "WARN: git redeploy skipped (no .git). Restart backend only."
   sudo systemctl restart ch2-macro-backend
 fi
 
 echo "==> health"
-curl -sf "http://127.0.0.1:8000/health"
-echo
-echo "OK: promote restore complete"
+for attempt in {1..15}; do
+  if systemctl is-active --quiet ch2-macro-backend &&
+     curl --silent --fail --max-time 3 --output /dev/null "http://127.0.0.1:8000/health"; then
+    echo "OK: promote restore complete"
+    exit 0
+  fi
+  sleep 1
+done
+echo "ERROR: backend health check failed after Promote" >&2
+exit 1

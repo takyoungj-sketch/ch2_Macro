@@ -355,6 +355,10 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 - Windows PG18 **custom `-Fc` dump** → VPS 기본 `/usr/bin/pg_restore`(PG16) **실패** → `/usr/lib/postgresql/18/bin/pg_restore` 사용 또는 **plain SQL `.sql.gz`** ( `transaction_timeout` 등 PG18 전용 GUC 줄 제거 후 `psql` ).
 - `py scripts/monthly/dump_land_for_promote.py --cycle-id 202608`은 `backups/land_stats_promote_202608.sql.gz`에 저장한다. 출력 경로를 바꾸려면 `--output`을 지정한다. 작업 ID는 파일명에 쓰이고 덤프 범위는 `land_stats` 전체다.
 - VPS: `deploy/scripts/promote_restore.sh` (PG18 bin·`as_of` 자동·pre-backup은 `/tmp` 경유)
+- tar/scp 방식 서버에서는 Promote가 복원과 기준월 설정 뒤 기존 백엔드 서비스를 재시작한다. 재시작 성공과 `/health` 응답을 모두 확인한 뒤 완료로 기록한다. 덤프 검사에 실패하면 서비스 중단 전 종료한다.
+- 202612 실행 전 최신 코드의 전용 worktree에서 `DATABASE_URL`이 재판정 이력이 있는 로컬 `land_stats`를 가리키는지 확인한다. 덤프 CLI의 `localhost`와 `PGPORT`도 같은 PostgreSQL 인스턴스를 가리켜야 한다. DB 접속 환경은 실행 프로세스에 주입한다.
+- 계약월 202512~202611 CSV 폴더를 `--raw-dir`로 명시하고 기준월 2026-11-01을 확인한다. 토지 원장 SQLite와 광주·전남 대응표를 확인한 뒤 월간 공급 로그와 `clean_snapshots/202612/ledger_supply/land_coverage.json`을 점검한다.
+- 새 전체 덤프는 `dump_land_for_promote.py --cycle-id 202612 --output <전용-worktree>/backups/land_stats_promote_202612.sql.gz`로 생성한다. 스테이징 복원에서 `honam_v2-local-20261110` 이벤트 8,232건, 대응하는 연결표의 상태·가격, 집계 기준월을 대조한다. 검증을 마친 아카이브의 SHA-256을 운영 Promote 직전에 재확인한다.
 
 **2608 Promote 완료 (2026-08-09):** 로컬 검증 DB(`as_of=2026-07-01`, 7월 거래 17,985건) → VPS `land_stats` restore → `/health.latest_as_of_month=2026-07-01`.
 
