@@ -955,3 +955,57 @@ def test_reasoning_effort_is_sent_for_reasoning_models(monkeypatch):
     monkeypatch.setattr("app.ai.usage_log.assert_quota_or_raise", lambda: {})
     llm._openai_chat(system="s", user="u", json_response=True)
     assert sent["reasoning_effort"] == "low"
+
+
+# --- 2026-11-10 운영 재점검 후속: 내부 용어, 중앙값 범위, 답변 길이 --------------
+
+
+def test_t7_internal_terms_are_removed_from_answer(monkeypatch):
+    answer = ("현재 sources의 facts가 비어 있어 PaidMatrixCell 값을 볼 수 없어요. "
+              "화면을 공유해 주시면 확인할게요. "
+              "지금 화면의 통계가 AI에 전달되지 않았어요. 지역을 고르고 통계를 연 뒤 다시 물어봐 주세요.")
+    counting_model(monkeypatch, lambda _: ("knowledge", answer))
+    result = ask("평균 단가 얼마야?", AiContext(app="land", panel="PaidMatrixCell"))
+    for term in ("facts", "sources", "PaidMatrixCell", "공유"):
+        assert term not in result.answer
+    assert result.answer.startswith("지금 화면의 통계가 AI에 전달되지 않았어요.")
+
+
+@pytest.mark.parametrize("sentence", ["예를 들어 base 금리가 오르면 수요가 줄 수 있어요.", "중앙값은 가운데 값이에요."])
+def test_internal_term_check_keeps_normal_sentences(sentence):
+    from app.ai.dialogue import _render, _screen, number_policy
+
+    sources = {"current": _screen(trend_cell())}
+    assert _render({"kind": "knowledge", "answer": sentence}, sources, policy=number_policy("", sources)) is not None
+
+
+def test_median_calc_gets_server_range_when_model_omits_it(monkeypatch):
+    def choose(payload):
+        med = _fact(payload, "계관 × 전 칸 전체 단가 중앙값")
+        return "screen", "칸 전체 중앙값 기준으로 약 {{calc:" + med + "*5000}}입니다."
+
+    counting_model(monkeypatch, choose)
+    result = ask("이 칸 중앙값으로 5,000㎡면 얼마야?", trend_with_cell_total())
+    assert "1억 3,500만원" in result.answer
+    assert "25~75% 분위 기준으로는 1억 500만원~1억 7,000만원입니다." in result.answer
+    assert result.answer.count("25~75%") == 1 and "적정가격" in result.answer
+
+
+def test_median_range_not_added_when_model_already_gave_it(monkeypatch):
+    def choose(payload):
+        med = _fact(payload, "계관 × 전 칸 전체 단가 중앙값")
+        p25 = _fact(payload, "계관 × 전 칸 전체 단가 25% 분위")
+        p75 = _fact(payload, "계관 × 전 칸 전체 단가 75% 분위")
+        return "screen", ("중앙값 기준 {{calc:" + med + "*5000}}, 범위 {{calc:" + p25 + "*5000}}~{{calc:"
+                          + p75 + "*5000}}입니다.")
+
+    counting_model(monkeypatch, choose)
+    result = ask("이 칸 중앙값으로 5,000㎡면 얼마야?", trend_with_cell_total())
+    assert "25~75% 분위 기준으로는" not in result.answer
+
+
+def test_prompt_limits_general_answer_length():
+    from app.ai.dialogue import _SYSTEM
+
+    assert "3~5문장 이내" in _SYSTEM and "2~4문장" in _SYSTEM
+    assert "내부 용어" in _SYSTEM and "화면 공유" in _SYSTEM

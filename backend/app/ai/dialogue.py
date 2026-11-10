@@ -47,9 +47,10 @@ p값을 우연일 확률이나 귀무가설이 참일 확률로 말하지 마세
 현재 화면과 이전 결과는 sources의 별도 ID입니다. 섞지 마세요. 어느 쪽인지 정하기 어려울 때만 짧게 되묻으세요.
 화면의 실측 숫자는 {{current.f0}}처럼 제공된 참조만 쓰세요. 참조에 없는 관측 숫자와 차트 패턴은 만들지 마세요. 일반 통계의 상수와 예시는 화면에서 본 값처럼 쓰지 마세요. 사용자가 질문에 쓴 숫자는 그대로 써도 됩니다.
 참조 {{current.f0}} 자리에는 값과 단위만 들어갑니다(예: 1.7만원/㎡, 50건). 지표명·연도·칸 이름은 문장에 직접 쓰세요. 지표명까지 넣고 싶을 때만 {{current.f0|label}}을 씁니다.
-sources.current의 facts가 비어 있으면 지금 화면의 통계가 AI에 전달되지 않은 것입니다. 그렇다고 말하고 숫자를 만들지 마세요. previous는 사용자가 앞선 분석을 가리킬 때만 쓰고, 쓸 때는 이전 분석의 값이라고 밝히세요.
+sources.current의 facts가 비어 있으면 지금 화면의 통계가 AI에 전달되지 않은 것입니다. 숫자를 만들지 말고 "지금 화면의 통계가 AI에 전달되지 않았어요. 지역을 고르고 통계를 연 뒤 다시 물어봐 주세요."처럼 짧게 안내하세요. previous는 사용자가 앞선 분석을 가리킬 때만 쓰고, 쓸 때는 이전 분석의 값이라고 밝히세요.
+답변에 facts, sources, current, previous, 참조 ID, 패널 이름(예: PaidMatrixCell) 같은 내부 용어를 쓰지 마세요. 화면 공유나 캡처를 요청하지 마세요.
 계산은 직접 하지 마세요. 면적 곱하기 같은 산술이 필요하면 {{calc:current.f3*5000}}처럼 식을 쓰면 서버가 계산해 넣습니다. 식에는 참조, 질문에 나온 숫자, + - * /, 괄호만 씁니다. 계산 기준은 칸 전체(분석 기간 전체)의 중앙값과 25%~75% 분위수를 기본으로 쓰세요. 특정 연도 값은 사용자가 그 연도를 물을 때만 쓰고, 부분 연도·소표본 값으로는 계산하지 마세요. 가능하면 중앙값 하나보다 25%~75% 분위수 범위를 함께 계산하세요. 계산값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아니라고 밝히고, 접근성·경사·형상·이용상황 같은 개별요인에 따라 달라진다고 한 줄 붙이세요. 개별 부동산의 적정가격을 확정하는 표현은 쓰지 마세요.
-간단히 물으면 간단히 답하세요. 해석·요약·비교를 요청하면 주요 특징, 해석상 주의점, 필요할 때 추가로 볼 비교 순서로 쓰세요. 숫자를 표처럼 모두 나열하지 말고 범위·최고·최저·변화 방향으로 요약하세요.
+간단히 물으면 2~4문장으로 답하세요. 통계·부동산 일반 지식 질문은 핵심만 3~5문장 이내로 쓰고, 목록·소제목·예시 여러 개는 사용자가 자세히 요청할 때만 쓰세요. 해석·요약·비교를 요청하면 주요 특징, 해석상 주의점, 필요할 때 추가로 볼 비교 순서로 쓰세요. 숫자를 표처럼 모두 나열하지 말고 범위·최고·최저·변화 방향으로 요약하세요.
 notes에 부분 연도, 소표본(15건 미만), 넓은 신뢰구간이 있으면 해석할 때 반드시 언급하세요. 부분 연도나 소표본의 평균 차이를 가격 상승·하락으로 단정하지 마세요. 평균과 중앙값이 크게 다르면 분포가 한쪽으로 치우쳤다고 짚으세요.
 sources의 text_refs는 보고서 본문 출처입니다. 본문을 그대로 반복하지 말고 질문에 맞게 풀어 설명하세요. 본문 수치는 실제 기재된 값 그대로 쓰고 같은 문장 안의 마침표 앞에 해당 참조를 붙이세요. 본문 참조는 화면의 근거 패널에서 확인할 수 있으며 답변 본문에는 원문을 자동 삽입하지 않습니다. 수치형 참조는 기존처럼 숫자 자리에서 사용합니다.
 참조 뒤에 단위를 다시 붙이지 마세요. product_knowledge에 없는 메뉴나 내부 경로는 안내하지 마세요.
@@ -66,6 +67,12 @@ refusal은 범위 밖 질문만입니다.
 # calc.fN 은 서버가 {{calc:<식>}} 을 계산해 만든 내부 참조다(모델이 직접 쓰지 않는다).
 _REF = re.compile(r"\{\{((?:current|previous|base|calc)\.f\d+)(?:\|value|\|label)?\}\}")
 _CALC = re.compile(r"\{\{calc:([^{}]{1,200})\}\}")
+# 사용자에게 보이면 안 되는 내부 용어·요청(2026-11-10 운영 T7). 이 표현이 있는 문장은 뺀다.
+_INTERNAL_TERMS = re.compile(
+    r"\bfacts?\b|\bsources?\b|text_refs|identifiers|base_screen|\b(?:current|previous)\b|\bbase\.f\d+"
+    r"|\b[A-Z][a-z]+[A-Za-z]*(?:Card|Panel|Tab|Modal|Matrix|Cell|List|Detail)\b"
+    r"|화면\s*(?:을|를)?\s*공유|스크린\s*샷|화면\s*캡처"
+)
 # 참조 없는 숫자가 이 표현과 같은 문장에 있으면 화면 관측을 주장한 것으로 본다.
 _OBSERVATION_MARKERS = (
     "화면", "현재", "지금", "이 지역", "이 동네", "이 칸", "이 표", "이 결과", "이 모형", "이 회귀",
@@ -1101,7 +1108,50 @@ def _apply_calc(answer: str, sources: dict[str, ScreenEvidence], policy: NumberP
 
     answer = _CALC.sub(replace, answer)
     calc.context["expressions"] = expressions
+    used_refs = {ref for expr in expressions for ref in _CALC_REF.findall(expr)}
+    ranges = []
+    for expr in expressions:
+        found = _median_range(expr, sources, policy.asked, used_refs)
+        if found and found not in ranges:
+            ranges.append(found)
+    calc.context["median_ranges"] = ranges
     return answer, {**sources, "calc": calc}
+
+
+_SIMPLE_PRODUCT = re.compile(
+    r"\s*(?:((?:current|previous|base)\.f\d+)\s*\*\s*([\d,]+(?:\.\d+)?)"
+    r"|([\d,]+(?:\.\d+)?)\s*\*\s*((?:current|previous|base)\.f\d+))\s*"
+)
+
+
+def _median_range(expr: str, sources: dict[str, ScreenEvidence], asked: set[Decimal],
+                   used_refs: set[str]) -> tuple[str, str] | None:
+    """'중앙값 × 면적' 계산이면 같은 칸의 25%·75% 분위 × 면적을 계산한다(모델이 이미 썼으면 None)."""
+    match = _SIMPLE_PRODUCT.fullmatch(expr)
+    if not match:
+        return None
+    ref = match.group(1) or match.group(4)
+    constant = match.group(2) or match.group(3)
+    source, index = ref.split(".f")
+    data = sources.get(source)
+    if data is None or int(index) >= len(data.facts):
+        return None
+    label = data.facts[int(index)].rsplit(" ", 1)[0]
+    if "중앙값" not in label:
+        return None
+    shown = []
+    for quantile in ("25% 분위", "75% 분위"):
+        target = label.replace("중앙값", quantile)
+        j = next((i for i, fact in enumerate(data.facts)
+                  if i not in data.text_fact_ids and fact.rsplit(" ", 1)[0] == target), None)
+        if j is None or f"{source}.f{j}" in used_refs:
+            return None
+        try:
+            value, unit, _ = evaluate_calc(f"{source}.f{j}*{constant}", sources, asked)
+        except CalcError:
+            return None
+        shown.append(format_amount(value, unit))
+    return shown[0], shown[1]
 
 
 def _render(draft: dict, sources: dict[str, ScreenEvidence], issues: list[str] | None = None,
@@ -1137,6 +1187,8 @@ def _render(draft: dict, sources: dict[str, ScreenEvidence], issues: list[str] |
     if "{{" in remainder or "}}" in remainder or any(ref not in references for ref in ids):
         return reject("invalid_reference")
     for sentence in _sentences(answer):
+        if _INTERNAL_TERMS.search(_REF.sub("", sentence)):
+            return reject("internal_term:" + sentence[:80])
         local_refs = _REF.findall(sentence)
         prose = _clean_numbers(_REF.sub("", sentence))
         for data in sources.values():
@@ -1240,6 +1292,9 @@ def _render(draft: dict, sources: dict[str, ScreenEvidence], issues: list[str] |
         displayed = re.sub(r"[ \t]+([.,;:!?])", r"\1", displayed)
     if not displayed:
         return reject("empty_answer_after_references")
+    ranges = sources["calc"].context.get("median_ranges") if calc_used else None
+    if ranges and not fragment:
+        displayed += "\n\n" + " ".join(f"25~75% 분위 기준으로는 {low}~{high}입니다." for low, high in ranges)
     if calc_used and not _CAUTION_RE.search(displayed):
         displayed += "\n\n" + _CALC_CAUTION
     return displayed, evidence, next(iter(used)) if len(used) == 1 else None
