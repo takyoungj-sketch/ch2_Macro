@@ -355,7 +355,7 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 - Windows PG18 **custom `-Fc` dump** → VPS 기본 `/usr/bin/pg_restore`(PG16) **실패** → `/usr/lib/postgresql/18/bin/pg_restore` 사용 또는 **plain SQL `.sql.gz`** ( `transaction_timeout` 등 PG18 전용 GUC 줄 제거 후 `psql` ).
 - `py scripts/monthly/dump_land_for_promote.py --cycle-id 202608`은 `backups/land_stats_promote_202608.sql.gz`에 저장한다. 출력 경로를 바꾸려면 `--output`을 지정한다. 작업 ID는 파일명에 쓰이고 덤프 범위는 `land_stats` 전체다.
 - VPS: `deploy/scripts/promote_restore.sh` (PG18 bin·`as_of` 자동·pre-backup은 `/tmp` 경유)
-- tar/scp 방식 서버에서는 Promote가 복원과 기준월 설정 뒤 기존 백엔드 서비스를 재시작한다. 재시작 성공과 `/health` 응답을 모두 확인한 뒤 완료로 기록한다. 덤프 검사에 실패하면 서비스 중단 전 종료한다.
+- 새 Promote 스크립트와 `/health.configured_land_as_of_month`를 제공하는 백엔드를 함께 배포하고, 기존 서비스의 응답을 먼저 확인한다. 덤프 검사 또는 헬스 계약 확인에 실패하면 서비스 중단 전에 종료한다. 재시작 명령이 끝난 뒤 최대 120초 동안 2초 간격으로 systemd 활성 상태, HTTP 200, JSON `status=ok`, 서비스가 읽은 기준월 및 복원 DB의 최신 적재월을 확인한다. 모두 맞으면 즉시 완료한다. 기준월을 명시한 경우 최신 적재월과 달라도 되지만 복원 DB에 그 달의 데이터가 있어야 한다.
 - 202612 실행 전 최신 코드의 전용 worktree에서 `DATABASE_URL`이 재판정 이력이 있는 로컬 `land_stats`를 가리키는지 확인한다. 덤프 CLI의 `localhost`와 `PGPORT`도 같은 PostgreSQL 인스턴스를 가리켜야 한다. DB 접속 환경은 실행 프로세스에 주입한다.
 - 계약월 202512~202611 CSV 폴더를 `--raw-dir`로 명시하고 기준월 2026-11-01을 확인한다. 토지 원장 SQLite와 광주·전남 대응표를 확인한 뒤 월간 공급 로그와 `clean_snapshots/202612/ledger_supply/land_coverage.json`을 점검한다.
 - 새 전체 덤프는 `dump_land_for_promote.py --cycle-id 202612 --output <전용-worktree>/backups/land_stats_promote_202612.sql.gz`로 생성한다. 스테이징 복원에서 `honam_v2-local-20261110` 이벤트 8,232건, 대응하는 연결표의 상태·가격, 집계 기준월을 대조한다. 검증을 마친 아카이브의 SHA-256을 운영 Promote 직전에 재확인한다.
@@ -364,11 +364,50 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 
 ---
 
-## 10. 백업 및 롤백
+## 10. 백업 및 수동 롤백
 
-- **백업:** Promote 직전 `pg_dump` (`backups\`).  
-- **롤백:** 문제 발견 시 Promote 이전 dump 로 DB 복원 후 백엔드 재기동.  
-- **부분 롤백:** `land_basic_stats_v2` 특정 `as_of_month` 행만 삭제 등은 설계·FK에 따라 위험 — **가능하면 전체 restore** 우선.
+Promote는 사전 논리 덤프를 만든 뒤 기존 `land_stats`의 세션을 종료하고 DB를 삭제·재생성한다. 기존 DB 인스턴스는 보존되지 않는다. SQL 복원은 전체 트랜잭션으로 묶이지 않아 실패 시 새 DB가 비거나 일부 테이블·행·인덱스만 남을 수 있다. 사전 덤프는 `--no-owner --no-acl`로 생성되므로 객체 소유자와 개별 권한은 별도로 기록한다.
+
+### 10.1 시작 전 준비
+
+- 한 번에 한 명만 수행한다. DB에 쓰는 월간 작업·스케줄러·외부 세션을 멈추고 복구 확인까지 재개하지 않는다. 사전 덤프는 백엔드 중단 **전**에 뜨므로, 덤프의 스냅샷 이후 DB 삭제 사이에 들어간 쓰기는 복구본에 없다.
+- 접근 제한된 작업별 폴더에 `backend/.env` 원본을 메타데이터와 함께 보관한다. 예를 들어 `sudo install -d -m 0700 "$RECOVERY_DIR"` 후 `sudo cp -a -- /opt/ch2_Macro/backend/.env "$RECOVERY_DIR/backend.env.before"`를 실행한다. 파일 내용은 콘솔에 출력하지 않는다.
+- 현재 서비스 기준월·최신 적재월·핵심 테이블 행 수와 별도 권한을 기록한다. 실행마다 별도 백업 폴더를 준비해 `CH2_PROMOTE_BACKUP_DIR`로 지정한다. 이 실행에서 출력한 사전 덤프의 정확한 경로를 기록하고 보존한다. 운영 승인 전에 같은 형식의 덤프를 별도 DB에 복원할 수 있는지 점검한다. 압축 검사와 `pg_restore --list`는 형식 검사다.
+
+### 10.2 재시도와 복구 판단
+
+| 관찰한 마지막 단계 | 다음 조치 |
+|---|---|
+| 사전 검사·사전 백업 실패, DB 재생성 전 | 기존 DB와 서비스 상태를 확인한다. 원인 수정 및 입력 검증 뒤 Promote를 재시도할 수 있다. 서비스 중지만 일어났다면 DB를 확인하고 서비스를 먼저 재기동한다. |
+| DB 재생성 또는 SQL 복원 실패, 복원 완료 여부 불명 | 서비스와 쓰기를 차단한 상태로 유지하고 이 실행의 사전 덤프에서 수동 복구한다. 부분 DB를 대상으로 Promote를 다시 실행하면 부분 DB가 새 사전 백업으로 기록될 수 있다. |
+| SQL 복원 완료, 권한·기준월·재시작·헬스 단계 실패 | 덤프 대조와 권한·기준월을 확인한다. 데이터가 검증됐고 서비스 원인만 확인되면 해당 원인을 고친 뒤 재시작과 헬스 확인만 재시도한다. 기준월 불일치라면 systemd의 환경 오버라이드도 확인한다. 데이터가 불완전하거나 확인할 수 없거나 서비스 복구가 불가능하면 사전 덤프와 설정으로 수동 복구한다. |
+
+### 10.3 승인된 수동 복구
+
+1. 기록한 **이 실행의** 사전 덤프와 .env 사본을 지정한다. 로그를 보존하고 대상 호스트와 DB 이름을 확인한다. 백업 생성에 사용한 버전에 맞는 `pg_restore`의 절대 경로를 지정한다. 예를 들어 PG18이면 `/usr/lib/postgresql/18/bin/pg_restore`를 사용한다.
+2. 아래 VPS 명령을 실행하기 전에 `PRE_DUMP`, `ENV_BACKUP`, `RESTORE_BIN`을 검증한 절대 경로로 설정한다. 읽기 가능한 사본과 TOC를 확인한 뒤 DB를 교체한다. 서비스 중지 이후 명령이 실패하면 서비스를 중지한 상태에서 원인을 해결한다.
+
+```bash
+set -e
+: "${PRE_DUMP:?}" "${ENV_BACKUP:?}" "${RESTORE_BIN:?}"
+sudo test -s "$ENV_BACKUP"
+sudo -u postgres test -s "$PRE_DUMP"
+sudo -u postgres "$RESTORE_BIN" --list "$PRE_DUMP" >/dev/null
+sudo systemctl stop ch2-macro-backend.service
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -d postgres <<'SQL'
+DROP DATABASE IF EXISTS land_stats WITH (FORCE);
+CREATE DATABASE land_stats OWNER ch2app;
+SQL
+sudo -u postgres "$RESTORE_BIN" --exit-on-error --no-owner --no-acl -d land_stats "$PRE_DUMP"
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -d land_stats <<'SQL'
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ch2app;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ch2app;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO ch2app;
+SQL
+sudo cp -a -- "$ENV_BACKUP" /opt/ch2_Macro/backend/.env
+```
+
+3. 별도 소유자·권한을 사용했다면 기록에 따라 재적용한다. 복구된 행 수, 기준월과 `ch2app` 읽기 권한을 사전 기록과 대조한다. `sudo systemctl restart ch2-macro-backend.service`를 실행하고 서비스 활성 상태와 `/health`의 `status`, `configured_land_as_of_month`, `latest_as_of_month`를 사전 기록과 대조한다. 확인이 끝나면 쓰기를 재개한다.
 
 ---
 

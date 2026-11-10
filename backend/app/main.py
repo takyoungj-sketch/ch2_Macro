@@ -333,6 +333,11 @@ def health(db: Session = Depends(get_db)):
     payload: dict = {
         "status": "ok",
         "latest_as_of_month": latest.isoformat() if latest else None,
+        "configured_land_as_of_month": (
+            settings.stats_v2_default_as_of_month.isoformat()
+            if settings.stats_v2_default_as_of_month
+            else None
+        ),
     }
     built = _safe_built_health()
     if built is not None:

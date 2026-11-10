@@ -9,6 +9,8 @@ INPUT="${1:?dump path required}"
 REPO_ROOT="${CH2_PROMOTE_REPO_ROOT:-/opt/ch2_Macro}"
 BACKUP_DIR="${CH2_PROMOTE_BACKUP_DIR:-/var/backups/ch2}"
 ENV_FILE="$REPO_ROOT/backend/.env"
+BACKEND_UNIT=ch2-macro-backend.service
+HEALTH_URL=http://127.0.0.1:8000/health
 # Optional: explicit month after restore (default = latest completed monthly publication)
 AS_OF_OVERRIDE="${2:-}"
 MONTH_PATTERN='^[0-9]{4}-(0[1-9]|1[0-2])-01$'
@@ -28,6 +30,55 @@ else
   PG_RESTORE="pg_restore"
 fi
 
+fetch_health() {
+  local response
+  response=$(curl --silent --fail --max-time 3 --write-out '\n%{http_code}' "$1") || return 1
+  [[ "${response##*$'\n'}" == 200 ]] || return 1
+  printf '%s' "${response%$'\n'*}"
+}
+
+check_health_payload() {
+  python3 -c '
+import json
+import sys
+
+try:
+    body = json.load(sys.stdin)
+except (ValueError, UnicodeError):
+    sys.exit("invalid /health JSON")
+if not isinstance(body, dict) or body.get("status") != "ok":
+    sys.exit("/health status is not ok")
+if "configured_land_as_of_month" not in body:
+    sys.exit("/health lacks configured_land_as_of_month")
+if len(sys.argv) > 1:
+    if body.get("configured_land_as_of_month") != sys.argv[1]:
+        sys.exit(f"/health configured land month does not match {sys.argv[1]}")
+    if body.get("latest_as_of_month") != sys.argv[2]:
+        sys.exit(f"/health latest land data month does not match {sys.argv[2]}")
+' "$@"
+}
+
+wait_for_backend() {
+  local unit=$1 url=$2 month=$3 latest=$4 response state last_state=
+  while true; do
+    if ! systemctl is-active --quiet "$unit"; then
+      state="systemd service is not active"
+    elif ! response=$(fetch_health "$url"); then
+      state="/health request failed"
+    elif state=$(check_health_payload "$month" "$latest" <<<"$response" 2>&1); then
+      if systemctl is-active --quiet "$unit"; then
+        return 0
+      fi
+      state="systemd service stopped during the probe"
+    fi
+    if [[ "$state" != "$last_state" ]]; then
+      printf 'Waiting for backend: %s\n' "$state"
+      last_state=$state
+    fi
+    sleep 2
+  done
+}
+
 # Check the artifact and configuration before stopping the service.
 if [[ ! -f "$INPUT" || ! -s "$INPUT" ]]; then
   echo "ERROR: missing or empty Promote dump" >&2
@@ -42,6 +93,15 @@ case "$INPUT" in
   *.sql) [[ -r "$INPUT" ]] || { echo "ERROR: unreadable Promote SQL" >&2; exit 1; } ;;
   *) sudo -u postgres "$PG_RESTORE" --list "$INPUT" >/dev/null ;;
 esac
+if ! command -v python3 >/dev/null || ! command -v timeout >/dev/null; then
+  echo "ERROR: Promote readiness requires python3 and timeout" >&2
+  exit 1
+fi
+if ! PREFLIGHT_HEALTH=$(fetch_health "$HEALTH_URL") ||
+   ! check_health_payload <<<"$PREFLIGHT_HEALTH"; then
+  echo "ERROR: verify the deployed backend health contract before Promote; database unchanged" >&2
+  exit 1
+fi
 
 echo "==> VPS pre-promote backup (custom format, $PG_DUMP)"
 sudo -u postgres "$PG_DUMP" -Fc --no-owner --no-acl -f "$PRE" land_stats
@@ -81,8 +141,9 @@ if (( RC != 0 )); then
 fi
 
 echo "==> verify counts"
-sudo -u postgres psql -d land_stats -t -c "SELECT COUNT(*) FROM land_transactions;"
-sudo -u postgres psql -d land_stats -t -c "SELECT MAX(as_of_month) FROM land_basic_stats_v2;"
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -d land_stats -t -c "SELECT COUNT(*) FROM land_transactions;"
+LATEST_DATA_MONTH="$(sudo -u postgres psql -XAt -v ON_ERROR_STOP=1 -d land_stats -c "SELECT MAX(as_of_month) FROM land_basic_stats_v2;")"
+echo "latest restored land data month: $LATEST_DATA_MONTH"
 
 echo "==> grant ch2app (plain SQL restore 후 권한)"
 sudo -u postgres psql -d land_stats -v ON_ERROR_STOP=1 <<'SQL'
@@ -97,11 +158,16 @@ if [[ -z "$AS_OF_OVERRIDE" ]]; then
     AS_OF_OVERRIDE="$(sudo -u postgres psql -XAt -v ON_ERROR_STOP=1 -d land_stats -c "SELECT MAX(as_of_month) FROM land_stats_v2_publications;")"
   else
     echo "WARN: legacy dump without completion records; using newest restored basic stats month"
-    AS_OF_OVERRIDE="$(sudo -u postgres psql -XAt -v ON_ERROR_STOP=1 -d land_stats -c "SELECT MAX(as_of_month) FROM land_basic_stats_v2;")"
+    AS_OF_OVERRIDE="$LATEST_DATA_MONTH"
   fi
 fi
 if [[ ! "$AS_OF_OVERRIDE" =~ $MONTH_PATTERN ]]; then
   echo "ERROR: no valid land stats publication month"
+  exit 1
+fi
+MONTH_PRESENT="$(sudo -u postgres psql -XAt -v ON_ERROR_STOP=1 -d land_stats -c "SELECT EXISTS (SELECT 1 FROM land_basic_stats_v2 WHERE as_of_month = '$AS_OF_OVERRIDE');")"
+if [[ "$MONTH_PRESENT" != t ]]; then
+  echo "ERROR: requested land stats month $AS_OF_OVERRIDE is absent from the restored data" >&2
   exit 1
 fi
 echo "==> set STATS_V2_DEFAULT_AS_OF_MONTH=$AS_OF_OVERRIDE"
@@ -111,21 +177,38 @@ else
   echo "STATS_V2_DEFAULT_AS_OF_MONTH=${AS_OF_OVERRIDE}" >> "$ENV_FILE"
 fi
 
+report_backend_state() {
+  timeout 5s systemctl show "$BACKEND_UNIT" \
+    -p ActiveState -p SubState -p Result -p MainPID -p ExecMainStatus >&2 || true
+  echo "Restore log: $LOG" >&2
+  echo "Inspect service logs locally: sudo journalctl -u $BACKEND_UNIT -n 40 --no-pager" >&2
+}
+
 echo "==> restart backend"
 if [[ -e "$REPO_ROOT/.git" && -x "$REPO_ROOT/deploy/scripts/redeploy.sh" ]]; then
-  bash "$REPO_ROOT/deploy/scripts/redeploy.sh" main
-else
-  sudo systemctl restart ch2-macro-backend
+  CH2_REDEPLOY_SKIP_HEALTH=1 bash "$REPO_ROOT/deploy/scripts/redeploy.sh" main || {
+    echo "ERROR: backend redeploy command failed after restore" >&2
+    report_backend_state
+    exit 1
+  }
+elif ! sudo systemctl restart "$BACKEND_UNIT"; then
+  echo "ERROR: systemd restart command failed after restore" >&2
+  report_backend_state
+  exit 1
 fi
 
-echo "==> health"
-for attempt in {1..15}; do
-  if systemctl is-active --quiet ch2-macro-backend &&
-     curl --silent --fail --max-time 3 --output /dev/null "http://127.0.0.1:8000/health"; then
-    echo "OK: promote restore complete"
-    exit 0
-  fi
-  sleep 1
-done
-echo "ERROR: backend health check failed after Promote" >&2
+echo "==> health (up to 120s; expected land month=$AS_OF_OVERRIDE, latest data=$LATEST_DATA_MONTH)"
+export -f fetch_health check_health_payload wait_for_backend
+if timeout 120s bash -c 'wait_for_backend "$@"' _ "$BACKEND_UNIT" "$HEALTH_URL" "$AS_OF_OVERRIDE" "$LATEST_DATA_MONTH"; then
+  echo "OK: promote restore complete"
+  exit 0
+else
+  HEALTH_RC=$?
+fi
+if (( HEALTH_RC == 124 )); then
+  echo "ERROR: backend readiness timed out after 120s" >&2
+else
+  echo "ERROR: backend readiness failed after Promote (probe exit=$HEALTH_RC)" >&2
+fi
+report_backend_state
 exit 1

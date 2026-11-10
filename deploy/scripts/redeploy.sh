@@ -61,8 +61,10 @@ sudo systemctl restart ch2-macro-backend
 sudo nginx -t
 sudo systemctl reload nginx
 
-echo "==> health"
-sleep 2
-curl -sf "http://127.0.0.1:8000/health" | head -c 800
-echo
+if [[ "${CH2_REDEPLOY_SKIP_HEALTH:-0}" != 1 ]]; then
+  echo "==> health"
+  sleep 2
+  curl -sf "http://127.0.0.1:8000/health" | head -c 800
+  echo
+fi
 echo "OK: redeploy complete (gateway /, land /land/, built /built/, collective /collective/, profile /profile/)"
