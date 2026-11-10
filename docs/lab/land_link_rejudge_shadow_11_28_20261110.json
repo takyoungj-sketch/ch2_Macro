@@ -1,0 +1,302 @@
+{
+  "rule_version": "LAND_CODE_HISTORY_LAYER_V1+LAND_LINK_RULE_V1",
+  "mode": "shadow_rejudge_read_only",
+  "window": [
+    "2026-04-01",
+    "2026-11-01"
+  ],
+  "cutoff_dropped_from": "2026-07-20",
+  "sido_filter": [
+    "11",
+    "28"
+  ],
+  "transactions_fetched": 9271,
+  "judged": 2697,
+  "ledger_prefixes_without_parcels": [
+    "12"
+  ],
+  "linked_rate": {
+    "drop_last": {
+      "2026-04": {
+        "judged": 464,
+        "linked": 234,
+        "rate": 50.43
+      },
+      "2026-05": {
+        "judged": 438,
+        "linked": 249,
+        "rate": 56.85
+      },
+      "2026-06": {
+        "judged": 464,
+        "linked": 291,
+        "rate": 62.72
+      },
+      "2026-07": {
+        "judged": 401,
+        "linked": 244,
+        "rate": 60.85
+      },
+      "2026-08": {
+        "judged": 363,
+        "linked": 198,
+        "rate": 54.55
+      },
+      "2026-09": {
+        "judged": 305,
+        "linked": 167,
+        "rate": 54.75
+      },
+      "2026-10": {
+        "judged": 262,
+        "linked": 177,
+        "rate": 67.56
+      }
+    },
+    "full": {
+      "2026-04": {
+        "judged": 464,
+        "linked": 234,
+        "rate": 50.43
+      },
+      "2026-05": {
+        "judged": 438,
+        "linked": 249,
+        "rate": 56.85
+      },
+      "2026-06": {
+        "judged": 464,
+        "linked": 291,
+        "rate": 62.72
+      },
+      "2026-07": {
+        "judged": 401,
+        "linked": 258,
+        "rate": 64.34
+      },
+      "2026-08": {
+        "judged": 363,
+        "linked": 223,
+        "rate": 61.43
+      },
+      "2026-09": {
+        "judged": 305,
+        "linked": 196,
+        "rate": 64.26
+      },
+      "2026-10": {
+        "judged": 262,
+        "linked": 187,
+        "rate": 71.37
+      }
+    },
+    "code_gen": {
+      "2026-04": {
+        "judged": 464,
+        "linked": 234,
+        "rate": 50.43
+      },
+      "2026-05": {
+        "judged": 438,
+        "linked": 249,
+        "rate": 56.85
+      },
+      "2026-06": {
+        "judged": 464,
+        "linked": 291,
+        "rate": 62.72
+      },
+      "2026-07": {
+        "judged": 401,
+        "linked": 258,
+        "rate": 64.34
+      },
+      "2026-08": {
+        "judged": 363,
+        "linked": 223,
+        "rate": 61.43
+      },
+      "2026-09": {
+        "judged": 305,
+        "linked": 196,
+        "rate": 64.26
+      },
+      "2026-10": {
+        "judged": 262,
+        "linked": 187,
+        "rate": 71.37
+      }
+    }
+  },
+  "status_by_month": {
+    "drop_last": {
+      "2026-04": {
+        "exact": 234,
+        "multiple_candidates": 95,
+        "no_precontract_observation": 7,
+        "clean_precontract_traits_differ": 6,
+        "other_unmatched": 122
+      },
+      "2026-05": {
+        "exact": 249,
+        "clean_precontract_traits_differ": 1,
+        "multiple_candidates": 95,
+        "no_precontract_observation": 1,
+        "other_unmatched": 92
+      },
+      "2026-06": {
+        "exact": 291,
+        "multiple_candidates": 79,
+        "other_unmatched": 94
+      },
+      "2026-07": {
+        "exact": 244,
+        "multiple_candidates": 71,
+        "other_unmatched": 86
+      },
+      "2026-08": {
+        "multiple_candidates": 72,
+        "exact": 198,
+        "other_unmatched": 93
+      },
+      "2026-09": {
+        "exact": 167,
+        "multiple_candidates": 53,
+        "other_unmatched": 85
+      },
+      "2026-10": {
+        "exact": 177,
+        "multiple_candidates": 45,
+        "other_unmatched": 40
+      }
+    },
+    "full": {
+      "2026-04": {
+        "exact": 234,
+        "multiple_candidates": 95,
+        "no_precontract_observation": 57,
+        "clean_precontract_traits_differ": 6,
+        "other_unmatched": 72
+      },
+      "2026-05": {
+        "exact": 249,
+        "clean_precontract_traits_differ": 1,
+        "multiple_candidates": 95,
+        "no_precontract_observation": 47,
+        "other_unmatched": 46
+      },
+      "2026-06": {
+        "exact": 291,
+        "multiple_candidates": 79,
+        "other_unmatched": 74,
+        "no_precontract_observation": 20
+      },
+      "2026-07": {
+        "exact": 258,
+        "multiple_candidates": 72,
+        "other_unmatched": 54,
+        "no_precontract_observation": 17
+      },
+      "2026-08": {
+        "multiple_candidates": 80,
+        "exact": 223,
+        "other_unmatched": 60
+      },
+      "2026-09": {
+        "exact": 196,
+        "multiple_candidates": 66,
+        "other_unmatched": 43
+      },
+      "2026-10": {
+        "exact": 187,
+        "multiple_candidates": 48,
+        "other_unmatched": 27
+      }
+    }
+  },
+  "status_by_sido_full": {
+    "11": {
+      "exact": 635,
+      "multiple_candidates": 320,
+      "other_unmatched": 51,
+      "no_precontract_observation": 3,
+      "clean_precontract_traits_differ": 2
+    },
+    "28": {
+      "exact": 1003,
+      "no_precontract_observation": 138,
+      "other_unmatched": 325,
+      "multiple_candidates": 215,
+      "clean_precontract_traits_differ": 5
+    }
+  },
+  "status_by_sido_code_gen": {
+    "11": {
+      "exact": 635,
+      "multiple_candidates": 320,
+      "other_unmatched": 51,
+      "no_precontract_observation": 3,
+      "clean_precontract_traits_differ": 2
+    },
+    "28": {
+      "exact": 1003,
+      "no_precontract_observation": 138,
+      "other_unmatched": 325,
+      "multiple_candidates": 215,
+      "clean_precontract_traits_differ": 5
+    }
+  },
+  "drop_last_to_full_transitions": {
+    "other_unmatched -> no_precontract_observation": 133,
+    "other_unmatched -> exact": 93,
+    "other_unmatched -> multiple_candidates": 25,
+    "exact -> other_unmatched": 13,
+    "exact -> multiple_candidates": 3,
+    "multiple_candidates -> other_unmatched": 2,
+    "multiple_candidates -> exact": 1
+  },
+  "drop_last_to_full_by_month": {
+    "2026-04": {
+      "other_unmatched -> no_precontract_observation": 50
+    },
+    "2026-05": {
+      "other_unmatched -> no_precontract_observation": 46
+    },
+    "2026-06": {
+      "other_unmatched -> no_precontract_observation": 20
+    },
+    "2026-07": {
+      "other_unmatched -> no_precontract_observation": 17,
+      "other_unmatched -> exact": 15,
+      "other_unmatched -> multiple_candidates": 1,
+      "exact -> other_unmatched": 1
+    },
+    "2026-08": {
+      "other_unmatched -> exact": 29,
+      "other_unmatched -> multiple_candidates": 8,
+      "exact -> other_unmatched": 3,
+      "exact -> multiple_candidates": 2,
+      "multiple_candidates -> exact": 1,
+      "multiple_candidates -> other_unmatched": 1
+    },
+    "2026-09": {
+      "other_unmatched -> exact": 33,
+      "other_unmatched -> multiple_candidates": 14,
+      "exact -> other_unmatched": 4,
+      "multiple_candidates -> other_unmatched": 1
+    },
+    "2026-10": {
+      "other_unmatched -> exact": 16,
+      "exact -> other_unmatched": 5,
+      "other_unmatched -> multiple_candidates": 2,
+      "exact -> multiple_candidates": 1
+    }
+  },
+  "full_vs_stored": {
+    "same": 2674,
+    "stored_missing": 23
+  },
+  "code_gen_changes": {},
+  "seconds": 136,
+  "link_table_written": false
+}
