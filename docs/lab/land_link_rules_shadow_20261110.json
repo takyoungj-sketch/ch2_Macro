@@ -1,0 +1,1431 @@
+{
+ "created": "2026-11-10",
+ "read_only": true,
+ "link_table_written": false,
+ "synthetic": {
+  "mode": "synthetic_mask_test",
+  "seed": 20261110,
+  "dongs_per_sido": 40,
+  "per_dong": 50,
+  "trusted_road": [
+   "25이상",
+   "25미만",
+   "12미만",
+   "8미만",
+   "-"
+  ],
+  "results": {
+   "11": {
+    "n": 2000,
+    "v1:unlinked": 604,
+    "v1_truth_removed:unlinked": 1771,
+    "area_near:unlinked": 604,
+    "area_near_truth_removed:unlinked": 526,
+    "multiple": 604,
+    "zone_blank_cases": 1771,
+    "zone_blank:unlinked": 729,
+    "zone_blank_truth_removed:unlinked": 1771,
+    "v1:correct": 1396,
+    "v1_truth_removed:wrong": 229,
+    "zone_blank:correct": 1042,
+    "area_near_truth_removed:wrong": 78
+   },
+   "11:area_perturbed": {
+    "n": 2000,
+    "v1:unlinked": 1916,
+    "v1_truth_removed:unlinked": 1916,
+    "area_near:unlinked": 1036,
+    "area_near_truth_removed:unlinked": 1655,
+    "area_near_truth_removed:wrong": 261,
+    "area_near:correct": 880,
+    "v1:wrong": 84,
+    "v1_truth_removed:wrong": 84
+   },
+   "26": {
+    "n": 2000,
+    "v1:correct": 1487,
+    "v1_truth_removed:unlinked": 1779,
+    "zone_blank_cases": 1779,
+    "zone_blank:unlinked": 779,
+    "zone_blank_truth_removed:unlinked": 1779,
+    "zone_blank:correct": 1000,
+    "v1:unlinked": 513,
+    "v1_truth_removed:wrong": 221,
+    "area_near:unlinked": 513,
+    "area_near_truth_removed:wrong": 94,
+    "multiple": 513,
+    "area_near_truth_removed:unlinked": 419
+   },
+   "26:area_perturbed": {
+    "n": 2000,
+    "v1:unlinked": 1964,
+    "v1_truth_removed:unlinked": 1964,
+    "area_near:correct": 1071,
+    "area_near_truth_removed:unlinked": 1650,
+    "area_near:unlinked": 892,
+    "area_near_truth_removed:wrong": 314,
+    "v1:wrong": 36,
+    "v1_truth_removed:wrong": 36,
+    "area_near:wrong": 1
+   },
+   "28": {
+    "n": 1868,
+    "v1:correct": 1588,
+    "v1_truth_removed:unlinked": 1682,
+    "zone_blank_cases": 1682,
+    "zone_blank:unlinked": 416,
+    "zone_blank_truth_removed:unlinked": 1682,
+    "v1:unlinked": 280,
+    "v1_truth_removed:wrong": 186,
+    "area_near:unlinked": 280,
+    "area_near_truth_removed:wrong": 84,
+    "multiple": 280,
+    "zone_blank:correct": 1266,
+    "area_near_truth_removed:unlinked": 196
+   },
+   "28:area_perturbed": {
+    "n": 1865,
+    "v1:unlinked": 1835,
+    "v1_truth_removed:unlinked": 1835,
+    "area_near:correct": 1140,
+    "area_near_truth_removed:unlinked": 1519,
+    "area_near:unlinked": 692,
+    "area_near_truth_removed:wrong": 316,
+    "v1:wrong": 30,
+    "v1_truth_removed:wrong": 30,
+    "area_near:wrong": 3
+   },
+   "29": {
+    "n": 1986,
+    "v1:correct": 1611,
+    "v1_truth_removed:unlinked": 1774,
+    "zone_blank_cases": 1774,
+    "zone_blank:correct": 1162,
+    "zone_blank_truth_removed:unlinked": 1774,
+    "old_code_same_day:correct": 1563,
+    "v1_new_code:unlinked": 1986,
+    "v2_new_code:correct": 1563,
+    "zone_blank:unlinked": 612,
+    "v1:unlinked": 375,
+    "v1_truth_removed:wrong": 212,
+    "area_near:unlinked": 375,
+    "area_near_truth_removed:unlinked": 248,
+    "multiple": 375,
+    "old_code_same_day:unlinked": 421,
+    "v2_new_code:unlinked": 421,
+    "area_near_truth_removed:wrong": 127,
+    "old_code_same_day:wrong": 2,
+    "v2_new_code:wrong": 2
+   },
+   "29:area_perturbed": {
+    "n": 1986,
+    "v1:unlinked": 1970,
+    "v1_truth_removed:unlinked": 1970,
+    "area_near:correct": 1251,
+    "area_near_truth_removed:unlinked": 1653,
+    "area_near:unlinked": 718,
+    "area_near_truth_removed:wrong": 317,
+    "v1:wrong": 16,
+    "v1_truth_removed:wrong": 16,
+    "area_near:wrong": 1
+   },
+   "41": {
+    "n": 2000,
+    "v1:correct": 1748,
+    "v1_truth_removed:unlinked": 1840,
+    "zone_blank_cases": 1840,
+    "zone_blank:correct": 1303,
+    "zone_blank_truth_removed:unlinked": 1840,
+    "v1:unlinked": 252,
+    "v1_truth_removed:wrong": 160,
+    "area_near:unlinked": 252,
+    "area_near_truth_removed:wrong": 72,
+    "multiple": 252,
+    "zone_blank:unlinked": 537,
+    "area_near_truth_removed:unlinked": 180
+   },
+   "41:area_perturbed": {
+    "n": 2000,
+    "v1:unlinked": 1968,
+    "v1_truth_removed:unlinked": 1968,
+    "area_near:correct": 1327,
+    "area_near_truth_removed:unlinked": 1651,
+    "area_near:unlinked": 639,
+    "area_near_truth_removed:wrong": 317,
+    "v1:wrong": 32,
+    "v1_truth_removed:wrong": 32,
+    "area_near:wrong": 2
+   },
+   "43": {
+    "n": 2000,
+    "v1:correct": 1840,
+    "v1_truth_removed:unlinked": 1889,
+    "zone_blank_cases": 1889,
+    "zone_blank:correct": 1491,
+    "zone_blank_truth_removed:unlinked": 1889,
+    "zone_blank:unlinked": 398,
+    "v1:unlinked": 160,
+    "area_near:unlinked": 160,
+    "area_near_truth_removed:unlinked": 92,
+    "multiple": 160,
+    "v1_truth_removed:wrong": 111,
+    "area_near_truth_removed:wrong": 68
+   },
+   "43:area_perturbed": {
+    "n": 2000,
+    "v1:unlinked": 1994,
+    "v1_truth_removed:unlinked": 1994,
+    "area_near:correct": 1563,
+    "area_near_truth_removed:unlinked": 1726,
+    "area_near:unlinked": 431,
+    "area_near_truth_removed:wrong": 268,
+    "v1:wrong": 6,
+    "v1_truth_removed:wrong": 6
+   },
+   "46": {
+    "n": 1998,
+    "v1:correct": 1751,
+    "v1_truth_removed:unlinked": 1859,
+    "zone_blank_cases": 1859,
+    "zone_blank:correct": 1304,
+    "zone_blank_truth_removed:unlinked": 1859,
+    "old_code_same_day:correct": 1700,
+    "v1_new_code:unlinked": 1998,
+    "v2_new_code:correct": 1700,
+    "v1:unlinked": 247,
+    "v1_truth_removed:wrong": 139,
+    "area_near:unlinked": 247,
+    "area_near_truth_removed:wrong": 96,
+    "multiple": 247,
+    "old_code_same_day:unlinked": 296,
+    "v2_new_code:unlinked": 296,
+    "zone_blank:unlinked": 555,
+    "old_code_same_day:wrong": 2,
+    "v2_new_code:wrong": 2,
+    "area_near_truth_removed:unlinked": 151
+   },
+   "46:area_perturbed": {
+    "n": 1996,
+    "v1:unlinked": 1990,
+    "v1_truth_removed:unlinked": 1990,
+    "area_near:unlinked": 589,
+    "area_near_truth_removed:wrong": 280,
+    "area_near:correct": 1400,
+    "area_near_truth_removed:unlinked": 1710,
+    "v1:wrong": 6,
+    "v1_truth_removed:wrong": 6,
+    "area_near:wrong": 1
+   }
+  },
+  "v1_by_sido_year": {
+   "11:2019": {
+    "n": 140,
+    "v1:correct": 96,
+    "v1:unlinked": 44
+   },
+   "11:2020": {
+    "n": 150,
+    "v1:correct": 118,
+    "v1:unlinked": 32
+   },
+   "11:2021": {
+    "n": 244,
+    "v1:unlinked": 70,
+    "v1:correct": 174
+   },
+   "11:2022": {
+    "n": 151,
+    "v1:unlinked": 53,
+    "v1:correct": 98
+   },
+   "11:2023": {
+    "n": 400,
+    "v1:correct": 271,
+    "v1:unlinked": 129
+   },
+   "11:2024": {
+    "n": 305,
+    "v1:correct": 221,
+    "v1:unlinked": 84
+   },
+   "11:2025": {
+    "n": 310,
+    "v1:correct": 213,
+    "v1:unlinked": 97
+   },
+   "11:2026": {
+    "n": 300,
+    "v1:correct": 205,
+    "v1:unlinked": 95
+   },
+   "26:2019": {
+    "n": 133,
+    "v1:correct": 95,
+    "v1:unlinked": 38
+   },
+   "26:2020": {
+    "n": 146,
+    "v1:correct": 100,
+    "v1:unlinked": 46
+   },
+   "26:2021": {
+    "n": 212,
+    "v1:correct": 159,
+    "v1:unlinked": 53
+   },
+   "26:2022": {
+    "n": 158,
+    "v1:correct": 111,
+    "v1:unlinked": 47
+   },
+   "26:2023": {
+    "n": 410,
+    "v1:unlinked": 107,
+    "v1:correct": 303
+   },
+   "26:2024": {
+    "n": 288,
+    "v1:correct": 224,
+    "v1:unlinked": 64
+   },
+   "26:2025": {
+    "n": 307,
+    "v1:correct": 230,
+    "v1:unlinked": 77
+   },
+   "26:2026": {
+    "n": 346,
+    "v1:correct": 265,
+    "v1:unlinked": 81
+   },
+   "28:2019": {
+    "n": 115,
+    "v1:unlinked": 19,
+    "v1:correct": 96
+   },
+   "28:2020": {
+    "n": 206,
+    "v1:correct": 179,
+    "v1:unlinked": 27
+   },
+   "28:2021": {
+    "n": 152,
+    "v1:correct": 127,
+    "v1:unlinked": 25
+   },
+   "28:2022": {
+    "n": 111,
+    "v1:correct": 99,
+    "v1:unlinked": 12
+   },
+   "28:2023": {
+    "n": 292,
+    "v1:correct": 242,
+    "v1:unlinked": 50
+   },
+   "28:2024": {
+    "n": 212,
+    "v1:correct": 177,
+    "v1:unlinked": 35
+   },
+   "28:2025": {
+    "n": 209,
+    "v1:correct": 173,
+    "v1:unlinked": 36
+   },
+   "28:2026": {
+    "n": 571,
+    "v1:correct": 495,
+    "v1:unlinked": 76
+   },
+   "29:2019": {
+    "n": 174,
+    "v1:correct": 145,
+    "v1:unlinked": 29
+   },
+   "29:2020": {
+    "n": 162,
+    "v1:correct": 123,
+    "v1:unlinked": 39
+   },
+   "29:2021": {
+    "n": 187,
+    "v1:correct": 145,
+    "v1:unlinked": 42
+   },
+   "29:2022": {
+    "n": 143,
+    "v1:correct": 126,
+    "v1:unlinked": 17
+   },
+   "29:2023": {
+    "n": 436,
+    "v1:correct": 347,
+    "v1:unlinked": 89
+   },
+   "29:2024": {
+    "n": 275,
+    "v1:correct": 237,
+    "v1:unlinked": 38
+   },
+   "29:2025": {
+    "n": 297,
+    "v1:correct": 239,
+    "v1:unlinked": 58
+   },
+   "29:2026": {
+    "n": 312,
+    "v1:unlinked": 63,
+    "v1:correct": 249
+   },
+   "41:2019": {
+    "n": 110,
+    "v1:correct": 98,
+    "v1:unlinked": 12
+   },
+   "41:2020": {
+    "n": 90,
+    "v1:unlinked": 12,
+    "v1:correct": 78
+   },
+   "41:2021": {
+    "n": 185,
+    "v1:correct": 166,
+    "v1:unlinked": 19
+   },
+   "41:2022": {
+    "n": 101,
+    "v1:correct": 90,
+    "v1:unlinked": 11
+   },
+   "41:2023": {
+    "n": 319,
+    "v1:correct": 279,
+    "v1:unlinked": 40
+   },
+   "41:2024": {
+    "n": 321,
+    "v1:unlinked": 40,
+    "v1:correct": 281
+   },
+   "41:2025": {
+    "n": 324,
+    "v1:correct": 271,
+    "v1:unlinked": 53
+   },
+   "41:2026": {
+    "n": 550,
+    "v1:correct": 485,
+    "v1:unlinked": 65
+   },
+   "43:2019": {
+    "n": 148,
+    "v1:correct": 134,
+    "v1:unlinked": 14
+   },
+   "43:2020": {
+    "n": 116,
+    "v1:correct": 104,
+    "v1:unlinked": 12
+   },
+   "43:2021": {
+    "n": 201,
+    "v1:correct": 185,
+    "v1:unlinked": 16
+   },
+   "43:2022": {
+    "n": 147,
+    "v1:correct": 133,
+    "v1:unlinked": 14
+   },
+   "43:2023": {
+    "n": 321,
+    "v1:correct": 297,
+    "v1:unlinked": 24
+   },
+   "43:2024": {
+    "n": 354,
+    "v1:correct": 327,
+    "v1:unlinked": 27
+   },
+   "43:2025": {
+    "n": 344,
+    "v1:correct": 319,
+    "v1:unlinked": 25
+   },
+   "43:2026": {
+    "n": 369,
+    "v1:correct": 341,
+    "v1:unlinked": 28
+   },
+   "46:2019": {
+    "n": 119,
+    "v1:correct": 103,
+    "v1:unlinked": 16
+   },
+   "46:2020": {
+    "n": 132,
+    "v1:correct": 114,
+    "v1:unlinked": 18
+   },
+   "46:2021": {
+    "n": 216,
+    "v1:correct": 187,
+    "v1:unlinked": 29
+   },
+   "46:2022": {
+    "n": 147,
+    "v1:correct": 129,
+    "v1:unlinked": 18
+   },
+   "46:2023": {
+    "n": 343,
+    "v1:correct": 308,
+    "v1:unlinked": 35
+   },
+   "46:2024": {
+    "n": 325,
+    "v1:correct": 293,
+    "v1:unlinked": 32
+   },
+   "46:2025": {
+    "n": 351,
+    "v1:correct": 301,
+    "v1:unlinked": 50
+   },
+   "46:2026": {
+    "n": 365,
+    "v1:correct": 316,
+    "v1:unlinked": 49
+   }
+  },
+  "multiple_consensus": {
+   "11": {
+    "multiple": 604,
+    "zones:supplied": 558,
+    "zones:correct": 558,
+    "c_road:unlinked": 440,
+    "height:supplied": 406,
+    "height:correct": 406,
+    "road:supplied": 178,
+    "road:correct": 178,
+    "use:supplied": 219,
+    "use:correct": 219,
+    "shape:supplied": 187,
+    "shape:correct": 187,
+    "c_road:correct": 94,
+    "price:supplied": 62,
+    "price:correct": 62,
+    "c_road:wrong": 1
+   },
+   "11:truth_removed": {
+    "multiple": 375,
+    "zones:supplied": 341,
+    "zones:correct": 336,
+    "c_road:wrong": 47,
+    "height:supplied": 240,
+    "height:correct": 222,
+    "c_road:unlinked": 292,
+    "use:supplied": 114,
+    "use:wrong": 20,
+    "use:correct": 94,
+    "shape:supplied": 93,
+    "shape:correct": 70,
+    "road:supplied": 99,
+    "road:wrong": 29,
+    "road:correct": 70,
+    "height:wrong": 18,
+    "price:supplied": 30,
+    "price:correct": 21,
+    "shape:wrong": 23,
+    "zones:wrong": 5,
+    "price:wrong": 9
+   },
+   "26": {
+    "multiple": 513,
+    "zones:supplied": 488,
+    "zones:correct": 488,
+    "use:supplied": 243,
+    "use:correct": 243,
+    "height:supplied": 362,
+    "height:correct": 362,
+    "shape:supplied": 196,
+    "shape:correct": 196,
+    "road:supplied": 200,
+    "road:correct": 200,
+    "c_road:unlinked": 388,
+    "price:supplied": 82,
+    "price:correct": 82,
+    "c_road:correct": 82
+   },
+   "26:truth_removed": {
+    "multiple": 292,
+    "zones:supplied": 273,
+    "zones:correct": 271,
+    "use:supplied": 118,
+    "use:correct": 102,
+    "height:supplied": 188,
+    "height:correct": 172,
+    "shape:supplied": 106,
+    "shape:correct": 74,
+    "road:supplied": 90,
+    "road:correct": 67,
+    "c_road:unlinked": 232,
+    "price:supplied": 37,
+    "price:wrong": 13,
+    "shape:wrong": 32,
+    "road:wrong": 23,
+    "price:correct": 24,
+    "height:wrong": 16,
+    "zones:wrong": 2,
+    "use:wrong": 16,
+    "c_road:wrong": 39
+   },
+   "28": {
+    "multiple": 280,
+    "zones:supplied": 276,
+    "zones:correct": 276,
+    "height:supplied": 230,
+    "height:correct": 230,
+    "c_road:unlinked": 192,
+    "shape:supplied": 141,
+    "shape:correct": 141,
+    "road:supplied": 127,
+    "road:correct": 127,
+    "price:supplied": 58,
+    "price:correct": 58,
+    "use:supplied": 183,
+    "use:correct": 183,
+    "c_road:correct": 64,
+    "c_road:wrong": 1
+   },
+   "28:truth_removed": {
+    "multiple": 94,
+    "zones:supplied": 91,
+    "zones:correct": 91,
+    "height:supplied": 77,
+    "height:correct": 76,
+    "shape:supplied": 47,
+    "shape:correct": 32,
+    "road:supplied": 35,
+    "road:correct": 31,
+    "c_road:unlinked": 70,
+    "use:supplied": 57,
+    "use:correct": 54,
+    "price:supplied": 15,
+    "price:correct": 10,
+    "price:wrong": 5,
+    "c_road:wrong": 19,
+    "shape:wrong": 15,
+    "use:wrong": 3,
+    "height:wrong": 1,
+    "road:wrong": 4
+   },
+   "29": {
+    "multiple": 375,
+    "price:supplied": 70,
+    "price:correct": 70,
+    "zones:supplied": 351,
+    "zones:correct": 351,
+    "use:supplied": 236,
+    "use:correct": 236,
+    "height:supplied": 345,
+    "height:correct": 345,
+    "shape:supplied": 178,
+    "shape:correct": 178,
+    "road:supplied": 167,
+    "road:correct": 167,
+    "c_road:unlinked": 294,
+    "c_road:wrong": 1,
+    "c_road:correct": 72
+   },
+   "29:truth_removed": {
+    "multiple": 163,
+    "price:supplied": 24,
+    "price:correct": 17,
+    "zones:supplied": 150,
+    "zones:correct": 149,
+    "use:supplied": 102,
+    "use:correct": 93,
+    "height:supplied": 152,
+    "height:correct": 149,
+    "shape:supplied": 63,
+    "shape:wrong": 10,
+    "road:supplied": 62,
+    "road:correct": 52,
+    "c_road:unlinked": 133,
+    "shape:correct": 53,
+    "c_road:wrong": 28,
+    "height:wrong": 3,
+    "road:wrong": 10,
+    "use:wrong": 9,
+    "price:wrong": 7,
+    "zones:wrong": 1
+   },
+   "41": {
+    "multiple": 252,
+    "zones:supplied": 240,
+    "zones:correct": 240,
+    "use:supplied": 165,
+    "use:correct": 165,
+    "height:supplied": 217,
+    "height:correct": 217,
+    "shape:supplied": 138,
+    "shape:correct": 138,
+    "road:supplied": 135,
+    "road:correct": 135,
+    "c_road:unlinked": 163,
+    "price:supplied": 73,
+    "price:correct": 73,
+    "c_road:correct": 61
+   },
+   "41:truth_removed": {
+    "multiple": 92,
+    "height:supplied": 86,
+    "height:correct": 80,
+    "shape:supplied": 43,
+    "shape:correct": 35,
+    "road:supplied": 46,
+    "road:correct": 41,
+    "c_road:unlinked": 71,
+    "zones:supplied": 89,
+    "zones:correct": 89,
+    "use:supplied": 55,
+    "use:correct": 47,
+    "use:wrong": 8,
+    "road:wrong": 5,
+    "c_road:wrong": 12,
+    "price:supplied": 18,
+    "price:correct": 14,
+    "price:wrong": 4,
+    "shape:wrong": 8,
+    "height:wrong": 6
+   },
+   "43": {
+    "multiple": 160,
+    "zones:supplied": 148,
+    "zones:correct": 148,
+    "height:supplied": 143,
+    "height:correct": 143,
+    "c_road:unlinked": 101,
+    "price:supplied": 51,
+    "price:correct": 51,
+    "use:supplied": 113,
+    "use:correct": 113,
+    "shape:supplied": 109,
+    "shape:correct": 109,
+    "road:supplied": 89,
+    "road:correct": 89,
+    "c_road:correct": 36
+   },
+   "43:truth_removed": {
+    "multiple": 49,
+    "zones:supplied": 46,
+    "zones:correct": 46,
+    "height:supplied": 45,
+    "height:correct": 44,
+    "c_road:unlinked": 35,
+    "price:supplied": 19,
+    "price:correct": 19,
+    "use:supplied": 33,
+    "use:correct": 30,
+    "shape:supplied": 32,
+    "shape:correct": 28,
+    "road:supplied": 25,
+    "road:correct": 23,
+    "shape:wrong": 4,
+    "use:wrong": 3,
+    "road:wrong": 2,
+    "c_road:wrong": 6,
+    "height:wrong": 1
+   },
+   "46": {
+    "multiple": 247,
+    "zones:supplied": 227,
+    "zones:correct": 227,
+    "use:supplied": 169,
+    "use:correct": 169,
+    "height:supplied": 210,
+    "height:correct": 210,
+    "shape:supplied": 130,
+    "shape:correct": 130,
+    "c_road:unlinked": 194,
+    "road:supplied": 138,
+    "road:correct": 138,
+    "price:supplied": 58,
+    "price:correct": 58,
+    "c_road:correct": 39
+   },
+   "46:truth_removed": {
+    "multiple": 108,
+    "price:supplied": 26,
+    "price:correct": 21,
+    "zones:supplied": 99,
+    "zones:correct": 98,
+    "use:supplied": 68,
+    "use:correct": 66,
+    "height:supplied": 87,
+    "height:correct": 86,
+    "road:supplied": 57,
+    "road:correct": 53,
+    "c_road:unlinked": 92,
+    "shape:supplied": 47,
+    "shape:correct": 42,
+    "c_road:wrong": 9,
+    "price:wrong": 5,
+    "height:wrong": 1,
+    "zones:wrong": 1,
+    "use:wrong": 2,
+    "road:wrong": 4,
+    "shape:wrong": 5
+   }
+  },
+  "seconds": 314
+ },
+ "real_2019_2023": {
+  "mode": "real_rule_counts",
+  "window": [
+   "2019-01-01",
+   "2024-01-01"
+  ],
+  "sido": [
+   "11",
+   "26",
+   "28",
+   "43"
+  ],
+  "trusted_road": [
+   "25이상",
+   "25미만",
+   "12미만",
+   "8미만",
+   "-"
+  ],
+  "by_sido_year": {
+   "11:2019": {
+    "judged": 3148,
+    "v1:clean_precontract_traits_differ": 38,
+    "v1:exact": 1718,
+    "v1:multiple_candidates": 1081,
+    "b:price_consensus": 71,
+    "b:zones_consensus": 976,
+    "b:height_consensus": 621,
+    "c:road_resolved": 194,
+    "v1:other_unmatched": 179,
+    "b:use_consensus": 353,
+    "b:road_consensus": 266,
+    "v1:no_precontract_observation": 94,
+    "near:linked": 49,
+    "b:shape_consensus": 286,
+    "d:first_seen_12m": 107,
+    "v1:post_contract_only": 38
+   },
+   "11:2020": {
+    "judged": 3438,
+    "v1:exact": 1698,
+    "v1:multiple_candidates": 1271,
+    "b:price_consensus": 76,
+    "b:zones_consensus": 1092,
+    "b:height_consensus": 660,
+    "c:road_resolved": 243,
+    "v1:no_precontract_observation": 66,
+    "d:first_seen_12m": 73,
+    "v1:other_unmatched": 325,
+    "v1:clean_precontract_traits_differ": 49,
+    "near:linked": 55,
+    "b:shape_consensus": 279,
+    "b:road_consensus": 258,
+    "b:use_consensus": 316,
+    "v1:post_contract_only": 28,
+    "v1:label_normalized": 1
+   },
+   "11:2021": {
+    "judged": 3611,
+    "v1:exact": 1850,
+    "v1:other_unmatched": 257,
+    "v1:clean_precontract_traits_differ": 60,
+    "near:linked": 57,
+    "v1:multiple_candidates": 1340,
+    "b:price_consensus": 79,
+    "b:zones_consensus": 1149,
+    "b:height_consensus": 670,
+    "c:road_resolved": 233,
+    "b:shape_consensus": 317,
+    "b:road_consensus": 318,
+    "v1:no_precontract_observation": 87,
+    "d:first_seen_12m": 89,
+    "v1:post_contract_only": 16,
+    "b:use_consensus": 416,
+    "v1:label_normalized": 1
+   },
+   "11:2022": {
+    "judged": 2176,
+    "v1:multiple_candidates": 832,
+    "b:price_consensus": 49,
+    "b:zones_consensus": 692,
+    "c:road_resolved": 171,
+    "b:use_consensus": 229,
+    "b:height_consensus": 401,
+    "v1:exact": 1131,
+    "b:shape_consensus": 205,
+    "v1:no_precontract_observation": 81,
+    "d:first_seen_12m": 69,
+    "b:road_consensus": 183,
+    "near:linked": 24,
+    "v1:other_unmatched": 90,
+    "v1:clean_precontract_traits_differ": 42
+   },
+   "11:2023": {
+    "judged": 1866,
+    "v1:exact": 884,
+    "v1:multiple_candidates": 758,
+    "b:price_consensus": 61,
+    "b:zones_consensus": 655,
+    "b:use_consensus": 226,
+    "b:height_consensus": 411,
+    "b:shape_consensus": 204,
+    "b:road_consensus": 187,
+    "c:road_resolved": 132,
+    "v1:other_unmatched": 107,
+    "v1:clean_precontract_traits_differ": 38,
+    "near:linked": 27,
+    "v1:no_precontract_observation": 79,
+    "d:first_seen_12m": 78
+   },
+   "26:2019": {
+    "judged": 4918,
+    "v1:clean_precontract_traits_differ": 130,
+    "v1:exact": 2304,
+    "v1:multiple_candidates": 1738,
+    "b:price_consensus": 110,
+    "b:zones_consensus": 1548,
+    "b:height_consensus": 906,
+    "c:road_resolved": 297,
+    "v1:other_unmatched": 324,
+    "b:use_consensus": 593,
+    "b:road_consensus": 359,
+    "b:shape_consensus": 404,
+    "v1:no_precontract_observation": 284,
+    "d:first_seen_12m": 218,
+    "v1:post_contract_only": 138,
+    "near:linked": 69
+   },
+   "26:2020": {
+    "judged": 5540,
+    "v1:exact": 2762,
+    "v1:multiple_candidates": 1854,
+    "b:price_consensus": 186,
+    "b:zones_consensus": 1633,
+    "b:use_consensus": 760,
+    "b:height_consensus": 1011,
+    "b:road_consensus": 470,
+    "c:road_resolved": 312,
+    "v1:clean_precontract_traits_differ": 141,
+    "near:linked": 83,
+    "b:shape_consensus": 522,
+    "v1:other_unmatched": 350,
+    "v1:no_precontract_observation": 370,
+    "d:first_seen_12m": 144,
+    "v1:post_contract_only": 63
+   },
+   "26:2021": {
+    "judged": 6093,
+    "v1:exact": 3101,
+    "v1:other_unmatched": 327,
+    "near:linked": 80,
+    "v1:multiple_candidates": 1882,
+    "b:price_consensus": 125,
+    "b:zones_consensus": 1560,
+    "b:height_consensus": 1041,
+    "c:road_resolved": 395,
+    "b:shape_consensus": 459,
+    "b:use_consensus": 656,
+    "b:road_consensus": 429,
+    "v1:no_precontract_observation": 588,
+    "d:first_seen_12m": 283,
+    "v1:clean_precontract_traits_differ": 158,
+    "v1:post_contract_only": 21,
+    "v1:label_normalized": 16
+   },
+   "26:2022": {
+    "judged": 4280,
+    "v1:exact": 2357,
+    "v1:multiple_candidates": 1339,
+    "b:price_consensus": 104,
+    "b:zones_consensus": 1085,
+    "b:height_consensus": 702,
+    "b:road_consensus": 293,
+    "c:road_resolved": 278,
+    "v1:clean_precontract_traits_differ": 101,
+    "v1:no_precontract_observation": 326,
+    "b:shape_consensus": 388,
+    "b:use_consensus": 464,
+    "d:first_seen_12m": 283,
+    "near:linked": 69,
+    "v1:other_unmatched": 157
+   },
+   "26:2023": {
+    "judged": 2445,
+    "v1:exact": 1419,
+    "v1:multiple_candidates": 683,
+    "b:price_consensus": 55,
+    "b:zones_consensus": 597,
+    "b:use_consensus": 226,
+    "b:height_consensus": 431,
+    "b:shape_consensus": 196,
+    "b:road_consensus": 168,
+    "c:road_resolved": 145,
+    "v1:other_unmatched": 101,
+    "v1:clean_precontract_traits_differ": 98,
+    "v1:no_precontract_observation": 144,
+    "near:linked": 56,
+    "d:first_seen_12m": 137
+   },
+   "28:2019": {
+    "judged": 9762,
+    "v1:multiple_candidates": 975,
+    "b:price_consensus": 228,
+    "b:zones_consensus": 948,
+    "b:use_consensus": 623,
+    "b:height_consensus": 813,
+    "b:road_consensus": 461,
+    "c:road_resolved": 210,
+    "v1:exact": 5293,
+    "v1:post_contract_only": 385,
+    "near:linked": 251,
+    "d:first_seen_12m": 667,
+    "v1:no_precontract_observation": 1304,
+    "b:shape_consensus": 515,
+    "v1:other_unmatched": 1397,
+    "v1:clean_precontract_traits_differ": 408
+   },
+   "28:2020": {
+    "judged": 11666,
+    "v1:exact": 6381,
+    "v1:multiple_candidates": 1315,
+    "b:price_consensus": 280,
+    "b:zones_consensus": 1268,
+    "b:use_consensus": 793,
+    "b:height_consensus": 1025,
+    "c:road_resolved": 270,
+    "b:shape_consensus": 640,
+    "b:road_consensus": 631,
+    "v1:other_unmatched": 1630,
+    "v1:no_precontract_observation": 1400,
+    "d:first_seen_12m": 686,
+    "v1:post_contract_only": 419,
+    "v1:clean_precontract_traits_differ": 521,
+    "near:linked": 325,
+    "a:zone_blank_linked": 3
+   },
+   "28:2021": {
+    "judged": 11911,
+    "v1:multiple_candidates": 1041,
+    "b:price_consensus": 260,
+    "b:zones_consensus": 1017,
+    "b:use_consensus": 700,
+    "b:height_consensus": 840,
+    "b:shape_consensus": 557,
+    "b:road_consensus": 546,
+    "c:road_resolved": 238,
+    "v1:other_unmatched": 1612,
+    "v1:exact": 6511,
+    "v1:no_precontract_observation": 2139,
+    "d:first_seen_12m": 696,
+    "v1:clean_precontract_traits_differ": 496,
+    "near:linked": 268,
+    "v1:post_contract_only": 93,
+    "v1:label_normalized": 17,
+    "v1:label_normalized_traits_differ": 2
+   },
+   "28:2022": {
+    "judged": 7655,
+    "v1:multiple_candidates": 742,
+    "b:price_consensus": 144,
+    "b:zones_consensus": 728,
+    "b:use_consensus": 432,
+    "b:height_consensus": 560,
+    "b:road_consensus": 320,
+    "c:road_resolved": 191,
+    "v1:other_unmatched": 1027,
+    "near:linked": 182,
+    "v1:no_precontract_observation": 1558,
+    "d:first_seen_12m": 521,
+    "v1:exact": 4037,
+    "b:shape_consensus": 370,
+    "v1:clean_precontract_traits_differ": 291
+   },
+   "28:2023": {
+    "judged": 5683,
+    "v1:multiple_candidates": 614,
+    "b:price_consensus": 136,
+    "b:zones_consensus": 600,
+    "b:use_consensus": 391,
+    "b:height_consensus": 497,
+    "b:shape_consensus": 337,
+    "b:road_consensus": 302,
+    "c:road_resolved": 119,
+    "v1:other_unmatched": 652,
+    "v1:no_precontract_observation": 1118,
+    "near:linked": 120,
+    "v1:exact": 3066,
+    "d:first_seen_12m": 397,
+    "v1:clean_precontract_traits_differ": 233
+   },
+   "43:2019": {
+    "judged": 24809,
+    "v1:label_normalized": 3334,
+    "v1:post_contract_only": 2002,
+    "v1:no_precontract_observation": 899,
+    "v1:label_normalized_traits_differ": 127,
+    "v1:clean_precontract_traits_differ": 882,
+    "v1:other_unmatched": 1477,
+    "v1:multiple_candidates": 846,
+    "b:price_consensus": 237,
+    "b:zones_consensus": 800,
+    "b:use_consensus": 637,
+    "b:height_consensus": 717,
+    "b:shape_consensus": 567,
+    "c:road_resolved": 186,
+    "d:first_seen_12m": 1709,
+    "v1:exact": 15242,
+    "near:linked": 341,
+    "b:road_consensus": 495
+   },
+   "43:2020": {
+    "judged": 29388,
+    "v1:other_unmatched": 1621,
+    "v1:label_normalized": 4857,
+    "v1:post_contract_only": 1928,
+    "v1:exact": 17957,
+    "v1:label_normalized_traits_differ": 206,
+    "v1:clean_precontract_traits_differ": 980,
+    "d:first_seen_12m": 1346,
+    "near:linked": 372,
+    "v1:multiple_candidates": 1027,
+    "b:price_consensus": 291,
+    "b:zones_consensus": 1004,
+    "b:use_consensus": 761,
+    "b:road_consensus": 593,
+    "c:road_resolved": 240,
+    "v1:no_precontract_observation": 812,
+    "b:height_consensus": 876,
+    "b:shape_consensus": 661
+   },
+   "43:2021": {
+    "judged": 36259,
+    "v1:label_normalized": 4684,
+    "v1:exact": 23684,
+    "v1:other_unmatched": 1626,
+    "v1:post_contract_only": 724,
+    "near:linked": 522,
+    "d:first_seen_12m": 2552,
+    "v1:label_normalized_traits_differ": 268,
+    "v1:clean_precontract_traits_differ": 1379,
+    "v1:no_precontract_observation": 2365,
+    "v1:multiple_candidates": 1529,
+    "b:price_consensus": 398,
+    "b:zones_consensus": 1468,
+    "b:use_consensus": 1172,
+    "b:height_consensus": 1294,
+    "b:road_consensus": 887,
+    "c:road_resolved": 329,
+    "b:shape_consensus": 1010,
+    "a:zone_blank_linked": 1
+   },
+   "43:2022": {
+    "judged": 26644,
+    "v1:label_normalized": 1548,
+    "v1:no_precontract_observation": 2629,
+    "d:first_seen_12m": 2273,
+    "v1:multiple_candidates": 1106,
+    "b:price_consensus": 276,
+    "b:zones_consensus": 1054,
+    "b:use_consensus": 795,
+    "b:height_consensus": 935,
+    "b:shape_consensus": 724,
+    "c:road_resolved": 237,
+    "b:road_consensus": 645,
+    "v1:exact": 17903,
+    "v1:label_normalized_traits_differ": 95,
+    "v1:other_unmatched": 1103,
+    "near:linked": 440,
+    "v1:clean_precontract_traits_differ": 2245,
+    "a:zone_blank_linked": 1067,
+    "v1:post_contract_only": 15
+   },
+   "43:2023": {
+    "judged": 19376,
+    "v1:exact": 13157,
+    "v1:no_precontract_observation": 1940,
+    "d:first_seen_12m": 1778,
+    "v1:multiple_candidates": 774,
+    "b:price_consensus": 181,
+    "b:zones_consensus": 738,
+    "b:use_consensus": 559,
+    "b:height_consensus": 633,
+    "b:shape_consensus": 528,
+    "c:road_resolved": 196,
+    "near:linked": 332,
+    "v1:clean_precontract_traits_differ": 2866,
+    "a:zone_blank_linked": 1573,
+    "v1:other_unmatched": 638,
+    "b:road_consensus": 430,
+    "v1:label_normalized": 1
+   }
+  },
+  "road_cross_v1_linked": {
+   "(none)": {
+    "-": 7002,
+    "25이상": 259,
+    "8미만": 8833,
+    "12미만": 1428,
+    "25미만": 449
+   },
+   "-": {
+    "-": 31325,
+    "8미만": 434,
+    "25이상": 6,
+    "12미만": 68,
+    "25미만": 23
+   },
+   "12미만": {
+    "12미만": 14520,
+    "-": 245,
+    "25미만": 58,
+    "25이상": 41,
+    "8미만": 65
+   },
+   "25미만": {
+    "25미만": 3477,
+    "-": 85,
+    "8미만": 32,
+    "25이상": 13,
+    "12미만": 19
+   },
+   "25이상": {
+    "25이상": 2641,
+    "-": 95,
+    "8미만": 24,
+    "12미만": 5,
+    "25미만": 5
+   },
+   "8미만": {
+    "8미만": 74146,
+    "-": 1176,
+    "25미만": 129,
+    "25이상": 86,
+    "12미만": 225
+   }
+  },
+  "seconds": 1199
+ },
+ "honam_v2_dry_run": {
+  "mode": "dry_run",
+  "apply_supported": false,
+  "generated_at": "2026-11-10T11:28:57+00:00",
+  "target": "honam_v2",
+  "plate_asof": null,
+  "rule_version": "LAND_CODE_HISTORY_LAYER_V2+LAND_LINK_RULE_V1",
+  "pairs": {
+   "missing_prefixes": [
+    "12"
+   ],
+   "extended_pairs": 2938,
+   "held_pairs": 9
+  },
+  "unlinked_targets": 9085,
+  "would_update": 8232,
+  "would_link": 7391,
+  "moves": {
+   "other_unmatched -> exact": 7391,
+   "other_unmatched -> other_unmatched": 851,
+   "other_unmatched -> multiple_candidates": 841,
+   "other_unmatched -> not_judged": 2
+  },
+  "by_month": {
+   "2026-07": {
+    "unlinked_to_linked": 1988,
+    "reason_changed": 222,
+    "unchanged": 239
+   },
+   "2026-08": {
+    "unlinked_to_linked": 1895,
+    "reason_changed": 198,
+    "unchanged": 220
+   },
+   "2026-09": {
+    "unlinked_to_linked": 1637,
+    "reason_changed": 189,
+    "unchanged": 206
+   },
+   "2026-10": {
+    "unlinked_to_linked": 1871,
+    "reason_changed": 234,
+    "unchanged": 186
+   }
+  },
+  "by_sido": {
+   "12": {
+    "unlinked_to_linked": 7391,
+    "reason_changed": 843,
+    "unchanged": 851
+   }
+  },
+  "linked_rows_checked": 0,
+  "linked_rows_report_only": {},
+  "seconds": 208,
+  "link_table_written": false
+ },
+ "new_plate_dry_run_0720_sanity": {
+  "mode": "dry_run",
+  "apply_supported": false,
+  "generated_at": "2026-11-10T11:42:37+00:00",
+  "target": "new_plate",
+  "plate_asof": "2026-07-20",
+  "rule_version": "LAND_CODE_HISTORY_LAYER_V1+LAND_LINK_RULE_V1",
+  "pairs": {},
+  "unlinked_targets": 17445,
+  "would_update": 3,
+  "would_link": 0,
+  "moves": {
+   "other_unmatched -> other_unmatched": 14186,
+   "multiple_candidates -> multiple_candidates": 3254,
+   "multiple_candidates -> other_unmatched": 2,
+   "other_unmatched -> not_judged": 1,
+   "multiple_candidates -> not_judged": 1,
+   "other_unmatched -> multiple_candidates": 1
+  },
+  "by_month": {
+   "2026-07": {
+    "unchanged": 2507,
+    "reason_changed": 1
+   },
+   "2026-08": {
+    "unchanged": 5434,
+    "reason_changed": 2
+   },
+   "2026-09": {
+    "unchanged": 4914,
+    "reason_changed": 2
+   },
+   "2026-10": {
+    "unchanged": 4585
+   }
+  },
+  "by_sido": {
+   "11": {
+    "unchanged": 152
+   },
+   "12": {
+    "unchanged": 7638
+   },
+   "26": {
+    "unchanged": 234
+   },
+   "27": {
+    "unchanged": 128
+   },
+   "28": {
+    "unchanged": 229
+   },
+   "30": {
+    "unchanged": 119
+   },
+   "31": {
+    "unchanged": 125
+   },
+   "36": {
+    "unchanged": 46
+   },
+   "41": {
+    "unchanged": 1995,
+    "reason_changed": 4
+   },
+   "43": {
+    "unchanged": 816
+   },
+   "44": {
+    "unchanged": 1294
+   },
+   "47": {
+    "unchanged": 1257
+   },
+   "48": {
+    "unchanged": 1081
+   },
+   "50": {
+    "unchanged": 254
+   },
+   "51": {
+    "unchanged": 938
+   },
+   "52": {
+    "unchanged": 1134,
+    "reason_changed": 1
+   }
+  },
+  "linked_rows_checked": 30587,
+  "linked_rows_report_only": {
+   "same": 30577,
+   "parcel_changed": 5,
+   "linked_to_unlinked": 5
+  },
+  "seconds": 795,
+  "link_table_written": false
+ },
+ "drop_last_gain_detail_28_41_44_48": {
+  "window": [
+   "2026-04-01",
+   "2026-11-01"
+  ],
+  "sido_filter": [
+   "28",
+   "41",
+   "44",
+   "48"
+  ],
+  "judged": 46032,
+  "drop_last_to_full_moves": {
+   "linked_same_parcel": 34747,
+   "unlinked_same": 10546,
+   "linked_to_unlinked": 434,
+   "unlinked_reason_changed": 171,
+   "unlinked_to_linked": 134
+  },
+  "unlinked_to_linked_parcel_history": {
+   "other_unmatched -> exact: parcel_first_seen_at_cutoff": 93,
+   "multiple_candidates -> exact: parcel_seen_before_cutoff": 37,
+   "other_unmatched -> exact: parcel_seen_before_cutoff": 4
+  },
+  "drop_last_to_full_transitions": {
+   "exact -> other_unmatched": 427,
+   "other_unmatched -> no_precontract_observation": 133,
+   "other_unmatched -> exact": 97,
+   "multiple_candidates -> exact": 37,
+   "other_unmatched -> multiple_candidates": 25,
+   "multiple_candidates -> other_unmatched": 9,
+   "exact -> multiple_candidates": 7,
+   "other_unmatched -> clean_precontract_traits_differ": 2,
+   "no_precontract_observation -> other_unmatched": 2
+  }
+ },
+ "honam_bridge_evidence": {
+  "name_pairs_12": 2947,
+  "observed_and_name": 2938,
+  "observed_only": 26,
+  "name_only": 6,
+  "held_not_1to1": 4,
+  "tail_equal_buildings": 974993,
+  "tail_differ_buildings": 1269,
+  "post_july_unlinked_tx_by_evidence": {
+   "observed_and_name": 9068,
+   "held_not_1to1": 17
+  }
+ },
+ "ground_truth_search": {
+  "land_transactions_unmasked_lots_2010_2026": 0,
+  "raw_lot_number_masked": true,
+  "land_register_csv_has_move_dates": false
+ }
+}

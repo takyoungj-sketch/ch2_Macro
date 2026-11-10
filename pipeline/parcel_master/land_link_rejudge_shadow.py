@@ -62,6 +62,13 @@ CONFLICT_SQL = """
 """
 
 
+def _pnu(bjd: str, lot: str) -> str:
+    mountain = lot.startswith("산")
+    body = lot.removeprefix("산")
+    main, _, sub = body.partition("-")
+    return f"{bjd}{'2' if mountain else '1'}{int(main):04d}{int(sub or 0):04d}"
+
+
 def code_gen_pairs(pairs: dict, db) -> tuple[dict, list[str]]:
     """Hold the previous code while the ledger has no parcel under the new prefix."""
     missing = []
@@ -133,10 +140,12 @@ def _conflict_loader(db, cutoff=None):
     return load
 
 
-def _verdicts(code, batch, pairs, db, cutoff=None):
+def _verdicts(code, batch, pairs, db, cutoff=None, keep=None):
     rows = _load_rows(db, code, batch, pairs)
     plates, index = _plates(rows, cutoff)
     records, _ = v1._classify(code, plates, index, pairs, batch, conflict_loader=_conflict_loader(db, cutoff))
+    if keep is not None:
+        keep.update(plates)
     return {
         record["transaction_hash"]: (
             record["link_status"],
@@ -162,6 +171,7 @@ def run(start: str, stop: str, cutoff: str, out: Path, sido: set[str] | None) ->
     full: dict[str, tuple] = {}
     dropped: dict[str, tuple] = {}
     gen: dict[str, tuple] = {}
+    gained = Counter()
     started = time.perf_counter()
     uri = LEDGER.resolve().as_uri() + "?mode=ro"
     with closing(sqlite3.connect(uri, uri=True)) as db:
@@ -172,8 +182,18 @@ def run(start: str, stop: str, cutoff: str, out: Path, sido: set[str] | None) ->
             batch = list(group)
             if len(code) != 5 or not code.isdigit():
                 continue
-            full.update(_verdicts(code, batch, pairs, db))
-            dropped.update(_verdicts(code, batch, pairs, db, cutoff))
+            full_plates: dict = {}
+            got_full = _verdicts(code, batch, pairs, db, keep=full_plates)
+            got_drop = _verdicts(code, batch, pairs, db, cutoff)
+            full.update(got_full)
+            dropped.update(got_drop)
+            for key, (status, (bjd, lot)) in got_full.items():
+                before = got_drop.get(key, ("", None))[0]
+                if status in LINKED and before not in LINKED and lot:
+                    pnu = _pnu(bjd, lot)
+                    seen = [p[0] for p in full_plates.get(pnu, ())]
+                    kind = "parcel_seen_before_cutoff" if any(a < cutoff for a in seen) else "parcel_first_seen_at_cutoff"
+                    gained[f"{before} -> {status}: {kind}"] += 1
             if code[:2] in missing_prefixes:
                 gen.update(_verdicts(code, batch, gen_pairs, db))
             if number % 25 == 0:
@@ -263,6 +283,7 @@ def run(start: str, stop: str, cutoff: str, out: Path, sido: set[str] | None) ->
         "status_by_sido_full": tally(full, sido_of),
         "status_by_sido_code_gen": tally(gen, sido_of),
         "drop_last_to_full_moves": dict(moves.most_common()),
+        "unlinked_to_linked_parcel_history": dict(gained.most_common()),
         "drop_last_to_full_moves_by_sido": {k: dict(v) for k, v in sorted(moves_by_sido.items())},
         "drop_last_to_full_transitions": dict(transitions.most_common()),
         "drop_last_to_full_by_month": {m: dict(c.most_common()) for m, c in sorted(transitions_by_month.items())},
