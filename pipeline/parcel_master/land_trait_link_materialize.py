@@ -139,7 +139,7 @@ def _load_transactions(engine, code: str) -> list[dict]:
     return [dict(row) for row in fetched]
 
 
-def _classify(code: str, plates, index, pairs, fetched: list[dict]) -> tuple[list[dict], dict]:
+def _classify(code: str, plates, index, pairs, fetched: list[dict], *, conflict_loader=_load_conflict) -> tuple[list[dict], dict]:
     prepared = []
     targets: set[str] = set()
     skipped_hash = 0
@@ -179,7 +179,7 @@ def _classify(code: str, plates, index, pairs, fetched: list[dict]) -> tuple[lis
         )
     grouped = defaultdict(list)
     for prefix in _prefixes_for(code, pairs):
-        for key, variants in _load_conflict(prefix, targets).items():
+        for key, variants in conflict_loader(prefix, targets).items():
             grouped[key].extend(variants)
     normalized, conflict_asofs, substantive_asofs = _conflict_views(grouped)
     records: list[dict] = []

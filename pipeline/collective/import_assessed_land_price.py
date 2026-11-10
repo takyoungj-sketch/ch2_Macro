@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -248,6 +249,7 @@ def read_source_from_slim(
     *,
     current_to_old_bjd: dict[str, str] | None = None,
     old_to_current_bjd: dict[str, str] | None = None,
+    latest_year: int | None = None,
 ) -> pd.DataFrame:
     """land_trait_slim 최신 연도 공시지가. 섀도 표(build_assessed_land_price_shadow_v1)와 같은 규칙.
 
@@ -272,7 +274,7 @@ def read_source_from_slim(
         else:
             held[yp["state"]] = held.get(yp["state"], 0) + 1
     slim.close()
-    latest = max((v["year"] for v in found.values()), default=None)
+    latest = latest_year if latest_year is not None else max((v["year"] for v in found.values()), default=None)
     records = [{"pnu": p, "assessed_land_price": v["price"], "assessed_land_price_year": v["year"]}
                for p, v in found.items() if v["year"] == latest]
     held["held_stale"] = len(found) - len(records)
@@ -288,7 +290,9 @@ def _apply_ddl(engine) -> None:
                 conn.execute(text(statement))
 
 
-def _representative_pnus(conn, asset_types: tuple[str, ...]) -> list[dict[str, Any]]:
+def _representative_pnus(
+    conn, asset_types: tuple[str, ...], *, keys: set[tuple[str, str]] | None = None,
+) -> list[dict[str, Any]]:
     statement = text(
         """
         WITH ranked AS (
@@ -305,10 +309,21 @@ def _representative_pnus(conn, asset_types: tuple[str, ...]) -> list[dict[str, A
         WHERE rn = 1
         """
     ).bindparams(bindparam("asset_types", expanding=True))
-    rows = conn.execute(
-        statement,
-        {"asset_types": list(asset_types)},
-    ).mappings()
+    params: dict[str, Any] = {"asset_types": list(asset_types)}
+    if keys is not None:
+        statement = text("""
+            SELECT s.building_key, s.asset_type, s.beopjungri_code, s.lot_number
+            FROM jsonb_to_recordset(CAST(:keys AS jsonb)) AS k(building_key text, asset_type text)
+            CROSS JOIN LATERAL (
+                SELECT building_key, asset_type, beopjungri_code, lot_number
+                FROM collective_building_stats
+                WHERE building_key = k.building_key AND asset_type = k.asset_type
+                ORDER BY as_of_month DESC, window_years DESC
+                LIMIT 1
+            ) s
+        """)
+        params = {"keys": json.dumps([{"building_key": k, "asset_type": a} for k, a in sorted(keys)])}
+    rows = conn.execute(statement, params).mappings()
     out: list[dict[str, Any]] = []
     for row in rows:
         pnu = pnu_from_tx(row["beopjungri_code"], row["lot_number"])

@@ -243,7 +243,7 @@ def tied_from_title(t: pd.DataFrame, parcels: set[str]) -> dict:
     return out
 
 
-def compute_sido(sido: str, defn: Defn, keys: list[str] | None) -> dict:
+def compute_sido(sido: str, defn: Defn, keys: list[str] | None, cache: Path | None = None) -> dict:
     """Matching, management key, building attributes and zone for one sido. keys=None: every key."""
     eng = get_built_engine()
     with eng.connect() as c:
@@ -253,7 +253,7 @@ def compute_sido(sido: str, defn: Defn, keys: list[str] | None) -> dict:
     tx = tx.sort_values("id").reset_index(drop=True)
     if tx.empty:
         return {"rows": pd.DataFrame(), "zone": pd.DataFrame(), "pk": pd.DataFrame(), "attr": pd.DataFrame()}
-    folder = BRIDGED if sido == "12" else CACHE
+    folder = BRIDGED if sido == "12" else (cache or CACHE)
     bridge = load_bridge()
     translate = bridge if sido == "12" else None
     slim = SlimView(defn.land_bits)
@@ -432,16 +432,16 @@ def ledger_universe(keys_exclude: set[str] | None = None, sidos: tuple[str, ...]
 
 
 def _worker(args):
-    sido, defn_d, keys = args
-    return sido, compute_sido(sido, Defn.from_dict(defn_d), keys)
+    sido, defn_d, keys, cache = args
+    return sido, compute_sido(sido, Defn.from_dict(defn_d), keys, cache)
 
 
-def compute(ledger_rows: pd.DataFrame, defn: Defn, workers: int = 6) -> tuple[list, list, list, dict]:
+def compute(ledger_rows: pd.DataFrame, defn: Defn, workers: int = 6, *, cache: Path | None = None) -> tuple[list, list, list, dict]:
     """Rows for exactly the keys in ledger_rows. Keys outside SIDOS get header rows only."""
     tasks = []
     for sido, g in ledger_rows.groupby("sido"):
         if sido in SIDOS:
-            tasks.append((sido, defn.to_dict(), g["transaction_hash"].tolist()))
+            tasks.append((sido, defn.to_dict(), g["transaction_hash"].tolist(), cache))
     parts = defaultdict(list)
     timing = {}
     if tasks:
