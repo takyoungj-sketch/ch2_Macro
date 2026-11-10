@@ -22,7 +22,7 @@
 ```mermaid
 flowchart TD
   molit[MOLIT CSV 월] --> land[run_land_cycle_csv]
-  land --> enrichL[토지 V1 신규 해시]
+  land --> enrichL[토지 V2 코드층+V1 규칙 신규 해시]
   enrichL --> built[run_built_cycle_csv]
   built --> martB[build_scope_stats 원장만]
   martB --> enrichB[복합 ENGINE_V2 신규 해시]
@@ -55,7 +55,7 @@ flowchart TD
 
 ## 3. 토지·복합 신규 해시 연결
 
-월간 러너는 원장 재적재 전에 거래 해시 집합을 저장한다. 적재 뒤 **새 해시 중 공급표에 없는 것**만 기존 토지 V1 또는 복합 ENGINE_V2로 계산한다. 같은 해시의 재적재는 신규 거래로 세지 않는다. 격리 worktree에서 복합을 돌릴 때는 기존 표제부·총괄 캐시 경로를 `CH2_BUILT_REGISTER_CACHE` 환경 변수로 지정할 수 있다.
+월간 러너는 원장 재적재 전에 거래 해시 집합을 저장한다. 적재 뒤 **새 해시 중 공급표에 없는 것**만 토지 `LAND_CODE_HISTORY_LAYER_V2+LAND_LINK_RULE_V1` 또는 복합 ENGINE_V2로 계산한다. 같은 해시의 재적재는 신규 거래로 세지 않는다. 격리 worktree에서 복합을 돌릴 때는 기존 표제부·총괄 캐시 경로를 `CH2_BUILT_REGISTER_CACHE` 환경 변수로 지정할 수 있다.
 
 1. 원장·마트 작업 뒤 신규 결과를 한 도메인 트랜잭션으로 삽입한다. 기존 값의 동결을 확인한다.
 2. 원장에서 사라진 해시는 토지의 `orphaned`, 복합의 `supply_hold='orphaned'`로 표시한다. 옛 행을 보존하고 새 해시는 독립적으로 연결한다.
