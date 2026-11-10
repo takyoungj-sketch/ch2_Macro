@@ -139,7 +139,8 @@ def _load_transactions(engine, code: str) -> list[dict]:
     return [dict(row) for row in fetched]
 
 
-def _classify(code: str, plates, index, pairs, fetched: list[dict], *, conflict_loader=_load_conflict) -> tuple[list[dict], dict]:
+def _classify(code: str, plates, index, pairs, fetched: list[dict], *, conflict_loader=_load_conflict,
+              rule_version: str = RULE_VERSION) -> tuple[list[dict], dict]:
     prepared = []
     targets: set[str] = set()
     skipped_hash = 0
@@ -221,7 +222,7 @@ def _classify(code: str, plates, index, pairs, fetched: list[dict], *, conflict_
                 "trait_asof": _trait_asof(kind, price_pnu, row["day"], plates, normalized),
                 "ledger_beopjungri_code": row["ledger_beopjungri_code"],
                 "code_resolution": row["code_resolution"],
-                "rule_version": RULE_VERSION,
+                "rule_version": rule_version,
                 "recovered_lot": lot,
             }
         )

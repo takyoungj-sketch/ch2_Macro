@@ -1,7 +1,12 @@
-"""Read only the PNU ranges a V1 transaction mask can match."""
+"""Read only the PNU ranges a transaction mask can match, then judge new rows.
+
+Monthly supply judges with LAND_CODE_HISTORY_LAYER_V2 (ledger-generation code
+pairs) and LAND_LINK_RULE_V1. See land_code_history_layer_v2.
+"""
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from collections import defaultdict
 from contextlib import closing
@@ -13,8 +18,11 @@ from sqlalchemy import text
 from parcel_master import land_trait_link_materialize as v1
 from parcel_master.cheongju_land_link_probe import _add_plate
 from parcel_master.code_history_link_shadow import _prefixes_for
+from parcel_master.land_code_history_layer_v2 import RULE_VERSION_V2, ledger_generation_pairs
 from parcel_master.national_land_link_shadow import LEDGER
 from parcel_master.trait_link_helpers import lot_matches
+
+LOG = logging.getLogger(__name__)
 
 FETCH = text("""
     SELECT t.transaction_hash, t.contract_date, t.beopjungri_code, t.sigungu_code,
@@ -85,7 +93,7 @@ def _conflicts(db, prefix, targets):
     return grouped
 
 
-def classify(code, rows, pairs, db):
+def classify(code, rows, pairs, db, *, rule_version=RULE_VERSION_V2):
     plates = defaultdict(list)
     index = defaultdict(set)
     for low, high in _ranges(code, rows, pairs):
@@ -97,7 +105,8 @@ def classify(code, rows, pairs, db):
     for entries in plates.values():
         entries.sort()
     return v1._classify(code, plates, index, pairs, rows,
-                        conflict_loader=lambda prefix, targets: _conflicts(db, prefix, targets))[0]
+                        conflict_loader=lambda prefix, targets: _conflicts(db, prefix, targets),
+                        rule_version=rule_version)[0]
 
 
 def missing_records(engine, start, stop, since=None, *, keys=None):
@@ -112,6 +121,10 @@ def missing_records(engine, start, stop, since=None, *, keys=None):
     records = []
     with closing(sqlite3.connect(LEDGER.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         db.execute("PRAGMA query_only=ON")
+        pairs, summary = ledger_generation_pairs(pairs, db)
+        if summary["missing_prefixes"] and not summary["extended_pairs"]:
+            LOG.warning("V2: ledger lacks prefixes %s but no bridge pair was confirmed",
+                        summary["missing_prefixes"])
         groups = groupby(rows, lambda row: str(row["sigungu_code"] or "").strip())
         for code, group in groups:
             batch = list(group)
