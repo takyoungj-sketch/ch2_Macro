@@ -548,6 +548,7 @@ export default function App() {
   const [vars, setVars] = useState<RegressionVariableSpec>(() => defaultVarsForKinds(["commercial"]));
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [includePartial, setIncludePartial] = useState(false);
+  const [excludeDirect, setExcludeDirect] = useState(false);
   const [enrich, setEnrich] = useState(false);
   const [categoricalMissing, setCategoricalMissing] = useState<"keep_unknown" | "drop">("keep_unknown");
   const [pendingLedgerVariable, setPendingLedgerVariable] = useState<"structure_dummy" | "assessed_land_price" | null>(null);
@@ -587,6 +588,13 @@ export default function App() {
     staleTime: 60_000,
   });
   const asOfMonth = metaQ.data?.as_of_month ?? undefined;
+  // B-09: 서버 meta 기본 롤링 기간으로 한 번만 초기화한다. 사용자가 고른 값은 덮지 않는다.
+  const windowTouched = useRef(false);
+  const metaDefaultWindow = metaQ.data?.default_window_years;
+  useEffect(() => {
+    if (windowTouched.current || metaDefaultWindow == null) return;
+    setWindowYears(normalizeStatsWindowYears(metaDefaultWindow));
+  }, [metaDefaultWindow]);
   const yearFilterActive = hasYearFilter(yearFrom, yearTo);
 
   useEffect(() => {
@@ -1031,6 +1039,7 @@ export default function App() {
       exclude_outliers_iqr: excludeOutliers,
       outlier_iqr_multiplier: iqrMultiplier,
       include_partial: includePartial,
+      exclude_direct_trades: excludeDirect,
       enrich,
     };
   }, [
@@ -1051,6 +1060,7 @@ export default function App() {
     excludeOutliers,
     iqrMultiplier,
     includePartial,
+    excludeDirect,
     enrich,
   ]);
 
@@ -1258,9 +1268,17 @@ export default function App() {
             </div>
               <StatsWindowToggle
                 value={windowYears}
-                onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
+                onChange={(y) => {
+                  windowTouched.current = true;
+                  setWindowYears(normalizeStatsWindowYears(y));
+                }}
                 disabled={yearFilterActive}
               />
+              {!yearFilterActive && windowYears === 7 && (
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-snug" data-window-seven-note>
+                  기간이 길수록 시점 차이가 계수에 섞일 수 있습니다. 잔차 진단의 계약연도별 오차를 확인하세요.
+                </p>
+              )}
               {yearFilterActive && (
                 <p className="text-sm text-amber-700 dark:text-amber-400 leading-snug">
                   연도가 선택되어 롤링 구간은 적용되지 않습니다.
@@ -1636,6 +1654,14 @@ export default function App() {
                     }}
                   />
                   지분거래 포함
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={excludeDirect}
+                    onChange={(e) => setExcludeDirect(e.target.checked)}
+                  />
+                  직거래 제외
                 </label>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">

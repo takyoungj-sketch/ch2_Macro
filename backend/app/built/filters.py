@@ -143,8 +143,13 @@ def apply_sample_filters(
             params[f"{col}_max"] = float(hi)
 
 
-def apply_sample_filters_from_request(clauses: list[str], params: dict, req, *, skip_zone: bool = False) -> None:
-    """RegressionRunRequest / 동일 필드 객체."""
+def apply_sample_filters_from_request(
+    clauses: list[str], params: dict, req, *, skip_zone: bool = False, skip_age: bool = False
+) -> None:
+    """RegressionRunRequest / 동일 필드 객체.
+
+    skip_age: 대장 보강(F-1)을 쓰는 표본은 연식 범위를 보강 뒤 pandas에서 건다.
+    """
     apply_sample_filters(
         clauses,
         params,
@@ -155,8 +160,22 @@ def apply_sample_filters_from_request(clauses: list[str], params: dict, req, *, 
         gross_area_max=getattr(req, "gross_area_max", None),
         land_area_min=getattr(req, "land_area_min", None),
         land_area_max=getattr(req, "land_area_max", None),
-        building_age_min=getattr(req, "building_age_min", None),
-        building_age_max=getattr(req, "building_age_max", None),
+        building_age_min=None if skip_age else getattr(req, "building_age_min", None),
+        building_age_max=None if skip_age else getattr(req, "building_age_max", None),
         road_code_min=getattr(req, "road_code_min", None),
         road_code_max=getattr(req, "road_code_max", None),
     )
+
+
+DIRECT_TRADE_LABEL = "직거래"
+
+
+def apply_direct_trade_filter(clauses: list[str], *, exclude: bool, col_prefix: str = "") -> None:
+    """B-05: 분석 표본에서 직거래 제외 (기본 OFF). 거래유형 빈 값은 직거래로 보지 않는다.
+
+    D-049(지분)와 같은 원칙 — 거래목록은 전체를 두고, 이 조건은 run·recommend·Twin·예측에만 건다.
+    """
+    if not exclude:
+        return
+    p = f"{col_prefix}." if col_prefix else ""
+    clauses.append(f"COALESCE(btrim({p}deal_type::text), '') <> '{DIRECT_TRADE_LABEL}'")

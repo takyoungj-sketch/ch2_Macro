@@ -167,6 +167,9 @@ export interface AnalysisScope {
   include_partial?: boolean;
   partial_tx_count?: number;
   partial_n_note?: string | null;
+  /** B-05: 직거래 제외 옵션과 그로 빠진 거래 수 */
+  exclude_direct_trades?: boolean;
+  direct_tx_excluded?: number;
 }
 
 export interface RegressionScopeResponse {
@@ -470,6 +473,8 @@ export interface RegressionRunRequest {
   sample_lock_blocks?: string[];
   outlier_iqr_multiplier?: number;
   include_partial?: boolean;
+  /** B-05: 분석 표본에서 직거래 제외 (기본 OFF). 거래목록은 전체 유지. */
+  exclude_direct_trades?: boolean;
   enrich?: boolean;
   /** R0 — analysis_scope anchor (analysisUnits[0] non-crossParent) */
   anchor_region_code?: string;
@@ -578,7 +583,8 @@ export interface FunnelStep {
   code: string;
   label: string;
   n: number;
-  kind: "remain" | "drop";
+  /** info: 행 수를 바꾸지 않는 표본 구성 정보 (F-1 대장 보강 연식) */
+  kind: "remain" | "drop" | "info";
   note?: string | null;
   reasons?: FunnelReason[];
 }

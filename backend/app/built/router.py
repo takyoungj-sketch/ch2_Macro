@@ -180,7 +180,7 @@ def filter_meta(db: Session = Depends(get_built_db)):
         road_width_labels=_distinct("road_width_label"),
         addr1_list=list_sido_names(conn),
         as_of_month=as_of.strftime("%Y-%m"),
-        default_window_years=3,
+        default_window_years=5,  # B-09: 화면 초기값과 같게 5년
     )
 
 

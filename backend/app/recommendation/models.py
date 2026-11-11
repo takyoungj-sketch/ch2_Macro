@@ -87,6 +87,9 @@ class AnalysisScope(BaseModel):
     include_partial: bool = False
     partial_tx_count: int = 0
     partial_n_note: Optional[str] = None
+    # B-05: 직거래 제외 옵션과 그로 빠진 거래 수 (초점 범위)
+    exclude_direct_trades: bool = False
+    direct_tx_excluded: int = 0
 
 
 class TerminationInfo(BaseModel):

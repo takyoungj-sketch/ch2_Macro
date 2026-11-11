@@ -29,6 +29,7 @@ export function builtAnalysisScopeKey(body: RegressionRunRequest): string {
     exclude_outliers_iqr: body.exclude_outliers_iqr,
     outlier_iqr_multiplier: body.outlier_iqr_multiplier ?? null,
     include_partial: body.include_partial ?? false,
+    exclude_direct_trades: body.exclude_direct_trades ?? false,
     anchor_region_code: body.anchor_region_code ?? "",
     leaf_level: body.leaf_level ?? "",
   });

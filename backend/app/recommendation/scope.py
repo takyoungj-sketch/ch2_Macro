@@ -192,6 +192,8 @@ def built_analysis_scope_from_prepared(
             "partial_n_note": format_partial_n_note(
                 include_partial=include_partial, partial_tx_count=partial_tx_count
             ),
+            "exclude_direct_trades": bool(getattr(req, "exclude_direct_trades", False)),
+            "direct_tx_excluded": int(getattr(wide_df, "attrs", {}).get("direct_excluded_n", 0) or 0),
         }
     )
 

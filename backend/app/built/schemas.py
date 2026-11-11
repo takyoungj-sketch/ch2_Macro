@@ -84,7 +84,7 @@ class BuiltFilterMetaResponse(BaseModel):
     road_width_labels: list[str] = Field(default_factory=list)
     addr1_list: list[str]
     as_of_month: Optional[str] = None
-    default_window_years: int = 3
+    default_window_years: int = 5
 
 
 class BuiltScopeStatsRow(BaseModel):
@@ -218,6 +218,8 @@ class RegressionRunRequest(BaseModel):
     # 방법이 없다. 창을 늘리거나 시도 단위로 지수 잡음을 줄인 뒤 재검토한다.
     time_adjust: bool = False
     include_partial: bool = False  # D-049 분석 기본 제외. 목록과 분리.
+    # B-05: 분석 표본에서 직거래 제외 (기본 OFF). 거래목록은 전체 유지.
+    exclude_direct_trades: bool = False
     enrich: bool = False  # D-051. 기본 끄기. 켜면 표시 용도지역=필터.
     # 범주 빈칸. keep_unknown=미상으로 유지(기본). drop=그 식에서 해당 거래 제외.
     categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
@@ -281,7 +283,8 @@ class FunnelStep(BaseModel):
     code: str
     label: str
     n: int
-    kind: Literal["remain", "drop"] = "remain"
+    # info: 행 수를 바꾸지 않는 표본 구성 정보 (예: F-1 대장 연식 보강)
+    kind: Literal["remain", "drop", "info"] = "remain"
     note: Optional[str] = None
     reasons: list[FunnelReason] = Field(default_factory=list)
 

@@ -50,6 +50,7 @@ function buildCols(assetType: AssetType, enrich: boolean, allocation: boolean): 
     { key: "ri", label: "리", filterType: "select" },
     { key: "lot", label: "지번", filterType: "text", textPlaceholder: "검색" },
     { key: "share", label: "지분", filterType: "select" },
+    { key: "deal_type", label: "거래유형", filterType: "select" },
     { key: "road_name", label: "도로명", filterType: "text", textPlaceholder: "검색" },
   ];
   if (!allocation) {
@@ -691,6 +692,9 @@ export default function BuiltTransactionTable({
                     </td>
                     <td className="border px-2 py-1 whitespace-nowrap">
                       {r.is_partial_ownership ? "지분" : "—"}
+                    </td>
+                    <td className="border px-2 py-1 whitespace-nowrap">
+                      {r.deal_type?.trim() || "—"}
                     </td>
                     <td className="border px-2 py-1 w-[6.5rem] max-w-[6.5rem] truncate" title={r.road_name ?? undefined}>
                       {formatBuiltTxCell(r.road_name)}

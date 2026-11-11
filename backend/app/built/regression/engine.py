@@ -201,6 +201,8 @@ def _build_where(
     conn=None,
     include_subregion: bool = True,
     include_partial: bool | None = None,
+    defer_age_filter: bool = False,
+    exclude_direct: bool | None = None,
 ) -> tuple[str, dict]:
     clauses = ["is_valid = true"]
     params: dict[str, Any] = {}
@@ -291,18 +293,27 @@ def _build_where(
     from app.built.filters import apply_sample_filters_from_request
 
     enrich = bool(getattr(req, "enrich", False))
-    apply_sample_filters_from_request(clauses, params, req, skip_zone=enrich)
+    apply_sample_filters_from_request(
+        clauses, params, req, skip_zone=enrich, skip_age=defer_age_filter
+    )
     from app.built.partial_ownership import apply_partial_ownership_filter
 
     flag = bool(getattr(req, "include_partial", False)) if include_partial is None else include_partial
     apply_partial_ownership_filter(clauses, include_partial=flag)
+    from app.built.filters import apply_direct_trade_filter
+
+    direct = bool(getattr(req, "exclude_direct_trades", False)) if exclude_direct is None else exclude_direct
+    apply_direct_trade_filter(clauses, exclude=direct)
     return " AND ".join(clauses), params
 
 
 def _fetch_df(conn, req: RegressionRunRequest, *, include_subregion: bool = True) -> pd.DataFrame:
     from sqlalchemy import text
 
-    where, params = _build_where(req, conn=conn, include_subregion=include_subregion)
+    enrich_age = bool(getattr(req, "enrich", False))
+    where, params = _build_where(
+        req, conn=conn, include_subregion=include_subregion, defer_age_filter=enrich_age
+    )
     inner = f"""
         SELECT id AS transaction_id, price, gross_area, land_area, building_age, road_code, road_width_label,
                zone_type, building_use, asset_type, contract_year,
@@ -327,6 +338,13 @@ def _fetch_df(conn, req: RegressionRunRequest, *, include_subregion: bool = True
         return df
     if enrich:
         df = apply_wrapped_zone_columns(df)
+        # F-1: 동의 시에만 회귀 연식을 대장 사용승인연도로 보강, 연식 범위는 보강 뒤 적용
+        from app.built.regression.age_backfill import apply_age_range, backfill_age_from_ledger
+
+        df = backfill_age_from_ledger(df)
+        df = apply_age_range(
+            df, getattr(req, "building_age_min", None), getattr(req, "building_age_max", None)
+        )
     else:
         df = df.drop(columns=["transaction_hash"], errors="ignore")
     return df.sort_values("transaction_id", kind="stable").reset_index(drop=True) if "transaction_id" in df else df
@@ -451,9 +469,27 @@ def _prepare_regression_scope(
         ).scalar()
         or 0
     )
+    direct_excluded = 0
+    if bool(getattr(req, "exclude_direct_trades", False)):
+        where_direct, params_direct = _build_where(
+            req, conn=conn, include_subregion=True, exclude_direct=False
+        )
+        direct_excluded = int(
+            conn.execute(
+                text(
+                    f"""
+                    SELECT COUNT(*) FROM built_transactions
+                    WHERE {where_direct} AND btrim(deal_type::text) = '직거래'
+                    """
+                ),
+                params_direct,
+            ).scalar()
+            or 0
+        )
     wide_df = _fetch_df(conn, req, include_subregion=False)
     if req.exclude_outliers_iqr:
         wide_df = _iqr_filter(wide_df, "price", req.outlier_iqr_multiplier)
+    wide_df.attrs["direct_excluded_n"] = direct_excluded
     addr4_city_hint = _resolve_addr4_city(conn, req, wide_df)
     req = _normalize_leaf_fields(req, wide_df, addr4_city=addr4_city_hint)
     addr4_city = _finalize_addr4_city(conn, req, wide_df)
@@ -1305,6 +1341,23 @@ def build_sample_funnel(
             note="금액·숫자·범주 조건을 반영한 회귀식의 표본입니다.",
         )
     )
+    if vars_spec.building_age:
+        from app.built.regression.age_backfill import ledger_backfill_count
+
+        backfilled = ledger_backfill_count(df, fitted_index)
+        if backfilled:
+            funnel.append(
+                FunnelStep(
+                    code="ledger_age",
+                    label="대장 보강 연식",
+                    n=backfilled,
+                    kind="info",
+                    note=(
+                        "최종 표본 중 실거래 건축연도가 없어 대장 사용승인연도로 연식을 채운 거래입니다. "
+                        "대장 정보 동의 시에만 적용하며 원장은 바꾸지 않습니다."
+                    ),
+                )
+            )
     return SampleBreakdown(n_pool=n_pool, n_fit=n_fit, funnel=funnel)
 
 

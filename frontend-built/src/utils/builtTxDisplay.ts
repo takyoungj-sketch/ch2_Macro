@@ -94,6 +94,7 @@ export type BuiltTxSortKey =
   | "ri"
   | "lot"
   | "share"
+  | "deal_type"
   | "road_name"
   | "zone_type"
   | "building_use"
@@ -140,6 +141,8 @@ export function builtTxSortValue(
       return admin.lot ?? "";
     case "share":
       return r.is_partial_ownership ? "지분" : "—";
+    case "deal_type":
+      return r.deal_type?.trim() || "—";
     case "road_name":
       return r.road_name?.trim() || "";
     case "zone_type":

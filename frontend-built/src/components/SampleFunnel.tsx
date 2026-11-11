@@ -69,6 +69,18 @@ function FunnelRow({ step }: { step: FunnelStep }) {
     );
   }
 
+  if (step.kind === "info") {
+    return (
+      <li className={clsx(rowClass, "text-slate-600 dark:text-slate-300")} title={step.note ?? undefined}>
+        <span>
+          {step.label}
+          {step.note && <span className="block text-[10px] text-slate-500 dark:text-slate-400">{step.note}</span>}
+        </span>
+        <span className="tabular-nums">{count}건</span>
+      </li>
+    );
+  }
+
   return (
     <li className={rowClass}>
       <span className={clsx(step.kind === "remain" && "font-medium")}>{step.label}</span>

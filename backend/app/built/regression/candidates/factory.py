@@ -233,7 +233,10 @@ def fetch_candidate_rows(
         from app.built.enrichment_policy import split_zone_filter
         from app.built.filters import apply_sample_filters_from_request
 
-        apply_sample_filters_from_request(clauses, params, req, skip_zone=enrich)
+        apply_sample_filters_from_request(clauses, params, req, skip_zone=enrich, skip_age=enrich)
+        from app.built.filters import apply_direct_trade_filter
+
+        apply_direct_trade_filter(clauses, exclude=bool(getattr(req, "exclude_direct_trades", False)))
         _, outer_zones = split_zone_filter(
             enrich=enrich,
             zone_types=list(getattr(req, "zone_types", None) or []),
@@ -266,7 +269,15 @@ def fetch_candidate_rows(
         if df.empty:
             return df
     if enrich:
-        return apply_wrapped_zone_columns(df)
+        df = apply_wrapped_zone_columns(df)
+        if req is not None:
+            from app.built.regression.age_backfill import apply_age_range, backfill_age_from_ledger
+
+            df = backfill_age_from_ledger(df)
+            df = apply_age_range(
+                df, getattr(req, "building_age_min", None), getattr(req, "building_age_max", None)
+            )
+        return df
     return df.drop(columns=["transaction_hash"], errors="ignore")
 
 
