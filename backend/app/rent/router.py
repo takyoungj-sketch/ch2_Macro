@@ -35,7 +35,11 @@ from app.rent.query import (
     list_buildings,
 )
 from app.collective.building_geocode import geocode_collective_building, resolve_building_map_points
-from app.collective.regression.engine import run_building_regression, run_cohort_regression
+from app.collective.regression.engine import (
+    auto_exclusion_disabled,
+    run_building_regression,
+    run_cohort_regression,
+)
 from app.collective.schemas import CollectiveRegressionRequest, CollectiveRegressionResponse
 from app.rent.map_resolve import resolve_rent_map_codes
 from app.rent.land_price import prepare_rent_regression
@@ -397,13 +401,15 @@ def rent_building_transactions(
 
 def _run_rent_regression(df, body, asset_type, keys, names):
     df, body, notes = prepare_rent_regression(df, body, asset_type)
-    if len(keys) == 1:
-        name = names.get(keys[0]) or (keys[0] if keys else "")
-        resp = run_building_regression(df, keys[0], name, body)
-    else:
-        resp = run_cohort_regression(
-            df, keys, f"{len(keys)}동", body, building_display_names=names
-        )
+    # 집합 1단계 C-03 자동 제외는 임대에 적용하지 않는다(범위 밖, 현행 유지).
+    with auto_exclusion_disabled():
+        if len(keys) == 1:
+            name = names.get(keys[0]) or (keys[0] if keys else "")
+            resp = run_building_regression(df, keys[0], name, body)
+        else:
+            resp = run_cohort_regression(
+                df, keys, f"{len(keys)}동", body, building_display_names=names
+            )
     if notes:
         resp.warnings = [*notes, *resp.warnings]
     return resp

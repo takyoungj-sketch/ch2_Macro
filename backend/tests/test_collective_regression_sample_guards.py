@@ -96,7 +96,9 @@ def test_unseen_floor_is_refused_and_trained_floors_differ():
     assert third["y_hat"] - first["y_hat"] == pytest.approx(800, abs=0.2)
 
 
-def test_collinear_age_refuses_only_the_unseen_combination():
+def test_collinear_age_is_auto_excluded_and_ignored_in_predict():
+    """C-03(집합 1단계) 이전에는 연식 계수를 빈칸으로 두고 학습 밖 조합 예측을 거절했다.
+    이제 연식↔시점 식별 불가면 연식을 자동 제외하고(거래시점 유지), 예측은 연식 입력을 반영하지 않는다."""
     frames = []
     start = 0
     for year, age in ((2022, 12), (2023, 13)):
@@ -109,15 +111,18 @@ def test_collinear_age_refuses_only_the_unseen_combination():
         variables=_spec(building_age=True, contract_period=True),
     )
     _model, _X, _meta, fit = engine._run_regression_core(df, req)
-    age = next(c for c in fit.coefficients if c.name == "building_age")
-    assert age.se is None and age.p is None
-    assert age.effect_plain == "이 계수는 한 값으로 정해지지 않습니다."
+    assert all(c.name != "building_age" for c in fit.coefficients)
+    assert any(c.name.startswith("time_") for c in fit.coefficients)
+    assert [e.variable for e in fit.excluded_variables] == ["building_age"]
+    assert fit.excluded_variables[0].reason_code == "age_collinear_period"
+    assert not any("모형 식별" in w for w in fit.warnings)
     ok = engine.predict_regression(df, req, CollectiveRegressionPredictInputs(
         exclusive_area=80, building_age=13, contract_period="2023H1"))
+    other = engine.predict_regression(df, req, CollectiveRegressionPredictInputs(
+        exclusive_area=80, building_age=12, contract_period="2023H1"))
     assert np.isfinite(ok["y_hat"])
-    with pytest.raises(ValueError, match="정해지지 않아"):
-        engine.predict_regression(df, req, CollectiveRegressionPredictInputs(
-            exclusive_area=80, building_age=12, contract_period="2023H1"))
+    assert other["y_hat"] == ok["y_hat"]
+    assert any("연식 입력은 반영하지 않았습니다" in w for w in other["warnings"])
 
 
 def test_one_row_dummy_makes_cv_unavailable():

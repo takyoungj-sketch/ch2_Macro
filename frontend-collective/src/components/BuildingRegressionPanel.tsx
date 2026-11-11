@@ -14,6 +14,7 @@ import type {
   CollectivePredictOptions,
   CollectiveRegressionPredictInputs,
   CollectiveRegressionPredictResponse,
+  ExcludedVariable,
   RegressionModelType,
 } from "../types";
 import { ASSET_LABELS } from "../types";
@@ -118,6 +119,7 @@ function PredictPanel({
   result,
   error,
   groups = [],
+  excluded = [],
 }: {
   opts: CollectivePredictOptions;
   vars: RegressionVars;
@@ -131,7 +133,12 @@ function PredictPanel({
   result?: CollectiveRegressionPredictResponse;
   error?: string;
   groups?: RegressionSampleGroup[];
+  excluded?: ExcludedVariable[];
 }) {
+  const excludedVar = (variable: string) => excluded.find((ex) => ex.variable === variable);
+  const excludedLabel = (label: string) => excluded.find((ex) => ex.label === label);
+  const areaEx = excludedVar("exclusive_area");
+  const ageEx = excludedVar("building_age");
   const selectedGroup = groups.find(group => group.key === inputs.building_key) ?? (groups.length === 1 ? groups[0] : undefined);
   const confirmed = selectedGroup?.confirmed_attributes ?? {};
   const loadable = Object.fromEntries(["households", "parking_per_household", "assessed_land_price"]
@@ -162,11 +169,13 @@ function PredictPanel({
       </div>}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         {vars.exclusive_area && opts.exclusive_area && (
-          <label className="space-y-0.5">
-            <span className="text-slate-500 dark:text-slate-400">전용면적(㎡)</span>
+          <label className="space-y-0.5" title={areaEx?.message}>
+            <span className="text-slate-500 dark:text-slate-400">전용면적(㎡){areaEx ? " · 제외" : ""}</span>
             <input
               type="number"
-              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+              disabled={Boolean(areaEx)}
+              title={areaEx?.message}
+              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900 disabled:opacity-50"
               value={inputs.exclusive_area ?? ""}
               onChange={(e) =>
                 setInputs((p) => ({ ...p, exclusive_area: e.target.value ? Number(e.target.value) : undefined }))
@@ -175,11 +184,13 @@ function PredictPanel({
           </label>
         )}
         {vars.building_age && opts.building_age && (
-          <label className="space-y-0.5">
-            <span className="text-slate-500 dark:text-slate-400">연식(년)</span>
+          <label className="space-y-0.5" title={ageEx?.message}>
+            <span className="text-slate-500 dark:text-slate-400">연식(년){ageEx ? " · 제외" : ""}</span>
             <input
               type="number"
-              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+              disabled={Boolean(ageEx)}
+              title={ageEx?.message}
+              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900 disabled:opacity-50"
               value={inputs.building_age ?? ""}
               onChange={(e) =>
                 setInputs((p) => ({ ...p, building_age: e.target.value ? Number(e.target.value) : undefined }))
@@ -246,9 +257,11 @@ function PredictPanel({
               onChange={(e) => setInputs((p) => ({ ...p, dong: e.target.value || undefined }))}
             >
               {dongChoices.map((o) => (
-                <option key={`${o.building_key ?? ""}|${o.dong}`} value={o.dong}>
+                <option key={`${o.building_key ?? ""}|${o.dong}`} value={o.dong}
+                  title={excludedLabel(`동 ${o.label}`)?.message}>
                   {o.label}
                   {o.is_reference ? " (기준)" : ""}
+                  {excludedLabel(`동 ${o.label}`) ? " (제외: 기준과 같게 계산)" : ""}
                 </option>
               ))}
             </select>
@@ -357,8 +370,10 @@ function PredictPanel({
         <span className="text-slate-500 dark:text-slate-400">거래시점 (반기)</span>
         <select className="input" value={inputs.contract_period ?? opts.contract_period_reference ?? ""}
           onChange={(e) => setInputs(p => ({ ...p, contract_period: e.target.value }))}>
-          {opts.contract_periods?.map(period => <option key={period} value={period}>
+          {opts.contract_periods?.map(period => <option key={period} value={period}
+            title={excluded.find(ex => ex.column === `time_${period}`)?.message}>
             {period}{period === opts.contract_period_reference ? " (기준)" : ""}
+            {excluded.find(ex => ex.column === `time_${period}`) ? " (제외: 기준과 같게 계산)" : ""}
           </option>)}
         </select>
       </label>}
@@ -800,6 +815,7 @@ export default function BuildingRegressionPanel({
         <PredictPanel
           opts={regM.data.predict_options}
           groups={regM.data.analysis?.sample_groups}
+          excluded={regM.data.excluded_variables}
           vars={vars}
           floorMode={floorMode}
           useCohort={useCohort}

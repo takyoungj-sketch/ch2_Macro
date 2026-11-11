@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -1331,6 +1333,141 @@ def _meta_to_predict_options(meta: RegressionDesignMeta, req: CollectiveRegressi
     return opts
 
 
+# C-03 자동 제외 우선순위 (D-084). 거래시점(반기)은 면적 바로 앞, 마지막까지 유지한다.
+EXCLUSION_PRIORITY: tuple[str, ...] = (
+    "building_age",
+    "dong_unknown",
+    "dong",
+    "floor",
+    "contract_period",
+    "exclusive_area",
+)
+
+
+def _exclusion_group(col: str, meta: RegressionDesignMeta) -> str | None:
+    from app.regression_missing import UNKNOWN
+
+    if col == "building_age":
+        return "building_age"
+    if col == "exclusive_area":
+        return "exclusive_area"
+    if col.startswith("time_"):
+        return "contract_period"
+    unknown_cols = {f"dong_{UNKNOWN}"} | {
+        c for (_bk, d), c in meta.dong_fe_map.items() if d == UNKNOWN
+    }
+    if col in unknown_cols:
+        return "dong_unknown"
+    if col.startswith("dong_"):
+        return "dong"
+    if col == "floor" or col in set(meta.floor_dummy_cols or []) or col.startswith("floor_"):
+        return "floor"
+    return None
+
+
+def _exclusion_reason(
+    group: str, label: str, work: pd.DataFrame | None, cohort_mode: bool, has_building_fe: bool = False
+) -> tuple[str, str, str]:
+    """(reason_code, 표시 라벨, 사유 문구) — 0단계 보고서 §C-03 초안."""
+    if group == "building_age":
+        lead = "코호트 단지의 준공연도가 같아" if cohort_mode and not has_building_fe else "한 단지 안에서는"
+        return (
+            "age_collinear_period",
+            "연식",
+            f"{lead} 연식이 거래 시점과 함께 움직여 따로 추정할 수 없습니다. 연식 효과는 거래시점 계수에 포함됩니다.",
+        )
+    if group == "exclusive_area":
+        single = False
+        if work is not None and "exclusive_area" in work.columns:
+            single = pd.to_numeric(work["exclusive_area"], errors="coerce").round(2).nunique() <= 1
+        if single:
+            return ("area_single", "면적", "이 단지는 전용면적이 한 종류라 면적 효과를 추정하지 않았습니다.")
+        return ("area_collinear", "면적", "전용면적이 다른 변수와 함께 움직여 면적 효과를 따로 추정할 수 없어 뺐습니다.")
+    if group == "dong_unknown":
+        return (
+            "dong_unknown_collinear_period",
+            "동 미상",
+            "동이 아직 공개되지 않은 최근 거래가 많아 ‘동 미상’ 효과를 거래시점과 구분할 수 없어 뺐습니다.",
+        )
+    name = label.split(" (", 1)[0]
+    if group == "dong":
+        return ("dong_level_collinear", name, f"{name} 거래가 특정 시점에만 있어 효과를 따로 추정할 수 없어 뺐습니다.")
+    if group == "floor":
+        return ("floor_level_collinear", name, f"{name} 거래가 특정 시점에만 있어 효과를 따로 추정할 수 없어 뺐습니다.")
+    return ("period_level_collinear", name, f"{name} 효과를 다른 변수와 구분할 수 없어 뺐습니다.")
+
+
+def auto_exclude_nonidentifiable(
+    y_fit: pd.Series,
+    X_const: pd.DataFrame,
+    labels: dict[str, str],
+    meta: RegressionDesignMeta,
+    *,
+    work: pd.DataFrame | None = None,
+    cohort_mode: bool = False,
+) -> tuple[pd.DataFrame, list[dict], dict | None]:
+    """C-03 — 식별 불가 열을 우선순위대로 한 열씩 빼고 rank를 다시 본다.
+
+    식별 불가 열이 속한 그룹 중 우선순위가 가장 높은 그룹의 열 하나를 뺀다.
+    우선순위 밖 열(단지 FE·속성 등)만 남으면 멈춘다(기존 식별 경고 유지).
+    식별 가능 설계는 그대로 돌려준다(identifiability=None).
+    """
+    from app.regression_identifiability import design_rank, lstsq_r_squared, nonidentifiable_columns
+
+    yv = pd.to_numeric(y_fit, errors="coerce").to_numpy(dtype=float)
+    mask = np.isfinite(yv) & np.isfinite(X_const.to_numpy(dtype=float)).all(axis=1)
+    cur = X_const
+    arr = cur.to_numpy(dtype=float)[mask]
+    rank0 = design_rank(arr)
+    cols0 = cur.shape[1]
+    if rank0 >= cols0:
+        return X_const, [], None
+    r2_before = lstsq_r_squared(yv[mask], arr)
+    order = {g: i for i, g in enumerate(EXCLUSION_PRIORITY)}
+    excluded: list[dict] = []
+    for _ in range(cols0):
+        arr = cur.to_numpy(dtype=float)[mask]
+        bad = [c for c in nonidentifiable_columns(arr, [str(c) for c in cur.columns]) if c != "const"]
+        if not bad:
+            break
+        ranked = sorted(
+            (order[g], c, g) for c in bad if (g := _exclusion_group(c, meta)) is not None
+        )
+        if not ranked:
+            break
+        _o, col, group = ranked[0]
+        code, lab, msg = _exclusion_reason(
+            group, labels.get(col, col), work, cohort_mode, has_building_fe=bool(meta.building_fe_map)
+        )
+        excluded.append(dict(variable=group, label=lab, reason_code=code, message=msg, column=col))
+        cur = cur.drop(columns=[col])
+    arr = cur.to_numpy(dtype=float)[mask]
+    ident = dict(
+        rank_before=int(rank0),
+        rank_after=int(design_rank(arr)),
+        cols_before=int(cols0),
+        cols_after=int(cur.shape[1]),
+        r_squared_before=r2_before,
+        r_squared_after=lstsq_r_squared(yv[mask], arr),
+    )
+    return cur, excluded, ident
+
+
+R2_TOLERANCE = 1e-6
+
+# 임대(rent)는 같은 엔진을 쓰지만 집합 1단계 범위 밖이라 자동 제외를 끈다(별도 결정 전까지 현행 유지).
+_AUTO_EXCLUDE: ContextVar[bool] = ContextVar("collective_auto_exclude", default=True)
+
+
+@contextmanager
+def auto_exclusion_disabled():
+    token = _AUTO_EXCLUDE.set(False)
+    try:
+        yield
+    finally:
+        _AUTO_EXCLUDE.reset(token)
+
+
 def _fit_regression(
     y: pd.Series,
     X: pd.DataFrame,
@@ -1339,6 +1476,7 @@ def _fit_regression(
     req: CollectiveRegressionRequest,
     base_warnings: list[str],
     *, observations: pd.DataFrame | None = None,
+    cohort_mode: bool = False,
 ) -> tuple[sm.regression.linear_model.RegressionResultsWrapper | None, CollectiveRegressionResponse]:
     if X.empty:
         return None, CollectiveRegressionResponse(
@@ -1354,6 +1492,13 @@ def _fit_regression(
         base_warnings = base_warnings + ["price≤0 거래가 있어 선형모델로 대체"]
         model_type = "linear"
     y_fit = np.log(y) if model_type == "log" else y
+    excluded: list[dict] = []
+    ident: dict | None = None
+    if _AUTO_EXCLUDE.get():
+        X_const, excluded, ident = auto_exclude_nonidentifiable(
+            y_fit, X_const, labels, meta, work=observations, cohort_mode=cohort_mode
+        )
+    X = X_const.drop(columns=["const"], errors="ignore")
     try:
         model = sm.OLS(y_fit, X_const, missing="drop").fit()
     except Exception as exc:
@@ -1367,6 +1512,10 @@ def _fit_regression(
     from app.regression_sample_judge import blank_unidentified_effects, judge_exog, sample_notes
 
     warnings = list(base_warnings)
+    if ident is not None:
+        r0, r1 = ident.get("r_squared_before"), ident.get("r_squared_after")
+        if r0 is not None and r1 is not None and abs(r0 - r1) > R2_TOLERANCE:
+            warnings.append(f"자동 제외 전후 R²가 다릅니다({r0:.6f} → {r1:.6f}). 제외 결과를 확인해 주세요.")
     verdict = judge_exog(model.model.exog)
     notes = sample_notes(verdict)
     if verdict.tier == "blocked":
@@ -1443,6 +1592,8 @@ def _fit_regression(
         predict_options=predict_options,
         model_comparison=comparison,
         time_reference=meta.time_reference,
+        excluded_variables=excluded,
+        identifiability=ident,
     )
 
 
@@ -1633,7 +1784,7 @@ def _run_regression_core(
         cohort_mode=cohort_mode,
         building_display_names=building_display_names,
     )
-    model, resp = _fit_regression(y, X, labels, meta, req, fe_warnings, observations=work)
+    model, resp = _fit_regression(y, X, labels, meta, req, fe_warnings, observations=work, cohort_mode=cohort_mode)
     if resp.analysis is not None:
         from app.regression_contracts import grouped_sample_details
         fitted_rows = work.loc[model.model.data.row_labels]
@@ -2033,6 +2184,18 @@ def _attach_model_candidates(
     return resp
 
 
+def _excluded_input_notes(fit_resp: CollectiveRegressionResponse, inputs: CollectiveRegressionPredictInputs, x_row: pd.Series) -> list[str]:
+    """C-03 — 자동 제외된 변수에 입력값이 있으면 반영하지 않았다고 알린다."""
+    notes: list[str] = []
+    for ex in fit_resp.excluded_variables or []:
+        if ex.variable in ("building_age", "exclusive_area"):
+            if getattr(inputs, ex.variable, None) is not None:
+                notes.append(f"{ex.label} 입력은 반영하지 않았습니다 — {ex.message}")
+        elif ex.column and float(x_row.get(ex.column, 0.0) or 0.0) != 0.0:
+            notes.append(f"{ex.label}은(는) 모형에서 제외되어 기준 범주로 계산했습니다 — {ex.message}")
+    return notes
+
+
 def predict_regression(
     df: pd.DataFrame,
     req: CollectiveRegressionRequest,
@@ -2067,6 +2230,7 @@ def predict_regression(
     row = frame.iloc[0]
 
     warnings = _extrapolation_warnings(meta, inputs)
+    warnings.extend(_excluded_input_notes(fit_resp, inputs, x_row))
     predict_verdict = judge_exog(model.model.exog)
     if predict_verdict.tier == "caution":
         warnings.insert(0, f"{provision_note(predict_verdict)} · 예측구간 넓음")

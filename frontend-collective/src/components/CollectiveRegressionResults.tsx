@@ -125,7 +125,20 @@ type RegressionResultData = Pick<
   | "time_reference"
   | "missing_treatment_label"
   | "augmentation"
->;
+> & Partial<Pick<CollectiveRegressionResponse, "excluded_variables">>;
+
+function ExcludedVariables({ items }: { items?: RegressionResultData["excluded_variables"] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="space-y-0.5" aria-label="제외한 변수">
+      {items.map((ex) => (
+        <p key={`${ex.variable}|${ex.column ?? ex.label}`} className="text-[11px] leading-snug text-slate-700 dark:text-slate-200">
+          <span className="font-medium">제외한 변수: {ex.label}</span> — {ex.message}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 function fmtShift(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return "—";
@@ -240,6 +253,7 @@ export function CollectiveRegressionResults({
     <div className="card space-y-3 mt-3">
       <section className="space-y-2" aria-label="결과 요약">
         <SummaryHeading />
+        <ExcludedVariables items={data.excluded_variables} />
         {data.warnings.map((w) => (
           <p key={w} className="text-xs text-amber-700 dark:text-amber-300">
             {w}

@@ -706,6 +706,24 @@ export interface CohortAugmentation {
   note: string;
 }
 
+/** C-03 자동 제외 — 식별 불가로 뺀 변수 한 건 (집합 1단계). */
+export interface ExcludedVariable {
+  variable: "building_age" | "exclusive_area" | "dong_unknown" | "dong" | "floor" | "contract_period" | string;
+  label: string;
+  reason_code: string;
+  message: string;
+  column?: string | null;
+}
+
+export interface IdentifiabilityRecord {
+  rank_before: number;
+  rank_after: number;
+  cols_before: number;
+  cols_after: number;
+  r_squared_before?: number | null;
+  r_squared_after?: number | null;
+}
+
 export interface CollectiveRegressionResponse {
   analysis?: import("../../shared/regression-ui/types").RegressionAnalysisContext | null;
   in_sample_mape?: number | null;
@@ -733,6 +751,8 @@ export interface CollectiveRegressionResponse {
   augmentation?: CohortAugmentation | null;
   explain?: AnalysisExplain | null;
   time_reference?: string | null;
+  excluded_variables?: ExcludedVariable[];
+  identifiability?: IdentifiabilityRecord | null;
 }
 
 export interface CohortRegressionResponse extends CollectiveRegressionResponse {

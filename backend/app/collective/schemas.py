@@ -548,6 +548,27 @@ class CollectiveModelCandidate(BaseModel):
     cv_mape: Optional[float] = None
 
 
+class ExcludedVariable(BaseModel):
+    """C-03 자동 제외 — 식별 불가로 뺀 변수(열) 한 건."""
+
+    variable: str  # building_age | exclusive_area | dong_unknown | dong | floor | contract_period
+    label: str
+    reason_code: str
+    message: str
+    column: Optional[str] = None
+
+
+class IdentifiabilityRecord(BaseModel):
+    """C-03 자동 제외 전후 설계행렬 rank·열 수·R². R²는 같아야 정상이다."""
+
+    rank_before: int
+    rank_after: int
+    cols_before: int
+    cols_after: int
+    r_squared_before: Optional[float] = None
+    r_squared_after: Optional[float] = None
+
+
 class CollectiveRegressionResponse(BaseModel):
     analysis: RegressionAnalysisContext | None = None
     building_key: str
@@ -575,6 +596,8 @@ class CollectiveRegressionResponse(BaseModel):
     categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
     n_excluded_missing: int = 0
     missing_treatment_label: str = ""
+    excluded_variables: list[ExcludedVariable] = Field(default_factory=list)
+    identifiability: Optional[IdentifiabilityRecord] = None
 
 
 class CohortBuildingSummary(BaseModel):
