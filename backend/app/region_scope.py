@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.engine import Connection
 
 from app.built.filters import apply_addr3_filter, apply_addr4_filter, apply_ri_filter
@@ -276,7 +276,114 @@ def expand_beopjungri_codes(
         ),
         tmp_params,
     ).fetchall()
-    return [str(r.code) for r in rows if r.code]
+    codes = [str(r.code) for r in rows if r.code]
+    selected = _selected_emd_names(
+        conn,
+        addr2=addr2,
+        addr3=addr3,
+        addr3_list=addr3_list,
+        addr4_list=addr4_list,
+        ri_list=ri_list,
+    )
+    if selected is None or not codes:
+        return codes
+    return filter_codes_by_official_emd_name(conn, codes, selected)
+
+
+def _selected_emd_names(
+    conn: Connection,
+    *,
+    addr2: str | None,
+    addr3: str | None,
+    addr3_list: list[str] | None,
+    addr4_list: list[str] | None,
+    ri_list: list | None,
+) -> list[str] | None:
+    """C-01 B안 — 거를 기준이 되는 선택 읍면동명. None이면 거르지 않는다.
+
+    - 리(addr5) 선택: 현행 유지(None).
+    - addr4 선택(일반구 시의 동): addr4 목록.
+    - addr3만 선택: 일반구(예: 부천시 원미구)면 구 전체 선택이라 현행 유지,
+      아니면 addr3 = 읍면동(시군구 직속·세종).
+    - 시군구 전체: 현행 유지.
+    """
+    if ri_list:
+        return None
+    from app.built.filters import effective_addr3_list, effective_addr4_list
+
+    a4 = [s for s in (str(x or "").strip() for x in effective_addr4_list(None, addr4_list or [])) if s]
+    if a4:
+        return a4
+    a3 = [s for s in (str(x or "").strip() for x in effective_addr3_list(addr3, addr3_list or [])) if s]
+    if not a3:
+        return None
+    if any(_is_general_gu(conn, addr2, g) for g in a3):
+        return None
+    return a3
+
+
+def _is_general_gu(conn: Connection, addr2: str | None, addr3: str) -> bool:
+    """addr3가 일반구(시 아래 구)인지. region_codes 시군구명 '시 구'로 확인, 없으면 끝 글자 규칙."""
+    a2 = (addr2 or "").strip()
+    a3 = (addr3 or "").strip()
+    if not a2 or is_flat_sido_addr2(a2) or not a3.endswith("구"):
+        return False
+    hit = conn.execute(
+        text("SELECT 1 FROM region_codes WHERE btrim(sigungu_name::text) = :sgg LIMIT 1"),
+        {"sgg": f"{a2} {a3}"},
+    ).first()
+    if hit is not None:
+        return True
+    return a2.endswith("시")
+
+
+def filter_codes_by_official_emd_name(
+    conn: Connection,
+    codes: list[str],
+    selected_names: list[str],
+) -> list[str]:
+    """확장 코드 중 앞 8자리 공식 읍면동명(활성·비활성, 옛 이름, 읍↔면 변형)이 선택명과 같은 것만 남긴다.
+
+    공식명이 비어 있거나(세종 동 지역) region_codes에 없는 코드는 거를 근거가 없어 남긴다.
+    앞 8자리를 현행 코드와 비교하지 않는다(화성 등 개편 지역의 옛 코드 거래 보존).
+    세종 읍·면 지역은 region_codes 열이 한 칸 밀려 있다(sigungu_name=읍면명, eupmyeondong_name=리명).
+    그래서 sigungu_name 끝 토큰이 읍·면·동·가로 끝나면 그것도 공식명으로 본다.
+    """
+    ok: set[str] = set()
+    for nm in selected_names:
+        ok.update(_leaf_name_variants(nm))
+    if not ok:
+        return codes
+    code8 = sorted({c[:8] for c in codes if len(c) >= 8})
+    names_by8: dict[str, set[str]] = {}
+    if code8:
+        rows = conn.execute(
+            text(
+                """
+                SELECT DISTINCT btrim(eupmyeondong_code::text) AS c8,
+                       btrim(COALESCE(eupmyeondong_name::text, '')) AS nm,
+                       btrim(COALESCE(sigungu_name::text, '')) AS sgg
+                FROM region_codes
+                WHERE btrim(eupmyeondong_code::text) IN :c8
+                """
+            ).bindparams(bindparam("c8", expanding=True)),
+            {"c8": code8},
+        ).fetchall()
+        for r in rows:
+            got = names_by8.setdefault(str(r.c8), set())
+            nm = str(r.nm or "").strip()
+            if nm:
+                got.add(nm)
+            tail = (str(getattr(r, "sgg", "") or "").split() or [""])[-1]
+            if tail.endswith(("읍", "면", "동", "가")):
+                got.add(tail)
+        names_by8 = {k: v for k, v in names_by8.items() if v}
+    out: list[str] = []
+    for c in codes:
+        names = names_by8.get(c[:8])
+        if not names or (names & ok):
+            out.append(c)
+    return out
 
 
 def apply_region_scope(
