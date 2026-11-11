@@ -124,6 +124,7 @@
 - **요청은 그대로 통과**(테스트: 미지원 파라미터 1개 → 200, 집계 +1). 거절 모드 없음.
 - 집계 키: (경로 템플릿, method, 화면 식별자, 위치 query/body, 파라미터 이름) → 빈도. 프로세스 메모리 → 기본 1시간마다·종료 시 JSONL 한 줄씩 추가. 앱 로그에는 날이 바뀔 때 하루 요약 1줄.
 - **기록하지 않는 것:** 값, 쿼리 문자열, 사용자 ID, IP, 토큰. 경로 변수는 템플릿(`{cluster_key}`). 테스트가 값·경로 변수 값이 파일에 없는지 확인한다.
+- **키 폭증 방지(검수 보완):** 파라미터 이름은 영문·숫자·`_-.[]`만 남기고 64자로 자른다(남는 문자가 없으면 버림). 한 집계 창(그리고 하루 요약)에서 고유 키가 1,000개에 닿으면 이후 새 키는 route별 `_overflow` 한 키로 합친다(창당 최대 1,000키 + route별 `_overflow`).
 - 설정: `API_PARAM_WARN_ENABLED`(기본 true), `API_PARAM_WARN_PATH`(기본 `logs/api_param_warn.jsonl`, 상대 경로는 저장소 루트), `API_PARAM_WARN_FLUSH_SECONDS`(기본 3600). 테스트는 conftest가 임시 경로로 돌린다.
 - 화면 식별자: [`shared/macro-shell/apiScreen.ts`](../../shared/macro-shell/apiScreen.ts) `attachApiScreenHeader()`를 5앱의 axios 인스턴스 12개에 붙였다. 값 `앱/화면`(land/main·land/map·built/main·built/twin·collective/residential·collective/commercial·rent/main·profile/main 등). 집합 상세 모달은 열려 있는 동안 `collective/residential-detail/{패널}`·`collective/commercial-detail/{패널}`. 헤더가 없으면 Referer의 경로만(`referer:/collective/`).
 - CORS: `allow_headers=["*"]`. 운영 nginx(`deploy/templates/nginx-ch2-macro.conf`)는 `/api/` 프록시에서 요청 헤더를 기본 전달하며(`proxy_pass_request_headers` 미변경), 헤더 이름에 밑줄이 없어 `underscores_in_headers`와 무관하다 → 막히지 않는다.
@@ -158,6 +159,7 @@
 - [ ] **원장 변화 0**: `logs/collective_p1/compare_region_scope.md` 또는 `python scripts/lab/collective_p1/compare_region_scope.py` — collective·commercial·built 변화 단위 0, building_stats 116 / −40,235 / −389,186.
 - [ ] **복합 테스트 그대로 통과**: `pytest tests -k built` — 복합 `nonidentifiable_columns`·`design_rank`는 공통 모듈 재수출, `test_built_p1_audit_fixes`·`test_built_p5_codex_fixes` 통과(기존 실패 test_built_region_all_asset 3건·test_built_recommend_deprecated 1건은 main과 동일).
 - [ ] **경고 모드에서 값이 기록되지 않음**: `tests/test_api_param_warn.py`(값·경로 변수 값이 JSONL에 없음, 필드는 8개 키만).
+- [ ] **키 폭증 방지**: 이름 64자·문자 `[A-Za-z0-9_-.[]]`만, 창당 고유 키 1,000 초과분은 `(route, _overflow)`로 합침 — `test_long_and_odd_param_names_are_cleaned`·`test_unique_keys_capped_with_overflow`·`test_overflow_via_http_keeps_requests_passing`.
 - [ ] **거절 모드 없음**: 미들웨어는 응답을 바꾸지 않는다(`test_main_app_has_middleware_and_no_reject_mode`, 미지원 파라미터 요청 200).
 - [ ] **DB 변경 없음**: 제품 코드는 SELECT만 추가(`region_codes` 이름 조회). 측정 스크립트는 읽기 전용 접속. 마이그레이션·새 테이블 없음.
 - [ ] 배포 시: `API_PARAM_WARN_PATH` 운영 경로·쓰기 권한·logrotate 결정, 프론트 5앱 재빌드(헤더), 집합 화면 「제외한 변수」 표시 확인.

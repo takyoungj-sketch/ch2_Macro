@@ -155,6 +155,24 @@ def _route_body_model(route: Any) -> type[BaseModel] | None:
 
 # ---------------- 집계 ----------------
 
+#: 파라미터 이름은 브라우저가 마음대로 보낼 수 있어 길이·문자·고유 키 수를 묶는다(메모리·로그 폭증 방지).
+MAX_PARAM_NAME = 64
+MAX_KEYS_PER_WINDOW = 1000
+OVERFLOW_PARAM = "_overflow"
+_PARAM_RE = re.compile(r"[^A-Za-z0-9_\-.\[\]]")
+
+
+def clean_param_name(name: str) -> str:
+    """영문·숫자·`_-.[]`만 남기고 64자로 자른다."""
+    return _PARAM_RE.sub("", str(name or ""))[:MAX_PARAM_NAME]
+
+
+def _capped(counter: Counter, key: tuple[str, str, str, str, str], route: str) -> tuple[str, str, str, str, str]:
+    """창 안 고유 키가 상한에 닿으면 새 키는 (route, '_overflow') 하나로 합친다."""
+    if key in counter or len(counter) < MAX_KEYS_PER_WINDOW:
+        return key
+    return (route, "", "", "", OVERFLOW_PARAM)
+
 class ParamWarnAggregator:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -167,9 +185,12 @@ class ParamWarnAggregator:
     def record(self, *, route: str, method: str, screen: str, location: str, params: Iterable[str]) -> None:
         with self._lock:
             for p in params:
-                key = (route, method, screen, location, p)
-                self._counts[key] += 1
-                self._day_counts[key] += 1
+                name = clean_param_name(p)
+                if not name:
+                    continue
+                key = (route, method, screen, location, name)
+                self._counts[_capped(self._counts, key, route)] += 1
+                self._day_counts[_capped(self._day_counts, key, route)] += 1
 
     def snapshot(self) -> dict[tuple[str, str, str, str, str], int]:
         with self._lock:

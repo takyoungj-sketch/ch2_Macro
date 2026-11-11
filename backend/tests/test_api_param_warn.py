@@ -126,3 +126,31 @@ def test_real_route_counts_commercial_date_params(agg, monkeypatch):
     assert agg.snapshot() == {
         ("/api/collective/commercial/clusters/{cluster_key}/addresses", "GET", "", "query", "not_a_param"): 1
     }
+
+
+def test_long_and_odd_param_names_are_cleaned(agg):
+    agg.record(route="/r", method="GET", screen="", location="query",
+               params=["a" * 200, "x<script>y", "ok[]", "한글만"])
+    names = {k[4] for k in agg.snapshot()}
+    assert "a" * apw.MAX_PARAM_NAME in names
+    assert all(len(n) <= apw.MAX_PARAM_NAME for n in names)
+    assert "xscripty" in names and "ok[]" in names
+    assert len(names) == 3  # 허용 문자가 하나도 없는 이름은 버린다
+
+
+def test_unique_keys_capped_with_overflow(agg):
+    for i in range(5):
+        agg.record(route="/r", method="GET", screen="", location="query",
+                   params=[f"p{i}_{j}" for j in range(3000)])
+    snap = agg.snapshot()
+    assert len(snap) <= apw.MAX_KEYS_PER_WINDOW + 1  # 상한 + 이 route 의 _overflow 1개
+    overflow = snap[("/r", "", "", "", apw.OVERFLOW_PARAM)]
+    assert overflow == 5 * 3000 - (len(snap) - 1)
+    assert sum(snap.values()) == 5 * 3000
+
+
+def test_overflow_via_http_keeps_requests_passing(agg):
+    c = TestClient(_make_app(agg))
+    qs = "&".join(f"junk{i}=1" for i in range(1500))
+    assert c.get(f"/items/k/stats?{qs}").status_code == 200
+    assert len(agg.snapshot()) <= apw.MAX_KEYS_PER_WINDOW + 1
