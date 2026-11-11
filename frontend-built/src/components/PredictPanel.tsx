@@ -43,6 +43,8 @@ import type {
   RegressionVariableSpec,
 } from "../types";
 import BasicPredictionResult from "./BasicPredictionResult";
+import PredictionSignNotice from "./PredictionSignNotice";
+import { isSignWarning } from "../utils/openMacroExplore";
 
 function fmtNum(n?: number | null, digits = 0) {
   if (n == null || Number.isNaN(n)) return "—";
@@ -509,7 +511,7 @@ export default function PredictPanel({
           level,
         );
         const otherWarnings = currentPrediction.warnings.filter(
-          (w) => !isTechnicalExtrapolationWarning(w),
+          (w) => !isTechnicalExtrapolationWarning(w) && !isSignWarning(w),
         );
         if (basicPresentation) return <BasicPredictionResult
           result={currentPrediction} hidden={hidden} badge={badge} guidance={extrapGuidance} warnings={otherWarnings}
@@ -546,7 +548,8 @@ export default function PredictPanel({
                 <div className={clsx("font-bold", embedded ? "text-lg" : "text-xl")}>
                   {fmtNum(Math.round(currentPrediction.y_hat))}만원
                 </div>
-                <StatisticalEstimateCaption compact={embedded} />
+                {!currentPrediction.nonpositive_estimate && <StatisticalEstimateCaption compact={embedded} />}
+                <PredictionSignNotice result={currentPrediction} showMacroButton={!embedded} />
               </>
             )}
           </div>

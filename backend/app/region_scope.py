@@ -320,8 +320,11 @@ def apply_region_scope(
     if addr1 and addr2:
         apply_addr2_scope(addr_clauses, addr_params, addr1=addr1, addr2=addr2, col_prefix=col_prefix)
     elif addr1:
-        addr_clauses.append(f"{p}addr1 = :addr1")
-        addr_params["addr1"] = addr1.strip()
+        from app.region_sido import addr1_scope_sql
+
+        addr_clauses.append(
+            addr1_scope_sql(conn, addr_params, addr1=addr1, table=table, col_prefix=col_prefix)
+        )
     apply_addr3_filter(addr_clauses, addr_params, addr3, addr3_list or [])
     apply_addr4_filter(addr_clauses, addr_params, None, addr4_list or [])
     apply_ri_filter(addr_clauses, addr_params, ri_list or [])

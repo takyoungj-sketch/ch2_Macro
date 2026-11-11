@@ -772,6 +772,16 @@ def _prediction(result: ScreenEvidence, raw: dict, unit: str) -> None:
     ):
         result.number(label, raw.get(key), unit)
     result.number("적합 표본", raw.get("regression_n") if raw.get("regression_n") is not None else raw.get("n"), "건")
+    y_hat = raw.get("y_hat")
+    if isinstance(y_hat, (int, float)) and y_hat <= 0:
+        # B-01: 음수·0 추정을 「추정금액」으로 단정하지 않는다.
+        result.notes.append(
+            "모형 추정값이 0 이하다. 선형식의 외삽 결과이며 실제 거래금액이 아니다. "
+            "이 값을 추정금액·가격으로 단정해 말하지 말고, 입력 조건이 표본 범위를 벗어났거나 "
+            "선형식이 맞지 않는다는 신호로 설명한다."
+        )
+    elif any(isinstance(raw.get(k), (int, float)) and raw[k] < 0 for k in ("ci_lower", "pi_lower")):
+        result.notes.append("구간 하한이 0 미만이다. 금액의 하한이 아니라 선형식 구간 계산의 값으로 설명한다.")
 
 
 def _histogram(result: ScreenEvidence, raw: dict) -> None:

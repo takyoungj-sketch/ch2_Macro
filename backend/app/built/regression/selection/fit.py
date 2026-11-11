@@ -243,6 +243,12 @@ def _estimable_columns(x_train: pd.DataFrame) -> list[str]:
     ]
     if not varying:
         return []
+    # B-12: 전체 적합과 같은 규칙 — fold 안에서 유형 더미가 건축물용도에 내포되면 뺀다.
+    from app.built.regression.engine import prune_design_columns
+
+    non_const = [c for c in varying if c != "const"]
+    kept, _dropped = prune_design_columns(x_train.loc[:, non_const])
+    varying = [c for c in varying if c == "const" or c in kept]
     matrix = x_train.loc[:, varying].to_numpy(dtype=float)
     # 면적(수십~수백)과 더미(0/1)가 섞여 있으면 특이값 범위가 커져 rank 판정
     # 허용오차가 느슨해진다. 열 노름으로 정규화해 척도 영향을 뺀다.

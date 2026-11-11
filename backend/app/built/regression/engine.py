@@ -25,6 +25,7 @@ from app.built.schemas import (
     FunnelReason,
     FunnelStep,
     PredictOptions,
+    DesignColumnNote,
     RegressionCoeff,
     RegressionLevelResult,
     SampleBreakdown,
@@ -163,6 +164,7 @@ class DesignMeta:
     continuous_ranges: dict[str, tuple[float, float]] = field(default_factory=dict)
     log_x_columns: frozenset[str] = field(default_factory=frozenset)
     response_scale: ResponseScale = "linear"
+    dropped_columns: list[DesignColumnNote] = field(default_factory=list)
 
 
 def _meta_to_predict_options(meta: DesignMeta | None) -> PredictOptions | None:
@@ -229,8 +231,11 @@ def _build_where(
                 asset_type=req.asset_type,
             )
         elif not used_units and req.addr1:
-            clauses.append("addr1 = :addr1")
-            params["addr1"] = req.addr1
+            from app.region_sido import addr1_scope_sql
+
+            clauses.append(
+                addr1_scope_sql(conn, params, addr1=req.addr1, table="built_transactions")
+            )
             from app.built.filters import apply_addr3_filter, apply_addr4_filter, apply_ri_filter
 
             apply_addr3_filter(clauses, params, req.addr3, req.addr3_list)
@@ -242,8 +247,11 @@ def _build_where(
         from app.region_scope import parse_region_addr_keys
 
         if req.addr1:
-            clauses.append("addr1 = :addr1")
-            params["addr1"] = req.addr1
+            from app.region_sido import addr1_scope_sql
+
+            clauses.append(
+                addr1_scope_sql(conn, params, addr1=req.addr1, table="built_transactions")
+            )
         if req.addr2 and is_flat_sido_addr2(req.addr2):
             # 세종 등 flat sido — 지도 단위 addr2(읍·면명)와 토큰이 섞여도 원장은 addr2 NULL
             apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=req.addr2)
@@ -264,8 +272,9 @@ def _build_where(
 
         apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=req.addr2)
     elif req.addr1:
-        clauses.append("addr1 = :addr1")
-        params["addr1"] = req.addr1
+        from app.region_sido import addr1_scope_sql
+
+        clauses.append(addr1_scope_sql(conn, params, addr1=req.addr1, table="built_transactions"))
     if req.contract_year_from is not None:
         clauses.append("contract_year >= :cy_from")
         params["cy_from"] = req.contract_year_from
@@ -855,6 +864,98 @@ def _enabled_category_columns(
     return columns
 
 
+_DUMMY_KINDS: dict[str, str] = {
+    "road_": "도로조건",
+    "zone_": "용도지역",
+    "use_": "건축물용도",
+    "struct_": "구조",
+    "atype_": "유형",
+    "loc_": "지역",
+}
+_DUMMY_META_LISTS: dict[str, str] = {
+    "road_": "road_width_labels",
+    "zone_": "zone_types",
+    "use_": "building_uses",
+    "struct_": "structure_groups",
+    "atype_": "asset_types",
+    "loc_": "region_leaves",
+}
+
+
+def _dummy_prefix(name: str) -> str | None:
+    s = str(name)
+    for prefix in _DUMMY_KINDS:
+        if s.startswith(prefix):
+            return prefix
+    return None
+
+
+def prune_design_columns(X: pd.DataFrame) -> tuple[list[str], list[DesignColumnNote]]:
+    """적합 직전 설계행렬에서 계수를 정할 수 없는 더미 열을 고른다 (B-12).
+
+    1. 최종 표본(결측·IQR·필터 뒤)에서 값이 **모두 0인 더미** — 그 범주 거래가 없다.
+    2. **유형 더미가 건축물용도 더미에 내포**되어 완전 중복 — 같은 건축물용도 안에서
+       유형이 한 값뿐이면 유형 열은 상수+용도 더미의 선형결합이다. 유형 더미를 뺀다.
+       (예: 상업+단독 통합에서 ``atype_detached`` = 단독 + 다가구)
+
+    두 경우 모두 열 공간이 그대로라 적합값·예측값은 바뀌지 않는다. 연속 변수와
+    ``const`` 는 건드리지 않는다. 학습 fold에도 같은 규칙을 쓴다.
+    """
+    keep: list[str] = []
+    dropped: list[DesignColumnNote] = []
+    for col in X.columns:
+        prefix = _dummy_prefix(col)
+        if prefix is not None and not (X[col].to_numpy(dtype=float) != 0).any():
+            label = str(col)[len(prefix):]
+            dropped.append(
+                DesignColumnNote(
+                    name=str(col),
+                    reason="all_zero",
+                    detail=f"{_DUMMY_KINDS[prefix]} '{label}' 거래가 최종 표본에 없어 제외",
+                )
+            )
+            continue
+        keep.append(str(col))
+    atype_cols = [c for c in keep if c.startswith("atype_")]
+    use_cols = [c for c in keep if c.startswith("use_")]
+    if atype_cols and use_cols and len(X):
+        groups = X[use_cols].astype(float).round(12).apply(tuple, axis=1)
+        for col in atype_cols:
+            per_group = X[col].astype(float).groupby(groups).nunique(dropna=False)
+            if bool((per_group <= 1).all()):
+                keep.remove(col)
+                dropped.append(
+                    DesignColumnNote(
+                        name=col,
+                        reason="nested_duplicate",
+                        detail="유형 더미가 건축물용도 더미와 완전히 겹쳐(내포) 유형 더미를 제외 — "
+                        "유형 차이는 건축물용도 계수에 담깁니다",
+                    )
+                )
+    return keep, dropped
+
+
+def nonidentifiable_columns(exog: np.ndarray, names: list[str]) -> list[str]:
+    """rank 부족 설계에서 한 값으로 정해지지 않는 계수 이름 (B-12).
+
+    열 노름으로 정규화한 설계행렬의 영공간 벡터에 성분이 있는 열이 식별 불가다.
+    rank가 꽉 차면 빈 목록. 예측값(열 공간)은 이와 무관하게 계산된다.
+    """
+    arr = np.asarray(exog, dtype=float)
+    if arr.ndim != 2 or arr.shape[1] == 0 or arr.shape[0] == 0:
+        return []
+    norms = np.linalg.norm(arr, axis=0)
+    norms[norms == 0.0] = 1.0
+    scaled = arr / norms
+    rank = int(np.linalg.matrix_rank(scaled))
+    if rank >= arr.shape[1]:
+        return []
+    _u, _s, vt = np.linalg.svd(scaled, full_matrices=True)
+    null = vt[rank:]
+    weight = np.abs(null).max(axis=0)
+    return [names[j] for j in range(len(names)) if weight[j] > 1e-6]
+
+
 def _build_design_matrix(
     df: pd.DataFrame,
     vars_spec: RegressionVariableSpec,
@@ -985,6 +1086,21 @@ def _build_design_matrix(
     X_out = X.loc[mask].astype(float).copy()
     for col in meta.log_x_columns:
         X_out[col] = np.log(X_out[col])
+
+    # B-12: 모든 표본 단계 뒤 — 전부 0인 더미·내포 유형 더미 제외
+    keep_cols, dropped_cols = prune_design_columns(X_out)
+    if dropped_cols:
+        X_out = X_out.loc[:, keep_cols]
+        meta.feature_columns = list(keep_cols)
+        meta.dropped_columns = dropped_cols
+        for note in dropped_cols:
+            if note.reason != "all_zero":
+                continue
+            prefix = _dummy_prefix(note.name)
+            attr = _DUMMY_META_LISTS.get(prefix or "")
+            if attr:
+                level = note.name[len(prefix):]  # type: ignore[arg-type]
+                setattr(meta, attr, [v for v in getattr(meta, attr) if v != level])
 
     y_out = y.loc[mask]
     if _uses_log_y(response_scale):
@@ -1472,22 +1588,39 @@ def _fit_ols(
             ),
         )
 
+    # B-12: 열을 정리한 뒤에도 rank 부족이면 식별 불가 계수의 SE·t·p 를 비운다.
+    unident = set(nonidentifiable_columns(model.model.exog, [str(c) for c in model.params.index]))
     coefs = [
         RegressionCoeff(
             name=str(name),
             estimate=float(model.params[name]),
-            std_err=float(model.bse[name]) if name in model.bse else None,
-            t_value=float(model.tvalues[name]) if name in model.tvalues else None,
-            p_value=float(model.pvalues[name]) if name in model.pvalues else None,
+            std_err=float(model.bse[name]) if name in model.bse and name not in unident else None,
+            t_value=float(model.tvalues[name]) if name in model.tvalues and name not in unident else None,
+            p_value=float(model.pvalues[name]) if name in model.pvalues and name not in unident else None,
+            identifiable=name not in unident,
         )
         for name in model.params.index
     ]
-    sig = sum(1 for c in coefs if c.name != "const" and c.p_value is not None and c.p_value < 0.05)
+    sig = sum(
+        1
+        for c in coefs
+        if c.name != "const" and c.identifiable and c.p_value is not None and c.p_value < 0.05
+    )
 
     warn = provision_note(verdict)
     ident = identification_note(verdict)
     if ident:
         warn = f"{warn} · {ident}" if warn else ident
+    identification_warning = None
+    if unident:
+        shown = ", ".join(_coef_display_name(c, response_scale=response_scale) for c in sorted(unident) if c != "const")
+        identification_warning = (
+            f"설계 열 {verdict.n_columns}개 중 독립 계수 {verdict.rank}개 — "
+            f"{len(unident)}개 계수가 한 값으로 정해지지 않습니다"
+            + (f" ({shown})" if shown else "")
+            + ". 이 계수들은 p값·유의 계수 집계에서 제외합니다. 추정금액(예측값)은 계산되지만 "
+            "해당 변수의 효과는 따로 해석할 수 없습니다."
+        )
     if _uses_log_y(response_scale):
         if _is_loglog(response_scale):
             log_note = "종속·면적=log — log-log (광평수 외삽에 유리)"
@@ -1610,6 +1743,8 @@ def _fit_ols(
             category_columns=_enabled_category_columns(vars_spec, region_col),
         ),
         residuals=residuals,
+        dropped_design_columns=list(meta.dropped_columns) if meta else [],
+        identification_warning=identification_warning,
     )
 
 
@@ -1695,6 +1830,7 @@ def _partial_regression_plots(
 
     X_const = sm.add_constant(X, has_constant="add")
     model = sm.OLS(y, X_const).fit()
+    unident = set(nonidentifiable_columns(model.model.exog, [str(c) for c in X_const.columns]))
     y_label = "log(금액) 잔차" if _uses_log_y(response_scale) else "금액 잔차"
 
     out: list[PartialRegressionSeries] = []
@@ -1714,7 +1850,8 @@ def _partial_regression_plots(
             pr2 = round(float(x_res.corr(y_res) ** 2), 4)
 
         beta = float(model.params[col]) if col in model.params else None
-        p_val = float(model.pvalues[col]) if col in model.pvalues else None
+        # B-12: 식별 불가 계수는 계수표와 같이 p값을 비운다.
+        p_val = float(model.pvalues[col]) if col in model.pvalues and col not in unident else None
 
         out.append(
             PartialRegressionSeries(
@@ -1966,6 +2103,34 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     )
 
 
+NONPOSITIVE_ESTIMATE_WARNING = (
+    "추정값이 0 이하입니다. 선형식의 외삽 결과이며 실제 거래금액을 의미하지 않습니다. "
+    "입력 조건이 표본과 다르거나 선형식이 이 범위에 맞지 않을 수 있으니 Macro 모형 탐색에서 "
+    "다른 척도(log·log-log)나 변수 조합을 확인해 보세요."
+)
+NEGATIVE_LOWER_BOUND_WARNING = (
+    "구간 하한이 0 미만입니다. 선형식 구간 계산의 값을 숨기지 않고 그대로 보이며, "
+    "금액의 하한을 뜻하지 않습니다. 하한은 모형 한계의 점검 단서로 읽어 주세요."
+)
+
+
+def nonpositive_estimate_flags(
+    y_hat: float, *, ci_lower: float, pi_lower: float
+) -> tuple[bool, bool, list[str]]:
+    """B-01: 음수·0 추정은 숨기지 않고 성격만 표시한다 (값 변경 없음)."""
+    nonpositive = bool(np.isfinite(y_hat) and y_hat <= 0)
+    negative_lower = bool(
+        not nonpositive
+        and ((np.isfinite(ci_lower) and ci_lower < 0) or (np.isfinite(pi_lower) and pi_lower < 0))
+    )
+    notes: list[str] = []
+    if nonpositive:
+        notes.append(NONPOSITIVE_ESTIMATE_WARNING)
+    elif negative_lower:
+        notes.append(NEGATIVE_LOWER_BOUND_WARNING)
+    return nonpositive, negative_lower, notes
+
+
 def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredictResponse:
     import statsmodels.api as sm
 
@@ -2074,6 +2239,13 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
 
     y_hat = _back_transform(float(row["mean"]), scale) * smear
     suppressed = should_suppress_y_hat(extrap_level, scale)
+    pi_lower = _back_transform(float(row["obs_ci_lower"]), scale)
+    ci_lower = _back_transform(float(row["mean_ci_lower"]), scale) * smear
+    nonpositive, negative_lower, sign_warnings = nonpositive_estimate_flags(
+        y_hat, ci_lower=ci_lower, pi_lower=pi_lower
+    )
+    for idx, text_ in enumerate(sign_warnings):
+        warnings.insert(idx, text_)
 
     cont_out = [
         ContinuousExtrapolation(
@@ -2093,15 +2265,17 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
         scope_label=scope_label,
         n=n,
         y_hat=y_hat,
-        pi_lower=_back_transform(float(row["obs_ci_lower"]), scale),
+        pi_lower=pi_lower,
         pi_upper=_back_transform(float(row["obs_ci_upper"]), scale),
-        ci_lower=_back_transform(float(row["mean_ci_lower"]), scale) * smear,
+        ci_lower=ci_lower,
         ci_upper=_back_transform(float(row["mean_ci_upper"]), scale) * smear,
         duan_factor=duan,
         price_base_year=year_index.base_year if year_index is not None else None,
         response_scale=scale,
         extrapolation_level=extrap_level,
         y_hat_suppressed=suppressed,
+        nonpositive_estimate=nonpositive,
+        negative_lower_bound=negative_lower,
         continuous_assessments=cont_out,
         warnings=warnings,
     )

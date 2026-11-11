@@ -225,6 +225,7 @@ def _scale_bins(fitted_price: np.ndarray, err: np.ndarray) -> list[ResidualScale
                 fitted_median=round(float(np.median(f[sel])), 1),
                 abs_pct_median=round(float(np.median(np.abs(e[sel]))), 1),
                 spread_pct=round(float(np.std(e[sel], ddof=1)), 1),
+                nonpositive_pred_n=int((f[sel] <= 0).sum()),
             )
         )
     return bins
@@ -503,6 +504,15 @@ def build_residual_diagnostics(
         if ranked:
             shifts, refit_note = _refit_without(model, np.asarray(ranked, dtype=int))
 
+    pred_arr = np.asarray(pred_price, dtype=float)
+    nonpositive_n = int((np.isfinite(pred_arr) & (pred_arr <= 0)).sum())
+    nonpositive_note = None
+    if nonpositive_n:
+        nonpositive_note = (
+            f"예측금액이 0 이하인 거래 {nonpositive_n}건이 포함되어 있습니다. "
+            "선형식의 외삽 결과이며 실제 거래금액을 뜻하지 않습니다. 그래프·표에는 값을 그대로 둡니다."
+        )
+
     warning = None
     if cooks is None:
         warning = "표본이 커서 영향도 계산을 생략했습니다." if len(fit_df) > MAX_INFLUENCE_N else None
@@ -525,6 +535,8 @@ def build_residual_diagnostics(
         refit_shifts=shifts,
         refit_note=refit_note,
         warning=warning,
+        nonpositive_pred_n=nonpositive_n,
+        nonpositive_pred_note=nonpositive_note,
     )
 
 

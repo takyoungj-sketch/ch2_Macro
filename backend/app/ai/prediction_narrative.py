@@ -40,11 +40,20 @@ def build_prediction_narrative(
     pi_width = float(pi_hi) - float(pi_lo) if pi_hi is not None and pi_lo is not None else None
     rel_width = (pi_width / float(y_hat) * 100) if pi_width and y_hat else None
 
-    summary = (
-        f"입력 조건에서 선택한 거래자료와 회귀모형으로 추정하면 "
-        f"**약 {_fmt_won(float(y_hat))}만원** 수준의 가격관계가 관찰됩니다 "
-        f"({scope_label}). 개별 물건의 가격으로 읽지 마세요."
-    )
+    if float(y_hat) <= 0:
+        # B-01: 음수·0 추정은 금액으로 단정하지 않는다.
+        summary = (
+            f"선형식 계산값이 **{_fmt_won(float(y_hat))}만원**으로 0 이하입니다 ({scope_label}). "
+            "선형식의 외삽 결과이며 실제 거래금액을 의미하지 않습니다. "
+            "입력 조건이 표본 범위를 벗어났거나 선형식이 이 범위에 맞지 않을 수 있으니 "
+            "Macro 모형 탐색에서 다른 척도·변수 조합을 확인해 보세요."
+        )
+    else:
+        summary = (
+            f"입력 조건에서 선택한 거래자료와 회귀모형으로 추정하면 "
+            f"**약 {_fmt_won(float(y_hat))}만원** 수준의 가격관계가 관찰됩니다 "
+            f"({scope_label}). 개별 물건의 가격으로 읽지 마세요."
+        )
 
     insight: list[str] = []
     if rel_width is not None:

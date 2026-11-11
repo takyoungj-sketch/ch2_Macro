@@ -226,7 +226,8 @@ def test_partial_regression_plots_match_ols_beta():
     rows = []
     for i in range(20):
         gross = 50 + i * 10
-        land = 30 + i * 8
+        # 연면적과 완전 공선이면 B-12 식별 불가(p 없음)가 되므로 i%3 으로 흔든다.
+        land = 30 + i * 8 + (i % 3) * 5
         age = 5 + (i % 5)
         rows.append(
             {

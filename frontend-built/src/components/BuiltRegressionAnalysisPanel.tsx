@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { OPEN_MACRO_EXPLORE_EVENT } from "../utils/openMacroExplore";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type {
   AssetType,
@@ -55,6 +56,12 @@ export default function BuiltRegressionAnalysisPanel({
     recommendM.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 지역·기간·필터가 바뀔 때만 Macro 리셋
   }, [scopeKey]);
+
+  useEffect(() => {
+    const open = () => setMacroOpen(true);
+    window.addEventListener(OPEN_MACRO_EXPLORE_EVENT, open);
+    return () => window.removeEventListener(OPEN_MACRO_EXPLORE_EVENT, open);
+  }, []);
 
   const focusLabel = regData.focus_scope_label ?? regData.primary.scope_label;
   const explored = Boolean(recommendM.data);

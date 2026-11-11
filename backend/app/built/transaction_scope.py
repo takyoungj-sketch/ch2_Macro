@@ -17,6 +17,7 @@ from app.built.schemas import RiPick
 from app.built.time_scope import apply_contract_date_window, parse_as_of_month
 from app.flat_sido_region import apply_addr2_scope
 from app.region_scope import apply_analysis_region_scope, apply_region_scope
+from app.region_sido import addr1_scope_sql
 
 
 def parse_ri_picks(raw: list[str]) -> list[RiPick]:
@@ -89,8 +90,8 @@ def build_transaction_where(
             asset_type=asset_type,
         )
     elif addr1:
-        clauses.append("addr1 = :addr1")
-        params["addr1"] = addr1
+        # B-02: 현행 시도면 같은 canonical 시도코드의 레거시 시도명 행 포함 (원장 addr1 보존)
+        clauses.append(addr1_scope_sql(conn, params, addr1=addr1, table="built_transactions"))
         apply_addr3_filter(clauses, params, addr3, addr3_list or [])
         apply_addr4_filter(clauses, params, None, addr4_list or [])
         apply_ri_filter(clauses, params, ri_parsed)

@@ -489,6 +489,15 @@ export interface RegressionCoeff {
   std_err?: number | null;
   t_value?: number | null;
   p_value?: number | null;
+  /** B-12: false면 rank 부족으로 한 값으로 정해지지 않는 계수 — SE·t·p 없음, 유의 집계 제외. */
+  identifiable?: boolean;
+}
+
+/** B-12: 적합 전에 설계행렬에서 뺀 더미 열과 사유. */
+export interface DesignColumnNote {
+  name: string;
+  reason: "all_zero" | "nested_duplicate";
+  detail: string;
 }
 
 export interface AnalysisExplainPreset {
@@ -589,6 +598,8 @@ export interface ResidualScaleBin {
   fitted_median: number;
   abs_pct_median: number;
   spread_pct: number;
+  /** B-01: 이 분위의 예측금액 ≤ 0 건수 */
+  nonpositive_pred_n?: number;
 }
 
 export interface InfluentialTransaction {
@@ -634,6 +645,9 @@ export interface ResidualDiagnostics {
   refit_shifts: CoefficientShift[];
   refit_note?: string | null;
   warning?: string | null;
+  /** B-01: in-sample 예측금액 ≤ 0 거래 수 */
+  nonpositive_pred_n?: number;
+  nonpositive_pred_note?: string | null;
 }
 
 export interface RegressionLevelResult {
@@ -664,6 +678,10 @@ export interface RegressionLevelResult {
   sample?: SampleBreakdown | null;
   /** 초점 모형만 (P5). 상위 비교에는 없다. */
   residuals?: ResidualDiagnostics | null;
+  /** B-12: 값이 모두 0인 더미·내포 중복 유형 더미 제외 기록 */
+  dropped_design_columns?: DesignColumnNote[];
+  /** B-12: 열 정리 뒤에도 남은 식별 경고 (화면 노출) */
+  identification_warning?: string | null;
 }
 
 export interface CorrelationSeries {
@@ -739,6 +757,10 @@ export interface RegressionPredictResponse {
   response_scale?: ResponseScale;
   extrapolation_level?: number;
   y_hat_suppressed?: boolean;
+  /** B-01: 점추정 ≤ 0 — 선형식 외삽 결과(값은 그대로 표시) */
+  nonpositive_estimate?: boolean;
+  /** B-01: 점추정 > 0, 구간 하한 < 0 */
+  negative_lower_bound?: boolean;
   continuous_assessments?: ContinuousExtrapolation[];
   warnings: string[];
   explain?: AnalysisExplain | null;

@@ -243,6 +243,17 @@ class RegressionCoeff(BaseModel):
     std_err: Optional[float] = None
     t_value: Optional[float] = None
     p_value: Optional[float] = None
+    # B-12: 설계행렬 rank 부족으로 이 계수가 한 값으로 정해지지 않으면 False.
+    # 그때 SE·t·p 는 비우고 유의 계수 집계에서 뺀다 (예측값 계산 가능성과 별개).
+    identifiable: bool = True
+
+
+class DesignColumnNote(BaseModel):
+    """적합 전에 설계행렬에서 뺀 열과 사유 (B-12)."""
+
+    name: str
+    reason: Literal["all_zero", "nested_duplicate"]
+    detail: str
 
 
 class VifEntry(BaseModel):
@@ -337,6 +348,7 @@ class ResidualScaleBin(BaseModel):
     fitted_median: float
     abs_pct_median: float
     spread_pct: float
+    nonpositive_pred_n: int = 0  # B-01: 이 분위의 예측금액 ≤ 0 건수
 
 
 class InfluentialTransaction(BaseModel):
@@ -388,6 +400,9 @@ class ResidualDiagnostics(BaseModel):
     refit_shifts: list[CoefficientShift] = Field(default_factory=list)
     refit_note: Optional[str] = None
     warning: Optional[str] = None
+    # B-01: in-sample 예측금액이 0 이하인 거래 수와 안내 (값은 그대로 그래프·표에 남긴다)
+    nonpositive_pred_n: int = 0
+    nonpositive_pred_note: Optional[str] = None
 
 
 class RegressionLevelResult(BaseModel):
@@ -417,6 +432,10 @@ class RegressionLevelResult(BaseModel):
     missing_treatment_label: str = ""
     sample: Optional[SampleBreakdown] = None
     residuals: Optional[ResidualDiagnostics] = None  # 초점 모형만 (P5)
+    # B-12: 최종 표본에서 값이 모두 0인 더미·완전 중복 유형 더미를 뺀 기록
+    dropped_design_columns: list[DesignColumnNote] = Field(default_factory=list)
+    # B-12: 열을 뺀 뒤에도 rank 부족이면 화면에 그대로 보이는 식별 경고
+    identification_warning: Optional[str] = None
 
 
 class CorrelationSeries(BaseModel):
@@ -639,6 +658,9 @@ class RegressionPredictResponse(BaseModel):
     response_scale: ResponseScale = "linear"
     extrapolation_level: int = 0
     y_hat_suppressed: bool = False
+    # B-01: 값은 숨기거나 0으로 바꾸지 않는다. 화면·AI가 「추정금액」으로 단정하지 않게 표시만 한다.
+    nonpositive_estimate: bool = False  # 점추정 ≤ 0 — 선형식 외삽 결과
+    negative_lower_bound: bool = False  # 점추정 > 0 이지만 평균/개별 구간 하한 < 0
     continuous_assessments: list[ContinuousExtrapolation] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None

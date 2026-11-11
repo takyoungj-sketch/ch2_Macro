@@ -259,6 +259,7 @@ export default function ResidualDiagnosticsCard({
       </dl>
       <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">음수는 실제 거래금액보다 높게 추정한 경우를 뜻합니다.</p>
       <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{headline}</p>
+      {d.nonpositive_pred_note && <p role="status" className="text-xs leading-relaxed text-amber-800 dark:text-amber-200" data-nonpositive-pred>{d.nonpositive_pred_note}</p>}
 
       {open && (
         <div className="space-y-3 pt-1">
@@ -281,7 +282,7 @@ export default function ResidualDiagnosticsCard({
                 <tbody>
                   {d.scale_bins.map((b) => (
                     <tr key={b.label} className="border-t border-slate-100 dark:border-slate-700/60">
-                      <td className="py-1.5">{b.label}</td>
+                      <td className="py-1.5">{b.label}{(b.nonpositive_pred_n ?? 0) > 0 && <span className="ml-1 text-[11px] text-amber-700 dark:text-amber-300">(음수 예측 {fmtNum(b.nonpositive_pred_n ?? 0)}건)</span>}</td>
                       <td className="py-0.5 text-right text-slate-500 dark:text-slate-400">
                         {fmtNum(b.n)}
                       </td>

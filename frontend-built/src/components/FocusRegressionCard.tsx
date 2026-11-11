@@ -10,6 +10,7 @@ import { formatPartialNNote } from "../utils/recommendationLabels";
 import { ADMIN_LABELS, formatCoefName, fmtDecimal, fmtNum, levelCardTitle } from "../utils/regressionFormat";
 import { BasicRegressionCoefficients, BasicRegressionEquation } from "./BasicRegressionDetails";
 import SampleFunnel from "./SampleFunnel";
+import DesignIdentificationNotes from "./DesignIdentificationNotes";
 
 type Props = {
   result: RegressionLevelResult;
@@ -81,6 +82,7 @@ export default function FocusRegressionCard({ result, assetType, responseScale, 
         </div>)}
       </div>
       {caution && <p role="status" className="border-l-2 border-amber-500 pl-3 text-xs leading-relaxed text-amber-800 dark:text-amber-200">{caution}</p>}
+      <DesignIdentificationNotes result={result} />
       <BasicRegressionEquation coefficients={result.coefficients} responseScale={responseScale} assetType={assetType} equation={result.equation} predictOptions={result.predict_options} />
     </section>
 

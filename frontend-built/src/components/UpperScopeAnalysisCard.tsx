@@ -23,6 +23,7 @@ import AnalysisSummary, { primaryCaution } from "../../../shared/regression-ui/A
 import { DetailAnalysis, SummaryHeading } from "../../../shared/regression-ui/ReadingLayout";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { BUILT_UPPER_SCOPE_HELP } from "../utils/builtAnalysisHelp";
+import DesignIdentificationNotes from "./DesignIdentificationNotes";
 
 type Props = {
   regData: RegressionRunResponse;
@@ -76,6 +77,7 @@ function ComparisonLevelCard({
       <section className="space-y-2" aria-label="결과 요약">
         <SummaryHeading />
         {result.warning && <p className="badge-warn">{result.warning}</p>}
+        <DesignIdentificationNotes result={result} />
         {primaryCaution(result.analysis) && (
           <p className="text-amber-800 dark:text-amber-300">{primaryCaution(result.analysis)}</p>
         )}
