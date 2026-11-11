@@ -56,7 +56,14 @@ cd c:\ch2\ch2_Macro
 .\deploy\scripts\deploy-from-windows.ps1 -Scope built
 # -Scope: built | land | collective | profile | rent | lab | insight | all
 # -SkipPush  # 이미 push 된 경우
+# -SkipPreflight  # 배포 전 점검 건너뛰기 (비권장)
+# -AllowDrift     # 범위 밖 의존이 서버와 달라도 진행 (의도한 경우만)
 ```
+
+**배포 전 점검 (built, 2026-11-11 추가):**
+
+1. **범위 밖 의존 점검** — `deploy/scripts/deploy_import_closure.py`가 built 패키지(`built`·`recommendation`·`map`·`ai`)의 import를 따라가 scope가 올리지 않는 backend/pipeline 파일을 찾고, 서버 파일과 줄바꿈을 무시한 sha256으로 비교한다. 다르면 **scp 전에 멈춘다** → 그 파일을 scope에 추가하거나 `-Scope all`.
+2. **서버 import 점검** — scp 후 restart **전에** 서버 venv로 `import app.main`. 실패하면 restart하지 않는다(실행 중 프로세스는 이전 코드 유지). 서버 파일은 이미 바뀌었으므로 누락 파일을 올리거나 이전 커밋으로 되돌린 뒤 다시 배포한다.
 
 **수동 equivalent:**
 
@@ -64,16 +71,21 @@ cd c:\ch2\ch2_Macro
 $KEY = "c:\ch2\ch2_Macro\LightsailDefaultKey-ap-northeast-2.pem"
 $VPS = "ubuntu@13.209.203.178"
 
-# 예: 복합(built) — 백엔드 + 프론트 소스
+# 예: 복합(built) — 백엔드 + 프론트 소스 (일부만 예시 — 전체 목록은 아래 표)
+# 공통 지역 모듈을 빼면 서버 구버전과 섞여 addr1_scope_sql import 오류가 난다.
 scp -i $KEY -r "c:\ch2\ch2_Macro\backend\app\built" "${VPS}:/opt/ch2_Macro/backend/app/"
+scp -i $KEY "c:\ch2\ch2_Macro\backend\app\region_sido.py" "c:\ch2\ch2_Macro\backend\app\region_canonical.py" "c:\ch2\ch2_Macro\backend\app\region_scope.py" "${VPS}:/opt/ch2_Macro/backend/app/"
+scp -i $KEY "c:\ch2\ch2_Macro\pipeline\region_canonical.py" "${VPS}:/opt/ch2_Macro/pipeline/"
 scp -i $KEY -r "c:\ch2\ch2_Macro\frontend-built\src" "${VPS}:/opt/ch2_Macro/frontend-built/"
 
+# restart 전에 서버에서 import 가능한지 확인 (실패하면 여기서 멈춘다)
+ssh -i $KEY $VPS "cd /opt/ch2_Macro/backend && .venv/bin/python -c 'import app.main'"
 ssh -i $KEY $VPS "bash /opt/ch2_Macro/deploy/scripts/vps_apply_scope.sh built"
 ```
 
 | Scope | scp 대상 (로컬 → VPS) | VPS 빌드 |
 |-------|------------------------|----------|
-| `built` | `backend/app/built/`, `frontend-built/src/` (+ 필요 시 `frontend-built/package*.json`) | `frontend-built` |
+| `built` | `backend/app/{built,recommendation,ai,map}/`, `backend/app/{config,main}.py`, **`backend/app/{region_sido,region_canonical,region_scope}.py`**, `backend/app/collective/schemas.py`, **`pipeline/region_canonical.py`**, `shared/`, `frontend-built/{src,tsconfig.json,vite.config.ts}` (+ 필요 시 `frontend-built/package*.json`) | `frontend-built` |
 | `land` | `backend/app/`(collective·built 제외 주의), `frontend/src/` | `frontend` |
 | `collective` | `backend/app/collective/`, `backend/app/collective_commercial/`, `frontend-collective/src/` | `frontend-collective` (VPS에 있을 때) |
 | `all` | 위 전부 + `deploy/macro-gateway/`, `deploy/hub/` | land + built + collective |

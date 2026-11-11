@@ -343,15 +343,18 @@ def _attach_search_confirm_cv(
 
 
 def _anchor_common_ids(local_df, pooled_df) -> set | None:
-    """두 표본 모두에 남은 내 지역 거래 id. 한쪽에 id가 없으면 None (기존 채점)."""
+    """두 표본 모두에 남은 내 지역 거래 id. 한쪽에 id 열이 없으면 None (기존 채점).
+
+    id 열은 있는데 공통 거래가 0건이면 **빈 집합**을 돌려준다. 이때 전체 Twin 거래로
+    채점하면 Local과 다른 거래를 비교하게 되므로, 호출 측이 「계산 불가」로 둔다 (T-2 보완).
+    """
     if "transaction_id" not in getattr(local_df, "columns", ()) or "transaction_id" not in getattr(
         pooled_df, "columns", ()
     ):
         return None
     local_ids = set(local_df["transaction_id"].dropna().tolist())
     pooled_ids = set(pooled_df["transaction_id"].dropna().tolist())
-    common = local_ids & pooled_ids
-    return common or None
+    return local_ids & pooled_ids
 
 
 def _attach_paired_anchor_cv(
@@ -370,6 +373,21 @@ def _attach_paired_anchor_cv(
     시점 보정 지수는 각자의 것을 쓴다 — 제품 기본 time_adjust=False(D-075)라 기본 경로 영향 없음.
     """
     common = _anchor_common_ids(local_ctx.df, pooled_ctx.df)
+    if common is not None and not common:
+        # 공통 내 지역 거래 0건 — 전체 Twin 거래로 채점하는 fallback 없이 탐색·확인 CV 모두
+        # 계산 불가로 둔다. Twin 판단은 판정 보류(T-1·T-5) 경로로 간다.
+        metrics.cv_mape = None
+        metrics.cv_folds = 0
+        metrics.confirm_cv_mape = None
+        metrics.confirm_cv_folds = 0
+        metrics.search_eval_n = 0
+        metrics.confirm_eval_n = 0
+        metrics.scored_on = "anchor_common"
+        metrics.paired_local_cv_mape = None
+        metrics.paired_local_confirm_cv_mape = None
+        metrics.paired_local_search_eval_n = 0
+        metrics.paired_local_confirm_eval_n = 0
+        return metrics
     metrics = _attach_search_confirm_cv(
         metrics,
         pooled_ctx.df,

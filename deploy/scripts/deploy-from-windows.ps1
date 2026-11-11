@@ -3,12 +3,20 @@
 #   # 에이전트: 먼저 관련 파일만 commit 한 뒤
 #   .\deploy\scripts\deploy-from-windows.ps1 -Scope built
 #   .\deploy\scripts\deploy-from-windows.ps1 -Scope built -SkipPush   # push 이미 한 경우
+#
+# 배포 전 점검 (built, 2026-11-11):
+#   1) 범위 밖 의존 점검 — built 패키지가 import하는 범위 밖 backend/pipeline 파일이 서버와
+#      다르면(줄바꿈 무시 sha256) 멈춘다. 의도한 경우 -AllowDrift. 건너뛰기 -SkipPreflight.
+#   2) 서버 import 점검 — 파일을 올린 뒤 restart 전에 서버 venv로 `import app.main`.
+#      실패하면 restart 하지 않는다(실행 중 프로세스는 이전 코드 유지).
 param(
   [ValidateSet("built", "land", "collective", "profile", "rent", "lab", "insight", "all")]
   [string]$Scope = "built",
   [switch]$SkipCommit = $true,
   [switch]$SkipPush,
-  [switch]$SkipVerify
+  [switch]$SkipVerify,
+  [switch]$SkipPreflight,
+  [switch]$AllowDrift
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,6 +43,72 @@ function Invoke-Scp([string[]]$Paths, [string]$RemoteSubdir) {
   }
 }
 
+# built가 서버로 보내는 backend 경로. 공통 지역 모듈(region_*)은 built 쿼리 경로가 직접
+# import하므로 함께 보낸다 — 빠지면 서버 구버전과 섞여 addr1_scope_sql import 오류 (코덱스 P1).
+$BuiltBackendAppPaths = @(
+  "backend/app/built", "backend/app/recommendation", "backend/app/ai", "backend/app/map",
+  "backend/app/config.py", "backend/app/main.py",
+  "backend/app/region_sido.py", "backend/app/region_canonical.py", "backend/app/region_scope.py"
+)
+$BuiltCovered = $BuiltBackendAppPaths + @("backend/app/collective/schemas.py", "pipeline/region_canonical.py")
+$BuiltClosureStart = @("backend/app/built", "backend/app/recommendation", "backend/app/map", "backend/app/ai")
+
+function Get-NormalizedSha256([string]$Path) {
+  $bytes = [System.IO.File]::ReadAllBytes($Path)
+  $clean = New-Object System.Collections.Generic.List[byte] $bytes.Length
+  foreach ($b in $bytes) { if ($b -ne 13) { $clean.Add($b) } }
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  return (-join ($sha.ComputeHash($clean.ToArray()) | ForEach-Object { $_.ToString("x2") }))
+}
+
+function Invoke-DependencyPreflight([string[]]$Covered, [string[]]$Start) {
+  $py = Join-Path $RepoRoot "backend/.venv/Scripts/python.exe"
+  if (-not (Test-Path $py)) { $py = "python" }
+  $helper = Join-Path $RepoRoot "deploy/scripts/deploy_import_closure.py"
+  $deps = & $py -W ignore $helper --covered @Covered --start @Start
+  if ($LASTEXITCODE -ne 0) { throw "preflight: import closure failed" }
+  $deps = @($deps | Where-Object { $_ -and $_.Trim() })
+  if (-not $deps.Count) {
+    Write-Host "preflight: 범위 밖 의존 없음"
+    return
+  }
+  Write-Host "preflight: 범위 밖 의존 $($deps.Count)개 — 서버와 내용 비교"
+  $remoteScript = "cd /opt/ch2_Macro`n" + (($deps | ForEach-Object {
+        "if [ -f '$_' ]; then echo `"`$(tr -d '\r' < '$_' | sha256sum | cut -d' ' -f1) $_`"; else echo `"MISSING $_`"; fi"
+      }) -join "`n")
+  $remote = $remoteScript | & ssh -i $Key $VpsHost "tr -d '\r' | bash"
+  if ($LASTEXITCODE -ne 0) { throw "preflight: remote hash failed" }
+  $remoteMap = @{}
+  foreach ($line in $remote) {
+    $parts = "$line".Split(" ", 2)
+    if ($parts.Count -eq 2) { $remoteMap[$parts[1]] = $parts[0] }
+  }
+  $drift = @()
+  foreach ($rel in $deps) {
+    $localHash = Get-NormalizedSha256 (Join-Path $RepoRoot $rel)
+    $remoteHash = $remoteMap[$rel]
+    if ($remoteHash -ne $localHash) { $drift += "$rel (server: $(if ($remoteHash) { $remoteHash.Substring(0, [Math]::Min(12, $remoteHash.Length)) } else { 'none' }))" }
+  }
+  if ($drift.Count) {
+    Write-Warning "preflight: 범위 밖 의존 파일이 서버와 다릅니다 — 이 scope 배포 시 구버전과 섞입니다:"
+    $drift | ForEach-Object { Write-Warning "  $_" }
+    if (-not $AllowDrift) {
+      throw "preflight drift: 위 파일을 scope에 추가하거나 -Scope all 로 배포하세요 (의도한 경우 -AllowDrift)"
+    }
+  } else {
+    Write-Host "preflight: 범위 밖 의존 $($deps.Count)개 모두 서버와 동일"
+  }
+}
+
+function Invoke-RemoteImportCheck {
+  Write-Host "==> server import check (restart 전)"
+  $check = "cd /opt/ch2_Macro/backend && .venv/bin/python -c 'import app.main' >/dev/null 2>/tmp/ch2_import_check.log || { echo 'IMPORT FAILED:'; tail -n 25 /tmp/ch2_import_check.log; exit 1; }; echo 'import app.main OK'"
+  & ssh -i $Key $VpsHost $check
+  if ($LASTEXITCODE -ne 0) {
+    throw "server import check failed — restart 하지 않았습니다. 서버 파일은 이미 바뀌었으니 누락 파일을 올리거나 이전 커밋으로 되돌린 뒤 다시 배포하세요."
+  }
+}
+
 Push-Location $RepoRoot
 try {
   if (-not $SkipCommit) {
@@ -51,6 +125,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "git push failed" }
   }
 
+  if ($Scope -eq "built" -and -not $SkipPreflight) {
+    Write-Host "==> preflight: built dependency closure"
+    Invoke-DependencyPreflight -Covered $BuiltCovered -Start $BuiltClosureStart
+  }
+
   Write-Host "==> scp to VPS (scope=$Scope)"
   if ($Scope -eq "profile" -or $Scope -eq "rent" -or $Scope -eq "lab" -or $Scope -eq "insight" -or $Scope -eq "all") {
     & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/frontend-profile /opt/ch2_Macro/frontend-rent /opt/ch2_Macro/frontend-lab /opt/ch2_Macro/frontend-insight /opt/ch2_Macro/docs/lab /opt/ch2_Macro/backend/app/ai/knowledge /opt/ch2_Macro/backend/app/ai/bundles /opt/ch2_Macro/deploy/templates"
@@ -58,8 +137,10 @@ try {
   }
   switch ($Scope) {
     "built" {
-      Invoke-Scp @("backend/app/built", "backend/app/recommendation", "backend/app/ai", "backend/app/map", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp $BuiltBackendAppPaths "backend/app/"
       Invoke-Scp @("backend/app/collective/schemas.py") "backend/app/collective/"
+      # backend/app/region_canonical.py 가 sys.path로 re-export 하는 SSOT
+      Invoke-Scp @("pipeline/region_canonical.py") "pipeline/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-built/tsconfig.json", "frontend-built/vite.config.ts", "frontend-built/src") "frontend-built/"
     }
@@ -137,6 +218,10 @@ try {
         "data/한은 월간"
       ) "data/"
     }
+  }
+
+  if (-not $SkipPreflight) {
+    Invoke-RemoteImportCheck
   }
 
   Write-Host "==> VPS build + restart"
