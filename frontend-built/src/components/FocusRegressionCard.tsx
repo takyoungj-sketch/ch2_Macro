@@ -11,6 +11,7 @@ import { ADMIN_LABELS, formatCoefName, fmtDecimal, fmtNum, levelCardTitle } from
 import { BasicRegressionCoefficients, BasicRegressionEquation } from "./BasicRegressionDetails";
 import SampleFunnel from "./SampleFunnel";
 import DesignIdentificationNotes from "./DesignIdentificationNotes";
+import { sampleSummaryLine } from "../utils/sampleSummary";
 
 type Props = {
   result: RegressionLevelResult;
@@ -64,7 +65,10 @@ export default function FocusRegressionCard({ result, assetType, responseScale, 
         <h3 className="text-base font-semibold">{levelCardTitle(result.scope_label, result.admin_level)}</h3>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{ADMIN_LABELS[result.admin_level] ?? result.admin_level} · 거래금액(만원)</p>
       </div>
-      <div className="flex items-center gap-1 text-sm font-medium">적합 거래 {fmtNum(result.n)}건 <StatsGlossaryHelp termId="fit_n" size="xs" /></div>
+      <div className="text-right">
+        <div className="flex items-center justify-end gap-1 text-sm font-medium">적합 거래 {fmtNum(result.n)}건 <StatsGlossaryHelp termId="fit_n" size="xs" /></div>
+        {sampleSummaryLine(result.sample) && <p className="mt-1 max-w-md text-xs text-slate-500 dark:text-slate-400" data-sample-summary>{sampleSummaryLine(result.sample)}</p>}
+      </div>
     </header>
     <section className="space-y-3" aria-label="결과 요약">
       <div className="flex items-center justify-between gap-2">

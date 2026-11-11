@@ -124,6 +124,7 @@ export function AllocationDetailDialog({
   onOverride,
   onClear,
   onClose,
+  enrich = true,
 }: {
   row: BuiltTransactionRow | null;
   bands: BandMap;
@@ -131,6 +132,8 @@ export function AllocationDetailDialog({
   onOverride: (id: number, patch: RowOverride) => void;
   onClear: (id: number) => void;
   onClose: () => void;
+  /** A-4: 대장 정보 동의 여부. 동의 전에는 구조 반영 안내를 보인다. */
+  enrich?: boolean;
 }) {
   const outcome = row ? allocateRow(row, bands, override) : null;
   const overrideEmpty = !override || Object.keys(override).length === 0;
@@ -322,6 +325,9 @@ export function AllocationDetailDialog({
               </p>
               {!row.structure_group?.trim() && !outcome.customized && (
                 <p>구조가 없어 이 용도의 구조별 하한·상한을 모은 범위입니다. 내용연수는 그 구조들의 중앙값입니다.</p>
+              )}
+              {!enrich && (
+                <p className="text-indigo-700 dark:text-indigo-300" data-allocation-enrich-hint>대장 정보를 활용하면 구조가 반영되어 범위가 좁아질 수 있습니다.</p>
               )}
               {outcome.view.unfitAll && (
                 <p>낮은 신축원가에서도 토지단가가 0 이하입니다. 음수는 추정 건물가가 거래금액보다 큰 만큼입니다.</p>

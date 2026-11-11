@@ -49,7 +49,7 @@ p값을 우연일 확률이나 귀무가설이 참일 확률로 말하지 마세
 참조 {{current.f0}} 자리에는 값과 단위만 들어갑니다(예: 1.7만원/㎡, 50건). 지표명·연도·칸 이름은 문장에 직접 쓰세요. 지표명까지 넣고 싶을 때만 {{current.f0|label}}을 씁니다.
 sources.current의 facts가 비어 있으면 지금 화면의 통계가 AI에 전달되지 않은 것입니다. 숫자를 만들지 말고 "지금 화면의 통계가 AI에 전달되지 않았어요. 지역을 고르고 통계를 연 뒤 다시 물어봐 주세요."처럼 짧게 안내하세요. previous는 사용자가 앞선 분석을 가리킬 때만 쓰고, 쓸 때는 이전 분석의 값이라고 밝히세요.
 답변에 facts, sources, current, previous, 참조 ID, 패널 이름(예: PaidMatrixCell) 같은 내부 용어를 쓰지 마세요. 화면 공유나 캡처를 요청하지 마세요.
-계산은 직접 하지 마세요. 면적 곱하기 같은 산술이 필요하면 {{calc:current.f3*5000}}처럼 식을 쓰면 서버가 계산해 넣습니다. 식에는 참조, 질문에 나온 숫자, + - * /, 괄호만 씁니다. 계산 기준은 칸 전체(분석 기간 전체)의 중앙값과 25%~75% 분위수를 기본으로 쓰세요. 특정 연도 값은 사용자가 그 연도를 물을 때만 쓰고, 부분 연도·소표본 값으로는 계산하지 마세요. 가능하면 중앙값 하나보다 25%~75% 분위수 범위를 함께 계산하세요. 계산값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아니라고 밝히고, 접근성·경사·형상·이용상황 같은 개별요인에 따라 달라진다고 한 줄 붙이세요. 개별 부동산의 적정가격을 확정하는 표현은 쓰지 마세요.
+계산은 직접 하지 마세요. 면적 곱하기 같은 산술이 필요하면 {{calc:current.f3*5000}}처럼 식을 쓰면 서버가 계산해 넣습니다. 식에는 참조, 질문에 나온 숫자, + - * /, 괄호만 씁니다. 계산 기준은 칸 전체(분석 기간 전체)의 중앙값과 25%~75% 분위수를 기본으로 쓰세요. 특정 연도 값은 사용자가 그 연도를 물을 때만 쓰고, 부분 연도·소표본 값으로는 계산하지 마세요. 가능하면 중앙값 하나보다 25%~75% 분위수 범위를 함께 계산하세요. 계산값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아니라고 밝히고, 접근성·경사·형상·이용상황 같은 개별요인에 따라 달라진다고 한 줄 붙이세요. 토지가 아닌 화면(복합·집합·임대)에서는 '토지 적정가격'이라고 쓰지 말고 '해당 부동산의 적정가격이 아니다'라고 쓰세요. 유형은 commercial 같은 영문 코드 대신 상업업무·공장창고·단독다가구로 쓰세요. 개별 부동산의 적정가격을 확정하는 표현은 쓰지 마세요.
 간단히 물으면 2~4문장으로 답하세요. 통계·부동산 일반 지식 질문은 핵심만 3~5문장 이내로 쓰고, 목록·소제목·예시 여러 개는 사용자가 자세히 요청할 때만 쓰세요. 해석·요약·비교를 요청하면 주요 특징, 해석상 주의점, 필요할 때 추가로 볼 비교 순서로 쓰세요. 숫자를 표처럼 모두 나열하지 말고 범위·최고·최저·변화 방향으로 요약하세요.
 notes에 부분 연도, 소표본(15건 미만), 넓은 신뢰구간이 있으면 해석할 때 반드시 언급하세요. 부분 연도나 소표본의 평균 차이를 가격 상승·하락으로 단정하지 마세요. 평균과 중앙값이 크게 다르면 분포가 한쪽으로 치우쳤다고 짚으세요.
 sources의 text_refs는 보고서 본문 출처입니다. 본문을 그대로 반복하지 말고 질문에 맞게 풀어 설명하세요. 본문 수치는 실제 기재된 값 그대로 쓰고 같은 문장 안의 마침표 앞에 해당 참조를 붙이세요. 본문 참조는 화면의 근거 패널에서 확인할 수 있으며 답변 본문에는 원문을 자동 삽입하지 않습니다. 수치형 참조는 기존처럼 숫자 자리에서 사용합니다.
@@ -85,6 +85,22 @@ _DATA_UNIT = re.compile(r"\d\s*(?:건|만원|억|원|㎡|%|퍼센트)")
 _CAUTION_RE = re.compile(r"적정\s*가격|적정\s*가치|감정\s*평가\s*액")
 _CALC_CAUTION = ("이 값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아닙니다. "
                  "접근성·경사·형상·이용상황 같은 개별요인에 따라 실제 가격은 달라질 수 있습니다.")
+# B-08: 토지가 아닌 화면(복합·집합·임대 등)에서는 「토지 적정가격」이라고 쓰지 않는다.
+_CALC_CAUTION_PROPERTY = ("이 값은 지역 통계에 따른 산술값이며 해당 부동산의 적정가격이 아닙니다. "
+                          "건물 상태·층·접근성·이용상황 같은 개별요인에 따라 실제 가격은 달라질 수 있습니다.")
+# B-08: 화면 근거에 영문 유형 코드가 그대로 나가지 않게 한다.
+_ASSET_KO = {"commercial": "상업업무", "factory": "공장창고", "detached": "단독다가구", "all": "전체 유형"}
+
+
+def _asset_ko(value: Any) -> Any:
+    if not isinstance(value, str) or not value.strip():
+        return value
+    parts = [p.strip() for p in value.split(",") if p.strip()]
+    return "·".join(_ASSET_KO.get(p, p) for p in parts)
+
+
+def _calc_caution(app: Any) -> str:
+    return _CALC_CAUTION if app in (None, "land") else _CALC_CAUTION_PROPERTY
 _UNRELATED = re.compile(r"(?:오늘\s*)?(?:저녁|점심)\s*메뉴\s*(?:추천해\s*줘|추천해주세요)|(?:오늘\s*)?날씨\s*(?:알려줘|알려주세요)")
 _UNOBSERVED = ("규모의 경제", "생산비용", "생산 비용", "인과")
 _AFFIRM = ("맞습니다", "맞아요", "맞네요", "맞는 말", "있다고 할 수", "관찰된다", "관찰됩니다", "일치합니다", "말할 수 있")
@@ -113,12 +129,16 @@ class ScreenEvidence:
     observation_terms: list[str] = field(default_factory=list)
     base: Any = None
 
-    def number(self, label: str, value: Any, unit: str = "") -> None:
+    def number(self, label: str, value: Any, unit: str = "", digits: int | None = None) -> None:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             return
         if isinstance(value, float) and not math.isfinite(value):
             return
-        number = str(value) if isinstance(value, int) else f"{value:.8g}"
+        # B-08: digits 를 주면 화면과 같은 자리수로 반올림해 준다 (복합 회귀 R² 3자리 등).
+        if digits is not None and isinstance(value, float):
+            number = f"{value:.{digits}f}"
+        else:
+            number = str(value) if isinstance(value, int) else f"{value:.8g}"
         self.values[len(self.facts)] = f"{number}{unit}"
         self.facts.append(f"{label} {number}{unit}")
 
@@ -137,9 +157,11 @@ def _rows(value: Any) -> list[dict]:
 
 def _screen(ctx: AiContext) -> ScreenEvidence:
     raw = ctx.facts
+    scope = ctx.scope.model_dump()
+    scope["asset_type"] = _asset_ko(scope.get("asset_type"))
     result = ScreenEvidence({
         "app": ctx.app, "panel": ctx.panel, "purpose": ctx.purpose,
-        "scope": ctx.scope.model_dump(),
+        "scope": scope,
     })
     for key in ("zone_type", "land_category", "scatter_tab", "trend_metric"):
         if isinstance(raw.get(key), str):
@@ -368,7 +390,8 @@ def _built_term(name: str, scale: str) -> str:
         return labels[name]
     for prefix, kind in (("zone_", "용도지역"), ("use_", "건축물용도"), ("struct_", "구조"), ("road_", "도로조건"), ("atype_", "유형"), ("loc_", "지역")):
         if name.startswith(prefix):
-            return f"{kind} {name[len(prefix):]}"
+            level = name[len(prefix):]
+            return f"{kind} {_asset_ko(level) if prefix == 'atype_' else level}"
     return name[:80]
 
 
@@ -384,10 +407,10 @@ def _built_regression(result: ScreenEvidence, raw: dict) -> None:
         "식에는 절편과 p<0.1인 항만 표시된다. 추정금액은 표시되지 않은 항을 포함한 전체 적합 모형으로 계산된다."
     )
     result.number("적합 표본", primary.get("n"), "건")
-    result.number("R²", primary.get("r_squared"))
-    result.number("조정 R²", primary.get("adj_r_squared"))
-    result.number("학습 MAPE", primary.get("mape"), "%")
-    result.number("CV-MAPE", primary.get("cv_mape"), "%")
+    result.number("R²", primary.get("r_squared"), digits=3)
+    result.number("조정 R²", primary.get("adj_r_squared"), digits=3)
+    result.number("학습 MAPE", primary.get("mape"), "%", digits=2)
+    result.number("CV-MAPE", primary.get("cv_mape"), "%", digits=2)
     result.number("모형 F 검정 p값", primary.get("f_p_value"))
     if isinstance(primary.get("warning"), str) and primary["warning"].strip():
         result.notes.append(primary["warning"][:240])
@@ -399,8 +422,9 @@ def _built_regression(result: ScreenEvidence, raw: dict) -> None:
     ):
         value = options.get(key)
         if isinstance(value, str) and value.strip():
-            result.notes.append(f"{kind} 기준 범주 {value[:100]}")
-            result.identifiers.append(value[:100])
+            shown_value = _asset_ko(value) if key == "asset_type_reference" else value
+            result.notes.append(f"{kind} 기준 범주 {shown_value[:100]}")
+            result.identifiers.append(shown_value[:100])
     for row in _rows(primary.get("coefficients"))[:80]:
         name = str(row.get("name") or "")
         if not name:
@@ -554,7 +578,7 @@ def _recommend_local(result: ScreenEvidence, raw: dict, stage1: dict, predictive
         result.number("탐색 CV-MAPE", metrics.get("cv_mape"), "%")
         result.number("확인 CV-MAPE", _confirm_mape(recommended), "%")
         result.number("학습 MAPE", metrics.get("mape"), "%")
-        result.number("조정 R²", metrics.get("adj_r_squared"))
+        result.number("조정 R²", metrics.get("adj_r_squared"), digits=3)
         rate = stage1.get("primary_cv_extreme_rate")
         if isinstance(rate, (int, float)) and not isinstance(rate, bool) and rate > 0.05:
             result.number("학습 범위를 벗어난 검증 예측", rate * 100, "%")
@@ -564,7 +588,7 @@ def _recommend_local(result: ScreenEvidence, raw: dict, stage1: dict, predictive
     else:
         result.notes.append("설명형 추천은 AIC 기준이다. 예측형 순위와 다르다.")
         result.number("AIC", recommended.get("aic"))
-        result.number("조정 R²", metrics.get("adj_r_squared"))
+        result.number("조정 R²", metrics.get("adj_r_squared"), digits=3)
         result.number("학습 MAPE", metrics.get("mape"), "%")
         result.number("탐색 CV-MAPE", metrics.get("cv_mape"), "%")
     key = "candidates_predictive" if predictive else "candidates_explanatory"
@@ -582,7 +606,7 @@ def _recommend_local(result: ScreenEvidence, raw: dict, stage1: dict, predictive
             result.number(f"{prefix}와 탐색 오차 차이", judgments.get(rank, {}).get("cv_gap_pp"), "%p")
         else:
             result.number(f"{prefix} AIC", candidate.get("aic"))
-            result.number(f"{prefix} 조정 R²", row_metrics.get("adj_r_squared"))
+            result.number(f"{prefix} 조정 R²", row_metrics.get("adj_r_squared"), digits=3)
         result.notes.append(f"{prefix}는 {_scale_name(candidate.get('response_scale'))} · {_block_line(candidate.get('blocks'))}이다.")
     selected_rank = raw.get("selected_rank")
     selected = next((row for row in candidates if row.get("rank") == selected_rank), None)
@@ -603,7 +627,7 @@ def _recommend_twin(result: ScreenEvidence, raw: dict) -> None:
         return
     pool = stage2.get("inspect_pool") if isinstance(stage2.get("inspect_pool"), dict) else {}
     result.number("Twin1 적합 표본", pool.get("n"), "건")
-    result.number("Twin1 조정 R²", pool.get("adj_r_squared"))
+    result.number("Twin1 조정 R²", pool.get("adj_r_squared"), digits=3)
     result.number("Twin1 탐색 CV-MAPE", pool.get("cv_mape"), "%")
     result.number("Twin1 확인 CV-MAPE", pool.get("confirm_cv_mape"), "%")
     result.number("Twin1 학습 MAPE", pool.get("mape"), "%")
@@ -614,7 +638,7 @@ def _recommend_twin(result: ScreenEvidence, raw: dict) -> None:
         research = stage2["research"]
         result.notes.append("Twin2 탐색 오차는 독립적인 확인 검증 결과가 아니다.")
         result.number("Twin2 적합 표본", research.get("n"), "건")
-        result.number("Twin2 조정 R²", research.get("adj_r_squared"))
+        result.number("Twin2 조정 R²", research.get("adj_r_squared"), digits=3)
         result.number("Twin2 탐색 CV-MAPE", research.get("cv_mape"), "%")
         result.number("Twin2 확인 CV-MAPE", research.get("confirm_cv_mape"), "%")
         result.number("Twin2 학습 MAPE", research.get("mape"), "%")
@@ -643,7 +667,7 @@ def _comparison_rows(result: ScreenEvidence, comparison: dict) -> None:
         row = comparison.get(key)
         if not isinstance(row, dict):
             continue
-        result.number(f"{label} 조정 R²", row.get("adj_r_squared"))
+        result.number(f"{label} 조정 R²", row.get("adj_r_squared"), digits=3)
         result.number(f"{label} 표본내 MAPE", row.get("mape"), "%")
         result.number(f"{label} CV-MAPE", row.get("cv_mape"), "%")
         result.number(f"{label} RMSE", row.get("rmse"), "만원")
@@ -669,7 +693,7 @@ def _model_selection(result: ScreenEvidence, raw: dict) -> None:
             if index == 0:
                 result.number("AIC", candidate.get("aic"))
                 result.number("BIC", candidate.get("bic"))
-                result.number("조정 R²", metrics.get("adj_r_squared"))
+                result.number("조정 R²", metrics.get("adj_r_squared"), digits=3)
                 result.number("CV-MAPE", metrics.get("cv_mape"), "%")
         return
     metrics = raw.get("metrics") if isinstance(raw.get("metrics"), dict) else {}
@@ -776,9 +800,9 @@ def _prediction(result: ScreenEvidence, raw: dict, unit: str) -> None:
     if isinstance(y_hat, (int, float)) and y_hat <= 0:
         # B-01: 음수·0 추정을 「추정금액」으로 단정하지 않는다.
         result.notes.append(
-            "모형 추정값이 0 이하다. 선형식의 외삽 결과이며 실제 거래금액이 아니다. "
-            "이 값을 추정금액·가격으로 단정해 말하지 말고, 입력 조건이 표본 범위를 벗어났거나 "
-            "선형식이 맞지 않는다는 신호로 설명한다."
+            "모형 추정값이 0 이하다. 선형식 계산 결과이며 실제 거래금액이 아니다. "
+            "이 값을 추정금액·가격으로 단정해 말하지 말고, 선형식이 이 입력 조건에 맞지 않는다는 신호로 "
+            "설명한다(표본 범위 안에서도 나올 수 있다). 외삽이라고 단정하지 않는다."
         )
     elif any(isinstance(raw.get(k), (int, float)) and raw[k] < 0 for k in ("ci_lower", "pi_lower")):
         result.notes.append("구간 하한이 0 미만이다. 금액의 하한이 아니라 선형식 구간 계산의 값으로 설명한다.")
@@ -1306,7 +1330,9 @@ def _render(draft: dict, sources: dict[str, ScreenEvidence], issues: list[str] |
     if ranges and not fragment:
         displayed += "\n\n" + " ".join(f"25~75% 분위 기준으로는 {low}~{high}입니다." for low, high in ranges)
     if calc_used and not _CAUTION_RE.search(displayed):
-        displayed += "\n\n" + _CALC_CAUTION
+        current = sources.get("current")
+        app = current.context.get("app") if current is not None else None
+        displayed += "\n\n" + _calc_caution(app)
     return displayed, evidence, next(iter(used)) if len(used) == 1 else None
 
 

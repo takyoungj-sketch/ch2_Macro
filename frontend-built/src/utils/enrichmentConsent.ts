@@ -5,7 +5,7 @@ export const ENRICH_NOTICE = [
   "모든 거래를 완벽하게 맞추기는 어려울 수 있습니다. 오류를 줄이기 위해, 연결되지 않은 건은 보강하지 않고 실거래 자료를 그대로 보여 줍니다.",
 ] as const;
 
-export const ENRICH_MATCH_RATE = "현재 매칭률 75.0% (계약 2019년 이후)";
+export const ENRICH_MATCH_RATE = "기준 연결률 75.0% (2026-08-25 집계 · 계약 2019년 이후)";
 
 export const ENRICH_LIST_BADGE = "건축물대장 확인";
 

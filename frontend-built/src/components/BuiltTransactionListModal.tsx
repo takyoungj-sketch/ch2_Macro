@@ -285,6 +285,7 @@ export default function BuiltTransactionListModal({
       <AllocationDetailDialog
         row={detailRow}
         bands={bands}
+        enrich={Boolean(exportParams.enrich)}
         override={detailId == null ? undefined : rowOverrides[detailId]}
         onOverride={patchOverride}
         onClear={(id) => {

@@ -283,6 +283,9 @@ export interface TwinValidationVerdict {
   /** T-2: 확인 CV를 채점한 내 지역 거래 수 */
   local_confirm_eval_n?: number | null;
   compared_confirm_eval_n?: number | null;
+  /** T-5: 판단 기준 — 탐색 CV(1차) · 확인 CV(탐색 CV 계산 불가 시 보조, 평가 거래 10건 이상) · 보류 */
+  judgment_basis?: "search_cv" | "confirm_cv" | "none";
+  judgment_basis_ko?: string;
 }
 
 export interface TwinExperimentStep {
@@ -788,7 +791,7 @@ export interface RegressionPredictResponse {
   response_scale?: ResponseScale;
   extrapolation_level?: number;
   y_hat_suppressed?: boolean;
-  /** B-01: 점추정 ≤ 0 — 선형식 외삽 결과(값은 그대로 표시) */
+  /** B-01: 점추정 ≤ 0 — 선형식 계산 결과(값은 그대로 표시) */
   nonpositive_estimate?: boolean;
   /** B-01: 점추정 > 0, 구간 하한 < 0 */
   negative_lower_bound?: boolean;

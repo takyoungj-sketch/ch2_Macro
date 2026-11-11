@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { StatsGlossaryHelp } from "./StatsGlossaryHelp";
 import { formatProbability } from "../../../shared/regression-ui/format";
 import type { AssetType, PredictOptions, RegressionCoeff, ResponseScale } from "../types";
@@ -52,20 +53,29 @@ type Props = {
 
 export function BasicRegressionEquation({ coefficients, assetType, responseScale, predictOptions, equation }: Props & { equation?: string }) {
   const intercept = coefficients.find(c => c.name === "const");
-  const terms = coefficients.filter(c => c.name !== "const" && isEquationSignificant(c.p_value))
+  // B-07: 기본은 유의 항만, 토글하면 적합된 전체 항. 식별 불가 계수는 구분 표시.
+  const [showAll, setShowAll] = useState(false);
+  const terms = coefficients.filter(c => c.name !== "const" && (showAll || isEquationSignificant(c.p_value)))
     .sort((a, b) => equationOrder(a.name) - equationOrder(b.name));
+  const hiddenCount = coefficients.filter(c => c.name !== "const" && !isEquationSignificant(c.p_value)).length;
   const references = dummyReferenceRows(predictOptions, assetType);
   const dependent = responseScale === "linear" ? "금액(만원)" : "log(금액)";
   return <div className="space-y-3">
     <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 dark:border-indigo-500/30 dark:bg-indigo-950/20">
-      <p className="flex items-center gap-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
-        회귀식 · 유의변수 <StatsGlossaryHelp termId="coefficient" size="xs" />
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+          회귀식 · {showAll ? "전체 계수" : "유의변수"} <StatsGlossaryHelp termId="coefficient" size="xs" />
+        </p>
+        {coefficients.length > 0 && hiddenCount > 0 && <label className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+          <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
+          전체 계수 보기 ({hiddenCount}개 더)
+        </label>}
+      </div>
       <p className="mt-2 flex flex-wrap gap-x-2 gap-y-2 text-base font-bold leading-relaxed text-yellow-700 dark:text-yellow-300" aria-label="유의변수 회귀식">
         {!coefficients.length ? <span className="break-words">{equation || "회귀식을 제공하지 않습니다."}</span> : <>
           <span>{dependent} = {intercept ? formatCoefValue(intercept.estimate) : ""}</span>
-          {terms.map((c, index) => <span key={c.name} className="max-w-full break-words">
-            {c.estimate < 0 ? "−" : intercept || index > 0 ? "+" : ""} {formatCoefValue(Math.abs(c.estimate))} × ({shortCoefName(c.name, assetType, responseScale)})
+          {terms.map((c, index) => <span key={c.name} className={`max-w-full break-words${showAll && !isEquationSignificant(c.p_value) ? " font-normal text-slate-500 dark:text-slate-400" : ""}`}>
+            {c.estimate < 0 ? "−" : intercept || index > 0 ? "+" : ""} {formatCoefValue(Math.abs(c.estimate))} × ({shortCoefName(c.name, assetType, responseScale)}){c.identifiable === false && <span className="ml-1 text-xs font-normal text-amber-700 dark:text-amber-300">[식별 불가]</span>}
           </span>)}
         </>}
       </p>

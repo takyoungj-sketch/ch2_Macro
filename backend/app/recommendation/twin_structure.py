@@ -22,6 +22,10 @@ PRACTICAL_REL = 0.02
 _JACCARD_RE = re.compile(r"Top3 Jaccard\s+([0-9.]+)", re.I)
 
 StabilityStatus = Literal["ok", "warn", "fail"]
+# T-5: 어떤 오차로 Twin을 판단했는지. 탐색 CV가 1차, 계산 불가일 때만 확인 CV 보조.
+JudgmentBasis = Literal["search_cv", "confirm_cv", "none"]
+# T-5: 확인 CV로 보조 판단하려면 같은 내 지역 평가 거래가 이 건수 이상이어야 한다.
+CONFIRM_FALLBACK_MIN_N = 10
 # unavailable: 비교할 탐색 CV가 한쪽이라도 없음 → 판정 보류 (T-1). 동등과 구분한다.
 SearchBand = Literal["improved", "tie", "worse", "unavailable"]
 
@@ -63,6 +67,8 @@ class TwinPrefixDecision(BaseModel):
     confirm_skipped_reason: Optional[str] = None
     region_effect: Optional[str] = None
     steps: list[TwinExperimentStep] = Field(default_factory=list)
+    judgment_basis: JudgmentBasis = "search_cv"
+    judgment_basis_ko: str = "탐색 CV 기준"
 
 
 def practical_band_pp(local_search_cv: float | None) -> float:
@@ -223,6 +229,67 @@ def region_effect_note(blocks: list[str] | None) -> str:
     return "지역 효과: 읍면동/리 더미 없음 (공통 기울기)"
 
 
+def _confirm_fallback(
+    decision: TwinPrefixDecision,
+    steps: list[TwinExperimentStep],
+    *,
+    local_n: int,
+    band: float,
+) -> bool:
+    """T-5: 탐색 CV가 계산 불가일 때만 확인 CV로 보조 판단한다.
+
+    같은 내 지역 평가 거래가 Local·Twin 모두 같고 CONFIRM_FALLBACK_MIN_N 이상인 Twin 행만 쓴다.
+    판단했으면 True. 거래가 모자라면 False (호출 측이 판정 보류로 둔다).
+    """
+    usable: list[tuple[TwinExperimentStep, float]] = []
+    for s in steps[1:]:
+        if s.local_confirm_cv_mape is None or s.confirm_cv_mape is None:
+            continue
+        if s.confirm_eval_n is None or s.confirm_eval_n != s.local_confirm_eval_n:
+            continue
+        if s.confirm_eval_n < CONFIRM_FALLBACK_MIN_N:
+            continue
+        usable.append((s, round(float(s.local_confirm_cv_mape) - float(s.confirm_cv_mape), 2)))
+    if not usable:
+        return False
+    best, cdelta = min(usable, key=lambda item: item[0].confirm_cv_mape or 1e9)
+    kind = classify_search_delta(cdelta, band)
+    decision.judgment_basis = "confirm_cv"
+    decision.judgment_basis_ko = f"확인 CV 기준 (탐색 CV 계산 불가 · 같은 평가 거래 {best.confirm_eval_n}건)"
+    decision.search_band = kind
+    txt = (
+        f"탐색 CV를 계산할 수 없어 확인 CV로 보조 판단했습니다: Local {best.local_confirm_cv_mape:.2f}% → "
+        f"Twin {best.confirm_cv_mape:.2f}% (Δ {cdelta:+.2f}%p, 같은 평가 거래 {best.confirm_eval_n}건)."
+    )
+    adopt = kind == "improved" and best.stability == "ok" and best.n > local_n
+    for s in steps:
+        s.selected = False
+    if adopt:
+        best.selected = True
+        best.search_picked = True
+        best.verdict_ko = "확인 CV 개선 (탐색 CV 계산 불가로 보조 판단)"
+        decision.decision = best.step_id
+        decision.selected_step_id = best.step_id
+        decision.adopt_recommended = True
+        decision.decision_reason = (
+            f"{txt} 핵심 계수 방향이 유지되어 같은 식을 Twin 표본에 재적합한 결과를 권고합니다. "
+            "기본 통계 식은 바꾸지 않습니다."
+        )
+    else:
+        steps[0].selected = True
+        decision.decision = "local"
+        decision.adopt_recommended = False
+        why = {
+            "worse": "확인 CV가 나빠졌습니다.",
+            "tie": f"차이가 실질적 개선 띠({band}%p) 안입니다.",
+        }.get(kind, "계수 안정 또는 표본 조건을 만족하지 않습니다.")
+        best.verdict_ko = {"worse": "확인 CV 악화", "tie": "확인 CV 동등(실질적 개선 띠 안)"}.get(
+            kind, "확인 CV 개선 · 계수 안정 미충족"
+        ) + " (보조 판단)"
+        decision.decision_reason = f"{txt} {why} Local을 유지합니다."
+    return True
+
+
 def decide_twin_prefix(
     *,
     local_n: int,
@@ -333,7 +400,12 @@ def decide_twin_prefix(
             for s in twin_steps
         ]
         if not twin_steps or all(b == "unavailable" for b in bands):
+            fallback = _confirm_fallback(decision, steps, local_n=local_n, band=band)
+            if fallback:
+                return decision
             decision.search_band = "unavailable"
+            decision.judgment_basis = "none"
+            decision.judgment_basis_ko = "판정 보류 (탐색 CV 계산 불가 · 확인 CV 평가 거래 부족)"
             confirm_bits = []
             for s in twin_steps:
                 if s.local_confirm_cv_mape is not None and s.confirm_cv_mape is not None:
@@ -344,7 +416,8 @@ def decide_twin_prefix(
                     )
             decision.decision_reason = (
                 "Local·Twin 탐색 CV를 같은 기준으로 계산할 수 없어(평가 연도·거래 부족) "
-                "Twin 판정을 보류하고 Local을 유지합니다. 동등하다는 뜻이 아닙니다."
+                f"Twin 판정을 보류하고 Local을 유지합니다. 확인 CV 보조 판단은 같은 평가 거래 "
+                f"{CONFIRM_FALLBACK_MIN_N}건 이상일 때만 합니다. 동등하다는 뜻이 아닙니다."
                 + (" " + " ".join(confirm_bits) if confirm_bits else "")
             )
         elif all(b == "worse" for b in bands if b != "unavailable"):

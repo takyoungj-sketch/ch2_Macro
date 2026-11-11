@@ -595,6 +595,9 @@ class TwinValidationVerdict(BaseModel):
     # T-2: 확인 CV를 채점한 내 지역 거래 수 (같으면 같은 거래로 비교한 것)
     local_confirm_eval_n: Optional[int] = None
     compared_confirm_eval_n: Optional[int] = None
+    # T-5: 판단 기준 — search_cv(1차) · confirm_cv(탐색 CV 계산 불가 시 보조) · none(보류)
+    judgment_basis: Literal["search_cv", "confirm_cv", "none"] = "search_cv"
+    judgment_basis_ko: str = "탐색 CV 기준"
 
 
 class RecommendationStage2(BaseModel):
@@ -681,7 +684,7 @@ class RegressionPredictResponse(BaseModel):
     extrapolation_level: int = 0
     y_hat_suppressed: bool = False
     # B-01: 값은 숨기거나 0으로 바꾸지 않는다. 화면·AI가 「추정금액」으로 단정하지 않게 표시만 한다.
-    nonpositive_estimate: bool = False  # 점추정 ≤ 0 — 선형식 외삽 결과
+    nonpositive_estimate: bool = False  # 점추정 ≤ 0 — 선형식 계산 결과
     negative_lower_bound: bool = False  # 점추정 > 0 이지만 평균/개별 구간 하한 < 0
     continuous_assessments: list[ContinuousExtrapolation] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)

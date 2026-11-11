@@ -26,9 +26,9 @@ export default function EnrichConsentModal({
           <p>건축물대장 자료를 활용해 건물 구조 등 추가 정보를 분석에 사용할 수 있습니다. 모든 거래에 해당 정보가 연결되는 것은 아니며, 확인되지 않은 정보는 임의로 보충하지 않습니다.</p>
         </div>
         <div className="rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-          <p className="font-semibold text-slate-800 dark:text-slate-100">기준 연결률 75.0%</p>
+          <p className="font-semibold text-slate-800 dark:text-slate-100">기준 연결률 75.0% (2026-08-25 집계)</p>
           <p>연결 498,568건 / 거래 665,030건 · 지분거래 포함</p>
-          <p>대상: 2019년 이후 계약 · 고정 집계 기준: 2026-08-25</p>
+          <p>대상: 2019년 이후 계약 · 집계 기준일 2026-08-25 고정값이며, 이후 월간 갱신분은 반영하지 않았습니다.</p>
           <p className="mt-2">실거래-대장 정보 연결률은 지역마다 다를 수 있습니다.</p>
         </div>
         <div className="inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300">활용·집계 기준 <AnalysisHelpPanel explain={BUILT_ENRICHMENT_HELP} title="건축물대장 활용·연결률 설명" /></div>

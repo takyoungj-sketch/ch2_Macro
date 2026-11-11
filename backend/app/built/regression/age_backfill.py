@@ -2,7 +2,7 @@
 
 순서는 간이 토지 배분단가(`frontend-built/src/utils/allocationCost.ts::allocationAge`)와 같다.
 실거래 건축연도(원장 `building_age`)가 있으면 그대로, 없을 때만 대장 사용승인연도로
-`계약연도 − 사용승인연도`(0 미만은 0)를 쓴다. 원장은 UPDATE하지 않는다 (D-051).
+`계약연도 − 사용승인연도`를 쓴다. 사용승인연도가 계약연도보다 뒤면 보강하지 않는다(0 클립 금지). 원장은 UPDATE하지 않는다 (D-051).
 D-051 「표시=필터」에 맞춰 연식 범위 필터는 보강한 값에 건다.
 """
 
@@ -23,12 +23,14 @@ def backfill_age_from_ledger(df: pd.DataFrame) -> pd.DataFrame:
     age = pd.to_numeric(out.get("building_age"), errors="coerce")
     approve = pd.to_numeric(out["approve_year"], errors="coerce")
     contract = pd.to_numeric(out.get("contract_year"), errors="coerce")
+    # 사용승인연도가 계약연도보다 뒤면 그 건물은 계약 당시 없었다 — 0으로 자르지 않고 보강하지 않는다.
     fill = (
         age.isna()
         & approve.between(APPROVE_YEAR_MIN, APPROVE_YEAR_MAX)
         & contract.notna()
+        & (approve <= contract)
     )
-    out["building_age"] = age.where(~fill, (contract - approve).clip(lower=0))
+    out["building_age"] = age.where(~fill, contract - approve)
     out[LEDGER_AGE_FLAG] = fill
     return out
 

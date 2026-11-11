@@ -68,13 +68,15 @@ export function allocationAge(row: AgeRow): { years: number; source: "실거래"
       return { years: Math.max(0, row.building_age), source: "실거래" };
     }
   }
+  // 사용승인연도가 계약연도보다 뒤면 그 건물은 계약 당시 없었다 — 0으로 자르지 않고 쓰지 않는다 (F-1).
   if (
     row.approve_year != null &&
     contract != null &&
     row.approve_year >= 1900 &&
-    row.approve_year <= 2100
+    row.approve_year <= 2100 &&
+    row.approve_year <= contract
   ) {
-    return { years: Math.max(0, contract - row.approve_year), source: "대장 사용승인" };
+    return { years: contract - row.approve_year, source: "대장 사용승인" };
   }
   return null;
 }

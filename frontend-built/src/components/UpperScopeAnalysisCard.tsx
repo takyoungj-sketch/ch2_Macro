@@ -168,6 +168,11 @@ export default function UpperScopeAnalysisCard({
         </button>
       </div>
 
+      {!opened && regData.primary.admin_level === "sigungu" && !comparisons.length && (
+        <p className="text-xs text-slate-500 dark:text-slate-400" data-sigungu-upper-note>
+          상위지역 재적합은 구·읍면동 초점에서 제공합니다. 시·군을 초점으로 고르면 비교할 상위 단위가 없습니다.
+        </p>
+      )}
       {!opened && (
         <p className="text-xs text-slate-400 py-2">
           「결과 보기」를 누르면 이미 계산된 상위지역 결과를 펼칩니다. 새 계산은 기본 통계분석을 다시 실행하세요.
@@ -188,7 +193,9 @@ export default function UpperScopeAnalysisCard({
 
           {!comparisons.length && (
             <p className="text-xs text-slate-400 text-center py-4">
-              재적합할 상위 단위가 없습니다 (시·군을 초점으로 고른 경우 등).
+              {regData.primary.admin_level === "sigungu"
+                ? "상위지역 재적합은 구·읍면동 초점에서 제공합니다. 시·군 초점은 그 자체가 가장 넓은 분석 단위입니다."
+                : "재적합할 상위 단위가 없습니다."}
             </p>
           )}
 

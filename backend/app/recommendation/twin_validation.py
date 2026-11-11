@@ -110,6 +110,8 @@ def build_twin_validation_verdict(
             compared_candidate_id=compared.step_id if compared else None,
             twin_adopt_recommended=adopt,
             confirm_skipped_reason=prefix.confirm_skipped_reason,
+            judgment_basis=getattr(prefix, "judgment_basis", "search_cv"),
+            judgment_basis_ko=getattr(prefix, "judgment_basis_ko", "탐색 CV 기준"),
         )
 
     if not ran:
@@ -118,6 +120,8 @@ def build_twin_validation_verdict(
             verdict="skipped",
             label_ko=_LABEL_KO["skipped"],
             summary_ko=reason,
+            judgment_basis="none",
+            judgment_basis_ko="검증 생략",
             epsilon_pp=epsilon_pp,
             practical_band_pp=epsilon_pp,
             local_cv_mape=local_cv_mape,
@@ -137,6 +141,8 @@ def build_twin_validation_verdict(
             verdict="unavailable",
             label_ko=_LABEL_KO["unavailable"],
             summary_ko="Local·Twin CV-MAPE를 비교할 수 없어 판정을 보류합니다. 동등하다는 뜻이 아닙니다.",
+            judgment_basis="none",
+            judgment_basis_ko="판정 보류 (비교할 CV 없음)",
             epsilon_pp=epsilon_pp,
             local_cv_mape=local_cv_mape,
             compared_cv_mape=compared.cv_mape if compared else None,

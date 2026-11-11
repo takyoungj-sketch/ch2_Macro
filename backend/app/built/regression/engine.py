@@ -2157,8 +2157,8 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
 
 
 NONPOSITIVE_ESTIMATE_WARNING = (
-    "추정값이 0 이하입니다. 선형식의 외삽 결과이며 실제 거래금액을 의미하지 않습니다. "
-    "입력 조건이 표본과 다르거나 선형식이 이 범위에 맞지 않을 수 있으니 Macro 모형 탐색에서 "
+    "추정값이 0 이하입니다. 선형식 계산 결과이며 실제 거래금액을 의미하지 않습니다. "
+    "선형식이 이 입력 조건에 맞지 않을 수 있으니(표본 범위 안에서도 나옵니다) Macro 모형 탐색에서 "
     "다른 척도(log·log-log)나 변수 조합을 확인해 보세요."
 )
 NEGATIVE_LOWER_BOUND_WARNING = (

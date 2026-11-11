@@ -322,7 +322,12 @@ def _leverage(model) -> np.ndarray | None:
 
 def _tx_label(row: pd.Series, leaf_col: str) -> str:
     bits = [row.get(leaf_col), row.get("addr5")]
-    out = " ".join(str(b).strip() for b in bits if b is not None and str(b).strip())
+    # RS-2: NaN·None·빈 문자열은 빼고 붙인다 ("복대동 nan" 방지)
+    out = " ".join(
+        str(b).strip()
+        for b in bits
+        if b is not None and pd.notna(b) and str(b).strip() and str(b).strip().lower() != "nan"
+    )
     return out or "주소 미상"
 
 
@@ -510,7 +515,7 @@ def build_residual_diagnostics(
     if nonpositive_n:
         nonpositive_note = (
             f"예측금액이 0 이하인 거래 {nonpositive_n}건이 포함되어 있습니다. "
-            "선형식의 외삽 결과이며 실제 거래금액을 뜻하지 않습니다. 그래프·표에는 값을 그대로 둡니다."
+            "선형식 계산 결과이며 실제 거래금액을 뜻하지 않습니다. 그래프·표에는 값을 그대로 둡니다."
         )
 
     warning = None

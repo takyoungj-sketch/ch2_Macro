@@ -110,6 +110,7 @@ export default function MacroTwinResults(props: RecommendStagePanelProps & { onO
     <Card title="Twin1 · 기존 식 재적합" status={twin1State} description="선택한 지역의 거래를 보태 Local 식을 다시 적합합니다.">
       {stage2?.ran && twin1 && <p className="text-sm text-slate-500 dark:text-slate-400">실제 사용 지역 · {regionNames(twin1.region_codes)}</p>}
       {!!stage2?.ran && <p className="text-sm">{stage2.twin_validation?.twin_adopt_recommended ? "기존 검증 기준에서 확장 재적합을 권고했습니다." : verdictKind === "unavailable" ? "같은 기준의 검증 오차가 없어 판정을 보류했습니다(동등 아님). Local 기준선을 유지합니다." : "기존 검증 기준에서는 Local 기준선을 유지합니다."}</p>}
+      {!!stage2?.ran && stage2.twin_validation?.judgment_basis_ko && <p className="text-sm text-slate-600 dark:text-slate-300" data-twin-judgment-basis>판단 기준 · {stage2.twin_validation.judgment_basis_ko}</p>}
       {stage2?.ran && !twin1 && <p className="text-sm text-amber-800 dark:text-amber-300">확장은 완료했지만 적합된 Twin1 모형이 제공되지 않았습니다.</p>}
       {stage2?.skipped_reason && !stage2.ran && <p className="text-sm text-amber-800 dark:text-amber-300">{stage2.skipped_reason}</p>}
       {twin1 && stage2?.ran && estimate(twin1, "twin1", Boolean(twin1PredictActiveLabel?.startsWith("Twin 재적합")) && twin1PredictIdentity === poolIdentity(twin1), twin1PredictPanel)}
