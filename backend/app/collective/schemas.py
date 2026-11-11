@@ -621,6 +621,12 @@ class CohortAnalysisRequest(BaseModel):
     experiment: bool = False
 
 
+class CohortRegressionRunRequest(CohortAnalysisRequest):
+    """주거 코호트 회귀 실행 — 단일 단지 회귀와 같은 범주 결측 처리(N-3)."""
+
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
+
+
 class CohortFloorIndexResponse(BaseModel):
     building_keys: list[str]
     cohort_buildings: list[CohortBuildingSummary]

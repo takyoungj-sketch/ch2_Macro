@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import type { MapAdminLevel } from "../utils/mapRegionScope";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 
@@ -9,16 +10,19 @@ const mapApi = axios.create({
   baseURL: "/api",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(mapApi, "collective", "map");
 
 const collectiveApi = axios.create({
   baseURL: "/api/collective",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(collectiveApi, "collective", "map");
 
 const commercialApi = axios.create({
   baseURL: "/api/collective/commercial",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(commercialApi, "collective", "map");
 
 export type MapConfigResponse = {
   vworld_configured: boolean;

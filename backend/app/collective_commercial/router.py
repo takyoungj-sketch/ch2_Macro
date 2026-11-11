@@ -588,6 +588,8 @@ def list_cluster_addresses(
     addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
+    contract_date_from: Optional[date] = None,
+    contract_date_to: Optional[date] = None,
 ):
     """도로(cluster) 내 번지·읍면동별 ㎡당 단가 — 목록 조회와 동일 지역 필터 적용."""
     where, params = _tx_where(
@@ -598,6 +600,8 @@ def list_cluster_addresses(
         addr4_list=addr4_list or None,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
+        contract_date_from=contract_date_from,
+        contract_date_to=contract_date_to,
         col_prefix="t",
     )
     params["cluster_key"] = cluster_key
@@ -728,6 +732,8 @@ def cluster_stats_by_year(
     addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
+    contract_date_from: Optional[date] = None,
+    contract_date_to: Optional[date] = None,
 ):
     conn = db.connection()
     scoped = any(
@@ -738,6 +744,8 @@ def cluster_stats_by_year(
             addr4_list,
             contract_year_from is not None,
             contract_year_to is not None,
+            contract_date_from is not None,
+            contract_date_to is not None,
         ]
     )
     if not scoped:
@@ -759,6 +767,8 @@ def cluster_stats_by_year(
         addr4_list=addr4_list or None,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
+        contract_date_from=contract_date_from,
+        contract_date_to=contract_date_to,
     )
     params["cluster_key"] = cluster_key
     rows = db.execute(
@@ -808,6 +818,8 @@ def cluster_histogram(
     addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
+    contract_date_from: Optional[date] = None,
+    contract_date_to: Optional[date] = None,
     bins: int = Query(12, ge=4, le=40),
     contract_year: Optional[int] = None,
 ):
@@ -819,6 +831,8 @@ def cluster_histogram(
         addr4_list=addr4_list or None,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
+        contract_date_from=contract_date_from,
+        contract_date_to=contract_date_to,
     )
     params["cluster_key"] = cluster_key
     if contract_year is not None:

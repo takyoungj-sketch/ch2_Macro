@@ -1,8 +1,10 @@
 import axios from "axios";
 
 import type { MapAdminLevel } from "../utils/mapRegionScope";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 const api = axios.create({ baseURL: "/api" });
+attachApiScreenHeader(api, "land", "map");
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 if (_API_TOKEN) {

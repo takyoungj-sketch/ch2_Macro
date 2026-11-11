@@ -12,12 +12,14 @@ import type {
   SangkwonSeriesResponse,
   StatsWindowYears,
 } from "../types";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
   baseURL: "/api/rent",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(api, "rent", "main");
 
 export async function fetchRentMeta(windowYears: StatsWindowYears) {
   const { data } = await api.get<{ addr1: string[]; as_of_month: string | null }>(

@@ -33,6 +33,7 @@ from app.collective.schemas import (
     AnalysisExplain,
     AnalysisFeatures,
     CohortAnalysisRequest,
+    CohortRegressionRunRequest,
     CohortBuildingSummary,
     CohortFloorIndexResponse,
     CohortHistogramResponse,
@@ -383,7 +384,7 @@ def cohort_floor_index(body: CohortAnalysisRequest, db: Session = Depends(get_co
 
 
 @router.post("/regression/run", response_model=CohortRegressionResponse)
-def cohort_regression(body: CohortAnalysisRequest, db: Session = Depends(get_collective_db)):
+def cohort_regression(body: CohortRegressionRunRequest, db: Session = Depends(get_collective_db)):
     keys = _cohort_keys(body)
     df, summaries = _cohort_regression_frame(db, body, keys)
     years = [int(y) for y in df["contract_year"].dropna().tolist()]
@@ -407,6 +408,7 @@ def cohort_regression(body: CohortAnalysisRequest, db: Session = Depends(get_col
         contract_year_to=body.contract_year_to,
         variables=body.variables,
         model_type=body.model_type,
+        categorical_missing=body.categorical_missing,
         exclude_outliers_iqr=body.exclude_outliers_iqr,
         outlier_iqr_multiplier=body.outlier_iqr_multiplier,
         experiment=body.experiment,

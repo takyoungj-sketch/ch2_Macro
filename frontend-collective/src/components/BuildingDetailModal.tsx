@@ -1,6 +1,7 @@
 import TargetPicker from "../../../shared/regression-ui/TargetPicker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
+import { setApiScreen } from "@ch2/macro-shell/apiScreen";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
@@ -538,6 +539,10 @@ export default function BuildingDetailModal({
   useEffect(() => {
     if (narrow) setPanel("trend");
   }, [narrow]);
+  useEffect(() => {
+    setApiScreen(`residential-detail/${panel}`);
+    return () => setApiScreen(null);
+  }, [panel]);
   const [cohortExtra, setCohortExtra] = useState<string[]>([]);
   const [cohortRunKeys, setCohortRunKeys] = useState<string[]>([]);
   const [cohortRunByPanel, setCohortRunByPanel] = useState<Partial<Record<PanelMode, number>>>({});

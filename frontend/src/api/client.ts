@@ -24,6 +24,7 @@ import type {
 import { normalizeFreeStatsWindowYears } from "../types";
 import { filenameFromContentDisposition, saveBlobAsFile } from "../utils/downloadBlob";
 import { viteOptionalV2AsOfMonth } from "../utils/freeStatsV2";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 /**
  * DECISIONS D-007 — 빌드 시 `VITE_API_TOKEN` 이 주입돼 있으면 모든 API 호출에 `X-Api-Token` 헤더를 단다.
@@ -34,6 +35,7 @@ const api = axios.create({
   baseURL: "/api",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(api, "land", "main");
 
 /** 전체 카탈로그: limit 미지정·비검색 시 4만 행 규모 로드(search 시 서버에서 짧게 캡). */
 export const fetchRegions = async (params?: {

@@ -18,17 +18,20 @@ import type {
   RegressionRecommendResponse,
   ScopeSampleFilterResponse,
 } from "../types";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
   baseURL: "/api/built",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(api, "built", "main");
 // Regional Profile은 복합(built)과 별도 도메인 API — /api/built가 아니라 /api 루트.
 const profileApi = axios.create({
   baseURL: "/api",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(profileApi, "built", "main");
 
 export interface TransactionQueryParams {
   asset_type?: string;

@@ -61,6 +61,9 @@ async def _lifespan(app: FastAPI):
     else:
         _LOG.info("API_TOKEN 미설정 — 인증 미들웨어 비활성 (개발/로컬 모드)")
     yield
+    from app.api_param_warn import AGGREGATOR
+
+    AGGREGATOR.close()
 
 
 app = FastAPI(
@@ -78,6 +81,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1500)
+# 집합 1단계 C-05 — 미지원 파라미터 경고·집계(요청은 그대로 통과, 값은 기록하지 않음).
+from app.api_param_warn import ApiParamWarnMiddleware  # noqa: E402
+
+app.add_middleware(ApiParamWarnMiddleware)
 
 
 # DECISIONS D-007 — `API_TOKEN` 환경변수가 비어 있으면 통과(개발), 값이 있으면 검사.

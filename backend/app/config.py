@@ -96,6 +96,11 @@ class Settings(BaseSettings):
     ai_monthly_budget_krw: float = Field(default=10000, validation_alias="AI_MONTHLY_BUDGET_KRW")
     ai_usd_krw: float = Field(default=1400, validation_alias="AI_USD_KRW")
     ai_usage_log_dir: str = Field(default="", validation_alias="AI_USAGE_LOG_DIR")
+    #: 집합 1단계 C-05 — 미지원 파라미터 경고·집계 모드(이름만 기록, 거절 없음).
+    api_param_warn_enabled: bool = Field(default=True, validation_alias="API_PARAM_WARN_ENABLED")
+    #: JSONL 경로. 상대 경로는 저장소 루트 기준. 운영 경로는 배포 때 정한다.
+    api_param_warn_path: str = Field(default="logs/api_param_warn.jsonl", validation_alias="API_PARAM_WARN_PATH")
+    api_param_warn_flush_seconds: int = Field(default=3600, validation_alias="API_PARAM_WARN_FLUSH_SECONDS")
     #: Enable only after db/077_platform_ai_allowances.sql and client rollout.
     ai_subscription_quota_enabled: bool = Field(default=False, validation_alias="AI_SUBSCRIPTION_QUOTA_ENABLED")
     ai_max_output_tokens: int = Field(default=8000, ge=512, le=16000, validation_alias="AI_MAX_OUTPUT_TOKENS")

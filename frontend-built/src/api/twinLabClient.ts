@@ -1,10 +1,12 @@
 import axios from "axios";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const labApi = axios.create({
   baseURL: "/api",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(labApi, "built", "twin");
 
 export type TwinLabVersionKey = "v0" | "v1" | "v2" | "v3" | "v2x" | "r0" | "r1" | "t1" | "rt" | "fp" | "rnd";
 

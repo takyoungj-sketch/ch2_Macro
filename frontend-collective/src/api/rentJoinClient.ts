@@ -1,10 +1,12 @@
 import axios from "axios";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
   baseURL: "/api/rent",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(api, "collective", "rent-join");
 
 export type RentJoinMetric = {
   n: number;

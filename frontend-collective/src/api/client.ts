@@ -29,12 +29,14 @@ import type {
   YearlyStatPoint,
   YearlyStatsResponse,
 } from "../types";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 export const api = axios.create({
   baseURL: "/api/collective",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(api, "collective", "residential");
 
 function apiAssetParam(assetType?: AssetSelectorType): string | undefined {
   if (!assetType || assetType === "all") return undefined;

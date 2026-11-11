@@ -22,12 +22,14 @@ import type {
   RegionOption,
   RegionStructure,
 } from "../types";
+import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
   baseURL: "/api/collective/commercial",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+attachApiScreenHeader(api, "collective", "commercial");
 
 function apiCommercialAssetParam(assetType?: CommercialAssetSelectorType): string | undefined {
   if (!assetType || assetType === "all") return undefined;
@@ -537,7 +539,7 @@ export async function predictCommercialCohortRegression(
     experiment: body.experiment ?? false,
     inputs: body.inputs,
     cluster_keys: body.cluster_keys,
-    asset_type: body.asset_type,
+    // asset_type 은 보내지 않는다: cluster 가 유형을 정하고, 서버는 거래 행의 유형을 쓴다 (집합 1단계 C-05).
     contract_year_from: body.contract_year_from,
     contract_year_to: body.contract_year_to,
     contract_date_from: body.contract_date_from,
