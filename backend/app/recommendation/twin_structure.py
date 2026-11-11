@@ -22,7 +22,8 @@ PRACTICAL_REL = 0.02
 _JACCARD_RE = re.compile(r"Top3 Jaccard\s+([0-9.]+)", re.I)
 
 StabilityStatus = Literal["ok", "warn", "fail"]
-SearchBand = Literal["improved", "tie", "worse"]
+# unavailable: 비교할 탐색 CV가 한쪽이라도 없음 → 판정 보류 (T-1). 동등과 구분한다.
+SearchBand = Literal["improved", "tie", "worse", "unavailable"]
 
 
 class TwinExperimentStep(BaseModel):
@@ -42,6 +43,13 @@ class TwinExperimentStep(BaseModel):
     selected: bool = False
     search_picked: bool = False
     verdict_ko: str = ""
+    # T-2: 이 행의 CV를 채점한 내 지역 거래 수와, 같은 거래로 잰 Local 값
+    search_eval_n: Optional[int] = None
+    confirm_eval_n: Optional[int] = None
+    local_search_cv_mape: Optional[float] = None
+    local_confirm_cv_mape: Optional[float] = None
+    local_search_eval_n: Optional[int] = None
+    local_confirm_eval_n: Optional[int] = None
 
 
 class TwinPrefixDecision(BaseModel):
@@ -66,7 +74,7 @@ def practical_band_pp(local_search_cv: float | None) -> float:
 
 def classify_search_delta(delta: float | None, band: float) -> SearchBand:
     if delta is None:
-        return "tie"
+        return "unavailable"
     if delta >= band:
         return "improved"
     if delta <= -band:
@@ -77,6 +85,8 @@ def classify_search_delta(delta: float | None, band: float) -> SearchBand:
 def improvement_label(delta: float | None, band: float) -> str:
     """채택 문턱이 아니라 Twin 결과 설명용."""
     kind = classify_search_delta(delta, band)
+    if kind == "unavailable":
+        return "계산 불가"
     if kind == "tie":
         return "사실상 동등"
     if kind == "worse":
@@ -242,12 +252,24 @@ def decide_twin_prefix(
     steps = [local_step]
     eligible: list[TwinExperimentStep] = []
 
+    def _num(v):
+        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    def _int(v):
+        return int(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
     for row in prefixes:
         search = row.get("search_cv_mape")
         search_f = float(search) if isinstance(search, (int, float)) else None
+        # T-2: 같은 내 지역 검증거래로 잰 Local 값이 있으면 그것과 비교한다.
+        paired = row.get("scored_on") == "anchor_common"
+        row_local_search = _num(row.get("local_search_cv_mape")) if paired else local_search_cv
+        row_local_confirm = _num(row.get("local_confirm_cv_mape")) if paired else local_confirm_cv
+        search_n, local_search_n = _int(row.get("search_eval_n")), _int(row.get("local_search_eval_n"))
         delta = None
-        if local_search_cv is not None and search_f is not None:
-            delta = round(float(local_search_cv) - search_f, 2)
+        same_trades = not paired or (search_n is not None and search_n == local_search_n)
+        if row_local_search is not None and search_f is not None and same_trades:
+            delta = round(float(row_local_search) - search_f, 2)
         coeffs = row.get("key_coefficients") if isinstance(row.get("key_coefficients"), dict) else {}
         stab, notes = coeff_stability(local_coeffs, {str(k): float(v) for k, v in coeffs.items() if isinstance(v, (int, float))})
         n = int(row.get("n") or 0)
@@ -260,6 +282,7 @@ def decide_twin_prefix(
             "improved": "탐색 CV 개선",
             "tie": "탐색 CV 동등(실질적 개선 띠 안)",
             "worse": "탐색 CV 악화",
+            "unavailable": "탐색 CV 계산 불가 — 판정 보류",
         }[band_kind]
         if stab == "fail":
             verdict = "계수 불안정 — 채택 제외"
@@ -277,26 +300,65 @@ def decide_twin_prefix(
             stability=stab,
             selected=False,
             verdict_ko=verdict,
+            search_eval_n=search_n,
+            confirm_eval_n=_int(row.get("confirm_eval_n")),
+            local_search_cv_mape=row_local_search,
+            local_confirm_cv_mape=row_local_confirm,
+            local_search_eval_n=local_search_n,
+            local_confirm_eval_n=_int(row.get("local_confirm_eval_n")),
         )
         steps.append(step)
         if stab != "fail" and band_kind == "improved" and n > local_n:
             eligible.append(step)
 
+    # T-2: Local 행에도 같은 거래로 잰 평가 건수를 보인다.
+    first_paired = next((s for s in steps[1:] if s.local_confirm_eval_n is not None or s.local_search_eval_n is not None), None)
+    if first_paired is not None:
+        local_step.search_eval_n = first_paired.local_search_eval_n
+        local_step.confirm_eval_n = first_paired.local_confirm_eval_n
+    # T-4: 지역 효과 문구는 실제 Twin 식(지역 더미 포함 여부) 기준으로 적는다.
+    twin_blocks = next((p.get("blocks") for p in prefixes if isinstance(p.get("blocks"), list)), None)
     decision = TwinPrefixDecision(
         practical_band_pp=band,
         confirm_skipped_reason=confirm_skipped_reason,
-        region_effect=region_effect_note(local_blocks),
+        region_effect=region_effect_note(twin_blocks if twin_blocks is not None else local_blocks),
         steps=steps,
     )
 
     if not eligible:
         decision.decision = "local"
-        decision.decision_reason = (
-            "Local 식을 Twin 표본에 다시 적합했으나, 탐색 CV의 실질적 개선과 계수 안정을 "
-            "함께 만족하는 접두가 없어 Local을 유지합니다. 표본이 늘었다는 것만으로 "
-            "채택하지 않습니다."
-        )
-        decision.search_band = "tie"
+        twin_steps = steps[1:]
+        bands = [
+            classify_search_delta(s.search_cv_delta, band) if s.stability != "fail" or s.search_cv_delta is not None else "unavailable"
+            for s in twin_steps
+        ]
+        if not twin_steps or all(b == "unavailable" for b in bands):
+            decision.search_band = "unavailable"
+            confirm_bits = []
+            for s in twin_steps:
+                if s.local_confirm_cv_mape is not None and s.confirm_cv_mape is not None:
+                    same_n = s.confirm_eval_n is not None and s.confirm_eval_n == s.local_confirm_eval_n
+                    n_txt = f", 같은 평가 거래 {s.confirm_eval_n}건" if same_n else ""
+                    confirm_bits.append(
+                        f"확인 CV는 Local {s.local_confirm_cv_mape:.2f}% · Twin {s.confirm_cv_mape:.2f}%{n_txt}로 참고만 합니다."
+                    )
+            decision.decision_reason = (
+                "Local·Twin 탐색 CV를 같은 기준으로 계산할 수 없어(평가 연도·거래 부족) "
+                "Twin 판정을 보류하고 Local을 유지합니다. 동등하다는 뜻이 아닙니다."
+                + (" " + " ".join(confirm_bits) if confirm_bits else "")
+            )
+        elif all(b == "worse" for b in bands if b != "unavailable"):
+            decision.search_band = "worse"
+            decision.decision_reason = (
+                "Local 식을 Twin 표본에 다시 적합했으나 탐색 CV가 나빠져 Local을 유지합니다."
+            )
+        else:
+            decision.search_band = "tie"
+            decision.decision_reason = (
+                "Local 식을 Twin 표본에 다시 적합했으나, 탐색 CV의 실질적 개선과 계수 안정을 "
+                "함께 만족하는 접두가 없어 Local을 유지합니다. 표본이 늘었다는 것만으로 "
+                "채택하지 않습니다."
+            )
         steps[0].selected = True
         return decision
 
@@ -317,12 +379,25 @@ def decide_twin_prefix(
 
     confirm_ok = True
     confirm_note = ""
+    if winner.local_confirm_cv_mape is not None or winner.local_search_cv_mape is not None:
+        local_confirm_cv = winner.local_confirm_cv_mape
     if confirm_skipped_reason:
         confirm_ok = False
         confirm_note = confirm_skipped_reason
     elif local_confirm_cv is None or winner.confirm_cv_mape is None:
         confirm_ok = False
         confirm_note = "확인 CV를 산출할 연도가 부족합니다."
+        decision.confirm_skipped_reason = confirm_note
+    elif (
+        winner.local_confirm_eval_n is not None
+        and winner.confirm_eval_n is not None
+        and winner.local_confirm_eval_n != winner.confirm_eval_n
+    ):
+        confirm_ok = False
+        confirm_note = (
+            f"확인 CV 평가 거래 수가 달라(Local {winner.local_confirm_eval_n}건 · "
+            f"Twin {winner.confirm_eval_n}건) 비교를 보류합니다."
+        )
         decision.confirm_skipped_reason = confirm_note
     else:
         cdelta = round(float(local_confirm_cv) - float(winner.confirm_cv_mape), 2)

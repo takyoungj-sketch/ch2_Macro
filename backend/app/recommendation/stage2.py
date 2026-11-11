@@ -112,6 +112,14 @@ def _pool_candidate(
         prefix_k=int(m.prefix_k or 0),
         key_coefficients=dict(m.key_coefficients or {}),
         sample_lock_blocks=list(getattr(m, "sample_lock_blocks", None) or []),
+        search_eval_n=m.search_eval_n,
+        confirm_eval_n=m.confirm_eval_n,
+        paired_local_cv_mape=m.paired_local_cv_mape,
+        paired_local_confirm_cv_mape=m.paired_local_confirm_cv_mape,
+        paired_local_search_eval_n=m.paired_local_search_eval_n,
+        paired_local_confirm_eval_n=m.paired_local_confirm_eval_n,
+        scored_on=m.scored_on,
+        region_dummy_note=m.region_dummy_note,
     )
 
 
@@ -200,11 +208,24 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
                 "confirm_cv_mape": c.confirm_cv_mape,
                 "key_coefficients": dict(c.key_coefficients or {}),
                 "blocks": list(c.blocks),
+                # T-2: 같은 내 지역 검증거래로 채점한 Local 값과 건수
+                "scored_on": c.scored_on,
+                "search_eval_n": c.search_eval_n,
+                "confirm_eval_n": c.confirm_eval_n,
+                "local_search_cv_mape": c.paired_local_cv_mape,
+                "local_confirm_cv_mape": c.paired_local_confirm_cv_mape,
+                "local_search_eval_n": c.paired_local_search_eval_n,
+                "local_confirm_eval_n": c.paired_local_confirm_eval_n,
             }
         )
 
     local_search = local_metrics.cv_mape if local_metrics else local_cv
     local_confirm = local_metrics.confirm_cv_mape if local_metrics else None
+    paired = next((c for c in rank1_candidates if c.scored_on == "anchor_common"), None)
+    if paired is not None:
+        # Local 표시값도 Twin과 같은 내 지역 검증거래로 잰 값으로 맞춘다 (T-2).
+        local_search = paired.paired_local_cv_mape
+        local_confirm = paired.paired_local_confirm_cv_mape
     local_n = int(local_metrics.n) if local_metrics else int(getattr(inp.primary_raw.fit, "n", 0) or 0)
     local_coeffs = dict(local_metrics.key_coefficients) if local_metrics else key_coefficients_from_fit(inp.primary_raw.fit)
 
@@ -264,6 +285,10 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
             twin_region_codes=twin_codes,
             admin_level=inp.ctx.admin_level,
             region_col=inp.region_col,
+            local_fit=inp.primary_raw.fit,
+            # T-3: 제품 Twin2는 일반 사용자에게 보이므로 Twin1과 같이 지역 더미를 붙인다.
+            force_region_leaf=True,
+            forced_region_col=twin1_region_col,
         )
         if research_metrics is None:
             research_skipped_reason = "선택한 지역 표본에서 식을 다시 고를 수 없습니다."

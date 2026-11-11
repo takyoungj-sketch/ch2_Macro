@@ -39,6 +39,7 @@ from app.recommendation.ranks import (
     candidate_from_compare,
     pick_alternate_explanatory,
     pick_primary_predictive,
+    predictive_ranking_basis,
     representative_verdict,
 )
 from app.recommendation.cv_fitness import offer_structure_twin
@@ -273,7 +274,10 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
     if result is None:
         raise ValueError("1단계 추천 모형을 적합할 수 없습니다. 표본·scope를 확인하세요.")
 
-    primary_raw = pick_primary_predictive(result.by_cv_mape, result.by_mape, result.by_aic)
+    basis, predictive_raw, basis_label, basis_years = predictive_ranking_basis(result)
+    primary_raw = pick_primary_predictive(
+        result.by_cv_mape, result.by_mape, result.by_aic, result.by_partial_cv
+    )
     if primary_raw is None:
         raise ValueError("적합된 후보 모형이 없습니다.")
 
@@ -291,12 +295,23 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
         asset_slice=analysis_scope.asset_slice,
     )
 
-    predictive_raw = result.by_cv_mape or result.by_mape
     predictive = [candidate_from_compare(c) for c in predictive_raw]
     judgments, parity_notes = annotate_predictive_band(
         predictive, ns=[c.fit.n for c in predictive_raw]
     )
     representative_confirmed, representative_note = representative_verdict(primary_fit)
+    if basis == "partial_cv":
+        parity_notes.insert(
+            0,
+            "모든 후보가 탐색 CV 일부 연도를 채점하지 못해, 같은 평가 거래를 쓴 후보끼리 "
+            f"{basis_label}으로 순위를 냈습니다.",
+        )
+    elif basis == "withheld":
+        representative_confirmed = False
+        representative_note = (
+            "같은 평가 기준으로 비교할 수 있는 탐색 CV가 없어 대표 추천을 보류했습니다. "
+            "후보 표는 학습 MAPE 순이며 예측 오차 순위가 아닙니다."
+        )
     stage1 = RecommendationStage1(
         candidates_explanatory=[candidate_from_compare(c) for c in result.by_aic],
         candidates_predictive=predictive,
@@ -326,6 +341,9 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
         assessed_side=_assessed_side(ctx, primary_raw, req),
         representative_confirmed=representative_confirmed,
         representative_note=representative_note,
+        ranking_basis=basis,  # type: ignore[arg-type]
+        ranking_basis_label=basis_label,
+        ranking_cv_years=basis_years,
     )
 
     bundle = _Stage1Bundle(
@@ -431,6 +449,7 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
         truncated=stage1.truncated,
         stage2=stage2,
         proceed_twin=twin_recommended,
+        has_twins=has_twins,
     )
 
     conclusion = build_recommendation_conclusion(

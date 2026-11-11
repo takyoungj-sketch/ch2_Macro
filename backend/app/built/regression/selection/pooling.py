@@ -140,6 +140,9 @@ def research_full_twin_pool(
     twin_region_codes: tuple[str, ...],
     admin_level: str,
     region_col: str | None,
+    local_fit: BlockFitResult | None = None,
+    force_region_leaf: bool = False,
+    forced_region_col: str | None = None,
 ) -> PoolingCandidateMetrics | None:
     """통과한 선택 지역을 모두 합쳐 Stage1과 같은 예측형 풀로 식을 다시 고른다."""
     _gates, passed = filter_twins_by_hard_gates(
@@ -164,6 +167,10 @@ def research_full_twin_pool(
         admin_level=admin_level,
         region_col=region_col,
         prefix_k=len(selected),
+        local_fit=local_fit,
+        local_region_col=region_col,
+        force_region_leaf=force_region_leaf,
+        forced_region_col=forced_region_col,
     )
 
 
@@ -273,6 +280,33 @@ def _pool_adjuster(
     return TimeAdjuster(pooled_rows, max_complete_year=last_complete_year(req_as_of))
 
 
+def _cv_phases(
+    df,
+    blocks,
+    response_scale,
+    *,
+    unified: bool,
+    region_col: str | None,
+    time_adjuster: TimeAdjuster | None = None,
+    score_ids: set | None = None,
+):
+    from app.built.regression.selection.fit import _rolling_time_cv_mape
+
+    mask = None
+    if score_ids is not None and "transaction_id" in df.columns:
+        mask = df["transaction_id"].isin(score_ids)
+    return _rolling_time_cv_mape(
+        df,
+        spec_from_blocks(blocks),
+        unified=unified,
+        response_scale=response_scale,
+        region_col=region_col,
+        holdout_last_year=True,
+        time_adjuster=time_adjuster,
+        score_mask=mask,
+    )
+
+
 def _attach_search_confirm_cv(
     metrics: PoolingCandidateMetrics,
     df,
@@ -280,20 +314,20 @@ def _attach_search_confirm_cv(
     unified: bool,
     region_col: str | None,
     time_adjuster: TimeAdjuster | None = None,
+    score_ids: set | None = None,
 ) -> PoolingCandidateMetrics:
     if not metrics.blocks or metrics.response_scale is None:
         return metrics
-    from app.built.regression.selection.fit import _rolling_time_cv_mape, search_evaluation_complete
+    from app.built.regression.selection.fit import search_evaluation_complete
 
-    spec = spec_from_blocks(metrics.blocks)
-    search, confirm = _rolling_time_cv_mape(
+    search, confirm = _cv_phases(
         df,
-        spec,
+        metrics.blocks,
+        metrics.response_scale,
         unified=unified,
-        response_scale=metrics.response_scale,
         region_col=region_col,
-        holdout_last_year=True,
         time_adjuster=time_adjuster,
+        score_ids=score_ids,
     )
     if search_evaluation_complete(search):
         metrics.cv_mape = search.mape
@@ -303,6 +337,65 @@ def _attach_search_confirm_cv(
         metrics.cv_folds = search.folds
     metrics.confirm_cv_mape = confirm.mape
     metrics.confirm_cv_folds = confirm.folds
+    metrics.search_eval_n = int(search.n_trades) if search.mape is not None else None
+    metrics.confirm_eval_n = int(confirm.n_trades) if confirm.mape is not None else None
+    return metrics
+
+
+def _anchor_common_ids(local_df, pooled_df) -> set | None:
+    """두 표본 모두에 남은 내 지역 거래 id. 한쪽에 id가 없으면 None (기존 채점)."""
+    if "transaction_id" not in getattr(local_df, "columns", ()) or "transaction_id" not in getattr(
+        pooled_df, "columns", ()
+    ):
+        return None
+    local_ids = set(local_df["transaction_id"].dropna().tolist())
+    pooled_ids = set(pooled_df["transaction_id"].dropna().tolist())
+    common = local_ids & pooled_ids
+    return common or None
+
+
+def _attach_paired_anchor_cv(
+    metrics: PoolingCandidateMetrics,
+    *,
+    local_ctx: SelectionContext,
+    local_fit: BlockFitResult | None,
+    local_region_col: str | None,
+    pooled_ctx: SelectionContext,
+    twin_region_col: str | None,
+) -> PoolingCandidateMetrics:
+    """T-2: Local·Twin을 **같은 내 지역 검증거래**로 채점한다.
+
+    학습: Local = 내 지역, Twin = 내 지역 + 쌍둥이 (둘 다 연도 < t 만).
+    채점: 두 표본에 공통으로 남은 내 지역 거래만. 확인 CV도 같은 원칙.
+    시점 보정 지수는 각자의 것을 쓴다 — 제품 기본 time_adjust=False(D-075)라 기본 경로 영향 없음.
+    """
+    common = _anchor_common_ids(local_ctx.df, pooled_ctx.df)
+    metrics = _attach_search_confirm_cv(
+        metrics,
+        pooled_ctx.df,
+        unified=local_ctx.unified,
+        region_col=twin_region_col,
+        time_adjuster=pooled_ctx.time_adjuster,
+        score_ids=common,
+    )
+    if common is None or local_fit is None:
+        return metrics
+    from app.built.regression.selection.fit import search_evaluation_complete
+
+    l_search, l_confirm = _cv_phases(
+        local_ctx.df,
+        list(local_fit.blocks),
+        local_fit.response_scale,
+        unified=local_ctx.unified,
+        region_col=local_region_col,
+        time_adjuster=local_ctx.time_adjuster,
+        score_ids=common,
+    )
+    metrics.scored_on = "anchor_common"
+    metrics.paired_local_cv_mape = l_search.mape if search_evaluation_complete(l_search) else None
+    metrics.paired_local_confirm_cv_mape = l_confirm.mape
+    metrics.paired_local_search_eval_n = int(l_search.n_trades) if l_search.mape is not None else None
+    metrics.paired_local_confirm_eval_n = int(l_confirm.n_trades) if l_confirm.mape is not None else None
     return metrics
 
 
@@ -320,6 +413,8 @@ def _fit_pool_variant(
     region_col: str | None,
     response_scale: ResponseScale | None = None,
     prefix_k: int = 0,
+    local_fit: BlockFitResult | None = None,
+    local_region_col: str | None = None,
 ) -> PoolingCandidateMetrics | None:
     pool_codes = tuple(dict.fromkeys((*anchor_region_codes, *twin_codes)))
     pooled_rows = fetch_candidate_rows(
@@ -393,12 +488,13 @@ def _fit_pool_variant(
         blocks=blocks,
         prefix_k=prefix_k,
     )
-    return _attach_search_confirm_cv(
+    return _attach_paired_anchor_cv(
         metrics,
-        pooled_ctx.df,
-        unified=local_ctx.unified,
-        region_col=region_col,
-        time_adjuster=pooled_ctx.time_adjuster,
+        local_ctx=local_ctx,
+        local_fit=local_fit,
+        local_region_col=local_region_col,
+        pooled_ctx=pooled_ctx,
+        twin_region_col=region_col,
     )
 
 
@@ -415,8 +511,17 @@ def _research_pool_variant(
     admin_level: str,
     region_col: str | None,
     prefix_k: int = 0,
+    local_fit: BlockFitResult | None = None,
+    local_region_col: str | None = None,
+    force_region_leaf: bool = False,
+    forced_region_col: str | None = None,
 ) -> PoolingCandidateMetrics | None:
-    """확장 표본 위에서 stage1과 동일 SSOT 풀로 best-subset 재탐색."""
+    """확장 표본 위에서 stage1과 동일 SSOT 풀로 best-subset 재탐색.
+
+    `force_region_leaf`(T-3, 제품 Twin2): 재탐색으로 고른 식에 Twin1과 같이 지역 더미를
+    붙여 다시 적합한다. 지역마다 금액 수준이 다른데 공통 절편 하나로 섞이는 것을 막는다.
+    재적합이 안 되거나 지역 더미가 식별되지 않으면 더미 없는 식을 두고 사유를 남긴다.
+    """
     pool_codes = tuple(dict.fromkeys((*anchor_region_codes, *twin_codes)))
     pooled_rows = fetch_candidate_rows(
         conn,
@@ -468,7 +573,8 @@ def _research_pool_variant(
         unified=local_ctx.unified,
         time_adjuster=_pool_adjuster(local_ctx, pooled_rows, req.as_of_month),
     )
-    pooled_ctx = with_complete_case(pooled_ctx, pool_blocks, region_col=region_col)
+    leaf_col = forced_region_col if force_region_leaf and forced_region_col else region_col
+    pooled_ctx = with_complete_case(pooled_ctx, pool_blocks, region_col=leaf_col)
     if pooled_ctx.selection_n < local_ctx.selection_n:
         return None
 
@@ -482,25 +588,91 @@ def _research_pool_variant(
         return None
     from app.recommendation.ranks import pick_primary_predictive
 
-    primary = pick_primary_predictive(result.by_cv_mape, result.by_mape, result.by_aic)
+    primary = pick_primary_predictive(
+        result.by_cv_mape, result.by_mape, result.by_aic, result.by_partial_cv
+    )
     if primary is None:
         return None
+    chosen_fit = primary.fit
+    chosen_blocks = list(primary.blocks)
+    dummy_note = None
+    fit_region_col = region_col
+    if force_region_leaf:
+        dummy_note, chosen_fit, chosen_blocks, fit_region_col = _with_region_dummy(
+            pooled_ctx,
+            primary,
+            unified=local_ctx.unified,
+            admin_level=admin_level,
+            region_col=leaf_col,
+            fallback_region_col=region_col,
+        )
     metrics = _metrics_from_fit(
         variant_id,
         label,
-        primary.fit,
+        chosen_fit,
         pool_codes,
-        blocks=list(primary.blocks),
+        blocks=chosen_blocks,
         prefix_k=prefix_k,
         sample_lock_blocks=list(pool_blocks),
     )
-    return _attach_search_confirm_cv(
+    metrics.region_dummy_note = dummy_note
+    return _attach_paired_anchor_cv(
         metrics,
-        pooled_ctx.df,
-        unified=local_ctx.unified,
-        region_col=region_col,
-        time_adjuster=pooled_ctx.time_adjuster,
+        local_ctx=local_ctx,
+        local_fit=local_fit,
+        local_region_col=local_region_col,
+        pooled_ctx=pooled_ctx,
+        twin_region_col=fit_region_col,
     )
+
+
+def _with_region_dummy(
+    pooled_ctx: SelectionContext,
+    primary,
+    *,
+    unified: bool,
+    admin_level: str,
+    region_col: str | None,
+    fallback_region_col: str | None,
+):
+    """T-3: 재탐색 식 + region_leaf 재적합. 식별·적합이 안 되면 원래 식과 사유를 돌려준다."""
+    blocks = list(primary.blocks)
+    if "region_leaf" in blocks:
+        return "지역 더미 포함 (재탐색 식에 이미 있음)", primary.fit, blocks, region_col
+    if not region_col or region_col not in pooled_ctx.df.columns:
+        return "지역 열이 없어 지역 더미를 적용하지 못했습니다.", primary.fit, blocks, fallback_region_col
+    levels = pooled_ctx.df[region_col].dropna().astype(str).str.strip()
+    if levels[levels != ""].nunique() < 2:
+        return "확장 표본의 지역이 하나뿐이라 지역 더미를 적용하지 않았습니다.", primary.fit, blocks, fallback_region_col
+    with_leaf = [*blocks, "region_leaf"]
+    try:
+        fit = fit_block_subset(
+            pooled_ctx.df,
+            with_leaf,
+            unified=unified,
+            response_scale=primary.fit.response_scale,
+            region_col=region_col,
+            admin_level=admin_level,
+            time_adjuster=pooled_ctx.time_adjuster,
+        )
+    except Exception:  # noqa: BLE001 — 더미 재적합 실패가 Twin2를 막으면 안 된다
+        fit = None
+    if fit is None:
+        return "지역 더미를 넣은 식을 적합하지 못해 더미 없는 재탐색 식을 표시합니다.", primary.fit, blocks, fallback_region_col
+    model = getattr(fit, "model", None)
+    if model is not None:
+        from app.built.regression.engine import nonidentifiable_columns
+
+        names = [str(c) for c in model.params.index]
+        bad = [c for c in nonidentifiable_columns(model.model.exog, names) if c.startswith("loc_")]
+        if bad:
+            return (
+                "지역 더미가 다른 변수와 겹쳐 식별되지 않아 더미 없는 재탐색 식을 표시합니다.",
+                primary.fit,
+                blocks,
+                fallback_region_col,
+            )
+    return "지역 더미 포함 (재탐색 식 + 지역 더미, Twin1과 같은 처리)", fit, with_leaf, region_col
 
 
 def _primary_value(c: PoolingCandidateMetrics) -> float | None:
@@ -645,6 +817,8 @@ def evaluate_pooling_candidates(
                 admin_level=admin_level,
                 region_col=region_col,
                 prefix_k=prefix_k,
+                local_fit=local_fit,
+                local_region_col=region_col,
             )
         else:
             metrics = _fit_pool_variant(
@@ -660,6 +834,8 @@ def evaluate_pooling_candidates(
                 region_col=diagnose_region_col,
                 response_scale=fixed_response_scale or getattr(local_fit, "response_scale", None),
                 prefix_k=prefix_k,
+                local_fit=local_fit,
+                local_region_col=region_col,
             )
         if metrics is not None:
             all_candidates.append(metrics)

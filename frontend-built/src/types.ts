@@ -225,6 +225,10 @@ export interface RecommendationStage1 {
   /** 탐색 1위를 대표모형으로 확정했는지. 순위는 그대로다. */
   representative_confirmed?: boolean;
   representative_note?: string | null;
+  /** R-1: 예측형 순위 근거 — 전체 탐색 CV · 같은 평가 서명 부분 CV · 대표 추천 보류 */
+  ranking_basis?: "full_cv" | "partial_cv" | "withheld";
+  ranking_basis_label?: string;
+  ranking_cv_years?: number[];
 }
 
 export interface RecommendationPoolCandidate {
@@ -244,9 +248,20 @@ export interface RecommendationPoolCandidate {
   key_coefficients?: Record<string, number>;
   structure_score?: number | null;
   sample_lock_blocks?: string[];
+  /** T-2: 같은 내 지역 검증거래로 채점 */
+  search_eval_n?: number | null;
+  confirm_eval_n?: number | null;
+  paired_local_cv_mape?: number | null;
+  paired_local_confirm_cv_mape?: number | null;
+  paired_local_search_eval_n?: number | null;
+  paired_local_confirm_eval_n?: number | null;
+  scored_on?: string | null;
+  /** T-3: Twin2 지역 더미 적용 결과 */
+  region_dummy_note?: string | null;
 }
 
-export type TwinValidationVerdictKind = "improved" | "tie" | "worse" | "skipped";
+/** unavailable: 실행했지만 같은 기준의 CV가 없어 판정 보류 (동등 아님, T-1). */
+export type TwinValidationVerdictKind = "improved" | "tie" | "worse" | "unavailable" | "skipped";
 
 export interface TwinValidationVerdict {
   verdict: TwinValidationVerdictKind;
@@ -262,6 +277,9 @@ export interface TwinValidationVerdict {
   compared_candidate_id?: string | null;
   twin_adopt_recommended: boolean;
   confirm_skipped_reason?: string | null;
+  /** T-2: 확인 CV를 채점한 내 지역 거래 수 */
+  local_confirm_eval_n?: number | null;
+  compared_confirm_eval_n?: number | null;
 }
 
 export interface TwinExperimentStep {
@@ -279,6 +297,13 @@ export interface TwinExperimentStep {
   selected: boolean;
   search_picked?: boolean;
   verdict_ko: string;
+  /** T-2: 채점한 내 지역 거래 수와 같은 거래로 잰 Local 값 */
+  search_eval_n?: number | null;
+  confirm_eval_n?: number | null;
+  local_search_cv_mape?: number | null;
+  local_confirm_cv_mape?: number | null;
+  local_search_eval_n?: number | null;
+  local_confirm_eval_n?: number | null;
 }
 
 export interface RecommendationStage2 {

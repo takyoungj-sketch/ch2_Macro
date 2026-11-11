@@ -31,6 +31,7 @@ _LABEL_KO = {
     "improved": "개선",
     "tie": "동등",
     "worse": "악화",
+    "unavailable": "계산 불가",
     "skipped": "검증 생략",
 }
 
@@ -76,6 +77,8 @@ def build_twin_validation_verdict(
         search_band = prefix.search_band
         if not ran:
             verdict = "skipped"
+        elif search_band == "unavailable":
+            verdict = "unavailable"
         elif search_band == "improved" and adopt:
             verdict = "improved"
         elif search_band == "worse":
@@ -90,6 +93,7 @@ def build_twin_validation_verdict(
                 default=None,
             )
         local_step = prefix.steps[0] if prefix.steps else None
+        twin_step = compared or (prefix.steps[1] if len(prefix.steps) > 1 else None)
         return TwinValidationVerdict(
             verdict=verdict,
             label_ko=_LABEL_KO[verdict],
@@ -100,7 +104,9 @@ def build_twin_validation_verdict(
             compared_cv_mape=compared.search_cv_mape if compared else None,
             cv_mape_delta=compared.search_cv_delta if compared else None,
             local_confirm_cv_mape=local_step.confirm_cv_mape if local_step else None,
-            compared_confirm_cv_mape=compared.confirm_cv_mape if compared else None,
+            compared_confirm_cv_mape=twin_step.confirm_cv_mape if twin_step else None,
+            local_confirm_eval_n=twin_step.local_confirm_eval_n if twin_step else None,
+            compared_confirm_eval_n=twin_step.confirm_eval_n if twin_step else None,
             compared_candidate_id=compared.step_id if compared else None,
             twin_adopt_recommended=adopt,
             confirm_skipped_reason=prefix.confirm_skipped_reason,
@@ -128,9 +134,9 @@ def build_twin_validation_verdict(
 
     if local_cv_mape is None or compared is None or compared.cv_mape is None:
         return TwinValidationVerdict(
-            verdict="skipped",
-            label_ko=_LABEL_KO["skipped"],
-            summary_ko="Local·Twin CV-MAPE를 비교할 수 없어 판정을 생략합니다.",
+            verdict="unavailable",
+            label_ko=_LABEL_KO["unavailable"],
+            summary_ko="Local·Twin CV-MAPE를 비교할 수 없어 판정을 보류합니다. 동등하다는 뜻이 아닙니다.",
             epsilon_pp=epsilon_pp,
             local_cv_mape=local_cv_mape,
             compared_cv_mape=compared.cv_mape if compared else None,

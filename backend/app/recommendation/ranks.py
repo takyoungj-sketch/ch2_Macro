@@ -48,13 +48,42 @@ def pick_primary_predictive(
     by_cv_mape: list[CompareCandidate],
     by_mape: list[CompareCandidate],
     by_aic: list[CompareCandidate],
+    by_partial_cv: list[CompareCandidate] | None = None,
 ) -> CompareCandidate | None:
-    """예측형 1위 — CV-MAPE → MAPE → AIC 순 fallback."""
+    """예측형 1위 — 전체 탐색 CV → 같은 서명 부분 CV → MAPE → AIC 순 fallback (R-1)."""
     if by_cv_mape:
         return by_cv_mape[0]
+    if by_partial_cv:
+        return by_partial_cv[0]
     if by_mape:
         return by_mape[0]
     return by_aic[0] if by_aic else None
+
+
+def _span(years) -> str:
+    ys = sorted(int(y) for y in years)
+    if not ys:
+        return ""
+    return f"{ys[0]}" if ys[0] == ys[-1] else f"{ys[0]}~{ys[-1]}"
+
+
+def predictive_ranking_basis(result) -> tuple[str, list[CompareCandidate], str, list[int]]:
+    """R-1: 예측형 순위의 근거(full_cv·partial_cv·withheld), 순위 목록, 화면 표기, 연도.
+
+    1. 탐색 CV를 끝까지 채점한 후보가 있으면 그 순위.
+    2. 없으면 evaluation_signature가 같은 부분 CV 후보끼리 순위.
+    3. 그것도 없으면 대표 추천을 보류한다 (후보 표는 학습 MAPE 순으로 계속 보인다).
+    """
+    if result.by_cv_mape:
+        years = sorted(result.by_cv_mape[0].fit.cv_search.years)
+        span = _span(years)
+        return "full_cv", list(result.by_cv_mape), f"탐색 CV({span}) 기준" if span else "탐색 CV 기준", years
+    partial = getattr(result, "by_partial_cv", None) or []
+    if partial:
+        years = sorted(getattr(result, "partial_cv_years", ()) or partial[0].fit.cv_search.years)
+        span = _span(years)
+        return "partial_cv", list(partial), f"부분 CV({span}) 기준" if span else "부분 CV 기준", years
+    return "withheld", list(result.by_mape), "대표 추천 보류 · 학습 MAPE 순 표시", []
 
 
 def pick_alternate_explanatory(by_aic: list[CompareCandidate]) -> CompareCandidate | None:

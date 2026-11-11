@@ -17,7 +17,7 @@ function Help({ candidate }: { candidate: ModelCandidate }) {
   return <AnalysisHelpPanel title="후보 비교와 검증 기준 설명" explain={{
     spec_id: "macro_local_comparison", spec_version: "1", title: "후보 비교와 검증 기준",
     summary: "탐색 오차는 후보 선정에, 확인 오차는 선정에 쓰지 않은 마지막 연도의 확인에 사용합니다. 두 오차는 평가 기간과 거래가 다를 수 있습니다.",
-    interpretation: ["예측형 순위는 제공된 탐색 CV 기준입니다. 설명형 추천은 기존 로그·로그-로그 후보의 AIC 기준을 유지합니다.", "같은 평가 거래·분할·계산 기준이 확인된 후보만 성능 유사로 표시합니다. 표본 수가 같다는 이유만으로 직접 비교하지 않습니다.", "회귀식은 기본회귀와 같이 유의한 변수만 표시합니다. 실제 적합된 전체 변수는 계수 표에서 확인할 수 있습니다.", "탐색 후보 자료에는 기준 범주가 제공되지 않습니다. 조건별 추정을 열면 재적합한 모형의 실제 기준 범주를 확인할 수 있습니다."],
+    interpretation: ["예측형 순위는 탐색 CV를 모든 연도에서 채점한 후보 기준입니다. 그런 후보가 없으면 같은 평가 거래를 쓴 후보끼리 부분 CV로 순위를 내고, 그것도 없으면 대표 추천을 보류합니다. 설명형 추천은 기존 로그·로그-로그 후보의 AIC 기준을 유지합니다.", "같은 평가 거래·분할·계산 기준이 확인된 후보만 성능 유사로 표시합니다. 표본 수가 같다는 이유만으로 직접 비교하지 않습니다.", "회귀식은 기본회귀와 같이 유의한 변수만 표시합니다. 실제 적합된 전체 변수는 계수 표에서 확인할 수 있습니다.", "탐색 후보 자료에는 기준 범주가 제공되지 않습니다. 조건별 추정을 열면 재적합한 모형의 실제 기준 범주를 확인할 수 있습니다."],
     controls: [`탐색 CV: ${coverage(candidate.cv_report?.search)}`, `확인 CV: ${coverage(candidate.cv_report?.confirm)}`, "성능 유사는 탐색 최저 오차와 1.0%p 이내이며 평가 기준의 일치가 확인된 경우입니다. 통계적 동률을 뜻하지 않습니다."],
     limitations: ["학습 MAPE는 모형을 적합한 자료 안의 오차입니다. 새로운 거래의 예측 성능을 직접 뜻하지 않습니다.", "AIC는 같은 표본과 종속변수 척도에서 비교해야 합니다. 서로 다른 척도의 수치만으로 성능 우열을 판단하지 마세요.", "조건별 추정은 선택한 변수로 다시 적합합니다. 숫자 변수의 결측에 따라 탐색 표본과 추정용 적합 표본 수가 다를 수 있습니다.", "용도지역이 여러 개인 필지는 원자료의 제1용도지역으로 분석합니다. 면적이나 가격 영향이 가장 큰 용도지역이라는 뜻은 아닙니다.", "로그모형의 금액 환산과 보정은 기존 추정 계산을 따릅니다. 회귀계수와 금액을 직접 같은 단위로 비교하지 마세요."], presets: [], interpretation_hints: [],
   }} />;
@@ -45,17 +45,20 @@ export default function MacroLocalResults({ mode, data, assetType, onPredict, pr
   if (!recommended || !selected) return <p className="py-4 text-sm text-slate-500">이 분석에서 {predictive ? "예측형" : "설명형"} 추천 모형을 제공하지 않습니다.</p>;
   const selectedLabel = `${predictive ? "예측형" : "설명형"} 후보 ${selected.rank} · ${formatResponseScale(selected.response_scale)} · ${variables(selected)}`;
   const confirmed = stage1.representative_confirmed !== false;
+  const basis = stage1.ranking_basis ?? "full_cv";
+  const basisLabel = stage1.ranking_basis_label || (basis === "withheld" ? "대표 추천 보류" : "탐색 CV 기준");
   const warning = predictive ? data.warnings[0] : null;
   return <div role="tabpanel" aria-label={predictive ? "예측형 결과" : "설명형 결과"} className="space-y-4 pt-3">
     <section className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-950/20 space-y-3">
-      <div className="flex items-center gap-2"><h3 className="text-base font-semibold">추천 모형 요약 · {predictive ? "예측 오차 기준" : "설명력·복잡도 기준"}</h3><Help candidate={recommended} /></div>
+      <div className="flex items-center gap-2"><h3 className="text-base font-semibold">추천 모형 요약 · {predictive ? basisLabel : "설명력·복잡도 기준"}</h3><Help candidate={recommended} /></div>
       <p className="text-sm">{formatResponseScale(recommended.response_scale)} · {variables(recommended)}</p>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {predictive ? <><Metric label="탐색 CV-MAPE" value={number(recommended.metrics.cv_mape, 2, "%")} /><Metric label="확인 CV-MAPE" value={number(recommended.cv_report?.confirm?.mape, 2, "%")} /></> : <><Metric label="AIC" value={number(recommended.aic, 1)} /><Metric label="조정 R²" value={number(recommended.metrics.adj_r_squared, 3)} /></>}
         <Metric label="학습 MAPE" value={number(recommended.metrics.mape, 2, "%")} />
         <Metric label={predictive ? "조정 R²" : "탐색 CV-MAPE"} value={predictive ? number(recommended.metrics.adj_r_squared, 3) : number(recommended.metrics.cv_mape, 2, "%")} />
       </div>
-      {predictive && !confirmed && <p role="status" className="text-sm text-amber-800 dark:text-amber-300">탐색 1위 후보이며 대표 예측모형은 미확정입니다. {stage1.representative_note || "검증 표본과 확인 오차를 확인해 주세요."}</p>}
+      {predictive && basis === "partial_cv" && <p role="status" className="text-sm text-amber-800 dark:text-amber-300">모든 후보가 탐색 CV 일부 연도를 채점하지 못했습니다. 같은 평가 거래를 쓴 후보끼리 {basisLabel}으로 순위를 냈습니다.</p>}
+      {predictive && !confirmed && <p role="status" className="text-sm text-amber-800 dark:text-amber-300">{basis === "withheld" ? "" : "탐색 1위 후보이며 대표 예측모형은 미확정입니다. "}{stage1.representative_note || "검증 표본과 확인 오차를 확인해 주세요."}</p>}
       {predictive && recommended.cv_report?.confirm?.mape == null && <p className="text-sm text-amber-800 dark:text-amber-300">확인 CV-MAPE가 제공되지 않았습니다.</p>}
       {(recommended.cv_report?.search?.requested_years?.length ?? 0) > (recommended.cv_report?.search?.folds ?? 0) && <p className="text-sm text-amber-800 dark:text-amber-300">탐색 검증을 일부 연도에서만 완료했습니다. 평가 범위는 도움말에서 확인해 주세요.</p>}
       {!predictive && <p className="text-sm text-slate-600 dark:text-slate-300">기존 AIC 기준으로 추천한 모형입니다. 예측형의 추천 순위와는 구분해서 읽어 주세요.</p>}

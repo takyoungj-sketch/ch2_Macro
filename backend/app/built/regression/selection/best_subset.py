@@ -40,6 +40,40 @@ class CompareResult:
     by_cv_mape: list[CompareCandidate]
     total_subsets: int
     truncated: bool
+    # R-1: 탐색 CV를 끝까지 채점한 후보가 없을 때만 쓴다. 평가 서명이 같은 부분 CV
+    # 후보끼리만 순위를 낸다 (서명이 다르면 채점 거래가 달라 비교할 수 없다).
+    by_partial_cv: list[CompareCandidate] | None = None
+    partial_cv_years: tuple[int, ...] = ()
+
+
+def _rank_partial_cv(
+    scored: list[tuple[list[BlockId], BlockFitResult, object | None]],
+) -> tuple[list[CompareCandidate], tuple[int, ...]]:
+    """부분 완료 탐색 CV 후보를 같은 evaluation_signature 그룹 안에서만 순위 짓는다.
+
+    여러 서명이 있으면 후보가 가장 많은 그룹(동률이면 채점 거래가 많은 쪽)을 쓴다.
+    """
+    groups: dict[str, list[tuple[list[BlockId], BlockFitResult, object | None]]] = {}
+    for blocks, fit, cmp in scored:
+        phase = fit.cv_search
+        if phase.mape is None or not phase.evaluation_signature:
+            continue
+        if search_evaluation_complete(phase):
+            continue
+        groups.setdefault(phase.evaluation_signature, []).append((blocks, fit, cmp))
+    if not groups:
+        return [], ()
+    best = max(
+        groups.values(),
+        key=lambda rows: (len(rows), max(r[1].cv_search.n_trades for r in rows)),
+    )
+    best.sort(key=lambda x: float(x[1].cv_search.mape))  # type: ignore[arg-type]
+    years = tuple(best[0][1].cv_search.years)
+    out = [
+        CompareCandidate(rank=i + 1, blocks=b, fit=f, model_comparison=c)
+        for i, (b, f, c) in enumerate(best[:TOP_K])
+    ]
+    return out, years
 
 
 def _rank_candidates(
@@ -116,6 +150,8 @@ def run_group_best_subset(
         total_subsets=total,
         truncated=truncated,
     )
+    if not result.by_cv_mape:
+        result.by_partial_cv, result.partial_cv_years = _rank_partial_cv(scored_pred)
     _attach_joint_f_to_ranked(ctx, result, region_col=region_col)
     return result
 
@@ -128,7 +164,9 @@ def _attach_joint_f_to_ranked(
 ) -> None:
     """랭킹에 오른 후보만 Joint F를 붙인다 — 순위 산정에는 쓰이지 않는다."""
     done: set[tuple[tuple[BlockId, ...], str]] = set()
-    for ranking in (result.by_cv_mape, result.by_mape, result.by_aic, result.by_bic):
+    for ranking in (
+        result.by_cv_mape, result.by_partial_cv or [], result.by_mape, result.by_aic, result.by_bic
+    ):
         for candidate in ranking:
             key = (tuple(candidate.blocks), candidate.fit.response_scale)
             if key in done:

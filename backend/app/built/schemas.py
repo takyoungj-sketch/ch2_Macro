@@ -535,6 +535,11 @@ class RecommendationStage1(BaseModel):
     # 탐색 1위를 대표모형으로 확정했는지. 순위는 바꾸지 않는다.
     representative_confirmed: bool = True
     representative_note: Optional[str] = None
+    # R-1: 예측형 순위의 근거. full_cv=탐색 CV 전체 · partial_cv=같은 평가 서명 부분 CV ·
+    # withheld=비교 가능한 CV 없음 → 대표 추천 보류 (후보 표는 학습 MAPE 순).
+    ranking_basis: Literal["full_cv", "partial_cv", "withheld"] = "full_cv"
+    ranking_basis_label: str = ""
+    ranking_cv_years: list[int] = Field(default_factory=list)
 
 
 class RecommendationPoolCandidate(BaseModel):
@@ -555,12 +560,23 @@ class RecommendationPoolCandidate(BaseModel):
     structure_score: Optional[float] = None
     # 이 후보를 적합하기 전에 숫자 결측을 뺀 블록. 추정은 같은 목록으로 표본을 고정한다.
     sample_lock_blocks: list[str] = Field(default_factory=list)
+    # T-2: Local·Twin을 같은 내 지역 검증거래로 채점한 결과
+    search_eval_n: Optional[int] = None
+    confirm_eval_n: Optional[int] = None
+    paired_local_cv_mape: Optional[float] = None
+    paired_local_confirm_cv_mape: Optional[float] = None
+    paired_local_search_eval_n: Optional[int] = None
+    paired_local_confirm_eval_n: Optional[int] = None
+    scored_on: Optional[str] = None  # "anchor_common" = 두 표본 공통 내 지역 거래
+    # T-3: Twin2 지역 더미 적용 결과
+    region_dummy_note: Optional[str] = None
 
 
 class TwinValidationVerdict(BaseModel):
     """Local vs Twin 접두 실험 판정. 탐색 CV로 고르고 확인 CV로 권고."""
 
-    verdict: Literal["improved", "tie", "worse", "skipped"]
+    # unavailable: 실행했지만 같은 기준의 CV가 없어 판정 보류 (T-1). skipped: 실행 안 함.
+    verdict: Literal["improved", "tie", "worse", "unavailable", "skipped"]
     label_ko: str
     summary_ko: str
     epsilon_pp: float = 0.5
@@ -573,6 +589,9 @@ class TwinValidationVerdict(BaseModel):
     compared_candidate_id: Optional[str] = None
     twin_adopt_recommended: bool = False
     confirm_skipped_reason: Optional[str] = None
+    # T-2: 확인 CV를 채점한 내 지역 거래 수 (같으면 같은 거래로 비교한 것)
+    local_confirm_eval_n: Optional[int] = None
+    compared_confirm_eval_n: Optional[int] = None
 
 
 class RecommendationStage2(BaseModel):
@@ -748,6 +767,16 @@ class PoolingCandidateMetrics(BaseModel):
     prefix_k: int = 0
     key_coefficients: dict[str, float] = Field(default_factory=dict)
     sample_lock_blocks: list[str] = Field(default_factory=list)
+    # T-2: Local·Twin을 같은 내 지역 검증거래로 채점한 결과
+    search_eval_n: Optional[int] = None
+    confirm_eval_n: Optional[int] = None
+    paired_local_cv_mape: Optional[float] = None
+    paired_local_confirm_cv_mape: Optional[float] = None
+    paired_local_search_eval_n: Optional[int] = None
+    paired_local_confirm_eval_n: Optional[int] = None
+    scored_on: Optional[str] = None  # "anchor_common" = 두 표본 공통 내 지역 거래
+    # T-3: Twin2 지역 더미 적용 결과
+    region_dummy_note: Optional[str] = None
 
 
 class DecisionConfidence(BaseModel):

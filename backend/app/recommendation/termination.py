@@ -60,6 +60,7 @@ def build_termination_r2(
     truncated: bool,
     stage2: RecommendationStage2 | None,
     proceed_twin: bool | None = None,
+    has_twins: bool | None = None,
 ) -> TerminationInfo:
     reasons: list[str] = []
     action: TerminationAction = "stop"
@@ -89,7 +90,13 @@ def build_termination_r2(
         if want_twin:
             action = "proceed_twin"
             next_hint = grade.note or "Profile Twin 2단계 검토를 권장합니다."
-            reasons.append("Twin 후보 미전달 또는 2단계 미실행")
+            # T-4: 실행 상태를 구분해 적는다.
+            if has_twins is False:
+                reasons.append("Twin 후보가 전달되지 않았습니다.")
+            elif has_twins is True:
+                reasons.append("Twin 후보는 있으나 Twin1을 아직 실행하지 않았습니다.")
+            else:
+                reasons.append("Twin 후보 미전달 또는 2단계 미실행")
         return TerminationInfo(
             stage_reached=1,
             action=action,
@@ -113,9 +120,20 @@ def build_termination_r2(
             next_stage_hint=next_hint,
         )
 
-    reasons.append("2단계 Twin pool 검토 완료 (1단계 식·스케일 고정)")
+    reasons.append("2단계 Twin1 실행 완료 (1단계 식·척도 고정 + 지역 더미)")
     if stage2.decision_reason:
         reasons.append(stage2.decision_reason)
+    if getattr(stage2, "research_ran", False):
+        research = getattr(stage2, "research", None)
+        if research is not None:
+            note = getattr(research, "region_dummy_note", None)
+            reasons.append("Twin2 재탐색 실행 완료" + (f" — {note}" if note else ""))
+        else:
+            reasons.append(
+                "Twin2 재탐색 실행 — " + (getattr(stage2, "research_skipped_reason", None) or "모형이 제공되지 않았습니다.")
+            )
+    else:
+        reasons.append("Twin2 재탐색은 아직 실행하지 않았습니다.")
 
     if stage2.primary and stage2.primary.cv_mape_delta is not None:
         if stage2.primary.cv_mape_delta > 0:

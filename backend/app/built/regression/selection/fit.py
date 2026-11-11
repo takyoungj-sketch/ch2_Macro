@@ -268,8 +268,13 @@ def _rolling_time_cv_mape(
     region_col: str | None,
     holdout_last_year: bool = False,
     time_adjuster: TimeAdjuster | None = None,
+    score_mask: pd.Series | None = None,
 ) -> tuple[CvPhase, CvPhase]:
     """과거 연도로 학습하고 다음 연도를 평가하는 rolling CV-MAPE.
+
+    `score_mask`(df 인덱스 기준 bool)를 주면 **채점만** 그 행으로 제한한다 (T-2).
+    학습은 그대로 ``연도 < t`` 인 모든 행이라, Twin 표본에서도 쌍둥이 지역의 t년 이후
+    자료는 학습에 들어가지 않는다. Local·Twin을 같은 내 지역 검증거래로 채점할 때 쓴다.
 
     MAPE는 fold 평균이 아니라 **거래 가중 평균**이다. fold마다의 개별 오차를 모두
     모아 한 번에 평균하므로 거래가 많은 연도가 지표를 더 끌어당긴다.
@@ -310,6 +315,11 @@ def _rolling_time_cv_mape(
     price = pd.to_numeric(df["price"], errors="coerce").reindex(y.index)
     year_values = pd.to_numeric(df["contract_year"], errors="coerce").reindex(y.index)
 
+    if score_mask is None:
+        scoring = pd.Series(True, index=y.index)
+    else:
+        scoring = score_mask.reindex(y.index).fillna(False).astype(bool)
+
     confirm_year = years[-1] if holdout_last_year and len(years) >= 3 else None
     search_years = [yr for yr in years[1:] if confirm_year is None or yr != confirm_year]
 
@@ -324,10 +334,10 @@ def _rolling_time_cv_mape(
         held = tuple(int(year) for year in test_years)
         failures: list[tuple[int, str]] = []
         failure_codes: list[tuple[int, str]] = []
-        eligible_n = int(year_values.isin(test_years).sum())
+        eligible_n = int((year_values.isin(test_years) & scoring).sum())
         for test_year in test_years:
             train_mask = year_values < test_year
-            test_mask = year_values == test_year
+            test_mask = (year_values == test_year) & scoring
             if int(train_mask.sum()) < max(5, x_const.shape[1] + 1) or not bool(test_mask.any()):
                 failures.append((int(test_year), "학습 표본 또는 평가 거래 부족"))
                 failure_codes.append((int(test_year), "insufficient_training"))

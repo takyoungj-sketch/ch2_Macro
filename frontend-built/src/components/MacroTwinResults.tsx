@@ -58,11 +58,16 @@ export default function MacroTwinResults(props: RecommendStagePanelProps & { onO
   const twin1State = twinStatus ?? (twinRunning ? "계산 중" : stage2?.ran ? "계산 완료" : "미실행");
   const twin2State = researchStatus ?? (twinResearchRunning ? "계산 중" : stage2?.research_ran ? "계산 완료" : "미실행");
   const resolvedAssetType = props.assetType ?? (analysis_scope.asset_slice === "unified" ? "commercial" : analysis_scope.asset_slice as NonNullable<RecommendStagePanelProps["assetType"]>);
+  // T-2: Twin을 실행했으면 Local도 Twin과 같은 내 지역 검증거래로 잰 값을 보인다.
+  const paired = stage2?.ran && twin1?.scored_on === "anchor_common";
   const modelValues = [
-    { title: "Local", n: stage1.fit_n, adj: local.metrics.adj_r_squared, search: local.metrics.cv_mape, confirm: local.cv_report?.confirm?.mape, status: stage1.representative_confirmed === false ? "대표모형 미확정" : "기준선", scale: local.response_scale },
-    { title: "Twin1", n: stage2?.ran ? twin1?.n : null, adj: stage2?.ran ? twin1?.adj_r_squared : null, search: stage2?.ran ? twin1?.cv_mape : null, confirm: stage2?.ran ? twin1?.confirm_cv_mape : null, status: twin1State, scale: stage2?.ran ? twin1?.response_scale ?? stage2.fixed_response_scale : null },
-    { title: "Twin2", n: stage2?.research_ran ? twin2?.n : null, adj: stage2?.research_ran ? twin2?.adj_r_squared : null, search: stage2?.research_ran ? twin2?.cv_mape : null, confirm: stage2?.research_ran ? twin2?.confirm_cv_mape : null, status: twin2State, scale: stage2?.research_ran ? twin2?.response_scale : null },
+    { title: "Local", n: stage1.fit_n, adj: local.metrics.adj_r_squared, search: paired ? twin1?.paired_local_cv_mape : local.metrics.cv_mape, confirm: paired ? twin1?.paired_local_confirm_cv_mape : local.cv_report?.confirm?.mape, evalN: paired ? twin1?.paired_local_confirm_eval_n : null, status: stage1.representative_confirmed === false ? "대표모형 미확정" : "기준선", scale: local.response_scale },
+    { title: "Twin1", n: stage2?.ran ? twin1?.n : null, adj: stage2?.ran ? twin1?.adj_r_squared : null, search: stage2?.ran ? twin1?.cv_mape : null, confirm: stage2?.ran ? twin1?.confirm_cv_mape : null, evalN: stage2?.ran ? twin1?.confirm_eval_n : null, status: twin1State, scale: stage2?.ran ? twin1?.response_scale ?? stage2.fixed_response_scale : null },
+    { title: "Twin2", n: stage2?.research_ran ? twin2?.n : null, adj: stage2?.research_ran ? twin2?.adj_r_squared : null, search: stage2?.research_ran ? twin2?.cv_mape : null, confirm: stage2?.research_ran ? twin2?.confirm_cv_mape : null, evalN: stage2?.research_ran ? twin2?.confirm_eval_n : null, status: twin2State, scale: stage2?.research_ran ? twin2?.response_scale : null },
   ];
+  const evalNs = modelValues.map(m => m.evalN).filter((n): n is number => n != null);
+  const sameEvalN = paired && evalNs.length >= 2 && evalNs.every(n => n === evalNs[0]);
+  const verdictKind = stage2?.twin_validation?.verdict;
   const poolVars = (pool: RecommendationPoolCandidate) => ({ vars: pool.variables ?? local.variables, scale: pool.response_scale ?? stage2?.fixed_response_scale ?? local.response_scale });
   const poolIdentity = (pool: RecommendationPoolCandidate) => { const { vars, scale } = poolVars(pool); return contentSignature({ vars, scale, fitN: pool.n, regionCodes: pool.region_codes }); };
   const canRun = twinCandidateStatus === "ready" && checkedTwinCodes.length > 0 && Boolean(onRunTwin) && !busy;
@@ -104,7 +109,7 @@ export default function MacroTwinResults(props: RecommendStagePanelProps & { onO
     </Card>
     <Card title="Twin1 · 기존 식 재적합" status={twin1State} description="선택한 지역의 거래를 보태 Local 식을 다시 적합합니다.">
       {stage2?.ran && twin1 && <p className="text-sm text-slate-500 dark:text-slate-400">실제 사용 지역 · {regionNames(twin1.region_codes)}</p>}
-      {!!stage2?.ran && <p className="text-sm">{stage2.twin_validation?.twin_adopt_recommended ? "기존 검증 기준에서 확장 재적합을 권고했습니다." : "기존 검증 기준에서는 Local 기준선을 유지합니다."}</p>}
+      {!!stage2?.ran && <p className="text-sm">{stage2.twin_validation?.twin_adopt_recommended ? "기존 검증 기준에서 확장 재적합을 권고했습니다." : verdictKind === "unavailable" ? "같은 기준의 검증 오차가 없어 판정을 보류했습니다(동등 아님). Local 기준선을 유지합니다." : "기존 검증 기준에서는 Local 기준선을 유지합니다."}</p>}
       {stage2?.ran && !twin1 && <p className="text-sm text-amber-800 dark:text-amber-300">확장은 완료했지만 적합된 Twin1 모형이 제공되지 않았습니다.</p>}
       {stage2?.skipped_reason && !stage2.ran && <p className="text-sm text-amber-800 dark:text-amber-300">{stage2.skipped_reason}</p>}
       {twin1 && stage2?.ran && estimate(twin1, "twin1", Boolean(twin1PredictActiveLabel?.startsWith("Twin 재적합")) && twin1PredictIdentity === poolIdentity(twin1), twin1PredictPanel)}
@@ -120,6 +125,7 @@ export default function MacroTwinResults(props: RecommendStagePanelProps & { onO
     </Card>
     <Card title="Twin2 · 확장 표본 재탐색" status={twin2State} description="확장한 표본에서 예측형 변수 조합을 다시 탐색합니다.">
       {stage2?.research_ran && twin2 && <p className="text-sm text-slate-500 dark:text-slate-400">실제 사용 지역 · {regionNames(twin2.region_codes)}</p>}
+      {stage2?.research_ran && twin2?.region_dummy_note && <p className="text-sm text-slate-600 dark:text-slate-300">{twin2.region_dummy_note}</p>}
       {!stage2?.ran && <p className="text-sm text-slate-500 dark:text-slate-400">Twin1을 실행한 뒤 재탐색할 수 있습니다.</p>}
       {stage2?.ran && !stage2.research_ran && <button type="button" className="btn btn-primary text-sm" disabled={!canResearch || twinResearchRunning} onClick={onRunTwinResearch}>{twinResearchRunning ? "Twin2 계산 중…" : "Twin2 재탐색 실행"}</button>}
       {stage2?.research_ran && !twin2 && !stage2.research_skipped_reason && <p className="text-sm text-amber-800 dark:text-amber-300">재탐색은 완료했지만 Twin2 모형이 제공되지 않았습니다.</p>}
@@ -137,10 +143,11 @@ export default function MacroTwinResults(props: RecommendStagePanelProps & { onO
       <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"><table className="w-full min-w-[560px] text-sm">
         <thead className="bg-slate-100 dark:bg-slate-900"><tr><th className="px-3 py-2 text-left font-medium">지표</th>{modelValues.map(m => <th key={m.title} className="px-3 py-2 text-center font-semibold">{m.title}</th>)}</tr></thead>
         <tbody className="bg-white/60 dark:bg-slate-900/40">
-          {([ ["상태", (m: typeof modelValues[number]) => m.status], ["적합 표본 수", (m: typeof modelValues[number]) => value(m.n, 0)], ["조정 R²", (m: typeof modelValues[number]) => value(m.adj, 3)], ["탐색 CV-MAPE", (m: typeof modelValues[number]) => value(m.search, 2, "%")], ["확인 CV-MAPE", (m: typeof modelValues[number]) => value(m.confirm, 2, "%")], ["척도", (m: typeof modelValues[number]) => m.scale ? formatResponseScale(m.scale) : "—"] ] as const).map(([label, display]) => <tr key={label} className="border-t border-slate-200 dark:border-slate-700"><th className="px-3 py-2 text-left font-medium">{label}</th>{modelValues.map(m => <td key={m.title} className="px-3 py-2 text-center tabular-nums">{display(m)}</td>)}</tr>)}
+          {([ ["상태", (m: typeof modelValues[number]) => m.status], ["적합 표본 수", (m: typeof modelValues[number]) => value(m.n, 0)], ["조정 R²", (m: typeof modelValues[number]) => value(m.adj, 3)], ["탐색 CV-MAPE", (m: typeof modelValues[number]) => value(m.search, 2, "%")], ["확인 CV-MAPE", (m: typeof modelValues[number]) => value(m.confirm, 2, "%")], ["확인 CV 평가 거래", (m: typeof modelValues[number]) => m.evalN != null ? `${value(m.evalN, 0)}건` : "—"], ["척도", (m: typeof modelValues[number]) => m.scale ? formatResponseScale(m.scale) : "—"] ] as const).map(([label, display]) => <tr key={label} className="border-t border-slate-200 dark:border-slate-700"><th className="px-3 py-2 text-left font-medium">{label}</th>{modelValues.map(m => <td key={m.title} className="px-3 py-2 text-center tabular-nums">{display(m)}</td>)}</tr>)}
         </tbody>
       </table></div>
-      <p className="text-sm text-slate-600 dark:text-slate-300">모형별 표본과 검증 조건이 다를 수 있습니다. 수치만으로 성능 우열을 판단하지 마세요.</p>
+      {sameEvalN ? <p className="text-sm text-slate-600 dark:text-slate-300">Local·Twin 검증 오차는 선택 지역의 같은 거래 {value(evalNs[0], 0)}건으로 채점했습니다. 학습 표본만 다릅니다.</p>
+        : <p className="text-sm text-slate-600 dark:text-slate-300">모형별 표본과 검증 조건이 다를 수 있습니다. 수치만으로 성능 우열을 판단하지 마세요.</p>}
       {stage1.representative_confirmed === false && <p className="text-sm text-amber-800 dark:text-amber-300">Local은 탐색 1위 후보입니다. 대표 예측모형은 미확정입니다.</p>}
       {stage2?.research_ran && <p className="text-sm text-amber-800 dark:text-amber-300">Twin2 탐색 오차는 독립적인 확인 검증 결과가 아닙니다.</p>}
       {minePrimary && <details className="text-sm"><summary className="cursor-pointer font-medium">기본회귀 결과도 확인하기</summary><p className="mt-2 leading-relaxed">{formatResponseScale(mineScale)} · 적합 {value(minePrimary.n, 0)}건 · 조정 R² {value(minePrimary.adj_r_squared, 3)} · 학습 MAPE {value(minePrimary.mape, 2, "%")}</p><p className="mt-1 text-slate-500 dark:text-slate-400">기본회귀와 확장 모형은 분석 조건과 평가 표본이 다를 수 있습니다.</p></details>}
@@ -150,7 +157,7 @@ export default function MacroTwinResults(props: RecommendStagePanelProps & { onO
 
 function StepTable({ steps, regionNames }: { steps: TwinExperimentStep[]; regionNames: (codes: string[]) => string }) {
   const status = { ok: "양호", warn: "주의", fail: "불안정" };
-  return <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead className="bg-slate-100 dark:bg-slate-900"><tr>{["모형·사용 지역", "적합 표본 수", "탐색 CV-MAPE", "확인 CV-MAPE", "계수 안정", "주요 계수 방향"].map(t => <th key={t} className="px-3 py-2 text-left font-medium">{t}</th>)}</tr></thead><tbody>
-    {steps.map((step) => <tr key={step.step_id} className="border-t border-slate-200 dark:border-slate-700"><td className="px-3 py-2">{step.step_id === "local" ? "Local" : "확장 모형"}<div className="mt-1 text-slate-500 dark:text-slate-400">{regionNames(step.region_codes)}</div>{step.search_picked && <span>탐색 선택</span>}{step.selected && <span> · 최종 선택</span>}<p className="mt-1">{step.verdict_ko}</p></td><td className="px-3 py-2 text-center tabular-nums">{value(step.n, 0)}</td><td className="px-3 py-2 text-center tabular-nums">{value(step.search_cv_mape, 2, "%")}</td><td className="px-3 py-2 text-center tabular-nums">{value(step.confirm_cv_mape, 2, "%")}</td><td className="px-3 py-2">{status[step.stability]}</td><td className="px-3 py-2">{Object.entries({ gross_area: "연면적", land_area: "대지면적", building_age: "연식" }).flatMap(([key, label]) => { const n = step.key_coefficients?.[key]; return n != null && Number.isFinite(n) ? [`${label} ${n >= 0 ? "+" : "−"}`] : []; }).join(" · ") || "—"}</td></tr>)}
+  return <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead className="bg-slate-100 dark:bg-slate-900"><tr>{["모형·사용 지역", "적합 표본 수", "탐색 CV-MAPE (평가 거래)", "확인 CV-MAPE (평가 거래)", "계수 안정", "주요 계수 방향"].map(t => <th key={t} className="px-3 py-2 text-left font-medium">{t}</th>)}</tr></thead><tbody>
+    {steps.map((step) => <tr key={step.step_id} className="border-t border-slate-200 dark:border-slate-700"><td className="px-3 py-2">{step.step_id === "local" ? "Local" : "확장 모형"}<div className="mt-1 text-slate-500 dark:text-slate-400">{regionNames(step.region_codes)}</div>{step.search_picked && <span>탐색 선택</span>}{step.selected && <span> · 최종 선택</span>}<p className="mt-1">{step.verdict_ko}</p></td><td className="px-3 py-2 text-center tabular-nums">{value(step.n, 0)}</td><td className="px-3 py-2 text-center tabular-nums">{value(step.search_cv_mape, 2, "%")}{step.search_eval_n != null && <div className="text-xs text-slate-500 dark:text-slate-400">{value(step.search_eval_n, 0)}건</div>}</td><td className="px-3 py-2 text-center tabular-nums">{value(step.confirm_cv_mape, 2, "%")}{step.confirm_eval_n != null && <div className="text-xs text-slate-500 dark:text-slate-400">{value(step.confirm_eval_n, 0)}건</div>}</td><td className="px-3 py-2">{status[step.stability]}</td><td className="px-3 py-2">{Object.entries({ gross_area: "연면적", land_area: "대지면적", building_age: "연식" }).flatMap(([key, label]) => { const n = step.key_coefficients?.[key]; return n != null && Number.isFinite(n) ? [`${label} ${n >= 0 ? "+" : "−"}`] : []; }).join(" · ") || "—"}</td></tr>)}
   </tbody></table></div>;
 }

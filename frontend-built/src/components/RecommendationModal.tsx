@@ -364,7 +364,8 @@ export default function RecommendationModal({
           stage1: localBaseline.stage1,
           coefficient_narratives: localBaseline.coefficient_narratives,
           warnings: localBaseline.warnings,
-          termination: localBaseline.termination,
+          // T-4: 종료 사유는 Twin 실행 결과의 것을 쓴다 (1단계 결과에는 「미실행」이 남아 있다).
+          termination: sourceData.termination,
           analysis_scope: localBaseline.analysis_scope,
           diagnostics_checklist: localBaseline.diagnostics_checklist,
         }

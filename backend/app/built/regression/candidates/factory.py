@@ -245,8 +245,8 @@ def fetch_candidate_rows(
 
     where = " AND ".join(clauses)
     inner = f"""
-        SELECT price, gross_area, land_area, building_age, road_code, road_width_label,
-               zone_type, building_use, asset_type, contract_year,
+        SELECT id AS transaction_id, price, gross_area, land_area, building_age, road_code,
+               road_width_label, zone_type, building_use, asset_type, contract_year,
                addr1, addr2, addr3, addr4, addr5,
                sigungu_code, eupmyeondong_code, beopjungri_code, transaction_hash
         FROM built_transactions
