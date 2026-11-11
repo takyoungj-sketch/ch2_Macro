@@ -123,7 +123,7 @@
 - 미들웨어 [`backend/app/api_param_warn.py`](../../backend/app/api_param_warn.py) (순수 ASGI, `main.py`에 등록). 라우팅 뒤 `scope["route"]`로 라우트를 찾아 **query 키**(하위 의존성 포함)와 **JSON body 키**(Pydantic 모델이 버리는 키, 중첩 모델은 `variables.foo` 점 경로)를 비교한다. body까지 구현했다. 핸들러가 `Request`를 직접 받는 라우트는 query를 수동으로 읽을 수 있어 query 판정을 건너뛴다(오탐 방지). axios 배열 표기 `x[]`도 같은 이름으로 본다.
 - **요청은 그대로 통과**(테스트: 미지원 파라미터 1개 → 200, 집계 +1). 거절 모드 없음.
 - 집계 키: (경로 템플릿, method, 화면 식별자, 위치 query/body, 파라미터 이름) → 빈도. 프로세스 메모리 → 기본 1시간마다·종료 시 JSONL 한 줄씩 추가. 앱 로그에는 날이 바뀔 때 하루 요약 1줄.
-- **기록하지 않는 것:** 값, 쿼리 문자열, 사용자 ID, IP, 토큰. 경로 변수는 템플릿(`{cluster_key}`). 테스트가 값·경로 변수 값이 파일에 없는지 확인한다.
+- **기록하지 않는 것:** 값, 쿼리 문자열, 사용자 ID, IP, 토큰, **Referer 원문**(경로 앞부분으로 앱만 분류: referer:land·built·collective/residential·collective/commercial·rent·profile, 그 밖 referer:other), **허용 목록 밖 화면 헤더 값**(other로 기록; 목록은 `api_param_warn.ALLOWED_SCREENS`, 프론트 값과 대조 테스트 있음). 경로 변수는 템플릿(`{cluster_key}`). 테스트가 값·경로 변수 값이 파일에 없는지 확인한다.
 - **키 폭증 방지(검수 보완):** 파라미터 이름은 영문·숫자·`_-.[]`만 남기고 64자로 자른다(남는 문자가 없으면 버림). 한 집계 창(그리고 하루 요약)에서 고유 키가 1,000개에 닿으면 이후 새 키는 route별 `_overflow` 한 키로 합친다(창당 최대 1,000키 + route별 `_overflow`).
 - 설정: `API_PARAM_WARN_ENABLED`(기본 true), `API_PARAM_WARN_PATH`(기본 `logs/api_param_warn.jsonl`, 상대 경로는 저장소 루트), `API_PARAM_WARN_FLUSH_SECONDS`(기본 3600). 테스트는 conftest가 임시 경로로 돌린다.
 - 화면 식별자: [`shared/macro-shell/apiScreen.ts`](../../shared/macro-shell/apiScreen.ts) `attachApiScreenHeader()`를 5앱의 axios 인스턴스 12개에 붙였다. 값 `앱/화면`(land/main·land/map·built/main·built/twin·collective/residential·collective/commercial·rent/main·profile/main 등). 집합 상세 모달은 열려 있는 동안 `collective/residential-detail/{패널}`·`collective/commercial-detail/{패널}`. 헤더가 없으면 Referer의 경로만(`referer:/collective/`).

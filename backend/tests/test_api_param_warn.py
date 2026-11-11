@@ -59,12 +59,12 @@ SECRET = "secret-value-9137"
 def test_unknown_query_param_passes_and_counts_name_only(agg, tmp_path):
     c = TestClient(_make_app(agg))
     r = c.get(f"/items/abc123/stats?year=2024&contract_date_from={SECRET}&page=2&tags=a&tags=b",
-              headers={"X-CH2-Screen": "collective/commercial-detail"})
+              headers={"X-CH2-Screen": "collective/commercial-detail/addresses"})
     assert r.status_code == 200
     snap = agg.snapshot()
-    assert snap == {("/items/{item_key}/stats", "GET", "collective/commercial-detail", "query", "contract_date_from"): 1}
-    c.get(f"/items/zzz/stats?contract_date_from={SECRET}", headers={"X-CH2-Screen": "collective/commercial-detail"})
-    assert agg.snapshot()[("/items/{item_key}/stats", "GET", "collective/commercial-detail", "query", "contract_date_from")] == 2
+    assert snap == {("/items/{item_key}/stats", "GET", "collective/commercial-detail/addresses", "query", "contract_date_from"): 1}
+    c.get(f"/items/zzz/stats?contract_date_from={SECRET}", headers={"X-CH2-Screen": "collective/commercial-detail/addresses"})
+    assert agg.snapshot()[("/items/{item_key}/stats", "GET", "collective/commercial-detail/addresses", "query", "contract_date_from")] == 2
     agg.flush()
     text = (tmp_path / "warn.jsonl").read_text(encoding="utf-8")
     assert SECRET not in text and "abc123" not in text and "zzz" not in text
@@ -83,12 +83,12 @@ def test_known_params_and_dependency_params_not_counted(agg):
 def test_unknown_body_keys_including_nested(agg, tmp_path):
     c = TestClient(_make_app(agg))
     r = c.post("/items/k/run", json={"x": 3, "asset_type": SECRET, "variables": {"a": False, "zz": 1}},
-               headers={"Referer": f"https://example.test/collective/?q={SECRET}#frag"})
+               headers={"Referer": f"https://example.test/collective/commercial/4311425036/{SECRET}?q={SECRET}#frag"})
     assert r.status_code == 200 and r.json() == {"x": 3}
     snap = agg.snapshot()
     assert snap == {
-        ("/items/{item_key}/run", "POST", "referer:/collective/", "body", "asset_type"): 1,
-        ("/items/{item_key}/run", "POST", "referer:/collective/", "body", "variables.zz"): 1,
+        ("/items/{item_key}/run", "POST", "referer:collective/commercial", "body", "asset_type"): 1,
+        ("/items/{item_key}/run", "POST", "referer:collective/commercial", "body", "variables.zz"): 1,
     }
     agg.flush()
     assert SECRET not in (tmp_path / "warn.jsonl").read_text(encoding="utf-8")
@@ -154,3 +154,73 @@ def test_overflow_via_http_keeps_requests_passing(agg):
     qs = "&".join(f"junk{i}=1" for i in range(1500))
     assert c.get(f"/items/k/stats?{qs}").status_code == 200
     assert len(agg.snapshot()) <= apw.MAX_KEYS_PER_WINDOW + 1
+
+
+# ---------------- 화면 식별자 개인정보 경계 ----------------
+
+def test_screen_header_outside_allowlist_becomes_other(agg):
+    c = TestClient(_make_app(agg))
+    for value in ("collective/commercial-detail/addresses", "land/4311425036", "user@example.com", "collective/residential-detail/xx"):
+        c.get("/items/k/stats?bogus=1", headers={"X-CH2-Screen": value})
+    screens = {k[2]: n for k, n in agg.snapshot().items()}
+    assert screens == {"collective/commercial-detail/addresses": 1, "other": 3}
+
+
+@pytest.mark.parametrize("referer,label", [
+    ("https://x.test/land/?code=4311425036", "referer:land"),
+    ("https://x.test/built/4311425036/abc", "referer:built"),
+    ("https://x.test/collective/residential/af6811fc56f7e9f3", "referer:collective/residential"),
+    ("https://x.test/collective/commercial/clusters/k123?a=1", "referer:collective/commercial"),
+    ("https://x.test/rent/", "referer:rent"),
+    ("https://x.test/profile/4311425036", "referer:profile"),
+    ("https://x.test/collective/", "referer:other"),
+    ("https://x.test/lab/secret/4311425036", "referer:other"),
+    ("not a url %%%", "referer:other"),
+])
+def test_referer_keeps_app_class_only(referer, label):
+    assert apw.screen_of([(b"referer", referer.encode())]) == label
+
+
+def test_jsonl_has_no_referer_path_or_header_raw(agg, tmp_path):
+    c = TestClient(_make_app(agg))
+    c.get("/items/k/stats?bogus=1", headers={"Referer": "https://x.test/collective/residential/4311425036/af6811fc?q=1"})
+    c.get("/items/k/stats?bogus=1", headers={"X-CH2-Screen": "land/4311425036-private"})
+    agg.flush()
+    text = (tmp_path / "warn.jsonl").read_text(encoding="utf-8")
+    for raw in ("4311425036", "af6811fc", "x.test", "private", "q=1"):
+        assert raw not in text
+    screens = {json.loads(l)["screen"] for l in text.strip().splitlines()}
+    assert screens == {"referer:collective/residential", "other"}
+
+
+def test_frontend_screen_values_match_backend_allowlist():
+    """프론트(attachApiScreenHeader·setApiScreen·PanelMode)와 백엔드 허용 목록이 같다."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    apps = ["frontend", "frontend-built", "frontend-collective", "frontend-rent", "frontend-profile"]
+    bases = set()
+    for app in apps:
+        for f in (root / app / "src").rglob("*.ts*"):
+            txt = f.read_text(encoding="utf-8")
+            bases |= set(re.findall(r'attachApiScreenHeader\(\w+,\s*"([^"]+)",\s*"([^"]+)"\)', txt))
+    assert bases == set(apw.SCREEN_BASES)
+
+    def panel_modes(path):
+        txt = (root / path).read_text(encoding="utf-8")
+        block = re.search(r"type PanelMode\s*=([^;]+);", txt).group(1)
+        return set(re.findall(r'"([^"]+)"', block))
+
+    found = {}
+    for path in ("frontend-collective/src/components/BuildingDetailModal.tsx",
+                 "frontend-collective/src/components/CommercialClusterDetailModal.tsx"):
+        txt = (root / path).read_text(encoding="utf-8")
+        prefixes = re.findall(r"setApiScreen\(`([a-z\-]+)/\$\{panel\}`\)", txt)
+        assert len(prefixes) == 1, path
+        found[prefixes[0]] = panel_modes(path)
+    assert found == {k: set(v) for k, v in apw.SCREEN_PANELS.items()}
+    # setApiScreen 은 집합 앱에서만 호출된다
+    callers = {app for app in apps for f in (root / app / "src").rglob("*.tsx")
+               if "setApiScreen(`" in f.read_text(encoding="utf-8")}
+    assert callers == {"frontend-collective"} and apw.SCREEN_PANEL_APPS == {"collective"}

@@ -49,25 +49,79 @@ def _clean_screen(value: str) -> str:
     return _SCREEN_RE.sub("", value.strip())[:80]
 
 
+# 화면 식별자 허용 목록 — shared/macro-shell/apiScreen.ts 를 쓰는 프론트가 실제로 붙이는 값.
+# (app, base): 각 앱 api 클라이언트의 attachApiScreenHeader(..., app, base)
+SCREEN_BASES: frozenset[tuple[str, str]] = frozenset({
+    ("land", "main"), ("land", "map"),
+    ("built", "main"), ("built", "map"), ("built", "twin"),
+    ("collective", "residential"), ("collective", "commercial"), ("collective", "map"), ("collective", "rent-join"),
+    ("rent", "main"), ("rent", "map"),
+    ("profile", "main"),
+})
+# setApiScreen(`{prefix}/${panel}`) — 집합 상세 모달(BuildingDetailModal·CommercialClusterDetailModal 의 PanelMode)
+SCREEN_PANELS: dict[str, frozenset[str]] = {
+    "residential-detail": frozenset({
+        "trend", "long_term", "histogram", "transactions", "floor_index", "regression", "danji", "rent",
+    }),
+    "commercial-detail": frozenset({
+        "trend", "long_term", "histogram", "transactions", "addresses", "floor_index", "regression",
+    }),
+}
+# 상세 모달은 집합 앱에서만 setApiScreen 을 부른다.
+SCREEN_PANEL_APPS = frozenset({"collective"})
+
+
+def allowed_screens() -> frozenset[str]:
+    out = {f"{app}/{base}" for app, base in SCREEN_BASES}
+    for app in SCREEN_PANEL_APPS:
+        for prefix, panels in SCREEN_PANELS.items():
+            out.update(f"{app}/{prefix}/{p}" for p in panels)
+    return frozenset(out)
+
+
+ALLOWED_SCREENS = allowed_screens()
+SCREEN_OTHER = "other"
+
+# Referer 경로 앞부분 → 앱 분류. 나머지 경로(코드·키)와 쿼리는 버린다. 긴 접두가 먼저.
+REFERER_PREFIXES: tuple[tuple[str, str], ...] = (
+    ("/collective/residential/", "referer:collective/residential"),
+    ("/collective/commercial/", "referer:collective/commercial"),
+    ("/land/", "referer:land"),
+    ("/built/", "referer:built"),
+    ("/rent/", "referer:rent"),
+    ("/profile/", "referer:profile"),
+)
+REFERER_OTHER = "referer:other"
+
+
+def _referer_class(referer: str) -> str:
+    try:
+        path = urlparse(referer).path or ""
+    except ValueError:
+        return REFERER_OTHER
+    path = path if path.endswith("/") else path + "/"
+    for prefix, label in REFERER_PREFIXES:
+        if path.startswith(prefix):
+            return label
+    return REFERER_OTHER
+
+
 def screen_of(headers: Iterable[tuple[bytes, bytes]]) -> str:
-    """X-CH2-Screen 헤더, 없으면 Referer 의 경로만(호스트·쿼리·조각 제거)."""
+    """X-CH2-Screen 헤더(허용 목록 값만, 그 밖은 other). 없으면 Referer 경로 앞부분의 앱 분류만.
+
+    헤더 원문·Referer 원문(경로 나머지·쿼리)은 기록하지 않는다.
+    """
     referer = ""
     for k, v in headers:
         lk = k.lower()
         if lk == SCREEN_HEADER:
             s = _clean_screen(v.decode("latin-1", "ignore"))
             if s:
-                return s
+                return s if s in ALLOWED_SCREENS else SCREEN_OTHER
         elif lk == b"referer":
             referer = v.decode("latin-1", "ignore")
-    if referer:
-        try:
-            path = urlparse(referer).path or ""
-        except ValueError:
-            path = ""
-        s = _clean_screen(path)
-        if s:
-            return "referer:" + s
+    if referer.strip():
+        return _referer_class(referer)
     return ""
 
 
