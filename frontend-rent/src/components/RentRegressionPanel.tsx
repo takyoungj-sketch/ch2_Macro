@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { runRentRegression, type RentRegressionResult } from "../api/client";
+import {
+  rentRegressionErrorMessage,
+  runRentRegression,
+  type RentRegressionResult,
+} from "../api/client";
 import ZoneCaution from "./ZoneCaution";
 
 function fmtPct(v: number | null | undefined) {
@@ -41,9 +45,7 @@ export default function RentRegressionPanel({
   });
 
   const data: RentRegressionResult | undefined = runM.data;
-  const err =
-    (runM.error as { response?: { data?: { detail?: string } } } | undefined)?.response?.data
-      ?.detail ?? (runM.isError ? "회귀를 실행하지 못했습니다." : null);
+  const err = runM.isError ? rentRegressionErrorMessage(runM.error) : null;
 
   return (
     <div className="space-y-3">

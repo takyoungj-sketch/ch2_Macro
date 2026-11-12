@@ -8,6 +8,11 @@ from typing import Any, Optional
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
+from app.rent.query_guard import (
+    REGRESSION_TIMEOUT_MESSAGE,
+    TRANSACTIONS_TIMEOUT_MESSAGE,
+    heavy_query,
+)
 from app.rent.sql_fragments import building_key_sql
 
 
@@ -182,7 +187,9 @@ def list_building_transactions(
         contract_date_from=contract_date_from,
         contract_date_to=contract_date_to,
     )
-    return _run_page(db, fallback, fallback_params, page=page, page_size=page_size)
+    # 계산 키 필터는 인덱스를 못 탄다(키가 원장에 없으면 원장 전체 스캔) — 시간 제한.
+    with heavy_query(db, message=TRANSACTIONS_TIMEOUT_MESSAGE):
+        return _run_page(db, fallback, fallback_params, page=page, page_size=page_size)
 
 
 def fetch_regression_rows(
@@ -231,5 +238,7 @@ def fetch_regression_rows(
         WHERE {where}
         """
     ).bindparams(bindparam("keys", expanding=True))
-    rows = db.execute(stmt, params).mappings().all()
+    # 계산 키 IN 필터는 인덱스를 못 타 자산 유형 전체를 훑는다(운영 5~6분) — 시간 제한.
+    with heavy_query(db, message=REGRESSION_TIMEOUT_MESSAGE):
+        rows = db.execute(stmt, params).mappings().all()
     return [dict(r) for r in rows]
