@@ -19,7 +19,7 @@ from sqlalchemy import text
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "pipeline"))
 
-from collective.building_keys import attach_building_identity, derive_display_name  # noqa: E402
+from collective.building_keys import apply_building_key_split, attach_building_identity, derive_display_name  # noqa: E402
 from region_mapping import attach_beopjungri_codes, clean_code_columns  # noqa: E402
 from rent.db_utils import get_land_engine_for_region_copy, get_rent_engine  # noqa: E402
 from rent.molit_schemas import ASSET_DIRS, FILE_LABEL, RentAssetType  # noqa: E402
@@ -196,6 +196,8 @@ def _prepare(df: pd.DataFrame, asset_type: RentAssetType, land_engine, region_ma
         df = attach_building_identity(df, asset_type)
     df = attach_beopjungri_codes(df, land_engine, region_maps=region_maps)
     df = clean_code_columns(df)
+    if asset_type != "detached":
+        df = apply_building_key_split(df, asset_type)
     return df
 
 

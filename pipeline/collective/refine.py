@@ -15,6 +15,14 @@ import numpy as np
 import pandas as pd
 
 try:
+    from admin_names import canonical_sido_name, normalize_addr1_column  # noqa: F401
+except ImportError:  # pipeline/ 가 sys.path 에 없을 때
+    import sys as _sys
+
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from admin_names import canonical_sido_name, normalize_addr1_column  # noqa: F401
+
+try:
     from .molit_schemas import REFINED_COL_MAP, SCHEMAS, AssetType
 except ImportError:
     from molit_schemas import REFINED_COL_MAP, SCHEMAS, AssetType
@@ -114,6 +122,8 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
     addr = out["sigungu"].astype(str).str.split(" ", expand=True)
     for i in range(5):
         out[f"addr{i + 1}"] = addr[i] if i < addr.shape[1] else ""
+    # 옛 시도명 → 개편 후 이름(키 생성 전에 맞춘다, 집합 2단계 C-02 재발 방지)
+    out["addr1"] = out["addr1"].map(canonical_sido_name)
     out["lot_number"] = out.get("lot_number", out.get("lot_number"))
     out["road_name"] = out.get("road_name")
     out["housing_subtype"] = out.get("housing_subtype")
@@ -197,6 +207,8 @@ def refine_dataframe(
     work = work.dropna(subset=["price", "exclusive_area"])
     work = work[work["exclusive_area"] > 0]
     work = work[work["price"] > 0]
+    # refined 입력 경로도 같은 정규화(raw 경로는 _extract_raw 에서 이미 적용, 중복 무해)
+    work = normalize_addr1_column(work)
     return work.reset_index(drop=True)
 
 

@@ -8,6 +8,14 @@ from typing import Any
 
 import pandas as pd
 
+try:
+    from admin_names import canonical_sido_name, normalize_addr1_column  # noqa: F401
+except ImportError:  # pipeline/ 가 sys.path 에 없을 때
+    import sys as _sys
+
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from admin_names import canonical_sido_name, normalize_addr1_column  # noqa: F401
+
 from .molit_schemas import (
     CANCEL_REGEX,
     MOLIT_CSV_SKIPROWS,
@@ -82,6 +90,8 @@ def parse_sigungu_to_addr(sigungu: pd.Series) -> pd.DataFrame:
             out[f"addr{i + 1}"] = ""
     for c in out.columns:
         out[c] = out[c].map(_s)
+    # 옛 시도명(광주광역시·전라남도) → 개편 후 이름. 복합·집합 비주거 공통(집합 2단계 C-02).
+    out["addr1"] = out["addr1"].map(canonical_sido_name)
     return out
 
 

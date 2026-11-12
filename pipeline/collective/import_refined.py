@@ -26,7 +26,7 @@ from sqlalchemy import text
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from region_mapping import attach_beopjungri_codes, clean_code_columns, log_mapping_coverage
 
-from building_keys import _sha256_series, attach_building_identity
+from building_keys import _sha256_series, apply_building_key_split, attach_building_identity
 from collective.db_utils import get_collective_engine, get_land_engine_for_region_copy
 from refine import InputKind, detect_input_kind, read_source_file, refine_dataframe
 
@@ -391,6 +391,7 @@ def ingest_paths(
         df = _prepare_df(df_raw, asset_type, path, input_kind=kind)
         df = attach_beopjungri_codes(df, engine, region_maps=region_maps)
         df = clean_code_columns(df)
+        df = apply_building_key_split(df, asset_type)
         n = _insert_records(engine, _records_from_df(df, asset_type))
         total += n
         log.info("%s: %d rows (cumulative %d)", path.name, n, total)
