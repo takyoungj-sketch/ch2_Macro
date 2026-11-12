@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""deploy/hub/toss-review/screenshots PNG로 토스 결제경로 PPT 생성."""
+"""docs/archive/toss-review/screenshots PNG로 토스 결제경로 PPT 생성."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from pptx.util import Inches, Pt
 
 REPO = Path(__file__).resolve().parents[1]
 ROOT = REPO.parent
-OUT_DIR = REPO / "hub" / "toss-review"
+OUT_DIR = REPO.parent / "docs" / "archive" / "toss-review"
 SHOT_DIR = OUT_DIR / "screenshots"
 PPT_PATH = OUT_DIR / "CH2DATA_payment_path.pptx"
 PPT_PATH_KO = OUT_DIR / "CH2DATA_결제경로.pptx"

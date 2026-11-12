@@ -86,12 +86,12 @@ sudo bash /opt/ch2_Macro/deploy/scripts/verify_toss_billing_ready.sh
 ### 5. 결제경로 PPT 재생성
 
 ```bash
-# 스크린샷: deploy/hub/toss-review/screenshots/ (06·07 갱신 후)
+# 스크린샷: docs/archive/toss-review/screenshots/ (06·07 갱신 후)
 python deploy/scripts/build_toss_payment_path_ppt_manual.py
 # 선택: PLATFORM_REVIEW_* 를 deploy/local/toss-test-keys.env 에 넣으면 ① Test PW 자동
 ```
 
-출력: `deploy/hub/toss-review/CH2DATA_payment_path.pptx` (동일 내용 `CH2DATA_결제경로.pptx`)  
+출력: `docs/archive/toss-review/CH2DATA_payment_path.pptx` (동일 내용 `CH2DATA_결제경로.pptx`)  
 가맹계약팀에 **⑥ 카드 결제경로(테스트 결제창)** 재첨부.
 
 ### 6. 자동 갱신 cron (라이브 전에 설정)
@@ -114,6 +114,6 @@ python deploy/scripts/build_toss_payment_path_ppt_manual.py
 | 토스 HTTP | `backend/app/platform/toss_client.py` |
 | 구독 UI | `deploy/hub/subscribe/` |
 | DDL | `db/072_platform_toss_billing.sql` |
-| PPT·캡처 | `deploy/hub/toss-review/` |
+| PPT·캡처 | `docs/archive/toss-review/` |
 | 키 VPS 반영 | `deploy/scripts/apply_toss_test_keys_from_local.ps1` |
 | 준비 검증 | `deploy/scripts/verify_toss_billing_ready.sh` |

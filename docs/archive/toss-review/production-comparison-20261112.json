@@ -1,0 +1,120 @@
+{
+  "server_root": "/var/www/ch2data-hub",
+  "base": "dfa308262b8f93a466226379b5cf0345ecdbe98b",
+  "files": [
+    {
+      "path": "index.html",
+      "realpath": "/var/www/ch2data-hub/index.html",
+      "size": 4214,
+      "sha256": "b65f2cf1a9b3933f375f09919e81d384df0d974b279b96dd9609de065ca819cf",
+      "wip_git_sha256": "29e8a863d9402ea67b67765b876f58820832ece7cf21ce6e8d8a2159166662ad",
+      "wip_worktree_sha256": "b65f2cf1a9b3933f375f09919e81d384df0d974b279b96dd9609de065ca819cf",
+      "production_equals_wip_git_bytes": false,
+      "production_equals_wip_worktree_bytes": true,
+      "production_equals_wip_after_crlf_normalization": true,
+      "https_status": 200,
+      "https_sha256": "b65f2cf1a9b3933f375f09919e81d384df0d974b279b96dd9609de065ca819cf"
+    },
+    {
+      "path": "refund/index.html",
+      "realpath": "/var/www/ch2data-hub/refund/index.html",
+      "size": 4483,
+      "sha256": "aa625eee968f268fd5300c272f4ec72b7a584ea844da71feeffcedf1472328a2",
+      "wip_git_sha256": "aa625eee968f268fd5300c272f4ec72b7a584ea844da71feeffcedf1472328a2",
+      "wip_worktree_sha256": "340e0adce91587b333e06edc622d862ebacd400224cf432ca7c12e19fc43b136",
+      "production_equals_wip_git_bytes": true,
+      "production_equals_wip_worktree_bytes": false,
+      "production_equals_wip_after_crlf_normalization": true,
+      "https_status": 200,
+      "https_sha256": "aa625eee968f268fd5300c272f4ec72b7a584ea844da71feeffcedf1472328a2"
+    },
+    {
+      "path": "subscription/index.html",
+      "realpath": "/var/www/ch2data-hub/subscription/index.html",
+      "size": 5249,
+      "sha256": "91bff7c48aa6d5ccb8cb3f0a7b1349c7d42c5565df27362e8c7b8ca56bb31072",
+      "wip_git_sha256": "91bff7c48aa6d5ccb8cb3f0a7b1349c7d42c5565df27362e8c7b8ca56bb31072",
+      "wip_worktree_sha256": "fc2ca5be8fe424673e17805aa0ed93036962a242ab0510cdf1e75882b6c5d0a2",
+      "production_equals_wip_git_bytes": true,
+      "production_equals_wip_worktree_bytes": false,
+      "production_equals_wip_after_crlf_normalization": true,
+      "https_status": 200,
+      "https_sha256": "91bff7c48aa6d5ccb8cb3f0a7b1349c7d42c5565df27362e8c7b8ca56bb31072"
+    },
+    {
+      "path": "subscribe/index.html",
+      "realpath": "/var/www/ch2data-hub/subscribe/index.html",
+      "size": 13779,
+      "sha256": "014ccc603942cb40525115e11d0a4055b0c5ff23b923c77d15f90670b96b682f",
+      "wip_git_sha256": "014ccc603942cb40525115e11d0a4055b0c5ff23b923c77d15f90670b96b682f",
+      "wip_worktree_sha256": "4ea9861d2cd8d0b17a963d7a6f146b7a8e4b9d35c441db7cc4495a8649aafbe4",
+      "production_equals_wip_git_bytes": true,
+      "production_equals_wip_worktree_bytes": false,
+      "production_equals_wip_after_crlf_normalization": true,
+      "https_status": 200,
+      "https_sha256": "014ccc603942cb40525115e11d0a4055b0c5ff23b923c77d15f90670b96b682f"
+    }
+  ],
+  "archive": [
+    {
+      "path": "docs/archive/toss-review/CH2DATA_payment_path.pptx",
+      "sha256": "cac116024267fcdd4dc68afdecc76f66655096a2dcc3db77524943cd16ba91d5"
+    },
+    {
+      "path": "docs/archive/toss-review/CH2DATA_결제경로.pptx",
+      "sha256": "cac116024267fcdd4dc68afdecc76f66655096a2dcc3db77524943cd16ba91d5"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/01_home_footer.png",
+      "sha256": "faee89e3a63474f943b003079237b79d321e8fa5575e58a70cf48e3d2307225a"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/02_footer.png",
+      "sha256": "01c3060af89dce2d827348ee0427397206e342558e900d85f12ed700cd210988"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/03_refund.png",
+      "sha256": "c7998c051d0bb07e3685444699d7837631859a15d0eaec3b965719920af11bfe"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/04_login.png",
+      "sha256": "f9f00b12e9a845def24d170ae9e0fd5eb3934cb2c94f4382ddd2751f52d9e342"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/04_subscription.png",
+      "sha256": "40eedc271d338a24aeb4aa54086ac3443e27a7deb0e5dddaefcacff71f59b81b"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/05_login.png",
+      "sha256": "e95f728e2d29b68ef2a7b0473134171e0dbecf2559d51effbb5ed6516c710568"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/05_subscription_1.png",
+      "sha256": "ec393ebded51a6011fa4e760de2bd6937f6efa3a12923069ecb5278467fdfe58"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/05_subscription_2.png",
+      "sha256": "49709654ec9899f11ad93769b0f753ef59920707edcd4019ca3a7e421ec71e05"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/06_subscribe.png",
+      "sha256": "e02b7ada709bf92a6a69fceecfcc174d7b24edb2f97ca6010ddcbf8d7cfb7d43"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/06_subscribe_logged_in.png",
+      "sha256": "3d5bfe57a5702318a79604c755984d8b9ee12e6764c1dbedd93a3b07095e91ac"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/07_payment_note.png",
+      "sha256": "3d5bfe57a5702318a79604c755984d8b9ee12e6764c1dbedd93a3b07095e91ac"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/07_payment_window.png",
+      "sha256": "d1d70a78c8c5b32eb3517d3ae354b0c0c5722509b2cf0922f91824a017ee52d8"
+    },
+    {
+      "path": "docs/archive/toss-review/screenshots/08_identity.png",
+      "sha256": "5b06cc8ef261e8411b6ceba9d80f802cc4b1182aa911d3287b7bacca1b07b2cc"
+    }
+  ]
+}

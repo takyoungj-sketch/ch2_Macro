@@ -16,7 +16,7 @@ from pptx.util import Inches, Pt
 from playwright.async_api import async_playwright
 
 REPO = Path(__file__).resolve().parents[1]
-OUT_DIR = REPO / "hub" / "toss-review"
+OUT_DIR = REPO.parent / "docs" / "archive" / "toss-review"
 SHOT_DIR = OUT_DIR / "screenshots"
 PPT_PATH = OUT_DIR / "CH2DATA_결제경로.pptx"
 
