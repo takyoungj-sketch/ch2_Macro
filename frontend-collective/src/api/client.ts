@@ -608,9 +608,9 @@ export async function fetchBuildingKeyStatus(buildingKey: string): Promise<Build
     );
     return data;
   } catch (e: unknown) {
-    const resp = (e as { response?: { status?: number; data?: { detail?: unknown } } }).response;
-    const detail = resp?.data?.detail as BuildingKeyStatus | undefined;
-    if (resp?.status === 409 && detail && detail.key_status === "split") return detail;
+    const resp = (e as { response?: { status?: number; data?: unknown } }).response;
+    const body = resp?.data as (BuildingKeyStatus & { detail?: string }) | undefined;
+    if (resp?.status === 409 && body && body.key_status === "split") return body;
     // 키 확인 실패는 화면을 막지 않는다 — 원래 키로 진행
     return { key_status: "ok", building_key: buildingKey };
   }

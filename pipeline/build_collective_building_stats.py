@@ -387,6 +387,8 @@ def main() -> None:
         if w < 1 or w > MAX_WINDOW_YEARS:
             raise SystemExit(f"window_years must be 1..{MAX_WINDOW_YEARS}")
     asset_type = (args.asset_type or "").strip() or None
+    if getattr(args, "prune_annual", False) and args.addr1:
+        raise SystemExit("--prune-annual 은 전 시도 빌드에서만(--addr1 과 함께 쓰면 다른 시도 행을 지움)")
     if asset_type and asset_type not in ASSET_TYPES:
         raise SystemExit(f"asset-type must be one of {ASSET_TYPES}")
 
@@ -429,8 +431,7 @@ def main() -> None:
         )
         log.info("collective_building_annual_stats upserted ~%s rows", annual_n)
         if args.prune_annual:
-            prune_annual(engine, "collective_building_annual_stats", "collective_transactions", "building_key",
-                         asset_type=asset_type)
+            prune_annual(engine, "collective_building_annual_stats", batch_id=batch_id, asset_type=asset_type)
 
     with engine.connect() as conn:
         cbs = conn.execute(text("SELECT COUNT(*) FROM collective_building_stats")).scalar()

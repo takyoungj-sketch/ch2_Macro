@@ -264,8 +264,9 @@ def parse_approved_date(value: object) -> str | None:
 
 
 def db_url() -> str:
+    # 실행 환경변수가 있으면 우선(리허설 DB 등). 없으면 기존처럼 backend/.env.
     env = dotenv_values(REPO / "backend" / ".env")
-    url = str(env.get("COLLECTIVE_DATABASE_URL") or "")
+    url = str(os.environ.get("COLLECTIVE_DATABASE_URL") or env.get("COLLECTIVE_DATABASE_URL") or "")
     if not url:
         raise RuntimeError("COLLECTIVE_DATABASE_URL not set in backend/.env")
     if url.startswith("postgresql://"):

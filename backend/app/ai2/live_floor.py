@@ -188,6 +188,21 @@ def _index(ctx: AnalysisContext, args: dict) -> ToolEnvelope:
         return _unavailable("floor_index")
     name = str(args.get("target") or ctx.target or "")
     key = str(args.get("building_key") or "")
+    if key:
+        # 집합 2단계: 옛 키는 연결표로 푼다. 분할된 키는 후보 중 하나를 고르지 않는다.
+        from app.collective.key_remap import resolve_key
+
+        rk = resolve_key("collective", key)
+        if rk["status"] == "split":
+            return ToolEnvelope(
+                tool_id="floor_index",
+                level="impossible",
+                analysis_possible=False,
+                reason_code="KEY_SPLIT",
+                period=PERIOD,
+                facts={"split_candidates": rk["candidates"]},
+            )
+        key = rk["building_key"]
     if not key:
         hits = [row for row in rows if _same_name(row[0], name)]
         if len(hits) != 1:

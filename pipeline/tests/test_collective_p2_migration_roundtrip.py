@@ -24,7 +24,7 @@ from sqlalchemy.engine import make_url  # noqa: E402
 from collective import building_keys as bk  # noqa: E402
 from collective import fix_p2_deal_types as fdt  # noqa: E402
 from collective import migrate_p2_keys as mig  # noqa: E402
-from collective.mart_replace import delete_as_of, prune_annual  # noqa: E402
+from collective.mart_replace import delete_as_of, prune_annual, stale_annual_report  # noqa: E402
 from collective.rep_address_sql import rep_address_query  # noqa: E402
 from collective_commercial.cluster_keys import make_road_cluster_key  # noqa: E402
 
@@ -252,13 +252,20 @@ def test_rep_address_and_mart_replace(fx):
         c.execute(text("CREATE TABLE t_stats (as_of_month date, window_years int, asset_type text, building_key text)"))
         c.execute(text("INSERT INTO t_stats VALUES ('2026-10-01',5,'apartment','x'), ('2026-10-01',7,'apartment','y'), "
                        "('2026-09-01',5,'apartment','z')"))
-        c.execute(text("CREATE TABLE t_annual (building_key text, asset_type text, contract_year int)"))
-        c.execute(text("INSERT INTO t_annual VALUES (:u,'apartment',2024), ('gone','apartment',2024), ('old','apartment',2015)"),
-                  {"u": U})
+        c.execute(text("CREATE TABLE t_annual (building_key text, asset_type text, contract_year int, addr1 text, "
+                       "batch_id text, count int, computed_at timestamptz DEFAULT now())"))
+        c.execute(text("""INSERT INTO t_annual VALUES
+            ('cur','apartment',2024,'서울특별시','NOW',1), ('gone','apartment',2024,'서울특별시','OLD',1),
+            ('hon','apartment',2019,'광주광역시','OLD',1), ('hon2','apartment',2020,:n,'NOW',1),
+            ('stale','apartment',2020,'경기도','OLD',1), ('old','apartment',2015,'광주광역시','LT',1)"""), {"n": N})
     assert delete_as_of(eng, "t_stats", as_of=date(2026, 10, 1), windows=[5]) == 1
-    assert prune_annual(eng, "t_annual", "collective_transactions", "building_key") == 1   # 2019~ 근거 없는 행만
+    res = prune_annual(eng, "t_annual", batch_id="NOW")
+    assert res == {"deleted_2021_plus": 1, "deleted_2019_2020_legacy_sido": 1, "deleted_2010_2018": 0}
     with eng.connect() as c:
-        assert sorted(r[0] for r in c.execute(text("SELECT building_key FROM t_annual"))) == sorted([U, "old"])
+        left = sorted(r[0] for r in c.execute(text("SELECT building_key FROM t_annual")))
+        assert left == ["cur", "hon2", "old", "stale"]          # 2019~2020 묵은 행(stale)·2010~2018 은 남김
+        rep = stale_annual_report(c, "t_annual", "collective_transactions", "building_key", batch_id="NOW")
+        assert [(r[1], r[2], r[3]) for r in rep] == [(2020, "경기도", "원장 빌더")]
 
 
 def test_deal_type_apply_and_rollback(fx):

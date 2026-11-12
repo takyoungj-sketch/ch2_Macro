@@ -106,12 +106,55 @@ class KeyMapCache:
 CACHE = KeyMapCache()
 
 
+_QUERY_KEY_APP = {"building_key": None, "sale_building_key": "collective"}  # None = 요청 앱의 연결표
+_MAX_BODY = 512 * 1024
+SPLIT_MESSAGE = "이 단지 키는 서로 다른 단지가 섞여 있어 동별로 나뉘었습니다. 후보 중 하나를 고르세요."
+
+
+def resolve_key(app: str, key: str, *, cache: KeyMapCache | None = None,
+                details: Callable[[str, list[str]], dict[str, dict[str, Any]]] | None = None) -> dict[str, Any]:
+    """동기 조회(AI 도구 등). {status: ok|remapped|split, building_key, candidates}."""
+    if os.environ.get("CH2_KEY_REMAP_ENABLED", "1") == "0" or not key:
+        return {"status": "ok", "building_key": key, "candidates": []}
+    details = details or globals()["_default_details"]
+    news = (cache or globals()["CACHE"]).get(app).get(key)
+    if not news:
+        return {"status": "ok", "building_key": key, "candidates": []}
+    if len(news) == 1:
+        return {"status": "remapped", "building_key": news[0][0], "candidates": []}
+    try:
+        det = details(app, [n for n, _p, _c in news])
+    except Exception:  # noqa: BLE001
+        det = {}
+    return {"status": "split", "building_key": key,
+            "candidates": [{"building_key": n, "split_part": p, "n_tx": c, **det.get(n, {})} for n, p, c in news]}
+
+
+def split_detail_text(cands: list[dict[str, Any]]) -> str:
+    names = []
+    for c in cands[:6]:
+        where = " ".join(str(x) for x in (c.get("addr3"), c.get("addr4"), c.get("addr5")) if x)
+        nm = c.get("display_name") or "단지"
+        names.append(f"{nm}({where}, {c.get('n_tx', 0)}건)" if where else f"{nm}({c.get('n_tx', 0)}건)")
+    return SPLIT_MESSAGE + (" 후보: " + ", ".join(names) if names else "")
+
+
+class _Split(Exception):
+    def __init__(self, app: str, old: str, news):
+        self.app, self.old, self.news = app, old, news
+
+
 class KeyRemapMiddleware:
     def __init__(self, app, cache: KeyMapCache | None = None,
                  details: Callable[[str, list[str]], dict[str, dict[str, Any]]] = _default_details):
         self.app = app
         self.cache = cache or CACHE
         self.details = details
+
+    async def _map(self, app_name: str) -> KeyMap:
+        import anyio
+
+        return await anyio.to_thread.run_sync(self.cache.get, app_name)
 
     async def __call__(self, scope, receive, send):
         if scope.get("type") != "http" or os.environ.get("CH2_KEY_REMAP_ENABLED", "1") == "0":
@@ -123,44 +166,49 @@ class KeyRemapMiddleware:
             await self.app(scope, receive, send)
             return
         app_name = am.group("app")
-        import anyio
-
-        kmap = await anyio.to_thread.run_sync(self.cache.get, app_name)
-        if not kmap:
-            await self.app(scope, receive, send)
-            return
         remapped: list[tuple[str, str]] = []
-        m = _PATH_RE.match(path)
-        if m and m.group("key") in kmap:
-            old = m.group("key")
-            news = kmap[old]
+
+        async def one(app_for: str, k: str) -> str:
+            kmap = await self._map(app_for)
+            news = kmap.get(k) if kmap else None
+            if not news:
+                return k
             if len(news) > 1:
-                await self._send_split(send, app_name, old, news)
-                return
-            new = news[0][0]
-            new_path = f"{m.group('prefix')}{new}{m.group('rest') or ''}"
-            scope = dict(scope)
-            scope["path"] = new_path
-            scope["raw_path"] = new_path.encode("utf-8")
-            remapped.append((old, new))
-        qs = scope.get("query_string") or b""
-        if b"building_key=" in qs:
-            pairs = parse_qsl(qs.decode("latin-1"), keep_blank_values=True)
-            changed = False
-            out_pairs = []
-            for k, v in pairs:
-                if k == "building_key" and v in kmap:
-                    news = kmap[v]
-                    if len(news) > 1:
-                        await self._send_split(send, app_name, v, news)
-                        return
-                    remapped.append((v, news[0][0]))
-                    v = news[0][0]
-                    changed = True
-                out_pairs.append((k, v))
-            if changed:
+                raise _Split(app_for, k, news)
+            remapped.append((k, news[0][0]))
+            return news[0][0]
+
+        try:
+            # 1) 경로 /buildings/{key}/
+            m = _PATH_RE.match(path)
+            if m:
+                new = await one(app_name, m.group("key"))
+                if new != m.group("key"):
+                    new_path = f"{m.group('prefix')}{new}{m.group('rest') or ''}"
+                    scope = dict(scope)
+                    scope["path"] = new_path
+                    scope["raw_path"] = new_path.encode("utf-8")
+            # 2) query building_key · sale_building_key(임대 → 매매 키)
+            qs = scope.get("query_string") or b""
+            if b"building_key=" in qs:
+                pairs = parse_qsl(qs.decode("latin-1"), keep_blank_values=True)
+                out_pairs, changed = [], False
+                for k, v in pairs:
+                    if k in _QUERY_KEY_APP:
+                        nv = await one(_QUERY_KEY_APP[k] or app_name, v)
+                        changed |= nv != v
+                        v = nv
+                    out_pairs.append((k, v))
+                if changed:
+                    scope = dict(scope)
+                    scope["query_string"] = urlencode(out_pairs).encode("latin-1")
+            # 3) 집합 POST JSON body building_keys(코호트)
+            if scope.get("method") == "POST" and app_name == "collective":
                 scope = dict(scope)
-                scope["query_string"] = urlencode(out_pairs).encode("latin-1")
+                _body, receive = await self._maybe_rewrite_body(scope, receive, one)
+        except _Split as sp:
+            await self._send_split(send, sp.app, sp.old, sp.news)
+            return
         if not remapped:
             await self.app(scope, receive, send)
             return
@@ -175,6 +223,49 @@ class KeyRemapMiddleware:
 
         await self.app(scope, receive, send_wrapper)
 
+    async def _maybe_rewrite_body(self, scope, receive, one):
+        ctype = dict(scope.get("headers") or []).get(b"content-type", b"")
+        if b"json" not in ctype:
+            return None, receive
+        chunks, more, size = [], True, 0
+        while more:
+            msg = await receive()
+            if msg["type"] != "http.request":
+                break
+            chunks.append(msg.get("body", b""))
+            size += len(chunks[-1])
+            more = msg.get("more_body", False)
+            if size > _MAX_BODY:
+                break
+        raw = b"".join(chunks)
+        out = raw
+        if size <= _MAX_BODY and b"building_keys" in raw:
+            try:
+                data = json.loads(raw)
+            except ValueError:
+                data = None
+            if isinstance(data, dict) and isinstance(data.get("building_keys"), list):
+                keys = [await one("collective", k) if isinstance(k, str) else k for k in data["building_keys"]]
+                if keys != data["building_keys"]:
+                    data["building_keys"] = keys
+                    out = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        sent = False
+        tail_more = more and size > _MAX_BODY
+
+        async def replay():
+            nonlocal sent
+            if not sent:
+                sent = True
+                return {"type": "http.request", "body": out, "more_body": tail_more}
+            return await receive()
+
+        if out is not raw:
+            # content-length 를 새 길이로
+            hdrs = [(k, v) for k, v in scope.get("headers") or [] if k != b"content-length"]
+            hdrs.append((b"content-length", str(len(out)).encode()))
+            scope["headers"] = hdrs
+        return out, replay
+
     async def _send_split(self, send, app_name: str, old: str, news: list[tuple[str, int, int]]) -> None:
         import anyio
 
@@ -182,12 +273,10 @@ class KeyRemapMiddleware:
             det = await anyio.to_thread.run_sync(self.details, app_name, [n for n, _p, _c in news])
         except Exception:  # noqa: BLE001
             det = {}
-        body = {"detail": {
-            "key_status": "split",
-            "message": "이 단지 키는 서로 다른 단지가 섞여 있어 동별로 나뉘었습니다. 후보 중 하나를 고르세요.",
-            "old_key": old,
-            "candidates": [{"building_key": n, "split_part": p, "n_tx": c, **det.get(n, {})} for n, p, c in news],
-        }}
+        cands = [{"building_key": n, "split_part": p, "n_tx": c, **det.get(n, {})} for n, p, c in news]
+        # detail 은 문자열(기존 화면 오류 표시가 그대로 읽는다), 구조화 정보는 최상위 칸
+        body = {"detail": split_detail_text(cands), "key_status": "split", "message": SPLIT_MESSAGE,
+                "old_key": old, "candidates": cands}
         raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
         await send({"type": "http.response.start", "status": 409,
                     "headers": [(b"content-type", b"application/json; charset=utf-8"),

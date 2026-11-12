@@ -17,6 +17,7 @@ import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import BuildingStatsTable, { buildingMatchesQuery } from "./components/BuildingStatsTable";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import BuildingDetailModal from "./components/BuildingDetailModal";
+import BuildingKeySplitGuard from "./components/BuildingKeySplitGuard";
 import RegionalRegressionModal from "./components/RegionalRegressionModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
@@ -858,6 +859,7 @@ export default function App() {
         />
       )}
       {selected && scope && (
+        <BuildingKeySplitGuard buildingKey={selected.building_key} displayName={selected.display_name} onClose={() => setSelected(null)}>
         <BuildingDetailModal
           row={selected}
           assetType={scope.assetType}
@@ -871,6 +873,7 @@ export default function App() {
           onClose={() => setSelected(null)}
           onOpenSibling={setSelected}
         />
+        </BuildingKeySplitGuard>
       )}
     </div>
     </ActiveAiViewProvider>

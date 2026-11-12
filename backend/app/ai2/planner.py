@@ -20,6 +20,7 @@ _REASON_KO = {
     "MEASURE_UNSUPPORTED": "㎡당 가격은 이 분석에서 제공하지 않습니다.",
     "DATABASE_UNAVAILABLE": "자료를 불러오지 못했습니다.",
     "AMBIGUOUS_TARGET": "이름이 둘 이상입니다. 하나만 지정해 주세요.",
+    "KEY_SPLIT": "이 단지는 서로 다른 단지가 섞여 있어 여러 단지로 나뉘었습니다. 아래 후보 중 하나를 골라 다시 물어 주세요.",
     "CONVERSION_GATE": "전환율 최소 조건을 넘지 않습니다.",
     "UNSUPPORTED": "이 도구는 제공하지 않습니다.",
     "REGRESSION_FAILED": "회귀를 계산하지 못했습니다.",
@@ -42,6 +43,15 @@ def _fmt_impossible(env: ToolEnvelope) -> str:
         parts.append(reason)
     if env.valid_n is not None and env.required_n is not None:
         parts.append(f"유효표본 {env.valid_n}건, 최소 {env.required_n}건.")
+    split = env.facts.get("split_candidates")
+    if split:
+        # 집합 2단계: 후보를 임의로 고르지 않고 그대로 보여 준다
+        names = []
+        for c in split[:6]:
+            where = " ".join(str(x) for x in (c.get("addr3"), c.get("addr4"), c.get("addr5")) if x)
+            names.append(f"{c.get('display_name') or '단지'}({where}, {c.get('n_tx', 0)}건)" if where
+                         else f"{c.get('display_name') or '단지'}({c.get('n_tx', 0)}건)")
+        parts.append("후보: " + ", ".join(names) + ".")
     missing = env.facts.get("missing")
     if missing:
         parts.append("필요한 값 " + ", ".join(_input_label(str(name)) for name in missing) + ".")

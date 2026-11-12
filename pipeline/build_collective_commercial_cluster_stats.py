@@ -314,6 +314,8 @@ def main() -> None:
 
     as_of = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
     windows = sorted({int(x.strip()) for x in args.windows.split(",") if x.strip()})
+    if getattr(args, "prune_annual", False) and args.addr1:
+        raise SystemExit("--prune-annual 은 전 시도 빌드에서만(--addr1 과 함께 쓰면 다른 시도 행을 지움)")
     engine = get_collective_engine()
     batch_id = str(uuid.uuid4())
 
@@ -333,8 +335,7 @@ def main() -> None:
         annual_n = build_annual(engine, addr1_filter=args.addr1, batch_id=batch_id)
         log.info("collective_commercial_cluster_annual_stats upserted ~%s rows", annual_n)
         if args.prune_annual:
-            prune_annual(engine, "collective_commercial_cluster_annual_stats", "collective_commercial_transactions",
-                         "cluster_key")
+            prune_annual(engine, "collective_commercial_cluster_annual_stats", batch_id=batch_id)
 
 
 if __name__ == "__main__":

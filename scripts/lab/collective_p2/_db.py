@@ -47,3 +47,14 @@ def md_table(rows, headers) -> str:
     for r in rows:
         out.append("| " + " | ".join("" if v is None else (f"{v:,}" if isinstance(v, int) else str(v)) for v in r) + " |")
     return "\n".join(out)
+
+
+def engine_db(dbname: str, timeout_ms: int = 1_200_000):
+    """같은 서버의 다른 DB(리허설 *_p2r 등)에 읽기 전용으로."""
+    from sqlalchemy.engine import make_url
+
+    url = make_url(settings.collective_database_url).set(database=dbname)
+    if url.drivername == "postgresql":
+        url = url.set(drivername="postgresql+psycopg2")
+    opts = f"-c default_transaction_read_only=on -c statement_timeout={int(timeout_ms)}"
+    return create_engine(url, pool_pre_ping=True, connect_args={"options": opts})

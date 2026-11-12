@@ -62,7 +62,9 @@ def test_split_returns_409_with_candidates():
     c = _app(MAPS, details=det)
     r = c.get(f"/api/collective/buildings/{OLDS}/stats/rolling")
     assert r.status_code == 409
-    d = r.json()["detail"]
+    d = r.json()
+    assert isinstance(d["detail"], str) and "여러" not in d["detail"] or "나뉘었습니다" in d["detail"]
+    assert "삼일(우암동, 7건)" in d["detail"]
     assert d["key_status"] == "split" and d["old_key"] == OLDS
     assert [x["building_key"] for x in d["candidates"]] == [P1, P2]
     assert d["candidates"][0]["addr4"] == "우암동" and d["candidates"][1]["n_tx"] == 3
@@ -107,3 +109,46 @@ def test_main_app_registers_middleware_and_key_status_route():
     assert any(m.cls is KeyRemapMiddleware for m in app.user_middleware)
     paths = {getattr(r, "path", "") for r in app.routes}
     assert "/api/collective/buildings/{building_key}/key-status" in paths
+
+
+def test_rent_sale_key_and_cohort_body():
+    app = FastAPI()
+
+    @app.get("/api/rent/sale-join")
+    def sj(sale_building_key: str):
+        return {"k": sale_building_key}
+
+    @app.post("/api/collective/analysis/cohort/stats/by-year")
+    async def cohort(request: Request):
+        return await request.json()
+
+    cache = KeyMapCache(loader=lambda name: MAPS.get(name, {}), ttl=0)
+    app.add_middleware(KeyRemapMiddleware, cache=cache, details=lambda a, ks: {})
+    c = TestClient(app)
+    # 임대 → 매매 키는 집합 연결표로 푼다
+    assert c.get(f"/api/rent/sale-join?sale_building_key={OLD1}").json() == {"k": NEW1}
+    assert c.get(f"/api/rent/sale-join?sale_building_key={OLDS}").status_code == 409
+    # 코호트 body: 1:1 은 바꾸고 나머지 칸은 그대로
+    r = c.post("/api/collective/analysis/cohort/stats/by-year", json={"building_keys": [OLD1, OTHER], "x": 1})
+    assert r.json() == {"building_keys": [NEW1, OTHER], "x": 1}
+    assert r.headers["x-ch2-key-remapped"] == f"{OLD1}->{NEW1}"
+    r = c.post("/api/collective/analysis/cohort/stats/by-year", json={"building_keys": [OTHER, OLDS]})
+    assert r.status_code == 409 and r.json()["old_key"] == OLDS
+    # 키 없는 body 는 그대로
+    assert c.post("/api/collective/analysis/cohort/stats/by-year", json={"a": [1]}).json() == {"a": [1]}
+
+
+def test_ai_floor_tool_does_not_pick_a_split_candidate(monkeypatch):
+    from app.ai2 import live_floor
+    from app.ai2.planner import _fmt_impossible
+    from app.collective import key_remap
+
+    monkeypatch.setattr(key_remap, "CACHE", KeyMapCache(loader=lambda name: MAPS.get(name, {}), ttl=0))
+    monkeypatch.setattr(key_remap, "_default_details",
+                        lambda a, ks: {P1: {"display_name": "삼일", "addr4": "우암동"}, P2: {"display_name": "삼일", "addr4": "내수읍"}})
+    monkeypatch.setattr(live_floor, "fetch_counts", lambda region: [("삼일", P1, 50), ("삼일", P2, 40)])
+    env = live_floor._index(type("Ctx", (), {"region": "x", "target": "삼일"})(), {"building_key": OLDS})
+    assert env.reason_code == "KEY_SPLIT" and env.analysis_possible is False
+    text = _fmt_impossible(env)
+    assert "여러 단지로 나뉘었습니다" in text and "우암동" in text and "내수읍" in text
+    assert "유효표본" not in text
