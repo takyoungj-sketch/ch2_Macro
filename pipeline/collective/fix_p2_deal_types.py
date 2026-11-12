@@ -198,10 +198,12 @@ def apply_updates(conn, table: str, upd: pd.DataFrame) -> int:
             zip(upd["id"], upd["deal_type"], upd["new_deal_type"])]
     for i in range(0, len(rows), 5000):
         conn.execute(text(f"INSERT INTO {b} (id, deal_type) VALUES (:id, :o) ON CONFLICT (id) DO NOTHING"), rows[i:i + 5000])
-    conn.execute(text("CREATE TEMP TABLE _p2_dt (id bigint PRIMARY KEY, deal_type text) ON COMMIT DROP"))
+    tmp = "_p2_dt_" + table[:40]  # 한 트랜잭션에서 표마다 따로(분양권·비주거를 같이 처리)
+    conn.execute(text(f"DROP TABLE IF EXISTS {tmp}"))
+    conn.execute(text(f"CREATE TEMP TABLE {tmp} (id bigint PRIMARY KEY, deal_type text) ON COMMIT DROP"))
     for i in range(0, len(rows), 5000):
-        conn.execute(text("INSERT INTO _p2_dt VALUES (:id, :n)"), rows[i:i + 5000])
-    r = conn.execute(text(f"UPDATE {table} t SET deal_type = u.deal_type FROM _p2_dt u WHERE t.id = u.id"))
+        conn.execute(text(f"INSERT INTO {tmp} VALUES (:id, :n)"), rows[i:i + 5000])
+    r = conn.execute(text(f"UPDATE {table} t SET deal_type = u.deal_type FROM {tmp} u WHERE t.id = u.id"))
     return int(r.rowcount or 0)
 
 

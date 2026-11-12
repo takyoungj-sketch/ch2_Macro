@@ -277,8 +277,11 @@ def test_deal_type_apply_and_rollback(fx):
     import pandas as pd
 
     upd = pd.DataFrame({"id": ids, "deal_type": ["경남 김해시", None], "new_deal_type": ["중개거래", "직거래"]})
-    with eng.begin() as c:
+    cupd = pd.DataFrame({"id": [1], "deal_type": [None], "new_deal_type": ["직거래"]})
+    with eng.begin() as c:  # 실제 실행처럼 한 트랜잭션에서 두 표
         assert fdt.apply_updates(c, "collective_transactions", upd) == 2
+        assert fdt.apply_updates(c, "collective_commercial_transactions", cupd) == 1
+        assert fdt.rollback_table(c, "collective_commercial_transactions") == 1
     with eng.connect() as c:
         assert [r[0] for r in c.execute(text("SELECT deal_type FROM collective_transactions WHERE id = ANY(:i) ORDER BY id"),
                                         {"i": ids})] == ["중개거래", "직거래"]
