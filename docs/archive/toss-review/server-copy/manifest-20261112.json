@@ -1,0 +1,161 @@
+{
+  "server_root": "/var/www/ch2data-hub/toss-review",
+  "captured_at_utc": "2026-11-12T09:09:18.754553+00:00",
+  "files": [
+    {
+      "path": "/var/www/ch2data-hub/toss-review/CH2DATA_payment_path.pptx",
+      "size": 443475,
+      "sha256": "41302bf03bc0c4737d9ba6f1397b1a7f59ef5f3e244eed39d2ceb016142d08a2",
+      "archive_equal": false
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/CH2DATA_결제경로.pptx",
+      "size": 794760,
+      "sha256": "03b648ec364e693451a9b3a0cf07bcadfca9e40c1d6dd4e97225d7ef1c01f35d",
+      "archive_equal": false
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/01_home_footer.png",
+      "size": 138034,
+      "sha256": "faee89e3a63474f943b003079237b79d321e8fa5575e58a70cf48e3d2307225a",
+      "archive_equal": true
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/02_footer.png",
+      "size": 65313,
+      "sha256": "bb1a1ed97e8a537797fec58090455f0b81074452684d4f081bcd83a4a6cac25c",
+      "archive_equal": false
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/03_refund.png",
+      "size": 101283,
+      "sha256": "ef1405fc887b680ae71d633bc9f553783aee3c5c213ab752d3d5bc2baa62eb01",
+      "archive_equal": false
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/04_login.png",
+      "size": 64411,
+      "sha256": "f9f00b12e9a845def24d170ae9e0fd5eb3934cb2c94f4382ddd2751f52d9e342",
+      "archive_equal": true
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/04_subscription.png",
+      "size": 230569,
+      "sha256": "40eedc271d338a24aeb4aa54086ac3443e27a7deb0e5dddaefcacff71f59b81b",
+      "archive_equal": true
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/05_login.png",
+      "size": 112206,
+      "sha256": "e95f728e2d29b68ef2a7b0473134171e0dbecf2559d51effbb5ed6516c710568",
+      "archive_equal": true
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/05_subscription_1.png",
+      "size": 84182,
+      "sha256": "ec393ebded51a6011fa4e760de2bd6937f6efa3a12923069ecb5278467fdfe58",
+      "archive_equal": true
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/05_subscription_2.png",
+      "size": 98903,
+      "sha256": "49709654ec9899f11ad93769b0f753ef59920707edcd4019ca3a7e421ec71e05",
+      "archive_equal": true
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/06_subscribe.png",
+      "size": 59182,
+      "sha256": "91c661c61b1ad1bc9964ad788d3bd01d7e37efd8aec61ecfb06e0424b47a4ea3",
+      "archive_equal": false
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/06_subscribe_logged_in.png",
+      "size": 104306,
+      "sha256": "3d5bfe57a5702318a79604c755984d8b9ee12e6764c1dbedd93a3b07095e91ac",
+      "archive_equal": true
+    },
+    {
+      "path": "/var/www/ch2data-hub/toss-review/screenshots/07_payment_note.png",
+      "size": 104306,
+      "sha256": "3d5bfe57a5702318a79604c755984d8b9ee12e6764c1dbedd93a3b07095e91ac",
+      "archive_equal": true
+    }
+  ],
+  "removal": {
+    "deleted": [
+      "/var/www/ch2data-hub/toss-review/CH2DATA_payment_path.pptx",
+      "/var/www/ch2data-hub/toss-review/CH2DATA_결제경로.pptx",
+      "/var/www/ch2data-hub/toss-review/screenshots/01_home_footer.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/02_footer.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/03_refund.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/04_login.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/04_subscription.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/05_login.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/05_subscription_1.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/05_subscription_2.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/06_subscribe.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/06_subscribe_logged_in.png",
+      "/var/www/ch2data-hub/toss-review/screenshots/07_payment_note.png"
+    ],
+    "root_exists": false,
+    "checked_at_utc": "2026-11-12T09:13:55.830143+00:00",
+    "url_checks": [
+      {
+        "url": "https://ch2data.com/toss-review/CH2DATA_payment_path.pptx",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/CH2DATA_%EA%B2%B0%EC%A0%9C%EA%B2%BD%EB%A1%9C.pptx",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/01_home_footer.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/02_footer.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/03_refund.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/04_login.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/04_subscription.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/05_login.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/05_subscription_1.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/05_subscription_2.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/06_subscribe.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/06_subscribe_logged_in.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/screenshots/07_payment_note.png",
+        "status": 404
+      },
+      {
+        "url": "https://ch2data.com/toss-review/",
+        "status": 404
+      }
+    ]
+  }
+}
