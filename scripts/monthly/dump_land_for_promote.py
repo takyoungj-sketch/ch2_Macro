@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 
-OUT = "E:/ch2/ch2_Macro/backups/land_stats_promote_202608.sql.gz"
+OUT = "D:/ch2/ch2_Macro/backups/land_stats_promote_202608.sql.gz"
 PG_DUMP = r"C:\Program Files\PostgreSQL\18\bin\pg_dump.exe"
 SKIP_SUBSTRINGS = (
     b"transaction_timeout",

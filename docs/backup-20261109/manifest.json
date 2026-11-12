@@ -1,0 +1,1640 @@
+{
+  "base": "05fa48fdc707e64f417fefdec2eb05fa96032745",
+  "branch": "claude/ai-revision-20261109",
+  "tracked_count": 64,
+  "untracked_count": 293,
+  "excluded": [
+    ".release-worktree-20261108/",
+    "_tmp_builder_names.json",
+    "_tmp_builder_names.txt",
+    "_tmp_collective_enrich_probe.json",
+    "_tmp_collective_enrich_probe2.json",
+    "_tmp_dictionary_check.json",
+    "_tmp_msg2.txt",
+    "_tmp_p2_verify_result.json",
+    "_tmp_vps_insight_smoke.sh",
+    "_tmp_vps_region_smoke.sh",
+    "backend/_tmp_7y_collective_smoke.py",
+    "backend/_tmp_7y_smoke_probe.py",
+    "backend/_tmp_all_domains_history_probe.py",
+    "backend/_tmp_apply_ddl.py",
+    "backend/_tmp_area_pick.py",
+    "backend/_tmp_bc_e2e_verify.py",
+    "backend/_tmp_bridge_smoke.py",
+    "backend/_tmp_builder_compact.py",
+    "backend/_tmp_builder_names_dump.py",
+    "backend/_tmp_built_cols.py",
+    "backend/_tmp_built_cols2.py",
+    "backend/_tmp_built_land_2019_probe.py",
+    "backend/_tmp_built_window_probe.py",
+    "backend/_tmp_bunpyeong_loglog.py",
+    "backend/_tmp_bunpyeong_loglog_out.txt",
+    "backend/_tmp_bunpyeong_ols.py",
+    "backend/_tmp_bunpyeong_ols_extra.py",
+    "backend/_tmp_bunpyeong_ols_extra.txt",
+    "backend/_tmp_bunpyeong_ols_out.txt",
+    "backend/_tmp_bunpyeong_ols_run.txt",
+    "backend/_tmp_by_year.json",
+    "backend/_tmp_collective_enrich_probe.py",
+    "backend/_tmp_collective_enrich_probe2.py",
+    "backend/_tmp_collective_gap_probe.py",
+    "backend/_tmp_collective_history_probe.py",
+    "backend/_tmp_conv_db.py",
+    "backend/_tmp_conv_probe.py",
+    "backend/_tmp_conv_probe2.py",
+    "backend/_tmp_coverage_year_vs_month.json",
+    "backend/_tmp_daeso_profile_debug.py",
+    "backend/_tmp_dictionary_check.py",
+    "backend/_tmp_dujeong_probe.py",
+    "backend/_tmp_extremes.json",
+    "backend/_tmp_land_builder_ident.json",
+    "backend/_tmp_land_builder_ident.py",
+    "backend/_tmp_land_finish_verify.py",
+    "backend/_tmp_land_window_probe.py",
+    "backend/_tmp_local_land_counts.py",
+    "backend/_tmp_newbuild_n_probe.json",
+    "backend/_tmp_newbuild_n_probe.py",
+    "backend/_tmp_newbuild_residual.json",
+    "backend/_tmp_newbuild_residual.py",
+    "backend/_tmp_newbuild_residual_national.json",
+    "backend/_tmp_newbuild_residual_national.py",
+    "backend/_tmp_p1_verify.py",
+    "backend/_tmp_p2_api_verify.py",
+    "backend/_tmp_p2_check.py",
+    "backend/_tmp_p2_verify.py",
+    "backend/_tmp_prod_out.txt",
+    "backend/_tmp_profile_check.py",
+    "backend/_tmp_profile_check2.py",
+    "backend/_tmp_regions_tree.json",
+    "backend/_tmp_sido_summary.json",
+    "backend/_tmp_snap_list.txt",
+    "backend/_tmp_sute_dual.py",
+    "backend/_tmp_sute_pairs.py",
+    "backend/_tmp_sute_raw.py",
+    "backend/_tmp_sute_reform.py",
+    "backend/_tmp_test_lateral.py",
+    "backend/_tmp_twin_batch_check.py",
+    "backend/_tmp_unresolved_peek.py",
+    "backend/_tmp_v2_golden_diagnostic.py",
+    "backend/_tmp_verify_ipark.txt",
+    "backend/_tmp_yangji_built_lateral.py",
+    "backend/_tmp_yangji_coll_local.py",
+    "deploy/scripts/_debug_built_daeso.sh",
+    "deploy/scripts/_debug_built_db_psql.sh",
+    "deploy/scripts/_debug_built_gakyung.sh",
+    "deploy/scripts/_debug_built_python.sh",
+    "deploy/scripts/_debug_land_upper_daeso.sh",
+    "deploy/scripts/_debug_profile_yangji.sh",
+    "deploy/scripts/_debug_profile_yangji_full.sh",
+    "deploy/scripts/_debug_profile_yangji_hist.sh",
+    "deploy/scripts/_debug_yangji_collective_addr.sh",
+    "deploy/scripts/_debug_yangji_collective_profile.sh",
+    "deploy/scripts/_tmp_apply_d043_ddl.py",
+    "deploy/scripts/_tmp_apply_d043_ddl.sh",
+    "deploy/scripts/_tmp_apply_fieldnote_ai_quota.sh",
+    "deploy/scripts/_tmp_build_remaining.sh",
+    "deploy/scripts/_tmp_check_group_axis.py",
+    "deploy/scripts/_tmp_check_rent_ddl.sh",
+    "deploy/scripts/_tmp_geomdan_rr_smoke.sh",
+    "deploy/scripts/_tmp_geomdan_rr_smoke2.sh",
+    "deploy/scripts/_tmp_geomdan_rr_smoke3.sh",
+    "deploy/scripts/_tmp_incheon_map.sh",
+    "deploy/scripts/_tmp_matrix_yearly_smoke.sh",
+    "deploy/scripts/_tmp_restore_land_price.sh",
+    "deploy/scripts/_tmp_smoke_group_api.sh",
+    "deploy/scripts/_tmp_vps_build_jimok_group.sh",
+    "deploy/scripts/_tmp_vps_build_jimok_group_upper.sh",
+    "deploy/scripts/_tmp_vps_check_history_dbs.sh",
+    "deploy/scripts/_tmp_vps_land_7y_audit.sh",
+    "deploy/scripts/_tmp_vps_land_canonical_rebuild.sh",
+    "deploy/scripts/_tmp_vps_map_smoke.sh",
+    "deploy/scripts/_tmp_vps_phase2_rebuild.sh",
+    "deploy/scripts/_tmp_vps_precheck.sh",
+    "deploy/scripts/_tmp_vps_sync_history_fix_map.sh",
+    "deploy/scripts/_tmp_vps_verify_built_map.sh",
+    "deploy/scripts/_tmp_vps_verify_built_map2.sh",
+    "pipeline/built/_tmp_ald155_43_apt_lots.csv",
+    "pipeline/built/_tmp_ald155_code_scan.json",
+    "pipeline/built/_tmp_ald155_code_scan.py",
+    "pipeline/built/_tmp_bldreg_cheongju_summary.csv",
+    "pipeline/built/_tmp_bldreg_cheongju_title.csv",
+    "pipeline/built/_tmp_bldreg_extract_cheongju.json",
+    "pipeline/built/_tmp_bldreg_extract_cheongju.py",
+    "pipeline/built/_tmp_bldreg_match_cheongju.json",
+    "pipeline/built/_tmp_bldreg_match_cheongju.py",
+    "pipeline/built/_tmp_bldreg_match_commercial.json",
+    "pipeline/built/_tmp_bldreg_match_commercial.py",
+    "pipeline/built/_tmp_bldreg_match_v2.json",
+    "pipeline/built/_tmp_bldreg_match_v2.py",
+    "pipeline/built/_tmp_bldreg_match_v3.json",
+    "pipeline/built/_tmp_bldreg_match_v3.py",
+    "pipeline/built/_tmp_bldreg_match_v4.json",
+    "pipeline/built/_tmp_bldreg_match_v4.py",
+    "pipeline/built/_tmp_bldreg_peek.json",
+    "pipeline/built/_tmp_bldreg_peek.py",
+    "pipeline/built/_tmp_cheongju_mask_probe.json",
+    "pipeline/built/_tmp_cheongju_mask_probe.py",
+    "pipeline/built/_tmp_detached_lot_format.json",
+    "pipeline/built/_tmp_detached_lot_format.py",
+    "pipeline/built/_tmp_kais_polish.py",
+    "pipeline/built/_tmp_kais_sample.py",
+    "pipeline/built/_tmp_kais_share_fill.py",
+    "pipeline/built/_tmp_recovery_joined_cheongju.csv",
+    "pipeline/built/_tmp_recovery_regression_pilot.json",
+    "pipeline/built/_tmp_recovery_regression_pilot.py",
+    "pipeline/built/_tmp_recovery_regression_pilot2.json",
+    "pipeline/built/_tmp_recovery_regression_pilot2.py",
+    "pipeline/built/_tmp_recovery_zone_cache.json",
+    "pipeline/built/_tmp_recovery_zone_cache_v2.json",
+    "pipeline/built/_tmp_shtreg_probe.py",
+    "pipeline/built/_tmp_verify_zone_fix.json",
+    "pipeline/built/_tmp_verify_zone_fix.py"
+  ],
+  "files": [
+    {
+      "path": "backend/app/admin_auth.py",
+      "tracked": false,
+      "size": 2788,
+      "sha256": "3cd16e3c4da7a5a3634e88c128aed1514a46414c0e7ea6e5b1f5fc261188e136",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/constitution.py",
+      "tracked": true,
+      "size": 12397,
+      "sha256": "d50dcb4661123afdedbef1f89ce0a6e937084c31589e022248fda200a2fead2c",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/dialogue.py",
+      "tracked": true,
+      "size": 84570,
+      "sha256": "12fdc160c1b82e32d96e96d7a93e56b5e26c794ce1aefa0271fdb4d5ba2640c4",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/knowledge/screen_guides.py",
+      "tracked": true,
+      "size": 56635,
+      "sha256": "f499f3ee6270d9b36813f225aaaed234d12708a47fd93812c6ef8811ab090f79",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/panel_capabilities.py",
+      "tracked": true,
+      "size": 26317,
+      "sha256": "88ac83ce394a7bf160d5377a0729a57efda5088f005b2fd9ed602d56f1309a74",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/rate_limit.py",
+      "tracked": true,
+      "size": 3252,
+      "sha256": "843312865885e54f5c2b9f0cd4cbe1aeeb3b1a7edfd3e0b2d1a205cb5429c1a9",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/schemas.py",
+      "tracked": true,
+      "size": 6664,
+      "sha256": "d07bd9db455c9b6c31c4a29deee430b069a78bfe12310c56fbddc57140478ff2",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/sessions.py",
+      "tracked": true,
+      "size": 4508,
+      "sha256": "ef34772f65b3fd724010ce34b0862f784a7ed1f54e2c8ffdb0dc61e28aa3cbdb",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/usage_log.py",
+      "tracked": true,
+      "size": 12159,
+      "sha256": "31bb3d4fd687000c952cd70bed1af0312eed10720635dbf498d5a3d19db4dbb3",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai/usage_router.py",
+      "tracked": true,
+      "size": 2107,
+      "sha256": "541ed7c9e19721e01ecc0af43654f2dc953655946ffe99038d4c518254a2c4e2",
+      "findings": []
+    },
+    {
+      "path": "backend/app/ai2/router.py",
+      "tracked": true,
+      "size": 4024,
+      "sha256": "b7f2b19e08e4691088da264b47a421cc197663445094e303603e1b746b96b1f8",
+      "findings": []
+    },
+    {
+      "path": "backend/app/collective/regional_regression/complex_gap_lab.py",
+      "tracked": false,
+      "size": 34762,
+      "sha256": "817d5a650a5c364ad3182893dda174b62dcc8acea96f3cc73c9b032b057cb5fd",
+      "findings": []
+    },
+    {
+      "path": "backend/app/collective_commercial/factory_floor_lab.py",
+      "tracked": false,
+      "size": 12779,
+      "sha256": "588d6241346076d43a0d9141bc8d248fb697cb3cbeac88933d5a5a50814746cf",
+      "findings": []
+    },
+    {
+      "path": "backend/app/config.py",
+      "tracked": true,
+      "size": 10754,
+      "sha256": "cd3a88e2bc05fe75f3f53bd9c51abd32281876264ede362c017c183711984014",
+      "findings": []
+    },
+    {
+      "path": "backend/app/land_lab/regression_augment.py",
+      "tracked": false,
+      "size": 35775,
+      "sha256": "2d4b8e2a800c8aa45402d29b8394a29bd3ef1fa9be12f80f89a5ce40b77f5dda",
+      "findings": []
+    },
+    {
+      "path": "backend/app/land_lab/regression_augment_run.py",
+      "tracked": false,
+      "size": 20438,
+      "sha256": "862f8970bf6f4c6c10564fc52eba24033b95c8752edbfccb1e8721b7fc514681",
+      "findings": []
+    },
+    {
+      "path": "backend/app/land_lab/twin_router.py",
+      "tracked": true,
+      "size": 1235,
+      "sha256": "e18f61063ae8fe52050fc41cde61b23649ff35ee866a506dedde02ac2418fd7c",
+      "findings": []
+    },
+    {
+      "path": "backend/app/land_regression.py",
+      "tracked": true,
+      "size": 35935,
+      "sha256": "55d25b497e1ad0ff6d2be72c786b9d6d2c88709fcdffa103479e26214a40d750",
+      "findings": []
+    },
+    {
+      "path": "backend/app/land_stats_snapshot.py",
+      "tracked": false,
+      "size": 1377,
+      "sha256": "1a3cf6dc691797e79c4dae65133e5c3fe8dfcb5c20a10faf906d5578f165d061",
+      "findings": []
+    },
+    {
+      "path": "backend/app/main.py",
+      "tracked": true,
+      "size": 13799,
+      "sha256": "a959fd2e5ea194314e442b1044d52ac9a6b19953a08ac7ab6396fac6e21718f1",
+      "findings": []
+    },
+    {
+      "path": "backend/app/product_gate.py",
+      "tracked": true,
+      "size": 9278,
+      "sha256": "a80deb3c57f884ac24c67b5689e89882a15151d0791ced19ce292f0b3b3192ab",
+      "findings": []
+    },
+    {
+      "path": "backend/app/routers/free_v2.py",
+      "tracked": true,
+      "size": 28505,
+      "sha256": "6035b858a7e441266e913964dc2566c3d8554bef84479ec1b44e3d2f00628c98",
+      "findings": []
+    },
+    {
+      "path": "backend/app/routers/paid.py",
+      "tracked": true,
+      "size": 79953,
+      "sha256": "0f7afb24a3bf7e95f09bd8fe15066b64b99d435dc26bd5913bfa84c3795057b7",
+      "findings": []
+    },
+    {
+      "path": "backend/app/routers/upper_stats.py",
+      "tracked": true,
+      "size": 23439,
+      "sha256": "26598a7761d83cf50401cbe3a4cb0a835cfca3441d76aee90d8ce031ac9c8ca7",
+      "findings": []
+    },
+    {
+      "path": "backend/app/schemas.py",
+      "tracked": true,
+      "size": 30567,
+      "sha256": "50a1c4a5688bb04e7b33b89c79ce119c22c4af63f9510a2f90a0fcda1a141833",
+      "findings": []
+    },
+    {
+      "path": "backend/tests/conftest.py",
+      "tracked": false,
+      "size": 377,
+      "sha256": "48a1e8814136f36daf19e20fe6c2a05e050c397e734aa057b6e21cee3558dc28",
+      "findings": []
+    },
+    {
+      "path": "backend/tests/test_ai2_protocol.py",
+      "tracked": true,
+      "size": 67496,
+      "sha256": "bad3b4c8ed6f46a9f6a9be9a8210f39bfbeba736515e1d346e087d3cecf2ac49",
+      "findings": []
+    },
+    {
+      "path": "backend/tests/test_ai_gateway.py",
+      "tracked": true,
+      "size": 41802,
+      "sha256": "0017375f2c37f99432b9aae6a11e9ea7bda38517c7fa189f045c2791045af582",
+      "findings": []
+    },
+    {
+      "path": "backend/tests/test_land_ai_dialogue.py",
+      "tracked": true,
+      "size": 41119,
+      "sha256": "2e7c340450c2b181f8450b8b3791acdc6846cfcac4bd4b60455e53c3d86b3c0f",
+      "findings": []
+    },
+    {
+      "path": "backend/tests/test_land_paid_sample_alignment.py",
+      "tracked": false,
+      "size": 4319,
+      "sha256": "40f82005f5a990aa67a9cde8bc33d1a7b87ad3f0975b3dbde5e13b7333e1e960",
+      "findings": []
+    },
+    {
+      "path": "backend/tests/test_land_regression_augment.py",
+      "tracked": false,
+      "size": 5094,
+      "sha256": "0473130002a0c73ab8b5e052b1ddcf428a1e33737e641472dc5f0c9e374e0370",
+      "findings": []
+    },
+    {
+      "path": "backend/tests/test_regression_evaluation_identity.py",
+      "tracked": false,
+      "size": 2892,
+      "sha256": "fd5ce41de593605b9c6242f6d0ecaf9b3a95e09de4e1a25eaee922612601a2bc",
+      "findings": []
+    },
+    {
+      "path": "data/research/land_trait_slim/gauge_asof_2026-05-12.sqlite",
+      "tracked": false,
+      "size": 8826650624,
+      "large_raw": true,
+      "sha256": "241f8b596eb2d3da2c261786d927869198d14e3fa8fc364454548bec2bd5b885"
+    },
+    {
+      "path": "data/단독_전국 매매가격지수.pdf",
+      "tracked": false,
+      "size": 33563,
+      "sha256": "f332617ee68d057f7a7d3cf0cc4bf5ef8a1cc3b98a494ade3fe691e6be67c2ae",
+      "findings": []
+    },
+    {
+      "path": "data/아파트_전국 매매가격지수.pdf",
+      "tracked": false,
+      "size": 33713,
+      "sha256": "c74fc73d7a2e08b53af82ec2f133badcdb25d39595b20d131cc91f34d5a55d51",
+      "findings": []
+    },
+    {
+      "path": "data/연립다세대_전국 매매가격지수.pdf",
+      "tracked": false,
+      "size": 33598,
+      "sha256": "dfe1aa91f814773af1657693a3d5fe27a50370b2df1dcd9801d75f1ad92c06d0",
+      "findings": []
+    },
+    {
+      "path": "data/오피스텔_전국 매매가격지수.pdf",
+      "tracked": false,
+      "size": 31154,
+      "sha256": "c72bb573441cc4ecc515cb4fe1d1c76d366aac783164a23919b34e906b3f56b1",
+      "findings": []
+    },
+    {
+      "path": "db/083_land_stats_v2_publications.sql",
+      "tracked": false,
+      "size": 280,
+      "sha256": "5b84aa74b4d98898635c5c35d877137f5b00dd1735ea7ef36ff318acfa77ff64",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/index.html",
+      "tracked": true,
+      "size": 4214,
+      "sha256": "b65f2cf1a9b3933f375f09919e81d384df0d974b279b96dd9609de065ca819cf",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/refund/index.html",
+      "tracked": true,
+      "size": 4576,
+      "sha256": "340e0adce91587b333e06edc622d862ebacd400224cf432ca7c12e19fc43b136",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/subscribe/index.html",
+      "tracked": true,
+      "size": 14127,
+      "sha256": "4ea9861d2cd8d0b17a963d7a6f146b7a8e4b9d35c441db7cc4495a8649aafbe4",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/subscription/index.html",
+      "tracked": true,
+      "size": 5364,
+      "sha256": "fc2ca5be8fe424673e17805aa0ed93036962a242ab0510cdf1e75882b6c5d0a2",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/toss-review/CH2DATA_payment_path.pptx",
+      "tracked": true,
+      "size": 930632,
+      "sha256": "cac116024267fcdd4dc68afdecc76f66655096a2dcc3db77524943cd16ba91d5",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/toss-review/CH2DATA_결제경로.pptx",
+      "tracked": true,
+      "size": 930632,
+      "sha256": "cac116024267fcdd4dc68afdecc76f66655096a2dcc3db77524943cd16ba91d5",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/toss-review/screenshots/02_footer.png",
+      "tracked": true,
+      "size": 149256,
+      "sha256": "01c3060af89dce2d827348ee0427397206e342558e900d85f12ed700cd210988",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/toss-review/screenshots/03_refund.png",
+      "tracked": true,
+      "size": 231649,
+      "sha256": "c7998c051d0bb07e3685444699d7837631859a15d0eaec3b965719920af11bfe",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/toss-review/screenshots/06_subscribe.png",
+      "tracked": true,
+      "size": 115631,
+      "sha256": "e02b7ada709bf92a6a69fceecfcc174d7b24edb2f97ca6010ddcbf8d7cfb7d43",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/toss-review/screenshots/07_payment_window.png",
+      "tracked": true,
+      "size": 105386,
+      "sha256": "d1d70a78c8c5b32eb3517d3ae354b0c0c5722509b2cf0922f91824a017ee52d8",
+      "findings": []
+    },
+    {
+      "path": "deploy/hub/toss-review/screenshots/08_identity.png",
+      "tracked": false,
+      "size": 104609,
+      "sha256": "5b06cc8ef261e8411b6ceba9d80f802cc4b1182aa911d3287b7bacca1b07b2cc",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/_vps_built_chungbuk_audit.sh",
+      "tracked": false,
+      "size": 1066,
+      "sha256": "81ade731e03b3f7255d27751026b8a80b33ea5f1826ca3ae9001811ba318c01a",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/_vps_built_daeso_detail.sh",
+      "tracked": false,
+      "size": 991,
+      "sha256": "cf15a8d11a003b47b23cf84ceefc7b674e880d9b8a98eb786be0fff36a3b7214",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/_vps_compare_daeso_hashes.sh",
+      "tracked": false,
+      "size": 1151,
+      "sha256": "57158c54c7d358abf9380cc958871af7736df9662bedae49989c5a82c69ec2a9",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/_vps_oauth_smoke.sh",
+      "tracked": false,
+      "size": 1466,
+      "sha256": "2965e27f290be5f9d71a1f9c9d34123180bd13b771842fa2c420e6e459c92758",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/_vps_platform_setup_once.sh",
+      "tracked": false,
+      "size": 871,
+      "sha256": "ffb9d55fca63c723173851518e866c40d31fa2818109662105d653f745953354",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/_vps_sync_history_and_smoke.sh",
+      "tracked": false,
+      "size": 511,
+      "sha256": "01e20e3cb4ed04c843e6070b17573e77a0df0716b7a3e564bec7fca47ff330e2",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/_vps_verify_oauth_env.sh",
+      "tracked": false,
+      "size": 2380,
+      "sha256": "43ae6de26a949d7228a91ec552e8c848508272c3b8433be49090c69e54bdc050",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/apply_toss_test_keys_from_local.ps1",
+      "tracked": true,
+      "size": 2426,
+      "sha256": "118b8c2029474cef8f48d73118765eb6b50f3b2bf0a2a943c43ce0b334e2eacf",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/build_toss_payment_path_ppt_manual.py",
+      "tracked": true,
+      "size": 6696,
+      "sha256": "ef310d9950a8d3229aafe689608eabbf9a78f395256b3654a7989d9bd05fb2f0",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/dump_built_stats_local.ps1",
+      "tracked": true,
+      "size": 1941,
+      "sha256": "3997c9c53795f7b1ff5b6d932e72e4673a52473d99cff2e65cbd43dc83a64c1a",
+      "findings": []
+    },
+    {
+      "path": "deploy/scripts/promote_restore.sh",
+      "tracked": true,
+      "size": 4114,
+      "sha256": "5c2568dc9bcf15f09a733625de11c5d197033f586ef00735e9ab7da835d3e345",
+      "findings": []
+    },
+    {
+      "path": "docs/AI_SCREEN_EXPLANATION_FOLLOWUP.md",
+      "tracked": false,
+      "size": 2205,
+      "sha256": "adcc3f6283aa4d8ecf76970a5138e3ba4d308fa01f8634b0ff1d2d7e5dc7ee61",
+      "findings": []
+    },
+    {
+      "path": "docs/BUILT_MONTHLY_UPDATE_SOP.md",
+      "tracked": true,
+      "size": 7348,
+      "sha256": "6b4b34cf6feaec4c4c2bfc844177213fcdaf29f5ae42ba533a306335ab36e42e",
+      "findings": []
+    },
+    {
+      "path": "docs/BUILT_RECOMMEND2.md",
+      "tracked": true,
+      "size": 10514,
+      "sha256": "4816a222639d0dc4ca27453276108f457353d44d55a3cf264c278f0cf02eb019",
+      "findings": []
+    },
+    {
+      "path": "docs/BUILT_REGRESSION_ANALYSIS_UI.md",
+      "tracked": true,
+      "size": 9045,
+      "sha256": "5f46ba2e7ba8f963880c8345c4888e7ce36e956cb235b33524de60d01389ebdc",
+      "findings": []
+    },
+    {
+      "path": "docs/BUILT_REGRESSION_UX_IMPROVEMENT_PLAN.md",
+      "tracked": false,
+      "size": 37412,
+      "sha256": "a835cb35a02b5ffa9b9b4f201cae22935d5123b666e5a48687827e0f3595fdbc",
+      "findings": []
+    },
+    {
+      "path": "docs/CH2_AI3_IMPLEMENTATION_PLAN.md",
+      "tracked": false,
+      "size": 32251,
+      "sha256": "9c9eaf5615f473019f81624a2be17855cd6a0cbd54f65b0f52ed2ef04d940f9e",
+      "findings": []
+    },
+    {
+      "path": "docs/CH2_AI_ASSISTANT_DIALOGUE_PLAN.md",
+      "tracked": false,
+      "size": 15667,
+      "sha256": "0cbca7e27d4f2bfbc5fc00e49f221f9e0af1598fb92d3d4ddb97215ea03b3d5a",
+      "findings": []
+    },
+    {
+      "path": "docs/CH2_AI_CONSTITUTION.md",
+      "tracked": true,
+      "size": 9885,
+      "sha256": "b5e70237687c1a1b6b17ce64bf7763b47c6661677f01dc937b5060b38ffa07e9",
+      "findings": []
+    },
+    {
+      "path": "docs/CH2_AI_REVISION_PLAN_20261109.md",
+      "tracked": false,
+      "size": 17093,
+      "sha256": "a40eae03add56b5737da15ff6789b1cf131087e0cc3a06e5e3b2f0fb90b00151",
+      "findings": []
+    },
+    {
+      "path": "docs/CH2_LAB_HUB.md",
+      "tracked": true,
+      "size": 13594,
+      "sha256": "31547cc3c069435aaa981fedc8fd16f720c373d8eb24ceea18e15cd88ddcaf13",
+      "findings": []
+    },
+    {
+      "path": "docs/COLLECTIVE_COMMERCIAL_REGRESSION_UX_IMPROVEMENT_PLAN.md",
+      "tracked": false,
+      "size": 19887,
+      "sha256": "1316e0b46c3362dc0633e0761fd42beda03e11d1ddedbc5c1c3a2e783b4df13d",
+      "findings": []
+    },
+    {
+      "path": "docs/COLLECTIVE_MONTHLY_UPDATE_SOP.md",
+      "tracked": true,
+      "size": 4693,
+      "sha256": "ba7ae002265970ae65107f26feccc5ac613b68fb4a17ce5f553876746a88f78f",
+      "findings": []
+    },
+    {
+      "path": "docs/COLLECTIVE_REGIONAL_REGRESSION_UX_IMPROVEMENT_PLAN.md",
+      "tracked": false,
+      "size": 25183,
+      "sha256": "98f0b81390b37045db2c011714a4af1f35a33807db01ff6090456606cef41f72",
+      "findings": []
+    },
+    {
+      "path": "docs/COLLECTIVE_RESIDENTIAL_REGRESSION_UX_IMPROVEMENT_PLAN.md",
+      "tracked": false,
+      "size": 32660,
+      "sha256": "6a8618962449c918adc8c733535979ad39cfd4e962b40be581069e9f52ef9865",
+      "findings": []
+    },
+    {
+      "path": "docs/LAND_REGRESSION_UX_IMPROVEMENT_PLAN.md",
+      "tracked": false,
+      "size": 23420,
+      "sha256": "d2b869e708c315f7fbc2b77b482e665348e2ba7ff9bcb30014f69308881742e7",
+      "findings": []
+    },
+    {
+      "path": "docs/LOCAL_DEVELOPMENT_ACCESS.md",
+      "tracked": false,
+      "size": 962,
+      "sha256": "9dfe872068d1c6b57b2e2693e5c8161b909a75cb4755c67e058f1f1f6cc27a1e",
+      "findings": []
+    },
+    {
+      "path": "docs/MONTHLY_UPDATE_SOP.md",
+      "tracked": true,
+      "size": 23336,
+      "sha256": "f84b7a5ba28cab280ea2f63e49f84e8bb35a804e8a04c8fdaa6ea12d82bd3c46",
+      "findings": []
+    },
+    {
+      "path": "docs/QA_REGION_AUDIT_PLAN.md",
+      "tracked": true,
+      "size": 17624,
+      "sha256": "1afc880e1ff1c424ef118b0668879c5032f20492de0ac59977cb0567d37fa12d",
+      "findings": []
+    },
+    {
+      "path": "docs/REGRESSION_IMPROVEMENT_STATUS.md",
+      "tracked": false,
+      "size": 22082,
+      "sha256": "280dd4dcc04110ed7338ced14b76a2310ff219b89686fa7cddb745fd5cad894e",
+      "findings": []
+    },
+    {
+      "path": "docs/REGRESSION_UNIFIED_IMPLEMENTATION_PLAN.md",
+      "tracked": false,
+      "size": 73214,
+      "sha256": "268c7fe5032320ae2cd5e46c323d13736ac616d2a3f5d0ce9e11475c7a50ced3",
+      "findings": []
+    },
+    {
+      "path": "docs/V2_STATS_DESIGN.md",
+      "tracked": true,
+      "size": 8316,
+      "sha256": "c9f8d3fd51ab2a12c51125b896d6078f3b04c2146dad914a1d5c23af1a11f4c7",
+      "findings": []
+    },
+    {
+      "path": "docs/archive/CH2_AI_CONSTITUTION_v2.1_2026-11-04.md",
+      "tracked": false,
+      "size": 11283,
+      "sha256": "65777be0317c9474940792254369bbd723f52d687a1c8a375a3661e07fcfdb9b",
+      "findings": []
+    },
+    {
+      "path": "docs/built/replacement_cost_review_2025.csv",
+      "tracked": false,
+      "size": 11467,
+      "sha256": "607068d59ba93a2bcfc9d731564e50b09556ef742681bca4c7d18e579439fe87",
+      "findings": []
+    },
+    {
+      "path": "docs/built/간이신축원가표.csv",
+      "tracked": false,
+      "size": 4912,
+      "sha256": "0dabef4a28fd1c078022d762b60e77b662a602ae2d3952369a8212ac9fe792ca",
+      "findings": []
+    },
+    {
+      "path": "docs/built/간이신축원가표_집계.csv",
+      "tracked": false,
+      "size": 10002,
+      "sha256": "8fffd7a25515db90c3ab9b533efd10035a665e74fde11235308636e8001651d4",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/COLLECTIVE_COMPLEX_GAP_LAB.md",
+      "tracked": false,
+      "size": 20947,
+      "sha256": "53bcc2c0257c24dd897002d836e50a1ab5981449cf361d88b19c1d0e30ece450",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/LAND_REGRESSION_AUGMENT_LAB.md",
+      "tracked": false,
+      "size": 22147,
+      "sha256": "c78423f57c40f78d295b31fa8e6c63b29e9d61b1a9ba2303cd687dad2533ee91",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/MACRO_TS_RAW_MONTH_MART.md",
+      "tracked": true,
+      "size": 12392,
+      "sha256": "9116a3275cc83de88354b46dbe6df76138ad3eb4804190042abd01abacf07eb7",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/PRESALE_APARTMENT_MATCH_PLAN.md",
+      "tracked": false,
+      "size": 3385,
+      "sha256": "c3ca49dacd80a1ac4732042110a7a81e1da5c691d597042c07cf66d1007586b9",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_gyeonggi.csv",
+      "tracked": false,
+      "size": 12901,
+      "sha256": "569369e8b6e5d864ad82ba3f8b05c74099ffda025867ee88367d732d05d25ddf",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/받은결과/A_확인군_입력.csv",
+      "tracked": false,
+      "size": 12542,
+      "sha256": "fd7cdcd0374c87b78ba2df3fa58386c51050b70571eb82b6271ccd7f77b61cf9",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/받은결과/A_확인군_입력2.csv",
+      "tracked": false,
+      "size": 15102,
+      "sha256": "ae41e6667adc91fc242738b47ee747b957b9c9fad81b97cacaddd0c83c28a761",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/받은결과/B_답이있는행.csv",
+      "tracked": false,
+      "size": 4790,
+      "sha256": "274855d47d688088c10c7076d9650d319a2833406bf23c0b050f73022cfcd9b2",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/받은결과/B_실험군_입력.csv",
+      "tracked": false,
+      "size": 9404,
+      "sha256": "b087f91d6ad889e184b452d4bef084eccb619eaa62196e9c6ac511b666364c84",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/받은결과/네이버건설사_8곳.csv",
+      "tracked": false,
+      "size": 1316,
+      "sha256": "998331c2d3c178d18c509771f20d085395b485451f03df7764073414be364531",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/받은결과/사람판정_8곳.csv",
+      "tracked": false,
+      "size": 1147,
+      "sha256": "65951f0c64687c8457d835445842e033f842c83de29b0db8488cbb899dad2b7d",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/받은결과/사람확인_목록.csv",
+      "tracked": false,
+      "size": 8721,
+      "sha256": "6e75c9b52d3ab84b8cba1c407b1cd223426f5b59cc314cbf8babbcb8bcf23b50",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/받은결과/여기에_세_파일을_넣으세요.txt",
+      "tracked": false,
+      "size": 238,
+      "sha256": "dd4fc364df6004a1329a3bdcc10871957aa584964b228f70872ed7babe59f2dd",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/올리지말것/A_정답.csv",
+      "tracked": false,
+      "size": 7983,
+      "sha256": "12bb6a448ff502edd9a7c99aa1e68405cf510245f91819f6cb805282b43720b9",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/올리지말것/B_연결키.csv",
+      "tracked": false,
+      "size": 4221,
+      "sha256": "17fa59954d77f34496c04b4693eae994e44a68cef59acd8f186df56616f4ea54",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/올릴파일/A_확인군_입력.csv",
+      "tracked": false,
+      "size": 6151,
+      "sha256": "3ab9424dd64b0bb8f52f4570569498fba28183446711e7e71476a2193abe6ae7",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/올릴파일/B_실험군_입력.csv",
+      "tracked": false,
+      "size": 4688,
+      "sha256": "6acf11cb481cfc96af555bb72b080ecf1b6fd554e4d18da57cbd0774cf391490",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/올릴파일/참고_시공사명.csv",
+      "tracked": false,
+      "size": 148450,
+      "sha256": "dfe10ff944883f8b7406cd90c48a3b1bbde48938aef6ab89fa446577682f4d82",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/올릴파일/프롬프트_목록없음.txt",
+      "tracked": false,
+      "size": 1321,
+      "sha256": "5ea374e0ecd15cae4b241d1c4debfef4e3cb3388d5d47f35c3359ecfc528c508",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/builder_gemini_trial_20261105/올릴파일/프롬프트_목록있음.txt",
+      "tracked": false,
+      "size": 1597,
+      "sha256": "ec3052d2dc1d5545782c809c27e67078456275841d4a4e20b1d4925a2ff1903b",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/collective_complex_gap_pilot.json",
+      "tracked": false,
+      "size": 350809,
+      "sha256": "0fee01f4622cb3da4c8ac11c2cfd2f738e2907b67ebbc9594c8cd1373ae7b6f6",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/collective_factory_floor_lab.json",
+      "tracked": false,
+      "size": 4376,
+      "sha256": "09d6f02b50dc308033f78bbbcaa77d18c7dc940c96f3e58c20f66d68df4023db",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/journal/2026-10-24.md",
+      "tracked": false,
+      "size": 4981,
+      "sha256": "109ed1fb8ee59b76b2540deefd77344da5b71f75e081a4aea0ddeafdad9f98ba",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/journal/2026-10-29.md",
+      "tracked": false,
+      "size": 4448,
+      "sha256": "9383dd8b0583cf324569fe81d42a81fecd4ae49ffed2c29ca2cf28a5524ac86b",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/journal/2026-10-30.md",
+      "tracked": false,
+      "size": 4694,
+      "sha256": "1b17fa4bb08dbe15182aeb7f7d652086bcd600b24e1682cf56f1ee9bbf7be8bf",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/land_regression_augment_assessed.json",
+      "tracked": false,
+      "size": 50384,
+      "sha256": "ca25e9a1b1eced64eb77190fa9aa2aed43a465de5713ecdedf90839184db4029",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/land_regression_augment_round1.json",
+      "tracked": false,
+      "size": 69626,
+      "sha256": "66186e626ade494f92a7c1c81b754d71fe7db778a88ef1ec3fdb7766a238c926",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/presale_apartment_gemini_sample.md",
+      "tracked": false,
+      "size": 17923,
+      "sha256": "b025b424266c6012ec90dbb7f878bb611a9ff26ab8855b8a9cd6283f5466e841",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/presale_apartment_gemini_sample_동남구.md",
+      "tracked": false,
+      "size": 16643,
+      "sha256": "7aef68a83c9a16b76b4023856d125c6a846bb9e644e6407efc4e526c12583a57",
+      "findings": []
+    },
+    {
+      "path": "docs/lab/presale_apartment_gemini_sample_상당구.md",
+      "tracked": false,
+      "size": 13243,
+      "sha256": "f05156e2bfa1b57027e64233caa15f9e76ebc0a766fdfcfa16dc6299b9c9f861",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/BUILT_ALLOCATION_REVIEW_20261103.md",
+      "tracked": false,
+      "size": 7359,
+      "sha256": "49148aa2aaa26e997724a8793825efeb8711a58c24f8ec77438cbf2e2245f101",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/CH2_AI3_HEADER_ENTRY.png",
+      "tracked": false,
+      "size": 119851,
+      "sha256": "ef381f61b13a2dd5cabc03173c39ce0e690f32e955f5f1a5222c592481e9e40c",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/CH2_AI3_MODAL_DEMO.png",
+      "tracked": false,
+      "size": 276429,
+      "sha256": "cd6bc02c337b534f67495d319ac4976733d829539914b30dbb6d80b977948fbe",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/CH2_AI3_TRIAL_REPORT.md",
+      "tracked": false,
+      "size": 11531,
+      "sha256": "f6a29f415fa864a4d91aacbd8d760ef24d363ff328d48db4949d2ddaf8167586",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/CH2_AI3_TRIAL_UI.png",
+      "tracked": false,
+      "size": 174864,
+      "sha256": "eb0ffb9d0c75352d59f1c32b5ad1c6c91580ba3d24ace95f6f06b39a7818244f",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/LOCAL_MIGRATION_LAND_SMOKE_20261010.json",
+      "tracked": false,
+      "size": 8018,
+      "sha256": "ce35c2052f67f95df2bc6307aefe20a092ff0ac4c6641d7f0823e641230097f9",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/LOCAL_MIGRATION_REVIEW_20261010.md",
+      "tracked": false,
+      "size": 7396,
+      "sha256": "1d09923b2d98d9477a6f490cfe471b0e70927b428375baa4b7b07ead5c9ae483",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/RENT_BASIC_STATS_REVIEW_20261102.md",
+      "tracked": false,
+      "size": 5800,
+      "sha256": "0ec31eab22a343991d2cc2c71300bd883a54e51057f874c5b87a996c173e32d6",
+      "findings": []
+    },
+    {
+      "path": "docs/reports/RENT_CONVERSION_MODAL_REVIEW_20261102.md",
+      "tracked": false,
+      "size": 5764,
+      "sha256": "895f7da0a03527ace747fe08abed46106a628705150ecec259b9937f3643cc3c",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/@tanstack_react-query.js",
+      "tracked": false,
+      "size": 170390,
+      "sha256": "32cd0fda5735f34386ebe05d273663cc244622f57fcb15d370d13755b0023462",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/@tanstack_react-query.js.map",
+      "tracked": false,
+      "size": 394274,
+      "sha256": "75b47cb95c58434ac9de9243d75d5a1fc212934abcd453c0bfab38a1fb86f027",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/_metadata.json",
+      "tracked": false,
+      "size": 1362,
+      "sha256": "3565fe5db4d694a428faf81e93fd51383879629548b6cac76892bca79cb5c745",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/axios.js",
+      "tracked": false,
+      "size": 117838,
+      "sha256": "f5b6707b0b294ad1f3b020b4b7d1647f7031c22a12a3d4126f84f06ffbdc25f3",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/axios.js.map",
+      "tracked": false,
+      "size": 244660,
+      "sha256": "110274c6dc1793eb1c14ea4c6ce8f8fb7b4483960083c7beded06e63f1be49b8",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/chunk-4MBMRILA.js",
+      "tracked": false,
+      "size": 2594,
+      "sha256": "6286e91bcffd6d5215cceebc5c633708b145cdb08bf3bbf8d7852281c4ac3d43",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/chunk-4MBMRILA.js.map",
+      "tracked": false,
+      "size": 93,
+      "sha256": "ed562b0bba7ee7214e56ac7f728054b3496bec4597c94a4eb7b4179e6f5cb1c9",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/chunk-E55NSNTN.js",
+      "tracked": false,
+      "size": 77784,
+      "sha256": "b7411feae8c29b443b40a9c34ddcb52e1f06c5445bd03fe8264c9dc52b22c708",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/chunk-E55NSNTN.js.map",
+      "tracked": false,
+      "size": 125629,
+      "sha256": "e9f7fc5306e7996d8a4ccad07d6bcdcc76bdff54d352636f1399720d701fa9e8",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/clsx.js",
+      "tracked": false,
+      "size": 657,
+      "sha256": "ca144c9f8c6312bc8e1bdc4bd0102213bc47506842e49f31fdc8bb6c9ed507bb",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/clsx.js.map",
+      "tracked": false,
+      "size": 1061,
+      "sha256": "afe05bac2c9eab20e2ef1483c0c2c0352d39bb54d34432c93d8bc343044720a1",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/package.json",
+      "tracked": false,
+      "size": 23,
+      "sha256": "3ca9d4afd21425087cf31893b8f9f63c81b0b8408db5e343ca76e5f8aa26ab9a",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/react-dom_client.js",
+      "tracked": false,
+      "size": 928844,
+      "sha256": "0ce350743e6436aeac95f0adc5e46129af2532c50b36d9eb5a64fd35010d3522",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/react-dom_client.js.map",
+      "tracked": false,
+      "size": 1493736,
+      "sha256": "7eca490ae9812121a3ea18f319535f0e561e86036f51d0124cba3ce52ca96226",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/react.js",
+      "tracked": false,
+      "size": 151,
+      "sha256": "ba93ce98d96235df876db37fe2c7e5992e90b035400f7b8a86adab3b5e42d6a8",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/react.js.map",
+      "tracked": false,
+      "size": 93,
+      "sha256": "ed562b0bba7ee7214e56ac7f728054b3496bec4597c94a4eb7b4179e6f5cb1c9",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/react_jsx-dev-runtime.js",
+      "tracked": false,
+      "size": 36967,
+      "sha256": "5d72a10d678b3fc78a941b4fe04f6f6f015c8ece8f44254ed9cc6a12b45524cd",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/.vite/deps/react_jsx-dev-runtime.js.map",
+      "tracked": false,
+      "size": 61110,
+      "sha256": "776ce7dd3f422e2e65a59b87fefe28fd89b76d66bd25fb3bf9c4495ae29016f6",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/src/api/aiUsageClient.ts",
+      "tracked": true,
+      "size": 1892,
+      "sha256": "b68390eff065dd5c7afedcbd5e88dbd1ec5ca47279ababe3cf0837d1a2a9cd1a",
+      "findings": []
+    },
+    {
+      "path": "frontend-lab/src/components/AiUsagePanel.tsx",
+      "tracked": true,
+      "size": 7638,
+      "sha256": "4f55cff316593a698f1952206714cd584838fb1af9322124b59c07d9b506793c",
+      "findings": []
+    },
+    {
+      "path": "frontend-profile/.vite/deps_temp_af090201/package.json",
+      "tracked": false,
+      "size": 23,
+      "sha256": "3ca9d4afd21425087cf31893b8f9f63c81b0b8408db5e343ca76e5f8aa26ab9a",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@tanstack_react-query.js",
+      "tracked": false,
+      "size": 170390,
+      "sha256": "32cd0fda5735f34386ebe05d273663cc244622f57fcb15d370d13755b0023462",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@tanstack_react-query.js.map",
+      "tracked": false,
+      "size": 394274,
+      "sha256": "75b47cb95c58434ac9de9243d75d5a1fc212934abcd453c0bfab38a1fb86f027",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_bbox.js",
+      "tracked": false,
+      "size": 781,
+      "sha256": "9da4f53c5078878e34b0a4c610d7d528777ae9a93eaf3031ac55ddc732b358f3",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_bbox.js.map",
+      "tracked": false,
+      "size": 2086,
+      "sha256": "19d099465fd44053ec96285cf7100ff96cd4fe0104b559238ef7622dc254746c",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_boolean-disjoint.js",
+      "tracked": false,
+      "size": 303,
+      "sha256": "77834bd0c6d31e5b4ba6afa4c732e29f8821867498544ecf085562018e6c5f8e",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_boolean-disjoint.js.map",
+      "tracked": false,
+      "size": 93,
+      "sha256": "ed562b0bba7ee7214e56ac7f728054b3496bec4597c94a4eb7b4179e6f5cb1c9",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_boolean-intersects.js",
+      "tracked": false,
+      "size": 559,
+      "sha256": "796e8a24f0bf53fbd5725efab2ea14a9a486a3c02a0a3da4d4e6b1eaff292799",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_boolean-intersects.js.map",
+      "tracked": false,
+      "size": 1789,
+      "sha256": "563fcb0b383ca26defe59fdecaac685ebba6bf9b33ff41c772b2ddd1a5e717cc",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_boolean-touches.js",
+      "tracked": false,
+      "size": 26900,
+      "sha256": "f6eb4de76c191fe2842eb3e3b7d1f6d5c117a03e96d3600a72bef93e99e042be",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_boolean-touches.js.map",
+      "tracked": false,
+      "size": 48275,
+      "sha256": "ff08d6c6c296164c67a98fa929be902d05c0a9ecea63ffdbe485c48ac76bd4e6",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_helpers.js",
+      "tracked": false,
+      "size": 1067,
+      "sha256": "5071f777342d7dbc389578249daf479d00eb973b09a587a5155cf9906bf4147f",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/@turf_helpers.js.map",
+      "tracked": false,
+      "size": 93,
+      "sha256": "ed562b0bba7ee7214e56ac7f728054b3496bec4597c94a4eb7b4179e6f5cb1c9",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/_metadata.json",
+      "tracked": false,
+      "size": 3256,
+      "sha256": "d66d5d3d122d9bf0c3bea41285c03f9cf757a12fd87584983a9d41f1b7d8e2c5",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/axios.js",
+      "tracked": false,
+      "size": 116937,
+      "sha256": "8f493c45a3ac27e9180a1d6576562fff833b897340b79003b08eca01ad7af2a5",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/axios.js.map",
+      "tracked": false,
+      "size": 243759,
+      "sha256": "65d7cc23db32cb074bf95f0834dcfb61a5234bb9f92805a47ae692dc844cafb2",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-2UO76BCB.js",
+      "tracked": false,
+      "size": 23760,
+      "sha256": "04984b2c8440ff67f4695dce97385c770a2437abf0307630e61f65b7da6a1842",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-2UO76BCB.js.map",
+      "tracked": false,
+      "size": 120071,
+      "sha256": "83146fd3814daf19040cc162d4070385b03387fd97157f74d5abf9d2c4f65e60",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-4MBMRILA.js",
+      "tracked": false,
+      "size": 2594,
+      "sha256": "6286e91bcffd6d5215cceebc5c633708b145cdb08bf3bbf8d7852281c4ac3d43",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-4MBMRILA.js.map",
+      "tracked": false,
+      "size": 93,
+      "sha256": "ed562b0bba7ee7214e56ac7f728054b3496bec4597c94a4eb7b4179e6f5cb1c9",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-5U2ID3AT.js",
+      "tracked": false,
+      "size": 928027,
+      "sha256": "878bb7971ba8c0ae5332489811910a2977e080182fbc7e835de99cd05b4039c1",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-5U2ID3AT.js.map",
+      "tracked": false,
+      "size": 1492600,
+      "sha256": "f12039e91315a8925e060e5297adf0bbff7e6bad99e13366833746ec68e7ebd3",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-E55NSNTN.js",
+      "tracked": false,
+      "size": 77784,
+      "sha256": "b7411feae8c29b443b40a9c34ddcb52e1f06c5445bd03fe8264c9dc52b22c708",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-E55NSNTN.js.map",
+      "tracked": false,
+      "size": 125629,
+      "sha256": "e9f7fc5306e7996d8a4ccad07d6bcdcc76bdff54d352636f1399720d701fa9e8",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-EGSHJPUB.js",
+      "tracked": false,
+      "size": 8891,
+      "sha256": "a4db851a6738367c7289a0d27f39d0ea9faf89b6e33bc32b76190d13782649ac",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-EGSHJPUB.js.map",
+      "tracked": false,
+      "size": 35087,
+      "sha256": "d4bbc44c2c9827f1dab704fd9f5daa4240df6c6a5d3a13c87ab9e239deef38ec",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-GH4D7NQT.js",
+      "tracked": false,
+      "size": 8881,
+      "sha256": "e70deb11260fe45a74f64841ace36ebe0b1ac1346d223f53884e4eb954730302",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-GH4D7NQT.js.map",
+      "tracked": false,
+      "size": 63694,
+      "sha256": "76a597b10ef462ab19344e6b6af144cf715bb83ca6302287ebff1efd9392ddb0",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-QPRHBWFJ.js",
+      "tracked": false,
+      "size": 12665,
+      "sha256": "057e93adf6ed3819e5806cd5be59ce2ac765b50758de6b3a926f84adbaa379c8",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/chunk-QPRHBWFJ.js.map",
+      "tracked": false,
+      "size": 99311,
+      "sha256": "06baf044ed0d56d51e84aaf11eb83d9fcbb07d8061271cccb649b1e2ee0de19e",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/clsx.js",
+      "tracked": false,
+      "size": 657,
+      "sha256": "ca144c9f8c6312bc8e1bdc4bd0102213bc47506842e49f31fdc8bb6c9ed507bb",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/clsx.js.map",
+      "tracked": false,
+      "size": 1061,
+      "sha256": "afe05bac2c9eab20e2ef1483c0c2c0352d39bb54d34432c93d8bc343044720a1",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/maplibre-gl.js",
+      "tracked": false,
+      "size": 1175582,
+      "sha256": "7abcd12d99c79ef25d15129194422e790ec88196194c69ed2fc49940383196f2",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/maplibre-gl.js.map",
+      "tracked": false,
+      "size": 4047616,
+      "sha256": "cc85dffc81753d8bfab53390b8eef773b076f15b439b4b6cb3723275a82d78ca",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/package.json",
+      "tracked": false,
+      "size": 23,
+      "sha256": "3ca9d4afd21425087cf31893b8f9f63c81b0b8408db5e343ca76e5f8aa26ab9a",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react-dom.js",
+      "tracked": false,
+      "size": 193,
+      "sha256": "3f471305ddf393143cc98989e8be2f549ee203509e5acfbaa8773758f7d9d36b",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react-dom.js.map",
+      "tracked": false,
+      "size": 93,
+      "sha256": "ed562b0bba7ee7214e56ac7f728054b3496bec4597c94a4eb7b4179e6f5cb1c9",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react-dom_client.js",
+      "tracked": false,
+      "size": 1016,
+      "sha256": "1347015a8697783dedd9c304359d2aff949d0c28d90d96e012a34351abde430d",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react-dom_client.js.map",
+      "tracked": false,
+      "size": 1226,
+      "sha256": "5724396fea43984b55fe35c3816f2582b8f03c82abfa7063a799754066383d29",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react-map-gl_maplibre.js",
+      "tracked": false,
+      "size": 45864,
+      "sha256": "52759107e6da7ae2336fe327d9402c9b17f05a8d8ef2eff4759abadc8b322a00",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react-map-gl_maplibre.js.map",
+      "tracked": false,
+      "size": 102074,
+      "sha256": "a3a7e99932208849c7d29408b68e50b83a82253443fee7318c8d83a21df0a86e",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react.js",
+      "tracked": false,
+      "size": 151,
+      "sha256": "ba93ce98d96235df876db37fe2c7e5992e90b035400f7b8a86adab3b5e42d6a8",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react.js.map",
+      "tracked": false,
+      "size": 93,
+      "sha256": "ed562b0bba7ee7214e56ac7f728054b3496bec4597c94a4eb7b4179e6f5cb1c9",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react_jsx-dev-runtime.js",
+      "tracked": false,
+      "size": 36967,
+      "sha256": "5d72a10d678b3fc78a941b4fe04f6f6f015c8ece8f44254ed9cc6a12b45524cd",
+      "findings": []
+    },
+    {
+      "path": "frontend-rent/.vite/deps/react_jsx-dev-runtime.js.map",
+      "tracked": false,
+      "size": 61110,
+      "sha256": "776ce7dd3f422e2e65a59b87fefe28fd89b76d66bd25fb3bf9c4495ae29016f6",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/api/aiContext.ts",
+      "tracked": true,
+      "size": 14099,
+      "sha256": "6c938e3492ea03bcd530d2186360b5f59a6c33a1b466a6cc54463d895b84b242",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/components/FreeStatsPanel.tsx",
+      "tracked": true,
+      "size": 17227,
+      "sha256": "ae3e5067f8f613ee7aad592c27ba86c17a2efea9da4cf898a132bc40b7e8a0d2",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/components/PaidAnalysisPanel.tsx",
+      "tracked": true,
+      "size": 20418,
+      "sha256": "7dd911d1841bcb6e7d49b7cd33fdf0e2288dcfaf337a1ab35357cb7086ec2e6c",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/components/PaidFilterTable.tsx",
+      "tracked": true,
+      "size": 15786,
+      "sha256": "f7621e8a37debd8fa1cfc6acd817dc9de6c70048033a9820bc8072960aa2f116",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/components/PaidMatrixYearlyModal.tsx",
+      "tracked": true,
+      "size": 70579,
+      "sha256": "8baa4285259260f05e964b381511f0402a79f9b6b830c2b09bb2312be87cdd91",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/constants/landStatsExplain.ts",
+      "tracked": true,
+      "size": 23851,
+      "sha256": "fa58138740ccc568635d8b3ec2b5c1bfcd5aa9971a48463edca4d15179a155e7",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/constants/paidFilters.ts",
+      "tracked": true,
+      "size": 1337,
+      "sha256": "1e9cdec7943d3cfdd50019c3ba134e3103f85a10631f47dd28c54c8255cd3794",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/store.ts",
+      "tracked": true,
+      "size": 29222,
+      "sha256": "904ce0528bb67c1dac09e0b3659f0c52a6d03b86b876df8398099f16551df91c",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/types.ts",
+      "tracked": true,
+      "size": 14494,
+      "sha256": "0433cb30cc79b4e96e2f334a68dcd3f43f4a96fe8f7b1d58b2db663444ea6775",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/utils/freeStatsV2.ts",
+      "tracked": true,
+      "size": 3887,
+      "sha256": "f67b90800a4c11271ad91fd4a7a6ca6859c8a5d3bbd8fd1f1eef9e304981ff0b",
+      "findings": []
+    },
+    {
+      "path": "frontend/src/utils/paidAnalysisPayload.ts",
+      "tracked": true,
+      "size": 2234,
+      "sha256": "fecb7d1cbc2e0303bf4a75d11c88d794c384bb0fbc6ad710c2b559b8076b13cf",
+      "findings": []
+    },
+    {
+      "path": "frontend/tests/paidFilterState.test.cjs",
+      "tracked": false,
+      "size": 5661,
+      "sha256": "fdae814283887e6353cdf4d5d86ff6ab7c2420306649ec330ea4718f602843af",
+      "findings": []
+    },
+    {
+      "path": "logs/rehearse_v2_update.txt",
+      "tracked": true,
+      "size": 2899,
+      "sha256": "b709593d92eb78f50fe65e81cf118b0020b60c072fa7ac837ccd17ac6bbfe8a9",
+      "findings": []
+    },
+    {
+      "path": "pipeline/_land_annual.sql",
+      "tracked": false,
+      "size": 1583383475,
+      "large_raw": true,
+      "sha256": "7982d15d89be1e454dc8e6760f50672987603e2caaae2576f7ed0f60b5ab18c9"
+    },
+    {
+      "path": "scripts/local/check-land.py",
+      "tracked": false,
+      "size": 6859,
+      "sha256": "3ac6fbef1075d41a3ec60ef4d768691234db79e1f930386337539460653195bb",
+      "findings": []
+    },
+    {
+      "path": "scripts/local/start-built.ps1",
+      "tracked": false,
+      "size": 2301,
+      "sha256": "8b5b824d11fe3ae6ba2666ce6f908cd023a9fd46535ecd8fb9585cfef9ad0283",
+      "findings": []
+    },
+    {
+      "path": "scripts/local/start-land.ps1",
+      "tracked": false,
+      "size": 1862,
+      "sha256": "8f23c60f172a80f8c14a39a4aea0f31525e843c00826c5a1d4e3b108f345c4ea",
+      "findings": []
+    },
+    {
+      "path": "scripts/local/use-env.ps1",
+      "tracked": false,
+      "size": 1534,
+      "sha256": "7ff89cd4ff6822bb04acdafc78449bac28ba9b759cd20b61b4eba28348f4f24f",
+      "findings": []
+    },
+    {
+      "path": "scripts/monthly/dump_land_for_promote.py",
+      "tracked": true,
+      "size": 1165,
+      "sha256": "78afd3feb36755aff38ff1b9a0abb72d67874e8f9d6aad8cc01700d1fda7618d",
+      "findings": []
+    },
+    {
+      "path": "scripts/monthly/run_land_cycle_csv.py",
+      "tracked": true,
+      "size": 12317,
+      "sha256": "c036b0e4388daaa3cfc1f697b338c3d2fb6ce69075cd2416778ec0337682eadc",
+      "findings": []
+    },
+    {
+      "path": "shared/ai-assistant/AiAssistantPanel.tsx",
+      "tracked": true,
+      "size": 37766,
+      "sha256": "c0e925da8cd9539866fa89aacc918e3bc918e3ef188de88813571b51aad94250",
+      "findings": []
+    },
+    {
+      "path": "shared/ai-assistant/aiClient.ts",
+      "tracked": true,
+      "size": 5467,
+      "sha256": "9dc360318c9de1a3b85a0fa37876e5fbf52fc885d327148b2053c3d5484dc9b2",
+      "findings": []
+    },
+    {
+      "path": "참고/지도구현.hwpx",
+      "tracked": false,
+      "size": 9795480,
+      "sha256": "47682fe9752cf8dd35ab0deb1723b766e6eba686da56c564894c44c4b5626be7",
+      "findings": []
+    }
+  ],
+  "findings": []
+}

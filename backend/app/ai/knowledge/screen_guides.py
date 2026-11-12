@@ -13,6 +13,7 @@ OVERVIEW_PANELS = frozenset(
         "CommercialList",
         "CollectiveLanding",
         "PaidMatrixCell",
+        "LandMatrix",
         "MatrixCard",
         "RentListCard",
         "RegionalProfile",
@@ -904,7 +905,7 @@ def format_screen_guide(context: AiContext) -> str:
         return _collective_residential(context)
     if panel == "CommercialList":
         return _collective_commercial(context)
-    if panel in ("PaidMatrixCell", "MatrixCard") or app == "land":
+    if panel in ("PaidMatrixCell", "LandMatrix", "MatrixCard") or app == "land":
         return _land_matrix(context)
     if panel == "RentListCard" or app == "rent":
         return _rent_list(context)
@@ -964,7 +965,7 @@ def screen_guide_followups(context: AiContext) -> list[str]:
             "n이 작으면 어떻게 읽나요?",
             "주거 단지 표와 무엇이 다른가요?",
         ]
-    if app == "land" or panel in ("PaidMatrixCell", "MatrixCard"):
+    if app == "land" or panel in ("PaidMatrixCell", "LandMatrix", "MatrixCard"):
         return [
             "칸을 클릭하면 무엇이 나오나요?",
             "필터 분석과 무엇이 다른가요?",

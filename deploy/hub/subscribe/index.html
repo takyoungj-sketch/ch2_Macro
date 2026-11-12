@@ -132,6 +132,12 @@
           <a href="https://macro.ch2data.com/">Macro 서비스</a>
           <a href="/refund/">환불 정책</a>
         </nav>
+        <p class="footer__biz">
+          씨에이치투 · 대표 정탁영 · 607-23-96932<br />
+          충청북도 청주시 흥덕구 서현중로35번길 25, 401호(가경동)<br />
+          대표전화 <a href="tel:+821058017953">010-5801-7953</a>
+          · <a href="mailto:ch2data.dev@gmail.com">ch2data.dev@gmail.com</a>
+        </p>
         <p>© CH2 DATA</p>
       </footer>
     </div>
@@ -198,7 +204,7 @@
         tossEnabled = Boolean(data.enabled);
         const note = document.getElementById("pay-note");
         note.textContent = tossEnabled
-          ? "자동결제(빌링)는 토스 가맹점 계약 후 「카드로 구독하기」가 동작합니다. 심사·결제창 캡처는 「카드 결제창(심사용)」을 사용하세요."
+          ? "카드로 구독하기를 누르면 토스 카드 등록창이 열립니다. 등록 후 매월 자동 결제됩니다."
           : "토스 테스트 키가 서버에 설정되면 구독 버튼이 활성화됩니다.";
       }
 
@@ -228,13 +234,7 @@
           cardBtn.textContent = tossEnabled ? "카드로 구독하기" : "카드 구독 준비 중";
           cardBtn.disabled = !tossEnabled || !me;
           cardBtn.addEventListener("click", () => startBilling(plan));
-          const onceBtn = document.createElement("button");
-          onceBtn.type = "button";
-          onceBtn.className = "btn-pay btn-pay--outline";
-          onceBtn.textContent = tossEnabled ? "카드 결제창 (심사용)" : "결제창 준비 중";
-          onceBtn.disabled = !tossEnabled || !me;
-          onceBtn.addEventListener("click", () => startOneTimePayment(plan));
-          actions.append(cardBtn, onceBtn);
+          actions.append(cardBtn);
           card.appendChild(actions);
           grid.appendChild(card);
         }
@@ -273,46 +273,11 @@
           const msg = (err && err.message) || "";
           if (msg.includes("빌링") || msg.includes("BILLING")) {
             alert(
-              "자동결제(빌링) 계약이 아직 활성화되지 않았습니다. 토스 가맹계약팀에 빌링 계약을 요청하거나, 아래 「카드 결제창(심사용)」으로 결제창을 확인하세요."
+              "자동결제(빌링) 계약이 아직 활성화되지 않았습니다. 토스 가맹계약팀에 빌링 계약 상태를 확인해 주세요."
             );
             return;
           }
           alert(msg || "카드 등록창을 열지 못했습니다.");
-        }
-      }
-
-      async function startOneTimePayment(plan) {
-        if (!me) {
-          alert("로그인 후 진행해 주세요.");
-          return;
-        }
-        const res = await fetch(`${BILLING}/toss/prepare`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan_id: plan.id }),
-        });
-        if (!res.ok) {
-          alert("결제 준비를 시작하지 못했습니다.");
-          return;
-        }
-        const prepared = await res.json();
-        const tossPayments = TossPayments(prepared.clientKey);
-        const payment = tossPayments.payment({ customerKey: prepared.customerKey });
-        try {
-          await payment.requestPayment({
-            method: "CARD",
-            amount: { currency: "KRW", value: prepared.amount },
-            orderId: prepared.orderId,
-            orderName: prepared.orderName,
-            successUrl: `${window.location.origin}/subscribe/success.html`,
-            failUrl: `${window.location.origin}/subscribe/fail.html`,
-          });
-        } catch (err) {
-          if (err && err.code === "USER_CANCEL") {
-            return;
-          }
-          alert((err && err.message) || "결제창을 열지 못했습니다.");
         }
       }
 
@@ -342,6 +307,8 @@
       document.getElementById("logout-btn").addEventListener("click", async () => {
         await fetch(`${AUTH}/logout`, { method: "POST", credentials: "include" });
         await refreshAuth();
+        await loadSubscription();
+        await loadPlans();
       });
       document.getElementById("review-login-form").addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -358,6 +325,8 @@
           return;
         }
         await refreshAuth();
+        await loadSubscription();
+        await loadPlans();
       });
 
       document.getElementById("cancel-sub-btn").addEventListener("click", () => {

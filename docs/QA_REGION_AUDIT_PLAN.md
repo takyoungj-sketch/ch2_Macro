@@ -379,7 +379,7 @@ P1에서 쓰는 대조 대상 마트는 **그 화면이 실제로 읽는 테이�
 ## 18. V1 실행
 
 ```powershell
-cd E:\ch2\ch2_Macro
+cd D:\ch2\ch2_Macro
 py scripts/qa/audit_region.py --region "세종특별자치시 나성동" --year 2025
 py scripts/qa/audit_region.py --random --year 2025 --n 2
 py scripts/qa/audit_region.py --region 나성동 --year 2025 --save

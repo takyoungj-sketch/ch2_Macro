@@ -45,8 +45,7 @@ $localTmp = [System.IO.Path]::GetTempFileName()
 @(
   "TOSS_CLIENT_KEY=$client"
   "TOSS_SECRET_KEY=$secret"
-) | Set-Content -Path $localTmp -Encoding ASCII -NoNewline
-Add-Content -Path $localTmp -Value "" -Encoding ASCII
+) | Set-Content -Path $localTmp -Encoding ASCII
 
 & scp -i $Key $localTmp "${VpsHost}:$remoteTmp"
 Remove-Item -Force $localTmp

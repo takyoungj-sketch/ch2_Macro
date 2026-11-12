@@ -20,9 +20,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db import get_db
 from app.jimok_group import display_land_key, matrix_mode_to_col_axis
+from app.land_stats_snapshot import preferred_land_stats_month
 from app.ledger_region_sql import beopjungri_eq_or_in, execute_expanding
 from app.population_query import attach_population_year_end
 from app.region_canonical import expand_to_ledger_codes, resolve_to_canonical
@@ -44,7 +44,6 @@ from app.schemas import (
 from app.stats_utils import compute_stats
 from app.v2_stats_windows import (
     UI_WINDOW_YEARS,
-    default_as_of_month_for_service,
     period_bounds_for_window,
     stats_ui_reference_date,
 )
@@ -129,23 +128,17 @@ def _resolve_as_of_month_single(
     explicit: Optional[date],
     col_axis: str = "category",
 ) -> date:
-    eff = (
-        explicit
-        if explicit is not None
-        else (
-            settings.stats_v2_default_as_of_month
-            or default_as_of_month_for_service(settings.stats_v2_assumed_today)
-        )
-    )
+    eff = preferred_land_stats_month(db, explicit)
     row = db.execute(
         text(
             """
-            SELECT 1 FROM land_basic_stats_v2
+            SELECT as_of_month FROM land_basic_stats_v2
             WHERE beopjungri_code = :c
-              AND as_of_month = :as_of
+              AND (:as_of IS NULL OR as_of_month = :as_of)
               AND window_years = :w
               AND col_axis = :axis
               AND zone_type = 'ALL' AND land_category = 'ALL'
+            ORDER BY as_of_month DESC
             LIMIT 1
             """
         ),
@@ -155,11 +148,11 @@ def _resolve_as_of_month_single(
         raise HTTPException(
             status_code=404,
             detail=(
-                f"해당 지역에 as_of_month={eff}, window_years={window_years}, "
+                f"해당 지역에 기준월={eff or '자동'}, window_years={window_years}, "
                 f"matrix_mode={col_axis} 인 V2 집계가 없습니다."
             ),
         )
-    return eff
+    return row.as_of_month
 
 
 def _split_codes_with_basic_stats_v2(
@@ -202,12 +195,25 @@ def _split_codes_with_basic_stats_v2(
     return kept, missing
 
 
-def _resolve_as_of_month_bulk(*, explicit: Optional[date]) -> date:
-    if explicit is not None:
-        return explicit
-    return settings.stats_v2_default_as_of_month or default_as_of_month_for_service(
-        settings.stats_v2_assumed_today
-    )
+def _resolve_as_of_month_bulk(
+    db: Session, codes: list[str], window_years: int, *, explicit: date | None
+) -> date | None:
+    preferred = preferred_land_stats_month(db, explicit)
+    if preferred is not None:
+        return preferred
+    return db.execute(text("""
+        SELECT MAX(s.as_of_month)
+        FROM unnest(CAST(:codes AS char(10)[])) AS region(code)
+        CROSS JOIN LATERAL (
+            SELECT as_of_month
+            FROM land_basic_stats_v2
+            WHERE beopjungri_code = region.code
+              AND window_years = :w AND col_axis = 'category'
+              AND zone_type = 'ALL' AND land_category = 'ALL'
+            ORDER BY as_of_month DESC
+            LIMIT 1
+        ) s
+    """), {"codes": codes, "w": window_years}).scalar()
 
 
 def _relabel_land_axis(
@@ -548,8 +554,7 @@ def get_basic_stats_v2(
     as_of_month: Optional[date] = Query(
         None,
         description=(
-            "기준월(YYYY-MM-01). 생략 시 STATS_V2_DEFAULT_AS_OF_MONTH(있으면) "
-            "또는 STATS_V2_ASSUMED_TODAY 기준 직전 달 1일, 둘 다 없으면 실제 오늘 기준(§3)."
+            "기준월(YYYY-MM-01). 생략 시 운영 고정값 또는 최신 완료 집계월을 사용합니다."
         ),
     ),
     matrix_mode: Literal["category", "group"] = Query(
@@ -686,7 +691,11 @@ def get_basic_stats_v2_bulk(
             detail="as_of_month 는 해당 월 1일(YYYY-MM-01)이어야 합니다.",
         )
 
-    as_of = _resolve_as_of_month_bulk(explicit=payload.as_of_month)
+    as_of = _resolve_as_of_month_bulk(
+        db, codes, payload.window_years, explicit=payload.as_of_month
+    )
+    if as_of is None:
+        raise HTTPException(status_code=404, detail="합산에 쓸 V2 사전집계(ALL×ALL)가 있는 코드가 없습니다.")
     # 지역 커버리지는 category grain 기준으로 판정(group mart 미적재 시도도 bulk 원장 재집계 가능)
     kept, stats_excluded_codes = _split_codes_with_basic_stats_v2(
         db, codes, as_of, payload.window_years, col_axis="category"

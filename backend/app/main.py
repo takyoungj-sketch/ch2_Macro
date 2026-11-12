@@ -47,12 +47,12 @@ async def _lifespan(app: FastAPI):
     """앱 시작/종료 훅 (FastAPI 0.93+ 권장 방식 — 구 `@app.on_event` 대체)."""
     from app.v2_stats_windows import default_as_of_month_for_service
 
-    eff = settings.stats_v2_default_as_of_month or default_as_of_month_for_service(
-        settings.stats_v2_assumed_today
-    )
+    eff = settings.stats_v2_default_as_of_month
+    if eff is None and settings.stats_v2_assumed_today is not None:
+        eff = default_as_of_month_for_service(settings.stats_v2_assumed_today)
     _LOG.info(
         "V2 API 기본 as_of_month=%s (STATS_V2_DEFAULT_AS_OF_MONTH=%s, STATS_V2_ASSUMED_TODAY=%s)",
-        eff,
+        eff or "latest completed snapshot",
         settings.stats_v2_default_as_of_month,
         settings.stats_v2_assumed_today,
     )
@@ -167,6 +167,9 @@ from app.ai.usage_router import router as ai_usage_router
 app.include_router(ai_router, prefix="/api")
 app.include_router(ai_usage_router, prefix="/api")
 _LOG.info("CH2 AI API 활성: /api/ai/* · /api/admin/ai-usage")
+from app.ai.usage_log import log_limit_warnings
+
+log_limit_warnings()
 
 from app.insight.router import router as insight_router
 
@@ -179,9 +182,12 @@ from app.land_lab.twin_router import router as land_twin_router
 app.include_router(parcel_lab_router, prefix="/api")
 app.include_router(land_twin_router, prefix="/api")
 
-from app.ai2.router import router as ai2_router
+if settings.ai2_lab_enabled:
+    # 운영 기본값은 비활성. 켜도 /api/lab/* 는 관리자 전용이다.
+    from app.ai2.router import router as ai2_router
 
-app.include_router(ai2_router, prefix="/api")
+    app.include_router(ai2_router, prefix="/api")
+    _LOG.info("AI2 랩 API 활성(관리자): /api/lab/ai2/*")
 from app.ai3.router import router as ai3_router
 
 app.include_router(ai3_router, prefix="/api")

@@ -8,6 +8,19 @@ from app.ai2.types import AnalysisContext, ToolEnvelope
 from app.collective.analysis_gates import MIN_COUNT_FLOOR_INDEX
 
 
+
+def _lab_app():
+    """AI2 랩 라우터만 올린 앱. 운영에서는 AI2_LAB_ENABLED=false 이고 관리자 전용이다."""
+    from fastapi import FastAPI
+
+    from app.admin_auth import require_admin_access
+    from app.ai2.router import router
+
+    lab = FastAPI()
+    lab.include_router(router, prefix="/api")
+    lab.dependency_overrides[require_admin_access] = lambda: None
+    return lab
+
 def _kinds(actions) -> list[str]:
     return [a.kind for a in actions]
 
@@ -783,7 +796,7 @@ def test_sentence_property_mismatch_refuses_without_a_call():
 def test_continue_sentence_keeps_the_session_if_the_form_fixture_differs():
     from fastapi.testclient import TestClient
 
-    from app.main import app
+    app = _lab_app()
 
     client = TestClient(app)
     sid = "ai2-sentence-keep"
@@ -940,7 +953,7 @@ def test_use_llm_flag_uses_the_reader(monkeypatch):
     from fastapi.testclient import TestClient
 
     from app.ai2.llm import LlmDraft as Draft
-    from app.main import app
+    app = _lab_app()
 
     def fake(sentence: str, ctx):
         return Draft(
@@ -1088,7 +1101,7 @@ def test_model_picks_one_listed_tool_and_rejects_any_other():
 def test_follow_up_explain_keeps_the_session_if_the_form_fixture_differs():
     from fastapi.testclient import TestClient
 
-    from app.main import app
+    app = _lab_app()
 
     client = TestClient(app)
     sid = "ai2-explain-keep"
@@ -1124,7 +1137,7 @@ def test_follow_up_explain_keeps_the_session_if_the_form_fixture_differs():
 def test_follow_up_drop_keeps_the_session_if_the_form_fixture_differs():
     from fastapi.testclient import TestClient
 
-    from app.main import app
+    app = _lab_app()
 
     client = TestClient(app)
     sid = "ai2-drop-keep"

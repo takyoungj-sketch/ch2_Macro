@@ -8,7 +8,6 @@ import {
   fetchUpperStats,
 } from "../api/client";
 import { MATRIX_MODE_LABEL, type MatrixMode } from "../constants/jimokGroup";
-import { yearsRangeInclusive } from "../constants/paidFilters";
 import {
   basicStatsActionLabel,
   rollingStatsCaption,
@@ -25,7 +24,6 @@ import { parseApiError } from "../utils/apiError";
 import {
   calendarYearReferenceRows,
   rollingMatrixModalPayload,
-  v2PeriodToYearRange,
 } from "../utils/freeStatsV2";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { statsScopeKeyFromBeopjungriCodes } from "../utils/statsScopeKey";
@@ -38,7 +36,7 @@ import YearlyStatsTable from "./YearlyStatsTable";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import RegionalProfileLink from "./RegionalProfileLink";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
-import { buildLandMatrixOverviewContext } from "../api/aiContext";
+import { buildLandMatrixContext, landRegionFullLabel } from "../api/aiContext";
 
 export default function FreeStatsPanel() {
   const narrow = useNarrowScreen();
@@ -48,8 +46,6 @@ export default function FreeStatsPanel() {
   const statsDisplayScopeKey = useAppStore((s) => s.statsDisplayScopeKey);
   const statsDisplayKick = useAppStore((s) => s.statsDisplayKick);
   const syncPaidBasicStatsMeta = useAppStore((s) => s.syncPaidBasicStatsMeta);
-  const setPaidRequest = useAppStore((s) => s.setPaidRequest);
-  const paidBasicBaseKey = useAppStore((s) => s.paidBasicBaseKey);
   const freeStatsWindowYears = useAppStore((s) =>
     normalizeFreeStatsWindowYears(s.freeStatsWindowYears)
   );
@@ -92,13 +88,12 @@ export default function FreeStatsPanel() {
     prevRegionScopeKey.current = regionScopeKey;
     if (prev === null || prev === regionScopeKey) return;
     setMatrixMode("category");
-    setPaidRequest({ matrix_mode: "category" });
     setTrendModal(null);
     setTrendRequest(null);
     setTrendLoading(false);
     setTrendError(null);
     setTrendRows([]);
-  }, [regionScopeKey, setPaidRequest]);
+  }, [regionScopeKey]);
 
   const isPaidBasic = paidResultView === "basic";
   /** 단일 상위 행정(시도·시군구·읍면동·city) — upper mart 경로 (D-028) */
@@ -181,27 +176,14 @@ export default function FreeStatsPanel() {
     });
   }, [data, isPaidBasic, useUpper, syncPaidBasicStatsMeta]);
 
-  /** 기본 통계 창과 동일 연도(period 달력 연도 범위)로 필터 칩 동기화 */
-  useEffect(() => {
-    if (!isPaidBasic || data == null) return;
-    const { year_from, year_to } = v2PeriodToYearRange(data);
-    const next = yearsRangeInclusive(year_from, year_to);
-    if (next.length === 0) return;
-    setPaidRequest({ years: next, year_from: null, year_to: null });
-  }, [
-    isPaidBasic,
-    paidBasicStatsKick,
-    data?.period_start,
-    data?.period_end,
-    setPaidRequest,
-  ]);
-
   const yearlyRowsFreeReference = useMemo(() => {
     if (!data) return [];
     const cal = calendarYearReferenceRows(data);
     if (cal && cal.length > 0) return cal;
     return data.by_year ?? [];
   }, [data]);
+
+  const aiRegion = useMemo(() => landRegionFullLabel(tierSelection, regions), [tierSelection, regions]);
 
   const closeTrend = () => {
     setTrendModal(null);
@@ -223,7 +205,6 @@ export default function FreeStatsPanel() {
         return;
       }
 
-      const baseKey = statsData.analysis_base_key ?? paidBasicBaseKey;
       const rollingExtras = rollingMatrixModalPayload(statsData);
 
       /**
@@ -248,10 +229,11 @@ export default function FreeStatsPanel() {
               .filter(Boolean) ?? resolvedCodes;
 
       const body: MatrixYearlyRequest = {
+        basic_stats_cell: true,
         region_selections: upperScope != null ? [upperScope] : null,
         region_codes: codesForTrend,
         ...rollingExtras,
-        base_cache_key: baseKey,
+        base_cache_key: statsData.analysis_base_key ?? null,
         road_conditions: null,
         area_categories: null,
         area_sqm_min: null,
@@ -263,7 +245,7 @@ export default function FreeStatsPanel() {
         outlier_iqr_multiplier: 3,
         zone_type: zoneType,
         land_category: landCategory,
-        matrix_mode: matrixMode,
+        matrix_mode: statsData.matrix_mode ?? matrixMode,
       };
 
       setTrendModal({ zoneType, landCategory });
@@ -280,7 +262,7 @@ export default function FreeStatsPanel() {
         setTrendLoading(false);
       }
     },
-    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey, useUpper, upperSingle, matrixMode]
+    [isPaidBasic, resolvedCodes, data, useUpper, upperSingle, matrixMode]
   );
 
   if (regionsLoading)
@@ -350,14 +332,28 @@ export default function FreeStatsPanel() {
   return (
     <div className={narrow ? "flex h-full min-h-0 flex-1 flex-col gap-1 bg-white p-1" : "bg-white rounded-xl shadow-sm p-5 space-y-5"}>
         <PublishAiContext
-          context={buildLandMatrixOverviewContext({
-            regionLabel: data.beopjungri_name,
-            windowYears: freeStatsWindowYears,
-            txCount: data.total?.count ?? 0,
-            matrixMode,
+          context={buildLandMatrixContext({
+            resultKind: "basic",
+            scope: {
+              regionLabel: aiRegion.label || data.beopjungri_name,
+              regionLevel: aiRegion.level,
+              regionCodes: resolvedCodes,
+              period: {
+                kind: "rolling",
+                period_start: data.period_start,
+                period_end: data.period_end,
+                window_years: data.window_years ?? freeStatsWindowYears,
+              },
+              filters: { exclude_outlier: false, exclude_partial: false },
+              asOfMonth: data.as_of_month,
+              statsReferenceDate: data.stats_reference_date,
+            },
+            matrixMode: data.matrix_mode ?? matrixMode,
             matrix: data.matrix ?? [],
             byZone: data.by_zone,
             byLandCategory: data.by_land_category,
+            byYear: yearlyRowsFreeReference,
+            total: data.total,
           })}
         />
         {useUpper &&
@@ -439,10 +435,11 @@ export default function FreeStatsPanel() {
         error={trendError}
         zoneType={trendModal?.zoneType ?? ""}
         landCategory={trendModal?.landCategory ?? ""}
-        matrixMode={matrixMode}
+        matrixMode={trendRequest?.matrix_mode}
         rows={trendRows}
         filterRequest={trendRequest}
-        aiRegionLabel={data.beopjungri_name}
+        aiRegionLabel={aiRegion.label || data.beopjungri_name}
+        aiAsOfMonth={data.as_of_month}
       />
     </div>
   );

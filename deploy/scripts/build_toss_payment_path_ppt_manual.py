@@ -36,11 +36,16 @@ SLIDES = [
     ("④ 로그인", "심사용 이메일·비밀번호 로그인", "04_login.png"),
     ("⑤ 구독 정책 (1/2)", "상품·요금·무료 체험", "05_subscription_1.png"),
     ("⑤ 구독 정책 (2/2)", "제품 추가·해제·결제 채널·해지", "05_subscription_2.png"),
-    ("⑤ 구매 과정", "로그인 후 구독 페이지 (카드 결제창·심사용)", "06_subscribe.png"),
+    ("⑤ 구매 과정", "로그인 후 구독 페이지 (카드로 구독하기)", "06_subscribe.png"),
     (
-        "⑥ 카드 결제경로",
-        "테스트 키 · 카드 결제창(심사용) → 토스 결제창 (실제 결제 없음)",
+        "⑥ 카드 결제경로 (1/2)",
+        "테스트 키 · 카드번호 · 유효기간 (실제 결제 없음)",
         "07_payment_window.png",
+    ),
+    (
+        "⑥ 카드 결제경로 (2/2)",
+        "본인 정보 · 주민등록번호 앞 7자리(생년월일) · 통신사 · 휴대폰번호",
+        "08_identity.png",
     ),
 ]
 
@@ -98,7 +103,7 @@ def _add_title_slide(prs: Presentation, merchant: dict[str, str]) -> None:
         f"(3) URL: {merchant['url']}",
         f"(4) Test ID: {merchant['test_id']}",
         f"(5) Test PW: {merchant['test_pw']}",
-        "(6) MID: ch2datoe5e (API 개별 연동 · 테스트 키)",
+        "(6) MID: bill_ch2davyf4 (API 개별 연동 · 빌링 테스트 키)",
     ]:
         para = tf.add_paragraph()
         para.text = line
@@ -119,8 +124,8 @@ def _add_notes_slide(prs: Presentation) -> None:
     p.font.color.rgb = BLUE
     for line in [
         "월 구독 SaaS (Macro / Macro+FieldNote) — 무형상품",
-        "테스트 키 연동 · 카드 결제창(심사용) 캡처 포함",
-        "운영: 카드 자동결제(빌링) — 가맹 빌링 계약 후 활성화",
+        "테스트 키 연동 · 카드번호·유효기간·주민등록번호 앞 7자리 입력창 캡처 포함",
+        "운영 결제: 카드 자동결제(빌링). 카드 등록 후 매월 승인",
         "각 슬라이드 하단 URL: https://ch2data.com/subscribe/",
     ]:
         para = tf.add_paragraph()

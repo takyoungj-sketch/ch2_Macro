@@ -2,7 +2,7 @@
 
 > **목표:** 매월 초 **토지 cycle 완료 후** 상업·공장·단독다가구 → `built_stats.built_transactions` 갱신, 검증·승인 후 반영.  
 > **전제:** 토지와 동일하게 **단순성·재현성·검증·롤백** 우선. 사전통계(V2)는 **당분간 없음** — 회귀는 실시간.  
-> **기준 루트:** 저장소 루트. 예: `C:\ch2\ch2_Macro` · `E:\ch2\ch2_Macro`.
+> **기준 루트:** 저장소 루트. 예: `D:\ch2\ch2_Macro`.
 >
 > **SSOT:** `scripts/monthly/run_built_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
 > 축약·보강 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) — 실거래 달 skip-enrich 기본. 이 SOP의 xlsx 러너 이름으로 월간을 돌리지 말 것.  

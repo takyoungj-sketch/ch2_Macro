@@ -1,0 +1,171 @@
+{
+  "status": "executed",
+  "as_of": "2026-10-01",
+  "period_start": "2021-11-01",
+  "period_end": "2026-10-31",
+  "window_years": 5,
+  "unit": "집합공장 상품군 클러스터. 도로·용도·연식·면적구간 단위이고 건물 키 하나는 아니다.",
+  "reference": "1층=100. 표본에 1층이 10건 미만이면 그 클러스터는 본표에서 뺀다.",
+  "bands": "지하, 1층, 2층, 3층 이상. 상가의 고층·초고층 구간은 쓰지 않는다.",
+  "entry": {
+    "cluster_n": 30,
+    "band_n": 10
+  },
+  "n_trades": 25650,
+  "funnel": {
+    "clusters": 912,
+    "n_below_30": 764,
+    "no_first_floor": 134,
+    "no_other_band": 0,
+    "not_identified": 11,
+    "entered": 3
+  },
+  "n_clusters_entered": 3,
+  "entered": [
+    {
+      "label": "통일로 (덕양구 · 동산동)",
+      "building_use": "공장",
+      "n": 43,
+      "cells": [
+        {
+          "band": "2층",
+          "code": "fac_2",
+          "n": 10,
+          "index": 100.5,
+          "lo": 87.6,
+          "hi": 115.2,
+          "above": true,
+          "ci_excludes_100": false,
+          "cov": "HC3"
+        },
+        {
+          "band": "3층 이상",
+          "code": "fac_3p",
+          "n": 23,
+          "index": 95.7,
+          "lo": 84.1,
+          "hi": 108.9,
+          "above": false,
+          "ci_excludes_100": false,
+          "cov": "HC3"
+        }
+      ]
+    },
+    {
+      "label": "다산중앙로19번길 (다산동)",
+      "building_use": "공장",
+      "n": 72,
+      "cells": [
+        {
+          "band": "3층 이상",
+          "code": "fac_3p",
+          "n": 54,
+          "index": 128.8,
+          "lo": 107.5,
+          "hi": 154.3,
+          "above": true,
+          "ci_excludes_100": true,
+          "cov": "HC3"
+        }
+      ]
+    },
+    {
+      "label": "송도미래로 (송도동)",
+      "building_use": "공장",
+      "n": 191,
+      "cells": [
+        {
+          "band": "2층",
+          "code": "fac_2",
+          "n": 18,
+          "index": 43.2,
+          "lo": 29.7,
+          "hi": 62.8,
+          "above": false,
+          "ci_excludes_100": true,
+          "cov": "HC3"
+        },
+        {
+          "band": "3층 이상",
+          "code": "fac_3p",
+          "n": 163,
+          "index": 43.6,
+          "lo": 30.7,
+          "hi": 62.0,
+          "above": false,
+          "ci_excludes_100": true,
+          "cov": "HC3"
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "band": "지하",
+      "n_clusters": 0
+    },
+    {
+      "band": "2층",
+      "n_clusters": 2,
+      "median": 71.8,
+      "p25": 57.5,
+      "p75": 86.2,
+      "share_above_100": 0.5,
+      "share_ci_excludes_100": 0.5,
+      "share_ci_above": 0.0,
+      "share_ci_below": 0.5
+    },
+    {
+      "band": "3층 이상",
+      "n_clusters": 3,
+      "median": 95.7,
+      "p25": 69.7,
+      "p75": 112.2,
+      "share_above_100": 0.333,
+      "share_ci_excludes_100": 0.667,
+      "share_ci_above": 0.333,
+      "share_ci_below": 0.333
+    }
+  ],
+  "building_use_top": [
+    {
+      "building_use": "공장",
+      "n": 22817
+    },
+    {
+      "building_use": "자동차 관련시설",
+      "n": 1903
+    },
+    {
+      "building_use": "창고시설",
+      "n": 787
+    },
+    {
+      "building_use": "운수시설",
+      "n": 129
+    },
+    {
+      "building_use": "자원순환 관련시설",
+      "n": 5
+    },
+    {
+      "building_use": "동물 및 식물 관련시설",
+      "n": 5
+    },
+    {
+      "building_use": "위험물 저장 및 처리시설",
+      "n": 4
+    }
+  ],
+  "knowledge_split": false,
+  "n_knowledge_clusters": 0,
+  "knowledge_tables": null,
+  "other_tables": null,
+  "notes": [
+    "지수는 클러스터 안 로그 ㎡당 가격 회귀다. 연면적 로그, 연식, 계약연도 더미를 넣을 수 있으면 넣는다.",
+    "표준오차는 HC3다. 레버리지가 0.99 이상인 클러스터만 HC1이다.",
+    "신뢰구간이 100을 가로지르면 그 클러스터의 방향은 정해지지 않은 것으로 센다.",
+    "아파트 층 지수, 집합상가 1층=100과 더하지 않는다. 집합상가는 다시 추정하지 않는다.",
+    "클러스터 키와 지번은 스냅샷에 넣지 않는다."
+  ]
+}

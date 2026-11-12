@@ -101,7 +101,7 @@ G3 compute_macro_ts (grain=calendar_month) · GET /api/insight/01
 
 - 유형: **단독다가구 · 매매만** (전월세 아님)
 - 기간: **2010-01 ~ 2018-12**
-- 저장: `E:\ch2\ch2_Macro\raw\raw long term\단독다가구_2010_2020\`
+- 저장: `D:\ch2\ch2_Macro\raw\raw long term\단독다가구_2010_2020\`
 - 기대: 시도×9년. 현재 수집기 16시도 기준 **144 CSV**. 1회 상한 100이라 **두 번** 돌린다.
 
 ### 5.2 CLI 예
@@ -109,8 +109,8 @@ G3 compute_macro_ts (grain=calendar_month) · GET /api/insight/01
 저장 폴더는 기존 2019·2020과 **같은 폴더**. `max-new-downloads`가 기존 파일을 건너뛴다.
 
 ```powershell
-cd E:\ch2\ch2_Macro\deploy\molit_csv_collector
-py -m molit_csv_collector --cli --property-type detached --deal-type sale --start-year 2010 --start-month 1 --end-year 2018 --end-month 12 --output-dir "E:\ch2\ch2_Macro\raw\raw long term\단독다가구_2010_2020" --max-new-downloads 100
+cd D:\ch2\ch2_Macro\deploy\molit_csv_collector
+py -m molit_csv_collector --cli --property-type detached --deal-type sale --start-year 2010 --start-month 1 --end-year 2018 --end-month 12 --output-dir "D:\ch2\ch2_Macro\raw\raw long term\단독다가구_2010_2020" --max-new-downloads 100
 ```
 
 끝나면 같은 명령을 한 번 더 돌려 나머지를 채운다.
@@ -133,7 +133,7 @@ GUI면 유형은 단독다가구만, 매매, 2010-01~2018-12, 출력 폴더 위�
 토지 long term 폴더가 비어 있다. 실험 결을 raw로 통일하려면:
 
 ```powershell
-py -m molit_csv_collector --cli --property-type land --deal-type sale --start-year 2010 --start-month 1 --end-year 2020 --end-month 12 --output-dir "E:\ch2\ch2_Macro\raw\raw long term\토지_2010_2020" --max-new-downloads 100
+py -m molit_csv_collector --cli --property-type land --deal-type sale --start-year 2010 --start-month 1 --end-year 2020 --end-month 12 --output-dir "D:\ch2\ch2_Macro\raw\raw long term\토지_2010_2020" --max-new-downloads 100
 ```
 
 토지 2010–2020은 용량이 크다. 단독을 먼저 채워도 마트 뼈는 만들 수 있다. 다만 **합계 선을 2010부터 공개하려면 토지 raw가 있어야** 한다. 그 전에는 합계를 2010부터 그리지 않는다.

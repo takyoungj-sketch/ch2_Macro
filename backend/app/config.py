@@ -56,15 +56,15 @@ class Settings(BaseSettings):
     #: 명시적으로 켠 로컬 개발 서버의 제품 구독 게이트만 생략한다.
     #: loopback 접속·로컬 Host·API_TOKEN 미설정 조건을 함께 검사한다.
     local_dev_access: bool = Field(default=False, validation_alias="CH2_LOCAL_DEV_ACCESS")
-    #: 관리자 QA 검증 API (`/api/admin/qa/*`). 비어 있으면 통과(로컬).
-    #: 값이 있으면 `X-Qa-Audit-Token` 필요. 공개 앱과 분리.
+    #: 관리자 API(`/api/admin/*`, `/api/lab/*`)의 대체 인증 토큰.
+    #: 관리자 세션이 없을 때 `X-Qa-Audit-Token` 이 이 값과 같아야 한다. 비어 있으면 토큰 경로는 거부.
     qa_audit_token: str = Field(default="", validation_alias="QA_AUDIT_TOKEN")
 
-    #: 무료 V2 API: 요청에 as_of_month 없을 때. None 이면 요청 시점 기준 직전 달 1일(§3).
+    #: V2 API 운영 고정 기준월. None 이면 최신 완료 집계월을 사용한다.
     stats_v2_default_as_of_month: Optional[date] = Field(
         default=None,
         validation_alias="STATS_V2_DEFAULT_AS_OF_MONTH",
-        description="고정 시 우선. 미설정 시 동적 직전 달(as_of_month_for_service)",
+        description="고정 시 우선. 미설정 시 최신 완료 집계월",
     )
     #: 로컬·검증: «오늘» 대신 이 날짜로 직전 달 as_of_month 를 계산. 예: 2026-01-01 → 2025-12-01.
     #: stats_v2_default_as_of_month 가 있으면 그쪽이 우선(이 필드는 무시).
@@ -101,6 +101,10 @@ class Settings(BaseSettings):
     ai_subscription_quota_enabled: bool = Field(default=False, validation_alias="AI_SUBSCRIPTION_QUOTA_ENABLED")
     ai_max_output_tokens: int = Field(default=8000, ge=512, le=16000, validation_alias="AI_MAX_OUTPUT_TOKENS")
     ai_paid_emergency_stop: bool = Field(default=False, validation_alias="AI_PAID_EMERGENCY_STOP")
+    #: AI2 프로토콜 랩(`/api/lab/ai2/*`). 운영 기본 비활성. 켜도 관리자 전용.
+    ai2_lab_enabled: bool = Field(default=False, validation_alias="AI2_LAB_ENABLED")
+    #: AI 요청 제한에서 X-Real-IP 를 믿을 직접 접속 주소(쉼표 구분). nginx 가 같은 호스트일 때 loopback.
+    ai_trusted_proxies: str = Field(default="127.0.0.1,::1", validation_alias="AI_TRUSTED_PROXIES")
     # AI3 독립 로컬 시험. 기존 AI·AI2의 활성 여부와 무관하다.
     ai3_enabled: bool = Field(default=False, validation_alias="AI3_ENABLED")
     ai3_access_token: str = Field(default="", validation_alias="AI3_ACCESS_TOKEN")

@@ -1,4 +1,9 @@
-"""AI 세션 — in-memory MVP (운영 시 Redis 등으로 교체)."""
+"""AI 세션 저장소.
+
+현재 구현은 단일 uvicorn 워커 전제의 프로세스 메모리(`MemorySessionStore`)다.
+세션 객체에 `ScreenEvidence` 같은 파이썬 객체가 들어 있어 그대로 직렬화되지 않는다.
+워커를 늘리기 전에 `SessionStore` 를 Redis/플랫폼 DB 구현으로 교체하고 직렬화 형식을 정한다.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,7 @@ import uuid
 from contextvars import ContextVar
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 from app.config import settings
 
@@ -57,7 +62,33 @@ class AiSession:
         self.touch()
 
 
-_store: dict[str, AiSession] = {}
+class SessionStore(Protocol):
+    def get(self, session_id: str) -> AiSession | None: ...
+    def put(self, session: AiSession) -> None: ...
+    def purge_older_than(self, cutoff: float) -> None: ...
+
+
+class MemorySessionStore:
+    def __init__(self) -> None:
+        self.items: dict[str, AiSession] = {}
+
+    def get(self, session_id: str) -> AiSession | None:
+        return self.items.get(session_id)
+
+    def put(self, session: AiSession) -> None:
+        self.items[session.session_id] = session
+
+    def purge_older_than(self, cutoff: float) -> None:
+        for sid in [sid for sid, s in self.items.items() if s.updated_at < cutoff]:
+            del self.items[sid]
+
+
+_backend: SessionStore = MemorySessionStore()
+
+
+def set_session_store(store: SessionStore) -> None:
+    global _backend
+    _backend = store
 _owner: ContextVar[str | None] = ContextVar("ai_session_owner", default=None)
 
 
@@ -75,23 +106,20 @@ def _ttl() -> float:
 
 
 def _purge_expired() -> None:
-    now = time.time()
-    ttl = _ttl()
-    dead = [sid for sid, s in _store.items() if now - s.updated_at > ttl]
-    for sid in dead:
-        del _store[sid]
+    _backend.purge_older_than(time.time() - _ttl())
 
 
 def get_or_create(session_id: Optional[str]) -> AiSession:
     _purge_expired()
     owner = _owner.get()
-    if session_id and session_id in _store and _store[session_id].owner == owner:
-        return _store[session_id]
+    existing = _backend.get(session_id) if session_id else None
+    if existing is not None and existing.owner == owner:
+        return existing
     # HTTP clients cannot select a session id or acquire another owner's session.
-    sid = (session_id if owner is None and session_id not in _store else None) or str(uuid.uuid4())
+    sid = (session_id if owner is None and existing is None else None) or str(uuid.uuid4())
     now = time.time()
     sess = AiSession(session_id=sid, created_at=now, updated_at=now, owner=owner)
-    _store[sid] = sess
+    _backend.put(sess)
     return sess
 
 

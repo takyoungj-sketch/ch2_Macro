@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
+import time
+import uuid
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 from app.config import settings
 
+_LOG = logging.getLogger(__name__)
 _LOCK = threading.Lock()
 _META: ContextVar[dict[str, str]] = ContextVar("ai_usage_meta", default={})
 
@@ -72,22 +76,51 @@ def _month_path(month: str) -> Path:
     return usage_dir() / f"{month}.jsonl"
 
 
+class _JsonlTail:
+    """월 JSONL 을 매번 처음부터 읽지 않고 늘어난 부분만 읽어 누계 행을 유지한다."""
+
+    def __init__(self) -> None:
+        self.offset = 0
+        self.rows: list[dict[str, Any]] = []
+
+    def read(self, path: Path) -> list[dict[str, Any]]:
+        if not path.is_file():
+            self.offset, self.rows = 0, []
+            return self.rows
+        size = path.stat().st_size
+        if size < self.offset:  # 파일 교체·회전
+            self.offset, self.rows = 0, []
+        if size == self.offset:
+            return self.rows
+        with path.open("rb") as fh:
+            fh.seek(self.offset)
+            chunk = fh.read()
+        complete = chunk.rfind(b"\n") + 1  # 쓰는 중인 마지막 줄은 다음에 읽는다
+        for line in chunk[:complete].decode("utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(row, dict):
+                self.rows.append(row)
+        self.offset += complete
+        return self.rows
+
+
+_TAILS: dict[str, _JsonlTail] = {}
+
+
+def _cached_rows(path: Path) -> list[dict[str, Any]]:
+    with _LOCK:
+        tail = _TAILS.setdefault(str(path), _JsonlTail())
+        return list(tail.read(path))
+
+
 def _read_events(month: str) -> list[dict[str, Any]]:
-    path = _month_path(month)
-    if not path.is_file():
-        return []
-    out: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(row, dict):
-            out.append(row)
-    return out
+    return _cached_rows(_month_path(month))
 
 
 def month_snapshot(month: Optional[str] = None) -> dict[str, Any]:
@@ -130,6 +163,8 @@ def month_snapshot(month: Optional[str] = None) -> dict[str, Any]:
         "requested_model": (settings.openai_model or "").strip(),
         "event_count": calls,
         "recent": events[-50:][::-1],
+        "questions": question_stats(key),
+        "limit_warnings": limit_warnings(),
     }
 
 
@@ -178,9 +213,131 @@ def record_llm_call(
         "panel": meta.get("panel") or "",
         "scope_label": meta.get("scope_label") or "",
     }
+    question = _QUESTION.get()
+    if question is not None:
+        question.prompt_tokens += event["prompt_tokens"]
+        question.completion_tokens += event["completion_tokens"]
+        question.usd += event["usd"]
+        question.krw += event["krw"]
     path = _month_path(month)
     with _LOCK:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(event, ensure_ascii=False) + "\n")
     return event
+
+
+# ---------------------------------------------------------------------------
+# 질문 단위 장부 (2026-11-09 지시서 §5.6). 질문 문장은 저장하지 않는다.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class QuestionLog:
+    request_id: str
+    app: str
+    panel: str
+    started: float = field(default_factory=time.monotonic)
+    llm_calls: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    usd: float = 0.0
+    krw: float = 0.0
+    #: pass | repaired | partial | failed | refusal | none
+    validation: str = "none"
+    token: Any = None
+
+
+_QUESTION: ContextVar[Optional[QuestionLog]] = ContextVar("ai_question_log", default=None)
+
+
+def _question_path(month: str) -> Path:
+    return usage_dir() / f"questions-{month}.jsonl"
+
+
+def begin_question(*, app: str, panel: str, request_id: Optional[str] = None) -> QuestionLog:
+    question = QuestionLog(request_id=request_id or uuid.uuid4().hex, app=app or "", panel=panel or "")
+    question.token = _QUESTION.set(question)
+    return question
+
+
+def finish_question(question: QuestionLog, response: Any = None) -> Optional[dict[str, Any]]:
+    try:
+        _QUESTION.reset(question.token)
+    except (ValueError, LookupError):
+        pass
+    now = datetime.now(timezone.utc)
+    row = {
+        "ts": now.isoformat(timespec="seconds"),
+        "request_id": question.request_id,
+        "app": question.app,
+        "panel": question.panel,
+        "llm_calls": question.llm_calls,
+        "prompt_tokens": question.prompt_tokens,
+        "completion_tokens": question.completion_tokens,
+        "usd": round(question.usd, 8),
+        "krw": round(question.krw, 4),
+        "latency_ms": int((time.monotonic() - question.started) * 1000),
+        "validation": question.validation if response is not None else "error",
+        "error_code": getattr(response, "error_code", None),
+    }
+    try:
+        path = _question_path(_month_key(now))
+        with _LOCK:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except OSError:
+        _LOG.warning("AI question log failed", exc_info=True)
+        return None
+    return row
+
+
+def _percentile(values: list[int], q: float) -> Optional[int]:
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[min(len(ordered) - 1, max(0, round(q * (len(ordered) - 1))))]
+
+
+def question_stats(month: Optional[str] = None) -> dict[str, Any]:
+    rows = _cached_rows(_question_path(month or _month_key()))
+    answered = [r for r in rows if int(r.get("llm_calls") or 0) > 0]
+    n = len(answered)
+    latencies = [int(r.get("latency_ms") or 0) for r in answered]
+    by_validation: dict[str, int] = {}
+    for r in rows:
+        key = str(r.get("validation") or "none")
+        by_validation[key] = by_validation.get(key, 0) + 1
+    return {
+        "questions": len(rows),
+        "answered_with_llm": n,
+        "avg_llm_calls": round(sum(int(r.get("llm_calls") or 0) for r in answered) / n, 2) if n else None,
+        "avg_krw": round(sum(float(r.get("krw") or 0) for r in answered) / n, 2) if n else None,
+        "latency_p50_ms": _percentile(latencies, 0.5),
+        "latency_p90_ms": _percentile(latencies, 0.9),
+        "validation": by_validation,
+    }
+
+
+def limit_warnings() -> list[str]:
+    """서비스 전체 한도와 개인 한도의 모순을 알린다. 제공 횟수는 바꾸지 않는다."""
+    if not getattr(settings, "ai_subscription_quota_enabled", False):
+        return []
+    from app.ai.allowances import LIMITS
+
+    out: list[str] = []
+    call_limit = int(settings.ai_monthly_call_limit or 0)
+    personal = max(int(v.get("macro_question", 0)) for v in LIMITS.values())
+    if call_limit and call_limit <= personal * 2:
+        out.append(
+            f"AI_MONTHLY_CALL_LIMIT={call_limit}(LLM 호출 단위)가 개인 월 질문 한도 {personal}회와 비슷하거나 작습니다. "
+            "구독자 한두 명만으로 서비스 전체가 멈출 수 있습니다. 전체 한도를 원가(AI_MONTHLY_BUDGET_KRW) 하나로 "
+            "일원화하고 호출 한도는 0(해제)으로 두는 안을 검토하세요."
+        )
+    return out
+
+
+def log_limit_warnings() -> None:
+    for message in limit_warnings():
+        _LOG.warning("AI 한도 점검: %s", message)

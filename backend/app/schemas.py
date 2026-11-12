@@ -126,7 +126,7 @@ class FreeStatsV2BulkRequest(BaseModel):
         None,
         description=(
             "기준월(해당 월 1일). 미지정 시 STATS_V2_DEFAULT_AS_OF_MONTH·"
-            "STATS_V2_ASSUMED_TODAY·실제 오늘 순(§3)."
+            "STATS_V2_ASSUMED_TODAY·최신 완료 집계월 순."
         ),
     )
     matrix_mode: Literal["category", "group"] = Field(
@@ -413,7 +413,7 @@ class PaidAnalysisRequest(PaidAreaSqmBounds):
     outlier_iqr_multiplier: OutlierIqrMultiplier = 3.0
 
     rolling_matrix_period_start: Optional[date] = Field(
-        None, description="/paid/matrix-* 롤링 모드 전용(api 본편에서는 미사용)"
+        None, description="계약일 하한(포함). 종료일과 함께 지정하면 계약연도 필터보다 우선."
     )
     rolling_matrix_period_end: Optional[date] = Field(None)
     rolling_bucket_count: Optional[int] = Field(None, ge=1, le=10)
@@ -484,6 +484,7 @@ class MatrixYearlyRequest(PaidFilters):
 
     zone_type: str = Field(...)
     land_category: str = Field(...)
+    basic_stats_cell: bool = Field(False, description="기본통계 매트릭스의 결측 행·열 키를 사용")
     matrix_mode: Literal["category", "group"] = Field(
         "category",
         description="category=지목 셀, group=지목군 셀(원장 jimok_group 재집계)",
@@ -701,7 +702,6 @@ class LandRegressionRequest(MatrixYearlyRequest):
     # 범주 빈칸. keep_unknown=미상 범주 유지(기본). drop=결측 거래 제외.
     categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
     exclude_outliers_iqr: bool = False
-    outlier_iqr_multiplier: float = 3.0
     min_n: int = 15
 
 

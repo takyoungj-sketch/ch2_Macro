@@ -2,7 +2,7 @@
 
 > **목표:** 매월 초 **전국 토지** 원장·정제·V2 사전통계를 **재현 가능한 절차**로 갱신하고, 검증·승인 후 외부에 반영한다.  
 > **전제:** 완전 무인·증분 갱신 최적화는 후순위. 우선 **단순성·재현성·검증·롤백**을 만족한다.  
-> **기준 루트:** 저장소 루트 (`--repo-root`). 예: `C:\ch2\ch2_Macro` · `E:\ch2\ch2_Macro`.
+> **기준 루트:** 저장소 루트 (`--repo-root`). 예: `D:\ch2\ch2_Macro`.
 >
 > **운영 SSOT:** 1페이지 [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
 > **매월 러너:** `scripts/monthly/run_land_cycle_csv.py` — V2 windows **3,5,7** · §7.1 group · cache TRUNCATE 포함.  

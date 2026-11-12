@@ -1,7 +1,7 @@
 # 월간 집합부동산(collective) 데이터 업데이트 SOP
 
 > **목표:** 매월 초 **토지 cycle 완료 후** 아파트·연립·오피스텔 → `collective_stats` 갱신.  
-> **기준 루트:** 저장소 루트. 예: `C:\ch2\ch2_Macro` · `E:\ch2\ch2_Macro`.
+> **기준 루트:** 저장소 루트. 예: `D:\ch2\ch2_Macro`.
 >
 > **SSOT:** `scripts/monthly/run_collective_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
 > 축약·K-apt·공시지가 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4. 실거래 러너 skip-enrich 기본.  

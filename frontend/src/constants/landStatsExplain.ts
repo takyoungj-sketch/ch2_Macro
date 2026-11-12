@@ -29,7 +29,7 @@ export function buildFreeStatsExplain(ctx: FreeStatsExplainContext): AnalysisExp
     { formula: UNIT_PRICE, controls: ["유효한 거래 중 해제 신고를 제외하고 단가를 계산할 수 있는 거래를 집계합니다.", "기본통계에는 도로·면적·지분·IQR 등의 추가 필터를 적용하지 않습니다.", "연도별 인구는 별도 인구자료의 연말 값을 사용합니다. 자료가 없는 연도는 빈칸으로 표시합니다."],
       floor_groups: ["연도별 표에서 거래 수·총거래금액·계약면적과 가중 단가를 확인합니다.", "분석표는 용도지역과 지목 또는 지목군별 거래를 나눠 보여줍니다. 칸 안의 값은 범례 도움말에서 확인해 주세요."],
       interpretation_hints: [`기준: ${statsAsOfLabel(ctx.data) ?? "미제공"}`, `롤링 구간: 최근 ${ctx.windowYears}년 · 계약일 기준`, `집계 기간: ${period}`, `표본: ${ctx.data.total.count.toLocaleString("ko-KR")}건`, ...(ctx.useUpper && ctx.upperLevelLabel ? [`상위 행정구역 합산: ${ctx.upperLevelLabel}`] : [])],
-      presets: [{ id: "vs-filter", question: "필터분석과 무엇이 다른가요?", answer: "기본통계는 선택한 롤링 구간의 거래를 요약합니다. 필터분석은 선택 연도와 도로·면적·지분·이상치 등 추가 조건을 적용하므로 기간과 표본이 다를 수 있습니다." }, { id: "year-table", question: "연도별 표는 어느 날짜를 기준으로 하나요?", answer: "계약일이 속한 달력 연도입니다. 롤링 구간의 처음과 마지막 연도는 해당 연도 전체가 아닌 구간 안의 계약만 포함합니다." }] });
+      presets: [{ id: "vs-filter", question: "필터분석과 무엇이 다른가요?", answer: "기본통계는 선택한 롤링 구간의 거래를 요약합니다. 필터분석은 선택 연도와 도로·면적·지분·이상치 등 추가 조건을 적용하므로 기간과 표본이 다를 수 있습니다." }, { id: "year-table", question: "연도별 표는 어느 날짜를 기준으로 하나요?", answer: "연도별 참고표는 각 달력 연도(1월~12월)를 요약합니다. 매트릭스는 선택한 롤링 구간의 시작일부터 종료일까지 집계하므로 양 끝 연도의 기간과 거래 건수가 다를 수 있습니다." }] });
 }
 
 export interface PaidFilteredExplainContext { result: PaidAnalysisResponse; regionLabel?: string }

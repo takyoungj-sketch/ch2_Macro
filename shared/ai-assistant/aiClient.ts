@@ -84,6 +84,12 @@ export interface AiContextPayload {
     region_codes?: string[];
     asset_type?: string;
     filters?: Record<string, unknown>;
+    /** 토지 매트릭스 문맥 공통 scope (2026-11-09 §5.1) */
+    region_level?: string;
+    region_code_count?: number;
+    period?: Record<string, unknown>;
+    as_of_month?: string;
+    stats_reference_date?: string;
   };
   facts: Record<string, unknown>;
   explain?: unknown;

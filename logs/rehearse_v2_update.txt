@@ -1,7 +1,7 @@
 
 === V2 갱신 리허설 시작 ===
-        repo = C:\ch2\ch2_Macro
-        python = 3.13.3
+        repo = E:\ch2\ch2_Macro
+        python = 3.14.4
 
 === 1) 환경 (.env, DB 접속) ===
   [OK] backend/.env 존재
@@ -20,30 +20,39 @@
   [OK] analysis_base_cache 존재
 
 === 3) 행수·신선도 스냅샷 ===
-  [OK] land_transactions 행수 = 2,691,574
-  [OK] land_basic_stats_v2 행수 = 1,368,078
-  [OK] land_basic_stats 행수 = 813,595
-  [OK] region_codes 행수 = 18,864
+  [OK] land_transactions 행수 = 9,674,141
+  [OK] land_basic_stats_v2 행수 = 6,255,883
+  [OK] land_basic_stats 행수 = 1,509,715
+  [OK] region_codes 행수 = 22,082
   [WARN] population_jusosagae: 조회 실패
-  [OK] analysis_cache 행수 = 1
-  [OK] analysis_base_cache 행수 = 136
+  [OK] analysis_cache 행수 = 4
+  [OK] analysis_base_cache 행수 = 0
   [OK] land_basic_stats_v2 (as_of_month, window_years, n) — 최근 20
-        2025-12-01  win=3  rows=610,502
-        2025-12-01  win=5  rows=757,576
-  [OK] V2 최신 as_of_month = 2025-12-01  → 2025년 12월 말 기준
+        2026-06-01  win=3  rows=905,846
+        2026-06-01  win=5  rows=1,096,780
+        2026-05-01  win=3  rows=598,857
+        2026-05-01  win=5  rows=739,138
+        2026-04-01  win=3  rows=602,250
+        2026-04-01  win=5  rows=742,624
+        2025-12-01  win=3  rows=701,516
+        2025-12-01  win=5  rows=868,872
+  [OK] V2 최신 as_of_month = 2026-06-01  → 2026년 6월 말 기준
   [WARN] population_jusosagae 분포 조회 실패: ProgrammingError('(psycopg2.errors.UndefinedTable) 오류:  "population_jusosagae" 이름의 릴레이션(relation)이 없습니다\nLINE 3:                       FROM population_jusosagae\n                                   ^\n')
+
+=== 3b) land_transactions 중복 (6월 dedupe 전 점검) ===
+  [WARN] 중복 extra_rows≈0, 비하동 보녹·답=3건 (dedupe 후 기대: 0, 2) — docs/TRANSACTION_HASH_DEDUPE.md
 
 === 4) SOP §B 명령 dry-run (--help) ===
   [OK] run_pipeline.py --help OK
   [OK] build_stats_v2.py --help OK
-  [OK] seed_population_csv.py --help OK
+  [OK] dedupe_land_transactions.py --help OK
+  [ERR] seed_population_csv.py --help 실패 (rc=1): ['Traceback (most recent call last):', '  File "E:\\ch2\\ch2_Macro\\pipeline\\seed_population_csv.py", line 269, in <module>', '    main()']
   [OK] verify_v2_national_samples.py --help OK
+  [OK] verify_monthly_integrity.py --help OK
 
 === 5) GET http://127.0.0.1:8000/health ===
-  [OK] status = 200
-        {"status": "ok"}
-  [WARN] latest_as_of_month 비어있음 — V2 미적재거나 백엔드 코드가 옛 버전(B4 이전)
+  [WARN] 백엔드 미기동 또는 통신 실패: ConnectionError(MaxRetryError('HTTPConnectionPool(host=\'127.0.0.1\', port=8000): Max retries exceeded with url: /health (Caused by NewConnectionError("HTTPConnection(host=\'127.0.0.1\', port=8000): Failed to establish a new connection: [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다"))'))
 
 === 결과 요약 ===
-        errors=1  warnings=3
+        errors=2  warnings=4
   [ERR] 에러가 있습니다 — 위 항목을 해결한 뒤 다시 돌리세요.

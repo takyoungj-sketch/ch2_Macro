@@ -16,7 +16,7 @@
   5) build_stats_v2 + build_upper_stats_v2 (group, §7.1)
   6) build_annual_stats (당해 연도, both) + verify_jimok_group_integrity
   7) analysis_cache / analysis_base_cache TRUNCATE (Facts First · H2)
-  8) 스냅샷 JSON
+  8) 스냅샷 JSON + 완료 집계월 기록
 """
 
 from __future__ import annotations
@@ -111,6 +111,40 @@ def _truncate_paid_caches() -> None:
     from run_pipeline import _truncate_paid_caches as truncate_fn  # noqa: WPS433
 
     truncate_fn()
+
+
+def _publish_completed_stats(as_of_month: str) -> None:
+    from sqlalchemy import text
+
+    if str(PIPELINE) not in sys.path:
+        sys.path.insert(0, str(PIPELINE))
+    from db_utils import get_engine
+
+    ddl = REPO / "db" / "083_land_stats_v2_publications.sql"
+    with get_engine().begin() as conn:
+        missing = conn.execute(text("""
+            SELECT w, axis
+            FROM (VALUES (3), (5), (7)) AS windows(w)
+            CROSS JOIN (VALUES ('category'), ('group')) AS axes(axis)
+            WHERE NOT EXISTS (
+                SELECT 1 FROM land_basic_stats_v2
+                WHERE as_of_month = :as_of AND window_years = w AND col_axis = axis
+                  AND zone_type = 'ALL' AND land_category = 'ALL'
+            ) OR NOT EXISTS (
+                SELECT 1 FROM land_upper_stats_v2
+                WHERE as_of_month = :as_of AND window_years = w AND col_axis = axis
+                  AND zone_type = 'ALL' AND land_category = 'ALL'
+            )
+        """), {"as_of": as_of_month}).all()
+        if missing:
+            raise RuntimeError(f"토지 V2 {as_of_month} 완료 기록 불가. 미적재 창·축: {missing}")
+        conn.execute(text(ddl.read_text(encoding="utf-8")))
+        conn.execute(text("""
+            INSERT INTO land_stats_v2_publications (as_of_month)
+            VALUES (:as_of)
+            ON CONFLICT (as_of_month) DO UPDATE SET published_at = EXCLUDED.published_at
+        """), {"as_of": as_of_month})
+    log.info("토지 V2 완료 기준월 기록: %s", as_of_month)
 
 
 def _apply_ddl(*, dry_run: bool) -> None:
@@ -314,6 +348,8 @@ def main() -> None:
         "snapshot_v2",
         [PY, str(v2_snap), "--as-of", v2_as, "--output", str(v2_out)],
     )
+    if not args.skip_stats and not args.skip_jimok_group:
+        _publish_completed_stats(v2_as)
 
     log.info("완료 — 다음: verify_monthly_integrity.py --as-of-month %s", v2_as[:8] + "01")
 

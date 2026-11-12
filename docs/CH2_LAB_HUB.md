@@ -42,6 +42,7 @@ G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?
 G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACRO_TS_RAW_MONTH_MART.md) (원장 대신 raw CSV 전국 월 마트).
 신규아파트 실험: [`NEW_APARTMENT_REGRESSION_DESIGN.md`](./NEW_APARTMENT_REGRESSION_DESIGN.md) · `?tool=newapt`.
 시공사 효과: [`lab/BUILDER_IDENT_LAB.md`](./lab/BUILDER_IDENT_LAB.md) · `?tool=builder`.
+아파트 결측과 회귀: [`lab/APT_MISSING_REGRESSION_PLAN.md`](./lab/APT_MISSING_REGRESSION_PLAN.md). 화면 없음. 1차는 K-apt, 2차는 KB. 완료만 회귀 후보. 제품 식 미변경.
 연식=0 잔차: [`lab/AGE0_RESIDUAL_LAB.md`](./lab/AGE0_RESIDUAL_LAB.md) · `?tool=age0`.
 모형추천 Twin 벤치: [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) · `?tool=recommend-twin`.
 토지 면적 탄성(광평수): [`lab/LAND_AREA_ELASTICITY_LAB.md`](./lab/LAND_AREA_ELASTICITY_LAB.md) · `?tool=area-elasticity` — 1–3차 정리. 차후=용도지역 분할. 공개 기록은 Insight #7. 제품 식 미변경.

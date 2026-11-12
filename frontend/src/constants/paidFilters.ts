@@ -16,8 +16,8 @@ export const AREA_CATEGORY_LABELS: Record<(typeof AREA_CATEGORIES)[number], stri
 export const DEAL_TYPES = ["중개거래", "직거래"] as const;
 
 /**
- * 필터 분석 연도 칩 — 기본통계 롤링 창(windowYears)과 맞춘 달력 연도.
- * as_of가 연중(예: 7월)이면 창에 걸치는 연도는 windowYears+1개 (5년 창 → 6칩, 7년 → 8칩).
+ * 롤링 창 길이로부터 필터에 표시할 달력 연도 후보를 구한다.
+ * 실제 필터 선택은 기본통계 창과 별도로 관리한다.
  */
 export function getPaidYearButtonYears(
   windowYears: FreeStatsWindowYears = 5,
@@ -34,14 +34,4 @@ export function getDefaultPaidSelectedYears(
   windowYears: FreeStatsWindowYears = 5,
 ): number[] {
   return [...getPaidYearButtonYears(windowYears)];
-}
-
-/** 기본 통계(무료 V2)의 period_start∼period_end 가 걸치는 달력 연도 범위와 같은 연도 목록 */
-export function yearsRangeInclusive(yearFrom: number, yearTo: number): number[] {
-  const yf = Number(yearFrom);
-  const yt = Number(yearTo);
-  if (!Number.isFinite(yf) || !Number.isFinite(yt) || yf > yt) return [];
-  const out: number[] = [];
-  for (let y = yf; y <= yt; y += 1) out.push(y);
-  return out;
 }

@@ -6,8 +6,13 @@
 set -euo pipefail
 
 INPUT="${1:?dump path required}"
-# Optional: STATS_V2_DEFAULT_AS_OF_MONTH after restore (default = MAX(as_of_month) from restored DB)
+# Optional: explicit month after restore (default = latest completed monthly publication)
 AS_OF_OVERRIDE="${2:-}"
+MONTH_PATTERN='^[0-9]{4}-(0[1-9]|1[0-2])-01$'
+if [[ -n "$AS_OF_OVERRIDE" && ! "$AS_OF_OVERRIDE" =~ $MONTH_PATTERN ]]; then
+  echo "ERROR: expected YYYY-MM-01 for the explicit land stats month"
+  exit 1
+fi
 TS="$(date +%Y%m%d_%H%M)"
 LOG="/var/backups/ch2/restore_${TS}.log"
 PRE="/tmp/land_stats_vps_pre_promote_${TS}.dump"
@@ -43,16 +48,19 @@ filter_pg18_sql() {
 
 if [[ "$INPUT" == *.sql.gz ]]; then
   gunzip -c "$INPUT" | filter_pg18_sql | sudo -u postgres psql -v ON_ERROR_STOP=1 -d land_stats 2>&1 | tee "$LOG"
-  RC="${PIPESTATUS[1]}"
+  RC=$?
 elif [[ "$INPUT" == *.sql ]]; then
   filter_pg18_sql < "$INPUT" | sudo -u postgres psql -v ON_ERROR_STOP=1 -d land_stats 2>&1 | tee "$LOG"
   RC=$?
 else
   sudo -u postgres "$PG_RESTORE" -d land_stats --no-owner --no-acl "$INPUT" 2>&1 | tee "$LOG"
-  RC="${PIPESTATUS[0]}"
+  RC=$?
 fi
 set -e
 echo "restore exit=$RC"
+if (( RC != 0 )); then
+  exit "$RC"
+fi
 
 echo "==> verify counts"
 sudo -u postgres psql -d land_stats -t -c "SELECT COUNT(*) FROM land_transactions;"
@@ -67,7 +75,17 @@ SQL
 
 ENV_FILE="/opt/ch2_Macro/backend/.env"
 if [[ -z "$AS_OF_OVERRIDE" ]]; then
-  AS_OF_OVERRIDE="$(sudo -u postgres psql -d land_stats -t -A -c "SELECT MAX(as_of_month) FROM land_basic_stats_v2;" | tr -d '[:space:]')"
+  PUB_TABLE="$(sudo -u postgres psql -XAt -v ON_ERROR_STOP=1 -d land_stats -c "SELECT to_regclass('public.land_stats_v2_publications');")"
+  if [[ -n "$PUB_TABLE" ]]; then
+    AS_OF_OVERRIDE="$(sudo -u postgres psql -XAt -v ON_ERROR_STOP=1 -d land_stats -c "SELECT MAX(as_of_month) FROM land_stats_v2_publications;")"
+  else
+    echo "WARN: legacy dump without completion records; using newest restored basic stats month"
+    AS_OF_OVERRIDE="$(sudo -u postgres psql -XAt -v ON_ERROR_STOP=1 -d land_stats -c "SELECT MAX(as_of_month) FROM land_basic_stats_v2;")"
+  fi
+fi
+if [[ ! "$AS_OF_OVERRIDE" =~ $MONTH_PATTERN ]]; then
+  echo "ERROR: no valid land stats publication month"
+  exit 1
 fi
 echo "==> set STATS_V2_DEFAULT_AS_OF_MONTH=$AS_OF_OVERRIDE"
 if grep -q '^STATS_V2_DEFAULT_AS_OF_MONTH=' "$ENV_FILE"; then

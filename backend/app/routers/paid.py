@@ -26,11 +26,13 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.land_stats_snapshot import latest_land_stats_publication
 from app.ledger_region_sql import (
     EXPAND_FILTER_YEARS_FLAG,
     beopjungri_eq_or_in,
     execute_expanding,
 )
+from app.v2_stats_windows import default_as_of_month_for_service, stats_ui_reference_date
 
 
 def _paid_execute(db: Session, sql: str, params: dict):
@@ -90,9 +92,16 @@ log = logging.getLogger(__name__)
 CACHE_TTL_HOURS = 24
 
 
-def _make_cache_key(req: PaidAnalysisRequest) -> str:
+def _make_cache_key(
+    req: PaidAnalysisRequest, *, as_of: date | None, published_at: datetime | None = None,
+) -> str:
     payload = json.dumps(
-        _request_stable_payload(req.model_dump(mode="json")), sort_keys=True
+        {
+            "request": _request_stable_payload(req.model_dump(mode="json")),
+            "as_of_month": as_of.isoformat() if as_of else None,
+            "published_at": published_at.isoformat() if published_at else None,
+        },
+        sort_keys=True,
     )
     return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -106,7 +115,11 @@ def _effective_paid_request(req: PaidAnalysisRequest) -> PaidAnalysisRequest:
 
     rps = req.rolling_matrix_period_start
     rpe = req.rolling_matrix_period_end
+    if (rps is None) != (rpe is None):
+        raise HTTPException(status_code=422, detail="롤링 시작일과 종료일을 함께 지정해야 합니다.")
     if rps is not None and rpe is not None:
+        if rps > rpe:
+            raise HTTPException(status_code=422, detail="롤링 시작일은 종료일 이하여야 합니다.")
         updates["years"] = None
         updates["year_from"] = None
         updates["year_to"] = None
@@ -347,6 +360,7 @@ def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[s
         body.zone_type.strip(),
         body.land_category.strip(),
         matrix_mode=getattr(body, "matrix_mode", None) or "category",
+        basic_stats_cell=body.basic_stats_cell,
     )
     merged_params = dict(params)
     merged_params.update(mtx_par)
@@ -360,6 +374,7 @@ def _matrix_dimension_sql(
     land_display: str,
     *,
     matrix_mode: str = "category",
+    basic_stats_cell: bool = False,
 ) -> tuple[str, dict]:
     """매트릭스 헤더 표시용 키(미지정/기타)와 DB 행 연결."""
     from app.jimok_group import matrix_mode_to_col_axis, normalize_group_key
@@ -368,40 +383,45 @@ def _matrix_dimension_sql(
     zs: list[str] = []
 
     zd = (zone_display or "").strip()
-    if zd in ("미지정", ""):
-        zs.append(
-            f"({alias}.zone_type_resolved IS NULL OR TRIM(BOTH FROM COALESCE({alias}.zone_type_resolved::text, '')) = '')"
-        )
-    else:
-        param["mtx_zone"] = zd
-        zs.append(
-            f"TRIM(BOTH FROM COALESCE({alias}.zone_type_resolved::text, ''))"
-            " = TRIM(:mtx_zone)"
-        )
+    zone_sql, param["mtx_zone"] = _matrix_label_match(
+        f"{alias}.zone_type_resolved", zd, "mtx_zone", "미지정", basic_stats_cell
+    )
+    zs.append(zone_sql)
 
     ld = (land_display or "").strip()
     if matrix_mode_to_col_axis(matrix_mode) == "group":
         if ld in ("기타", "other", ""):
             zs.append(
-                f"(COALESCE({alias}.jimok_group_code, 'other') = 'other')"
+                f"COALESCE(NULLIF(BTRIM({alias}.jimok_group_code::text), ''), 'other') = 'other'"
             )
         else:
             param["mtx_land"] = normalize_group_key(ld)
             zs.append(
-                f"COALESCE({alias}.jimok_group_code, 'other') = TRIM(:mtx_land)"
+                f"COALESCE(NULLIF(BTRIM({alias}.jimok_group_code::text), ''), 'other') = :mtx_land"
             )
-    elif ld in ("기타", ""):
-        zs.append(
-            f"({alias}.land_category_resolved IS NULL OR TRIM(BOTH FROM COALESCE({alias}.land_category_resolved::text, '')) = '')"
-        )
     else:
-        param["mtx_land"] = ld
-        zs.append(
-            f"TRIM(BOTH FROM COALESCE({alias}.land_category_resolved::text, ''))"
-            " = TRIM(:mtx_land)"
+        land_sql, param["mtx_land"] = _matrix_label_match(
+            f"{alias}.land_category_resolved", ld, "mtx_land", "기타", basic_stats_cell
         )
+        zs.append(land_sql)
 
     return " AND ".join(zs), param
+
+
+def _matrix_label_match(
+    column: str, label: str, key: str, missing_label: str, basic_stats_cell: bool,
+) -> tuple[str, str]:
+    value = f"BTRIM({column}::text)"
+    if basic_stats_cell:
+        # 기본 사전집계의 실제 '기타'는 빈 지목과 별개다. 원장 폴백은 빈 값을 UNKNOWN으로 묶는다.
+        if label == "UNKNOWN":
+            return f"COALESCE(NULLIF({value}, ''), 'UNKNOWN') = :{key}", label
+        if label in ("None", "nan"):
+            return f"({column} IS NULL OR {value} = :{key})", label
+        return f"{value} = :{key}", label
+    if label in ("", missing_label):
+        return f"COALESCE(NULLIF({value}, ''), :{key}) = :{key}", missing_label
+    return f"{value} = :{key}", label
 
 
 def _build_conditions(
@@ -844,6 +864,8 @@ def _analyze_core_materialized_rows(
         req.deal_types,
         req.area_sqm_min,
         req.area_sqm_max,
+        rolling_contract_ps=req.rolling_matrix_period_start,
+        rolling_contract_pe=req.rolling_matrix_period_end,
         db=db,
     )
 
@@ -943,6 +965,8 @@ def _analyze_core_sql_aggregate(
         req.deal_types,
         req.area_sqm_min,
         req.area_sqm_max,
+        rolling_contract_ps=req.rolling_matrix_period_start,
+        rolling_contract_pe=req.rolling_matrix_period_end,
         db=db,
     )
     from app.jimok_group import display_land_key
@@ -1064,27 +1088,21 @@ def _analyze_core(
     return _analyze_core_sql_aggregate(req, resolved_codes=resolved_codes, db=db)
 
 
-def _latest_v2_as_of(db: Session) -> tuple[Optional[object], Optional[object]]:
-    """
-    DECISIONS D-006 — 유료 응답에 같이 노출할 `as_of_month`, `stats_reference_date`.
-    `land_basic_stats_v2` 미적재 환경에서는 둘 다 None.
-    """
-    try:
-        row = db.execute(
-            text("SELECT MAX(as_of_month) AS am FROM land_basic_stats_v2")
-        ).fetchone()
-    except Exception as exc:  # noqa: BLE001
-        log.debug("latest_v2_as_of skipped: %s", exc)
+def _paid_v2_snapshot(db: Session) -> tuple[date | None, datetime | None]:
+    pinned = settings.stats_v2_default_as_of_month
+    if pinned is None and settings.stats_v2_assumed_today is not None:
+        pinned = default_as_of_month_for_service(settings.stats_v2_assumed_today)
+    publication = latest_land_stats_publication(db, as_of_month=pinned)
+    if publication is not None:
+        return publication
+    if db.execute(text("SELECT to_regclass('public.land_basic_stats_v2')")).scalar() is None:
         return None, None
-    am = row.am if row else None
-    if am is None:
-        return None, None
-    # stats_reference_date = as_of_month 의 다음 달 1일 (`v2_stats_windows.stats_ui_reference_date` 와 동일).
-    if am.month == 12:
-        ref = am.replace(year=am.year + 1, month=1, day=1)
-    else:
-        ref = am.replace(month=am.month + 1, day=1)
-    return am, ref
+    month = db.execute(text("""
+        SELECT MAX(as_of_month)
+        FROM land_basic_stats_v2
+        WHERE (:as_of IS NULL OR as_of_month = :as_of)
+    """), {"as_of": pinned}).scalar()
+    return month, None
 
 
 def _log_usage(
@@ -1165,9 +1183,10 @@ def analyze(
     )
 
     # DECISIONS D-006 — 모든 응답 경로에서 같은 as_of/ref 를 단다.
-    as_of, ref = _latest_v2_as_of(db)
+    as_of, published_at = _paid_v2_snapshot(db)
+    ref = stats_ui_reference_date(as_of) if as_of else None
 
-    cache_key = _make_cache_key(req_for_cache)
+    cache_key = _make_cache_key(req_for_cache, as_of=as_of, published_at=published_at)
     cached = _get_cache(cache_key, db)
     if cached is not None:
         try:
@@ -1238,11 +1257,6 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
     rolling_mode = rp_s is not None and rp_e is not None and rb_n is not None
 
     if rolling_mode:
-        if rp_s > rp_e:
-            raise HTTPException(
-                status_code=422,
-                detail="rolling_matrix_period_start 가 rolling_matrix_period_end 보다 클 수 없습니다.",
-            )
         bc = int(rb_n)
         if bc < 1 or bc > 10:
             raise HTTPException(status_code=422, detail="rolling_bucket_count 는 1~10 입니다.")
@@ -1262,6 +1276,11 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
             for r in prow
             if r.d is not None and r.px is not None
         ]
+        if body.exclude_outlier:
+            keep = outlier_keep_mask(
+                [px for _, px in points], iqr_multiplier=float(body.outlier_iqr_multiplier)
+            )
+            points = [point for point, ok in zip(points, keep) if ok]
         stat_rows: list[MatrixYearlyStat] = []
         for bi, ((bs_raw, be_raw), chart_label) in enumerate(zip(buckets, chart_labels)):
             bs_eff = bs_raw if bs_raw >= rp_s else rp_s
@@ -1280,11 +1299,6 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
                 )
                 continue
             prices_px = [px for d, px in points if bs_eff <= d <= be_eff]
-            if body.exclude_outlier and prices_px:
-                keep = outlier_keep_mask(
-                    prices_px, iqr_multiplier=float(body.outlier_iqr_multiplier)
-                )
-                prices_px = [p for p, k in zip(prices_px, keep) if k]
             mean_v, p25_v, med_v, p75_v = bucket_unit_price_summary(prices_px)
             stat_rows.append(
                 MatrixYearlyStat(
@@ -1941,6 +1955,10 @@ def _fetch_matrix_cell_filtered_transactions(
         keep = [True] * len(candidates)
 
     filtered = [c for c, ok in zip(candidates, keep) if ok]
+    log.debug(
+        "land matrix cell sample zone=%r land=%r after_query_filters=%d excluded_by_price_iqr=%d",
+        body.zone_type, body.land_category, len(candidates), len(candidates) - len(filtered),
+    )
     if not filtered:
         raise HTTPException(
             status_code=404, detail="이상치 제외 후 남은 거래가 없습니다."

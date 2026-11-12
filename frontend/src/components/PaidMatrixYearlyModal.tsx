@@ -28,6 +28,8 @@ import {
   buildLandLongTermContext,
   buildLandMatrixTrendContext,
   buildLandRegressionContext,
+  landFiltersFromRequest,
+  landPeriodFromRequest,
 } from "../api/aiContext";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
@@ -115,6 +117,8 @@ interface Props {
   /** 적용 범위 안내(기본: 필터 분석 기준 문구) */
   scopeNote?: string;
   aiRegionLabel?: string;
+  /** 기준월(YYYY-MM-01). 만년력 추이에서 기준월이 속한 해를 부분 연도로 표시한다. */
+  aiAsOfMonth?: string | null;
 }
 
 type PanelMode = "trend" | "longTerm" | "histogram" | "transactions" | "regression";
@@ -175,6 +179,7 @@ export default function PaidMatrixYearlyModal({
   filterRequest,
   scopeNote,
   aiRegionLabel,
+  aiAsOfMonth,
 }: Props) {
   const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
@@ -267,10 +272,16 @@ export default function PaidMatrixYearlyModal({
     variables: regVars,
     model_type: regModelType,
     categorical_missing: categoricalMissing,
-    exclude_outliers_iqr: regExcludeOutlier,
-    outlier_iqr_multiplier: 3,
+    exclude_outliers_iqr: !filterRequest.exclude_outlier && regExcludeOutlier,
     min_n: 15,
   }) : null, [filterRequest, regVars, regModelType, categoricalMissing, regExcludeOutlier]);
+  const analysisPeriod = filterRequest?.rolling_matrix_period_start && filterRequest.rolling_matrix_period_end
+    ? `${filterRequest.rolling_matrix_period_start} ~ ${filterRequest.rolling_matrix_period_end}`
+    : filterRequest?.years?.length
+      ? `${filterRequest.years.join(", ")}년`
+      : filterRequest?.year_from != null || filterRequest?.year_to != null
+        ? `${filterRequest.year_from ?? "최초"} ~ ${filterRequest.year_to ?? "최근"}`
+        : "전체 계약연도";
   const regControlsStale = Boolean(regResult && regBody && contentSignature(regBody) !== contentSignature(currentRegRequest));
   const suggestionIsCurrent = contentSignature(regSuggestionBody) === contentSignature(currentRegRequest);
 
@@ -308,6 +319,16 @@ export default function PaidMatrixYearlyModal({
         zoneType,
         landCategory,
         metric: isRolling ? rollMetric : "mean",
+        isRolling,
+        asOfMonth: aiAsOfMonth ?? null,
+        scope: {
+          regionLabel: aiScopeLabel,
+          regionCodes: filterRequest?.region_codes ?? filterRequest?.region_selections?.map((unit) => unit.code) ?? null,
+          period: landPeriodFromRequest(filterRequest),
+          filters: landFiltersFromRequest(filterRequest),
+          asOfMonth: aiAsOfMonth ?? null,
+          statsReferenceDate: filterRequest?.rolling_stats_reference_date ?? null,
+        },
       });
     }
     if (panel === "longTerm" && ltData && ltData.series.length > 0) {
@@ -330,7 +351,7 @@ export default function PaidMatrixYearlyModal({
           ? { total: txData.total, loaded: txData.items.length }
           : {},
     };
-  }, [panel, aiRegressionContext, sortedRows, ltData, aiScopeLabel, zoneType, landCategory, isRolling, rollMetric, ltMetric, histData, histLoading, histError, txData, txLoading, txError]);
+  }, [panel, aiRegressionContext, sortedRows, ltData, aiScopeLabel, zoneType, landCategory, isRolling, rollMetric, ltMetric, histData, histLoading, histError, txData, txLoading, txError, aiAsOfMonth, filterRequest]);
 
   useEffect(() => {
     if (sortedRows.length === 0) return;
@@ -610,6 +631,13 @@ export default function PaidMatrixYearlyModal({
           용도 <span className="font-semibold text-slate-700">{zoneType}</span> ·{" "}
           {matrixMode === "group" ? "지목군" : "지목"}{" "}
           <span className="font-semibold text-slate-700">{landCategory}</span>
+          {filterRequest && (
+            <span className="block text-xs mt-1 text-slate-600">
+              {panel === "longTerm"
+                ? "장기 추세 · 별도 기간 기준"
+                : `분석 기준: ${analysisPeriod} · ${filterRequest.exclude_outlier ? `IQR ${filterRequest.outlier_iqr_multiplier}` : "IQR 미적용"}`}
+            </span>
+          )}
           {!narrow && matrixMode === "group" ? (
             <span className="block text-xs mt-1 text-slate-400">
               용도 × 지목군 모드 — 구성 지목 거래를 원장에서 재집계합니다.
@@ -1335,14 +1363,19 @@ export default function PaidMatrixYearlyModal({
                       <span>{mt === "log" ? "log(단가)" : "단가(선형)"}</span>
                     </label>
                   ))}
-                  <label className="flex items-center gap-1.5 cursor-pointer ml-4">
+                  <label className="flex items-center gap-1.5 ml-4">
                     <input
                       type="checkbox"
-                      checked={regExcludeOutlier}
+                      checked={filterRequest.exclude_outlier || regExcludeOutlier}
+                      disabled={filterRequest.exclude_outlier}
                       onChange={(e) => setRegExcludeOutlier(e.target.checked)}
                       className="accent-blue-600"
                     />
-                    <span className="text-slate-500">IQR 이상치 제외</span>
+                    <span className="text-slate-500">
+                      {filterRequest.exclude_outlier
+                        ? `거래목록 IQR ${filterRequest.outlier_iqr_multiplier} 적용`
+                        : `회귀 표본 단가 IQR ${filterRequest.outlier_iqr_multiplier} 적용`}
+                    </span>
                   </label>
                   <label className="flex items-center gap-1.5 cursor-pointer">
                     <span className="text-slate-500">범주 결측</span>

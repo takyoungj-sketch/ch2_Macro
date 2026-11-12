@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.admin_auth import require_admin_access
 from pydantic import BaseModel, Field
 
 from app.ai2.llm import read_sentence, write_report, choose_alternative
 from app.ai2.loop import Session, Turn, known_fixtures, new_session, run_turn
 
-router = APIRouter(prefix="/lab/ai2", tags=["ai2"])
+router = APIRouter(prefix="/lab/ai2", tags=["ai2"], dependencies=[Depends(require_admin_access)])
 
 _SESSIONS: dict[str, Session] = {}
 

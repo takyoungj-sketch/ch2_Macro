@@ -33,6 +33,7 @@ export default function PaidFilterTable() {
     togglePaidAreaExclude,
     togglePaidDealTypeExclude,
     togglePaidYear,
+    resetPaidFilters,
     runPaidFilteredAnalysis,
     tierSelection,
     freeStatsWindowYears,
@@ -41,8 +42,11 @@ export default function PaidFilterTable() {
   const [filterError, setFilterError] = useState<string | null>(null);
 
   const yearOptions = useMemo(
-    () => [...getPaidYearButtonYears(freeStatsWindowYears)],
-    [freeStatsWindowYears],
+    () => [...new Set([
+      ...getPaidYearButtonYears(freeStatsWindowYears),
+      ...(paidRequest.years ?? []),
+    ])].sort((a, b) => a - b),
+    [freeStatsWindowYears, paidRequest.years],
   );
   const selectedYears = paidRequest.years ?? [];
   const selectedDealTypes = DEAL_TYPES.filter(
@@ -341,6 +345,16 @@ export default function PaidFilterTable() {
                 variant="filter"
                 className="py-2.5 shadow-sm"
               />
+              <button
+                type="button"
+                onClick={() => {
+                  resetPaidFilters();
+                  setFilterError(null);
+                }}
+                className="mt-2 text-xs font-medium text-slate-600 hover:text-slate-900"
+              >
+                필터 초기화
+              </button>
             </td>
           </tr>
         </tbody>
