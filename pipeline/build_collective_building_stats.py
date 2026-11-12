@@ -31,6 +31,8 @@ from build_stats_v2 import (  # noqa: E402
 )
 from constants import MAX_WINDOW_YEARS
 from collective.db_utils import get_collective_engine  # noqa: E402
+from collective.mart_replace import delete_as_of, prune_annual  # noqa: E402
+from collective.rep_address_sql import rep_address_query  # noqa: E402
 from stats import compute_stats  # noqa: E402
 
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="scipy")
@@ -45,55 +47,50 @@ log = logging.getLogger(__name__)
 ASSET_TYPES = ("apartment", "rowhouse", "officetel", "presale")
 DEFAULT_UPSERT_CHUNK = 400
 
-ROLLING_SQL = """
-SELECT
-    building_key,
-    asset_type,
-    MAX(display_name) AS display_name,
-    MAX(addr1) AS addr1,
-    MAX(addr2) AS addr2,
-    MAX(addr3) AS addr3,
-    MAX(addr4) AS addr4,
-    MAX(addr5) AS addr5,
-    MAX(beopjungri_code) AS beopjungri_code,
-    MAX(sigungu_code) AS sigungu_code,
-    MAX(lot_number) AS lot_number,
-    MAX(road_name) AS road_name,
-    MAX(building_year) AS building_year,
-    array_agg(unit_price ORDER BY unit_price) AS prices
-FROM collective_transactions
-WHERE is_valid = true
-  AND unit_price IS NOT NULL
-  AND unit_price > 0
-  AND contract_date IS NOT NULL
-  AND contract_date >= :p_start
-  AND contract_date <= :p_end
-  {asset_clause}
-  {addr1_clause}
-GROUP BY building_key, asset_type
-"""
+_TX_COLS = """building_key, asset_type, display_name, addr1, addr2, addr3, addr4, addr5,
+           beopjungri_code, sigungu_code, lot_number, road_name, building_year, unit_price,
+           contract_date, contract_year"""
 
-ANNUAL_SQL = """
-SELECT
-    building_key,
-    asset_type,
-    contract_year,
-    MAX(display_name) AS display_name,
-    MAX(addr1) AS addr1,
-    MAX(addr2) AS addr2,
-    MAX(addr3) AS addr3,
-    MAX(addr4) AS addr4,
-    MAX(beopjungri_code) AS beopjungri_code,
-    array_agg(unit_price ORDER BY unit_price) AS prices
-FROM collective_transactions
-WHERE is_valid = true
-  AND unit_price IS NOT NULL
-  AND unit_price > 0
-  AND contract_year IS NOT NULL
-  {asset_clause}
-  {addr1_clause}
-GROUP BY building_key, asset_type, contract_year
-"""
+# 대표 주소: 주소 열별 MAX 대신 최다 거래 주소 세트 한 건(집합 2단계 A-3, collective/rep_address_sql.py)
+ROLLING_SQL = rep_address_query(
+    base_sql=f"""
+    SELECT {_TX_COLS}
+    FROM collective_transactions
+    WHERE is_valid = true
+      AND unit_price IS NOT NULL
+      AND unit_price > 0
+      AND contract_date IS NOT NULL
+      AND contract_date >= :p_start
+      AND contract_date <= :p_end
+      {{asset_clause}}
+      {{addr1_clause}}
+""",
+    group_cols=["building_key", "asset_type"],
+    aggregates="""MAX(b.display_name) AS display_name,
+       MAX(b.addr1) AS addr1,
+       MAX(b.addr2) AS addr2,
+       MAX(b.building_year) AS building_year,
+       array_agg(b.unit_price ORDER BY b.unit_price) AS prices""",
+)
+
+ANNUAL_SQL = rep_address_query(
+    base_sql=f"""
+    SELECT {_TX_COLS}
+    FROM collective_transactions
+    WHERE is_valid = true
+      AND unit_price IS NOT NULL
+      AND unit_price > 0
+      AND contract_year IS NOT NULL
+      {{asset_clause}}
+      {{addr1_clause}}
+""",
+    group_cols=["building_key", "asset_type", "contract_year"],
+    aggregates="""MAX(b.display_name) AS display_name,
+       MAX(b.addr1) AS addr1,
+       MAX(b.addr2) AS addr2,
+       array_agg(b.unit_price ORDER BY b.unit_price) AS prices""",
+    rep_extra_max=(),
+)
 
 
 def _distinct_addr1(conn) -> list[str]:
@@ -378,6 +375,10 @@ def main() -> None:
     p.add_argument("--skip-annual", action="store_true")
     p.add_argument("--rolling-only", action="store_true")
     p.add_argument("--annual-only", action="store_true")
+    p.add_argument("--replace-as-of", action="store_true",
+                   help="빌드 전 같은 as_of·창 행 삭제(키 이전 뒤 같은 as_of 재빌드용, 집합 2단계)")
+    p.add_argument("--prune-annual", action="store_true",
+                   help="annual 빌드 뒤 원장 근거 없는 2019~ 행 삭제(키 이전 뒤 옛 키 행 정리)")
     args = p.parse_args()
 
     as_of = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
@@ -406,6 +407,9 @@ def main() -> None:
 
     rolling_n = 0
     if not args.annual_only:
+        if args.replace_as_of:
+            delete_as_of(engine, "collective_building_stats", as_of=as_of, windows=windows,
+                         asset_type=asset_type, addr1=args.addr1)
         rolling_n = build_rolling(
             engine,
             as_of_month=as_of,
@@ -424,6 +428,9 @@ def main() -> None:
             asset_type=asset_type,
         )
         log.info("collective_building_annual_stats upserted ~%s rows", annual_n)
+        if args.prune_annual:
+            prune_annual(engine, "collective_building_annual_stats", "collective_transactions", "building_key",
+                         asset_type=asset_type)
 
     with engine.connect() as conn:
         cbs = conn.execute(text("SELECT COUNT(*) FROM collective_building_stats")).scalar()

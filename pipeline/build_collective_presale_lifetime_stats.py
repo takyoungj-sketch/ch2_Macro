@@ -21,6 +21,7 @@ sys.path.insert(0, str(REPO / "pipeline"))
 
 from build_stats_v2 import default_as_of_month, parse_as_of_month  # noqa: E402
 from collective.db_utils import get_collective_engine  # noqa: E402
+from collective.rep_address_sql import rep_address_query  # noqa: E402
 from stats import compute_stats  # noqa: E402
 
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="scipy")
@@ -30,32 +31,28 @@ log = logging.getLogger(__name__)
 
 DEFAULT_UPSERT_CHUNK = 400
 
-LIFETIME_SQL = """
-SELECT
-    building_key,
-    MAX(display_name) AS display_name,
-    MAX(addr1) AS addr1,
-    MAX(addr2) AS addr2,
-    MAX(addr3) AS addr3,
-    MAX(addr4) AS addr4,
-    MAX(addr5) AS addr5,
-    MAX(beopjungri_code) AS beopjungri_code,
-    MAX(sigungu_code) AS sigungu_code,
-    MAX(lot_number) AS lot_number,
-    MAX(road_name) AS road_name,
-    MAX(building_year) AS building_year,
-    MIN(contract_date) AS period_start,
-    MAX(contract_date) AS period_end,
-    array_agg(unit_price ORDER BY unit_price) AS prices
-FROM collective_transactions
-WHERE is_valid = true
-  AND asset_type = 'presale'
-  AND unit_price IS NOT NULL
-  AND unit_price > 0
-  AND contract_date IS NOT NULL
-  {addr1_clause}
-GROUP BY building_key
-"""
+# 대표 주소: 최다 거래 주소 세트 한 건(집합 2단계 A-3)
+LIFETIME_SQL = rep_address_query(
+    base_sql="""
+    SELECT building_key, asset_type, display_name, addr1, addr2, addr3, addr4, addr5,
+           beopjungri_code, sigungu_code, lot_number, road_name, building_year, unit_price, contract_date
+    FROM collective_transactions
+    WHERE is_valid = true
+      AND asset_type = 'presale'
+      AND unit_price IS NOT NULL
+      AND unit_price > 0
+      AND contract_date IS NOT NULL
+      {addr1_clause}
+""",
+    group_cols=["building_key"],
+    aggregates="""MAX(b.display_name) AS display_name,
+       MAX(b.addr1) AS addr1,
+       MAX(b.addr2) AS addr2,
+       MAX(b.building_year) AS building_year,
+       MIN(b.contract_date) AS period_start,
+       MAX(b.contract_date) AS period_end,
+       array_agg(b.unit_price ORDER BY b.unit_price) AS prices""",
+)
 
 
 def _distinct_addr1(conn) -> list[str]:

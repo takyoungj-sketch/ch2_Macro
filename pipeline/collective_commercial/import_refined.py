@@ -80,7 +80,7 @@ INSERT_TX = text(
         contract_year, contract_month, contract_date,
         price, gross_area, land_area, unit_price, floor, road_code, road_width_label, building_age,
         beopjungri_code, sido_code, sigungu_code, eupmyeondong_code,
-        needs_review, mapping_notes
+        needs_review, mapping_notes, deal_type
     ) VALUES (
         :transaction_hash, :cluster_id, :asset_type, :cluster_key, :resolution_mode,
         :addr1, :addr2, :addr3, :addr4, :addr5, :lot_number, :road_name,
@@ -88,7 +88,7 @@ INSERT_TX = text(
         :contract_year, :contract_month, :contract_date,
         :price, :gross_area, :land_area, :unit_price, :floor, :road_code, :road_width_label, :building_age,
         :beopjungri_code, :sido_code, :sigungu_code, :eupmyeondong_code,
-        :needs_review, :mapping_notes
+        :needs_review, :mapping_notes, :deal_type
     )
     """
 )
@@ -105,6 +105,14 @@ def _null(val):
     if isinstance(val, str) and val.strip().lower() in ("", "nan", "none"):
         return None
     return val
+
+
+_DEAL_TYPES = frozenset({"중개거래", "직거래"})
+
+
+def _deal_type(val) -> str | None:
+    s = _str(val, 16)
+    return s if s in _DEAL_TYPES else None
 
 
 def _int_small(val) -> int | None:
@@ -309,6 +317,8 @@ def insert_transactions(engine, df: pd.DataFrame, id_map: dict[str, int], *, sou
                 "eupmyeondong_code": _str(d.get("eupmyeondong_code"), 8),
                 "needs_review": bool(d.get("needs_review", False)),
                 "mapping_notes": _str(d.get("mapping_notes"), None),
+                # 집합 2단계 N-2: 거래유형이 적재에서 버려지던 문제(정해진 두 값만, 나머지는 공란)
+                "deal_type": _deal_type(d.get("deal_type")),
             }
             batch.append(rec)
             if len(batch) >= 2000:

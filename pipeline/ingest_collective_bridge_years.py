@@ -25,6 +25,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "pipeline"))
 sys.path.insert(0, str(REPO / "pipeline" / "collective"))
 
+from admin_names import LEGACY_SIDO_TO_CURRENT, canonical_sido_name  # noqa: E402
 from collective.db_utils import get_collective_engine, get_land_engine_for_region_copy  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -76,36 +77,44 @@ def find_bridge_csvs(folder_name: str, name_token: str, years: tuple[int, ...]) 
     return sorted(set(out))
 
 
-def purge_residential_bridge(engine, years: tuple[int, ...]) -> int:
-    ys = list(years)
+def sido_addr1_names_from_paths(paths: list[Path]) -> list[str]:
+    """적재할 원천 파일의 시도(파일명 첫 토큰) → 지울 addr1 이름들(개편 후 이름 + 같은 이름으로 모이는 옛 이름).
+
+    2026-08 사고(D-084 C-02): 시도 조건 없이 연도만으로 지워, 개편 재적재로 넣은 새 이름 행을 옛 이름 파일로 덮었다.
+    """
+    cur = {canonical_sido_name(p.name.split("_", 1)[0]) for p in paths}
+    names = set(cur)
+    for old, new in LEGACY_SIDO_TO_CURRENT.items():
+        if new in cur:
+            names.add(old)
+    return sorted(n for n in names if isinstance(n, str) and n)
+
+
+def _purge(engine, table: str, assets: tuple[str, ...], years: tuple[int, ...], addr1_names: list[str], *, apply: bool) -> int:
+    if not addr1_names:
+        raise SystemExit(f"{table}: 시도 조건이 비어 purge 거부(원천 파일 없음?)")
+    params = {"assets": list(assets), "years": list(years), "names": addr1_names}
+    where = "asset_type = ANY(:assets) AND contract_year = ANY(:years) AND addr1 = ANY(:names)"
+    with engine.connect() as conn:
+        rows = conn.execute(text(f"SELECT addr1, contract_year, asset_type, count(*) FROM {table} WHERE {where} "
+                                 "GROUP BY 1,2,3 ORDER BY 1,2,3"), params).all()
+    total = sum(int(r[3]) for r in rows)
+    for r in rows:
+        log.info("[purge %s] %s %s %s: %d", "실행" if apply else "드라이런", r[0], r[1], r[2], int(r[3]))
+    log.info("[purge %s] %s 합계 %d행", "실행" if apply else "드라이런", table, total)
+    if not apply:
+        return total
     with engine.begin() as conn:
-        r = conn.execute(
-            text(
-                """
-                DELETE FROM collective_transactions
-                WHERE asset_type = ANY(:assets)
-                  AND contract_year = ANY(:years)
-                """
-            ),
-            {"assets": list(RESIDENTIAL_ASSETS), "years": ys},
-        )
+        r = conn.execute(text(f"DELETE FROM {table} WHERE {where}"), params)
         return int(r.rowcount or 0)
 
 
-def purge_commercial_bridge(engine, years: tuple[int, ...]) -> int:
-    ys = list(years)
-    with engine.begin() as conn:
-        r = conn.execute(
-            text(
-                """
-                DELETE FROM collective_commercial_transactions
-                WHERE asset_type = ANY(:assets)
-                  AND contract_year = ANY(:years)
-                """
-            ),
-            {"assets": list(COMMERCIAL_ASSETS), "years": ys},
-        )
-        return int(r.rowcount or 0)
+def purge_residential_bridge(engine, years: tuple[int, ...], addr1_names: list[str], *, apply: bool = False) -> int:
+    return _purge(engine, "collective_transactions", RESIDENTIAL_ASSETS, years, addr1_names, apply=apply)
+
+
+def purge_commercial_bridge(engine, years: tuple[int, ...], addr1_names: list[str], *, apply: bool = False) -> int:
+    return _purge(engine, "collective_commercial_transactions", COMMERCIAL_ASSETS, years, addr1_names, apply=apply)
 
 
 def ingest_residential(
@@ -203,7 +212,8 @@ def main() -> None:
     p.add_argument("--as-of", default="2026-07-01", help="rolling mart as_of_month")
     p.add_argument("--windows", default="3,5,7")
     p.add_argument("--refresh-region-codes", action="store_true")
-    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--dry-run", action="store_true", help="(기본 동작) 지울·넣을 건수만 출력")
+    p.add_argument("--apply", action="store_true", help="실제 purge·적재. 없으면 드라이런")
     args = p.parse_args()
 
     years = tuple(sorted({int(x.strip()) for x in args.years.split(",") if x.strip()}))
@@ -215,28 +225,34 @@ def main() -> None:
 
     log.info("bridge years=%s residential=%s commercial=%s", years, do_res, do_comm)
 
-    if args.dry_run:
-        for asset_type, folder_name, token in RESIDENTIAL:
-            paths = find_bridge_csvs(folder_name, token, years)
-            log.info("[dry-run] %s: %d files", asset_type, len(paths))
-        for label, folder_name, token in [
-            ("shop", "상업업무_2010_2020", "_상업업무_"),
-            ("factory", "공장창고_2010_2020", "_공장창고_"),
-        ]:
-            paths = find_bridge_csvs(folder_name, token, years)
-            log.info("[dry-run] %s: %d files", label, len(paths))
+    res_paths = [p for _a, f, t in RESIDENTIAL for p in find_bridge_csvs(f, t, years)]
+    com_paths = [p for _a, f, t in COMMERCIAL for p in find_bridge_csvs(f, t, years)]
+    res_names = sido_addr1_names_from_paths(res_paths)
+    com_names = sido_addr1_names_from_paths(com_paths)
+    for asset_type, folder_name, token in RESIDENTIAL + COMMERCIAL:
+        log.info("[plan] %s: %d files", asset_type, len(find_bridge_csvs(folder_name, token, years)))
+    log.info("[plan] purge 시도(주거): %s", res_names)
+    log.info("[plan] purge 시도(비주거): %s", com_names)
+    engine = get_collective_engine()
+    apply = bool(args.apply) and not args.dry_run
+    if not apply:
+        if not args.skip_purge:
+            if do_res:
+                purge_residential_bridge(engine, years, res_names, apply=False)
+            if do_comm:
+                purge_commercial_bridge(engine, years, com_names, apply=False)
+        log.info("드라이런 — 쓰지 않았다. 확인 후 --apply 로 실행.")
         return
 
-    engine = get_collective_engine()
     batch_id = str(uuid.uuid4())
     log.info("batch_id=%s", batch_id)
 
     if not args.skip_purge:
         if do_res:
-            n = purge_residential_bridge(engine, years)
+            n = purge_residential_bridge(engine, years, res_names, apply=True)
             log.info("purged residential bridge rows: %d", n)
         if do_comm:
-            n = purge_commercial_bridge(engine, years)
+            n = purge_commercial_bridge(engine, years, com_names, apply=True)
             log.info("purged commercial bridge rows: %d", n)
 
     if do_res:

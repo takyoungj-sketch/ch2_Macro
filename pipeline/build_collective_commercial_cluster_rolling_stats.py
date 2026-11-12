@@ -25,6 +25,7 @@ from build_stats_v2 import (  # noqa: E402
     period_bounds_for_window,
 )
 from collective.db_utils import get_collective_engine  # noqa: E402
+from collective.mart_replace import delete_as_of, prune_annual  # noqa: E402
 from stats import compute_stats  # noqa: E402
 
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="scipy")
@@ -179,12 +180,16 @@ def main() -> None:
     p.add_argument("--as-of", type=str, default=None)
     p.add_argument("--windows", type=str, default="3,5,7")
     p.add_argument("--addr1", type=str, default=None)
+    p.add_argument("--replace-as-of", action="store_true",
+                   help="빌드 전 같은 as_of·창 행 삭제(키 이전 뒤 같은 as_of 재빌드용, 집합 2단계)")
     args = p.parse_args()
 
     as_of = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
     windows = sorted({int(x.strip()) for x in args.windows.split(",") if x.strip()})
     engine = get_collective_engine()
     batch_id = str(uuid.uuid4())
+    if args.replace_as_of:
+        delete_as_of(engine, "collective_commercial_cluster_rolling_stats", as_of=as_of, windows=windows, addr1=args.addr1)
     n = build_rolling_buckets(
         engine,
         as_of_month=as_of,

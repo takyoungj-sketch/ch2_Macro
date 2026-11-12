@@ -21,6 +21,7 @@ sys.path.insert(0, str(REPO / "pipeline"))
 
 from build_stats_v2 import default_as_of_month, parse_as_of_month, period_bounds_for_window  # noqa: E402
 from collective.db_utils import get_collective_engine  # noqa: E402
+from collective.mart_replace import delete_as_of, prune_annual  # noqa: E402
 from stats import compute_stats  # noqa: E402
 
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="scipy")
@@ -306,6 +307,9 @@ def main() -> None:
     p.add_argument("--skip-annual", action="store_true")
     p.add_argument("--rolling-only", action="store_true")
     p.add_argument("--annual-only", action="store_true")
+    p.add_argument("--replace-as-of", action="store_true",
+                   help="빌드 전 같은 as_of·창 행 삭제(키 이전 뒤 같은 as_of 재빌드용, 집합 2단계)")
+    p.add_argument("--prune-annual", action="store_true", help="원장 근거 없는 2019~ annual 행 삭제")
     args = p.parse_args()
 
     as_of = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
@@ -321,11 +325,16 @@ def main() -> None:
 
     rolling_n = 0
     if not args.annual_only:
+        if args.replace_as_of:
+            delete_as_of(engine, "collective_commercial_cluster_stats", as_of=as_of, windows=windows, addr1=args.addr1)
         rolling_n = build_rolling(engine, as_of_month=as_of, windows=windows, addr1_filter=args.addr1, batch_id=batch_id)
         log.info("collective_commercial_cluster_stats upserted ~%s rows", rolling_n)
     if not args.rolling_only and not args.skip_annual:
         annual_n = build_annual(engine, addr1_filter=args.addr1, batch_id=batch_id)
         log.info("collective_commercial_cluster_annual_stats upserted ~%s rows", annual_n)
+        if args.prune_annual:
+            prune_annual(engine, "collective_commercial_cluster_annual_stats", "collective_commercial_transactions",
+                         "cluster_key")
 
 
 if __name__ == "__main__":

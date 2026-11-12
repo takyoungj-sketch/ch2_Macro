@@ -458,6 +458,16 @@ def main() -> None:
         help="결과 로그 저장 경로",
     )
     parser.add_argument(
+        "--collective",
+        action="store_true",
+        help="집합 2단계 검사(옛 시도명 0·동 이름 ≥2 키 판정·annual=원장) 추가",
+    )
+    parser.add_argument(
+        "--collective-deep",
+        action="store_true",
+        help="--collective + 최신 building_stats 합성 주소 0 검사(수십 초)",
+    )
+    parser.add_argument(
         "--skip-national-raw-match",
         action="store_true",
         help="전국 샘플 raw↔stored 검사 생략 (속도)",
@@ -541,6 +551,24 @@ def main() -> None:
                     fixture.get("national_samples") or [],
                     windows,
                 )
+
+    if args.collective or args.collective_deep:
+        sys.path.insert(0, str(ROOT / "collective"))
+        from collective.db_utils import get_collective_engine
+        from collective.integrity_p2 import check_collective_p2
+
+        try:
+            from built.db_utils import get_built_engine
+
+            beng = get_built_engine()
+        except Exception:  # noqa: BLE001
+            beng = None
+        with get_collective_engine().connect() as cconn:
+            if beng is not None:
+                with beng.connect() as bconn:
+                    check_collective_p2(rep, cconn, bconn, deep=args.collective_deep)
+            else:
+                check_collective_p2(rep, cconn, None, deep=args.collective_deep)
 
     if args.count_before and args.count_after:
         compare_count_snapshots(

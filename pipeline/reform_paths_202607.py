@@ -30,14 +30,30 @@ COLLECTIVE_COMMERCIAL_DIRS: dict[str, str] = {
 }
 
 
-def reform_staging_roots() -> list[Path]:
-    """`raw/*(201001_202605)` staging 루트 (인천·전남광주 각 1개)."""
+_STAGING_TOKEN = "201001_202605"
+_LAND_STAGING = "토지(인천,전남광주)_201001_202605"
+
+
+def reform_staging_roots(raw: Path | None = None, *, require: bool = False) -> list[Path]:
+    """`raw/*(201001_202605)` 또는 한 단계 아래 `raw/<묶음>/*(201001_202605)` staging 루트.
+
+    2026-11 확인: staging 이 `raw/인천, 전남광주/…` 아래로 옮겨져 `raw/` 바로 아래만 보면 0개였다(D-084 C-02).
+    require=True 면 0개일 때 FileNotFoundError(조용히 CSV 0개로 진행하지 않게).
+    """
+    base = raw or RAW
     roots: list[Path] = []
-    if not RAW.is_dir():
-        return roots
-    for child in sorted(RAW.iterdir()):
-        if child.is_dir() and "201001_202605" in child.name and child.name != "토지(인천,전남광주)_201001_202605":
-            roots.append(child)
+    if base.is_dir():
+        for child in sorted(base.iterdir()):
+            if not child.is_dir() or child.name == _LAND_STAGING:
+                continue
+            if _STAGING_TOKEN in child.name:
+                roots.append(child)
+                continue
+            for sub in sorted(child.iterdir()):
+                if sub.is_dir() and _STAGING_TOKEN in sub.name and sub.name != _LAND_STAGING:
+                    roots.append(sub)
+    if require and not roots:
+        raise FileNotFoundError(f"reform staging 루트 없음: {base}/*{_STAGING_TOKEN}*, {base}/*/*{_STAGING_TOKEN}*")
     return roots
 
 
@@ -60,7 +76,7 @@ def list_reform_csvs(
     """staging 루트들 아래 유형 폴더에서 reform 시도 CSV 목록."""
     paths: list[Path] = []
     seen: set[str] = set()
-    for root in reform_staging_roots():
+    for root in reform_staging_roots(require=True):
         folder = root / type_dir_name
         if not folder.is_dir():
             continue
