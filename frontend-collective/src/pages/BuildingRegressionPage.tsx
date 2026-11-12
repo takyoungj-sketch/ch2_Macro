@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BuildingRegressionPanel from "../components/BuildingRegressionPanel";
-import { COLLECTIVE_EXPERIMENT_MODE } from "../api/client";
+import { COLLECTIVE_EXPERIMENT_MODE, fetchBuildingKeyStatus, type BuildingKeyStatus } from "../api/client";
 import type { AssetType } from "../types";
 import { ASSET_LABELS } from "../types";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
@@ -25,6 +25,18 @@ export default function BuildingRegressionPage() {
   const params = useMemo(() => parseSearchParams(), []);
   const { fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
+  // 집합 2단계 — 옛 키 링크: 1:1 이면 새 키로, 분할이면 후보를 고르게 한다.
+  const [keyStatus, setKeyStatus] = useState<BuildingKeyStatus | null>(null);
+  useEffect(() => {
+    if (!params.buildingKey) return;
+    let alive = true;
+    void fetchBuildingKeyStatus(params.buildingKey).then((s) => {
+      if (alive) setKeyStatus(s);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [params.buildingKey]);
 
   if (!params.buildingKey) {
     return (
@@ -51,13 +63,36 @@ export default function BuildingRegressionPage() {
         <div className="max-w-3xl mx-auto w-full p-4 md:p-6">
           <div className="card space-y-4">
             <p className="text-xs text-slate-500">{ASSET_LABELS[params.assetType]} · 별도 창 (레거시)</p>
+            {keyStatus?.key_status === "split" ? (
+              <div className="space-y-2 text-sm">
+                <p className="text-slate-700 dark:text-slate-200">{keyStatus.message}</p>
+                <ul className="space-y-1">
+                  {keyStatus.candidates.map((c) => {
+                    const u = new URL(window.location.href);
+                    u.searchParams.set("building_key", c.building_key);
+                    const where = [c.addr3, c.addr4, c.addr5].filter(Boolean).join(" ");
+                    return (
+                      <li key={c.building_key}>
+                        <a className="text-blue-600 hover:underline dark:text-blue-400" href={u.toString()}>
+                          {c.display_name || params.displayName || "단지"}
+                          {where ? ` · ${where}` : ""} · {c.n_tx.toLocaleString()}건
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : keyStatus === null ? (
+              <p className="text-xs text-slate-500">단지 확인 중…</p>
+            ) : (
             <BuildingRegressionPanel
-              buildingKey={params.buildingKey}
+              buildingKey={keyStatus.building_key}
               assetType={params.assetType}
               yearFrom={params.yearFrom}
               yearTo={params.yearTo}
               experiment={COLLECTIVE_EXPERIMENT_MODE}
             />
+            )}
           </div>
         </div>
       </div>

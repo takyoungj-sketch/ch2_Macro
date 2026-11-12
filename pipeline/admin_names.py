@@ -30,5 +30,6 @@ def normalize_addr1_column(df: pd.DataFrame, col: str = "addr1") -> pd.DataFrame
     if not hit.any():
         return df
     out = df.copy()
-    out.loc[hit, col] = s[hit].map(LEGACY_SIDO_TO_CURRENT)
+    # 값 단위로 바꿔 None 등 문자열 아닌 값은 그대로 둔다(.loc 대입은 None → NaN 으로 바꿀 수 있음)
+    out[col] = pd.Series([canonical_sido_name(v) for v in s], index=s.index, dtype=object)
     return out

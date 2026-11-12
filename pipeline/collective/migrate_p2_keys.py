@@ -727,8 +727,9 @@ def verify(ceng: Engine, beng: Engine | None, reng: Engine | None, units: dict) 
 # main
 # --------------------------------------------------------------------------------------------
 
-def build_plan(ceng: Engine, beng: Engine | None, reng: Engine | None, units: dict) -> Plan:
-    parts = _split_part_lookup()
+def build_plan(ceng: Engine, beng: Engine | None, reng: Engine | None, units: dict,
+               split_path: Path | None = None) -> Plan:
+    parts = _split_part_lookup(split_path or SPLIT_UNITS_PATH)
     plan = Plan()
     with ceng.connect() as c:
         plan_collective(c, units, parts, plan)
@@ -778,7 +779,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{'OK ' if ok else 'NG '} {name}: 기대 {exp} / 실제 {got}")
         return 1 if bad else 0
 
-    plan = build_plan(ce, be, re_, units)
+    plan = build_plan(ce, be, re_, units, Path(a.split_units) if a.split_units else None)
     print(json.dumps({"split_base_keys": len(units), "counts": plan.counts, "problems": plan.problems},
                      ensure_ascii=False, indent=1, default=str))
     if not a.apply:

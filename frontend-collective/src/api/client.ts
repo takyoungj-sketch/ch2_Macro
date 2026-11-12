@@ -586,3 +586,32 @@ export async function runBuildingRegression(
 }
 
 export type { BuildingStatsRow };
+
+/** 집합 2단계 — 옛 단지 키 확인. 1:1 이면 새 키, 분할(409)이면 후보 목록. */
+export type BuildingKeyCandidate = {
+  building_key: string;
+  split_part: number;
+  n_tx: number;
+  display_name?: string;
+  addr3?: string | null;
+  addr4?: string | null;
+  addr5?: string | null;
+};
+export type BuildingKeyStatus =
+  | { key_status: "ok"; building_key: string }
+  | { key_status: "split"; old_key: string; message: string; candidates: BuildingKeyCandidate[] };
+
+export async function fetchBuildingKeyStatus(buildingKey: string): Promise<BuildingKeyStatus> {
+  try {
+    const { data } = await api.get<{ key_status: "ok"; building_key: string }>(
+      `/buildings/${encodeURIComponent(buildingKey)}/key-status`,
+    );
+    return data;
+  } catch (e: unknown) {
+    const resp = (e as { response?: { status?: number; data?: { detail?: unknown } } }).response;
+    const detail = resp?.data?.detail as BuildingKeyStatus | undefined;
+    if (resp?.status === 409 && detail && detail.key_status === "split") return detail;
+    // 키 확인 실패는 화면을 막지 않는다 — 원래 키로 진행
+    return { key_status: "ok", building_key: buildingKey };
+  }
+}

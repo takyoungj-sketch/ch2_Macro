@@ -674,6 +674,13 @@ def _get_building_meta(db: Session, building_key: str) -> tuple[str, str]:
     return str(meta["display_name"] or ""), str(meta["asset_type"] or "")
 
 
+@router.get("/buildings/{building_key}/key-status")
+def building_key_status(building_key: str) -> dict:
+    """옛 키 확인용(집합 2단계). 옛 키는 key_remap 미들웨어가 이 핸들러 전에 새 키로 바꾸거나(1:1)
+    409 후보 목록(분할)으로 응답한다. 여기 도달하면 받은 키가 현재 키다."""
+    return {"key_status": "ok", "building_key": building_key}
+
+
 @router.get("/buildings/{building_key}/presale-catalog", response_model=PresaleCatalogResponse)
 def presale_catalog(
     building_key: str,

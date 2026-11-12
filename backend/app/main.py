@@ -73,6 +73,10 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
+# 집합 2단계 — 옛 단지 키(호남 옛 시도명·분할 전) 요청을 연결표로 푼다. 가장 안쪽(CORS 안)에 둬 409에도 CORS 헤더가 붙는다.
+from app.collective.key_remap import KeyRemapMiddleware  # noqa: E402
+
+app.add_middleware(KeyRemapMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
