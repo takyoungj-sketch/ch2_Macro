@@ -1,0 +1,145 @@
+{
+  "source_inventory": {
+    "files": [
+      {
+        "path": "CH2DATA_payment_path.pptx",
+        "size": 607547,
+        "sha256": "819c3aaa803bcd80881788bc48ca643e279da351d06c25d326de58d997c70327",
+        "same_as_removed_web_copy": false
+      },
+      {
+        "path": "CH2DATA_결제경로.pptx",
+        "size": 607547,
+        "sha256": "819c3aaa803bcd80881788bc48ca643e279da351d06c25d326de58d997c70327",
+        "same_as_removed_web_copy": false
+      },
+      {
+        "path": "screenshots/01_home_footer.png",
+        "size": 138034,
+        "sha256": "faee89e3a63474f943b003079237b79d321e8fa5575e58a70cf48e3d2307225a",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/02_footer.png",
+        "size": 65313,
+        "sha256": "bb1a1ed97e8a537797fec58090455f0b81074452684d4f081bcd83a4a6cac25c",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/03_refund.png",
+        "size": 101283,
+        "sha256": "ef1405fc887b680ae71d633bc9f553783aee3c5c213ab752d3d5bc2baa62eb01",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/04_login.png",
+        "size": 64411,
+        "sha256": "f9f00b12e9a845def24d170ae9e0fd5eb3934cb2c94f4382ddd2751f52d9e342",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/04_subscription.png",
+        "size": 230569,
+        "sha256": "40eedc271d338a24aeb4aa54086ac3443e27a7deb0e5dddaefcacff71f59b81b",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/05_login.png",
+        "size": 112206,
+        "sha256": "e95f728e2d29b68ef2a7b0473134171e0dbecf2559d51effbb5ed6516c710568",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/05_subscription_1.png",
+        "size": 84182,
+        "sha256": "ec393ebded51a6011fa4e760de2bd6937f6efa3a12923069ecb5278467fdfe58",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/05_subscription_2.png",
+        "size": 98903,
+        "sha256": "49709654ec9899f11ad93769b0f753ef59920707edcd4019ca3a7e421ec71e05",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/06_subscribe.png",
+        "size": 101012,
+        "sha256": "652e59c6a12835dbc869b0f8f2435266d2f843e8b3ba58b1d13341e758221e50",
+        "same_as_removed_web_copy": false
+      },
+      {
+        "path": "screenshots/06_subscribe_logged_in.png",
+        "size": 104306,
+        "sha256": "3d5bfe57a5702318a79604c755984d8b9ee12e6764c1dbedd93a3b07095e91ac",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/07_payment_note.png",
+        "size": 104306,
+        "sha256": "3d5bfe57a5702318a79604c755984d8b9ee12e6764c1dbedd93a3b07095e91ac",
+        "same_as_removed_web_copy": true
+      },
+      {
+        "path": "screenshots/07_payment_window.png",
+        "size": 116585,
+        "sha256": "0d6e76921183c067fd515c0600624360f77648484483a98be1944eeb6d7caf74",
+        "same_as_removed_web_copy": false
+      }
+    ],
+    "extra_paths": [
+      "screenshots/07_payment_window.png"
+    ],
+    "missing_paths": []
+  },
+  "additional_archive_files": [
+    {
+      "path": "CH2DATA_payment_path.pptx",
+      "size": 607547,
+      "sha256": "819c3aaa803bcd80881788bc48ca643e279da351d06c25d326de58d997c70327",
+      "same_as_removed_web_copy": false
+    },
+    {
+      "path": "CH2DATA_결제경로.pptx",
+      "size": 607547,
+      "sha256": "819c3aaa803bcd80881788bc48ca643e279da351d06c25d326de58d997c70327",
+      "same_as_removed_web_copy": false
+    },
+    {
+      "path": "screenshots/06_subscribe.png",
+      "size": 101012,
+      "sha256": "652e59c6a12835dbc869b0f8f2435266d2f843e8b3ba58b1d13341e758221e50",
+      "same_as_removed_web_copy": false
+    },
+    {
+      "path": "screenshots/07_payment_window.png",
+      "size": 116585,
+      "sha256": "0d6e76921183c067fd515c0600624360f77648484483a98be1944eeb6d7caf74",
+      "same_as_removed_web_copy": false
+    }
+  ],
+  "removal": {
+    "deleted": [
+      "CH2DATA_payment_path.pptx",
+      "CH2DATA_결제경로.pptx",
+      "screenshots/01_home_footer.png",
+      "screenshots/02_footer.png",
+      "screenshots/03_refund.png",
+      "screenshots/04_login.png",
+      "screenshots/04_subscription.png",
+      "screenshots/05_login.png",
+      "screenshots/05_subscription_1.png",
+      "screenshots/05_subscription_2.png",
+      "screenshots/06_subscribe.png",
+      "screenshots/06_subscribe_logged_in.png",
+      "screenshots/07_payment_note.png",
+      "screenshots/07_payment_window.png"
+    ],
+    "source_path": "/opt/ch2_Macro/deploy/hub/toss-review",
+    "source_absent": true,
+    "web_path": "/var/www/ch2data-hub/toss-review",
+    "web_absent": true,
+    "deployment_executed": false,
+    "dry_run_executed": false,
+    "checked_at_utc": "2026-11-12T11:07:19.483443+00:00"
+  }
+}
