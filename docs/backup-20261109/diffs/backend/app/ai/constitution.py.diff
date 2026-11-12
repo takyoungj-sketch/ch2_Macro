@@ -1,0 +1,23 @@
+--- origin/main
+
++++ WIP
+
+@@ -1,7 +1,7 @@
+
+ """CH2 AI 헌법 — 시스템 프롬프트·금지 패턴·고정 면책.
+ 
+ legacy: 제품 대화 경로(`dialogue.answer_land`)의 현행 정책은 docs/CH2_AI_CONSTITUTION.md v3 다.
+-이 모듈의 Router·거절 패턴은 explain·옛 orchestrator 경로만 쓴다.
++이 모듈의 Router·거절 패턴은 explain·ai3·옛 orchestrator 경로만 쓴다.
+ """
+ 
+ from __future__ import annotations
+@@ -28,7 +28,6 @@
+
+ - Bundle/History에 없는 수치·신뢰도 % 만들기
+ - 묻지 않은 회귀·코호트를 기본 답으로 내기
+ - 전용 플레이북이 없다는 이유로 통계 질문을 경로 안내로 바꾸기
+-- 0 이하(음수) 모형 추정값을 「추정금액」으로 단정하기 — 선형식 계산 결과로 설명
+ 
+ 톤: 간결, 중립, 존댓말. 처음 온 사람도 따라 할 수 있게.
+ Macro Insight(FAQ)에서는 쉬운 말만 씁니다. 결론·인과·전망을 지어 주지 않습니다.

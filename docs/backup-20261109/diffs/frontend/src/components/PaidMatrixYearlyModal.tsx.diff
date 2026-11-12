@@ -1,0 +1,393 @@
+--- origin/main
+
++++ WIP
+
+@@ -1,4 +1,4 @@
+
+-import { useCallback, useEffect, useMemo, useState } from "react";
++import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ import { contentSignature } from "../../../shared/regression-ui/signature";
+ import {
+   fetchLongTermTrend,
+@@ -21,7 +21,6 @@
+
+   MatrixCellTransactionsResponse,
+   MatrixYearlyRequest,
+   MatrixYearlyStat,
+-  StatsResult,
+ } from "../types";
+ import { parseApiError, parseApiErrorAsync } from "../utils/apiError";
+ import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+@@ -42,6 +41,7 @@
+
+ import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
+ import MatrixCellTransactionAggregate from "./MatrixCellTransactionAggregate";
+ import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
++import LandModelRecommend from "./LandModelRecommend";
+ import LandRegressionResults from "./LandRegressionResults";
+ import LandRegressionScatterSection from "./LandRegressionScatterSection";
+ import LandPredictPanel from "./LandPredictPanel";
+@@ -116,12 +116,9 @@
+
+   filterRequest: MatrixYearlyRequest | null;
+   /** 적용 범위 안내(기본: 필터 분석 기준 문구) */
+   scopeNote?: string;
+-  /** AI 문맥 지역명 (예: "충청북도 단양군 영춘면") */
+   aiRegionLabel?: string;
+   /** 기준월(YYYY-MM-01). 만년력 추이에서 기준월이 속한 해를 부분 연도로 표시한다. */
+   aiAsOfMonth?: string | null;
+-  /** 이 칸의 분석 기간 전체 통계(매트릭스 칸 값) — AI 계산 기준 */
+-  aiCellStats?: StatsResult | null;
+ }
+ 
+ type PanelMode = "trend" | "longTerm" | "histogram" | "transactions" | "regression";
+@@ -183,7 +180,6 @@
+
+   scopeNote,
+   aiRegionLabel,
+   aiAsOfMonth,
+-  aiCellStats,
+ }: Props) {
+   const { entitled, narrow, requestPaid } = useProductAccess();
+   const [panel, setPanel] = useState<PanelMode>("trend");
+@@ -212,7 +208,7 @@
+
+     road_condition: true,
+     deal_type: true,
+     partial_ownership: false,
+-    year_trend: true,
++    year_trend: false,
+     beopjungri_fe: false,
+     assessed_land_price: false,
+   });
+@@ -224,7 +220,10 @@
+
+   const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
+   const [regSuggestion, setRegSuggestion] = useState<LandRegressionSuggestResponse | null>(null);
+   const [regBody, setRegBody] = useState<LandRegressionRequest | null>(null);
++  const [regScatterOpen, setRegScatterOpen] = useState(false);
+   const [regSuggestionBody, setRegSuggestionBody] = useState<LandRegressionRequest | null>(null);
++  const regRequestGen = useRef(0);
++  const regressionResultRef = useRef<HTMLDivElement>(null);
+ 
+   const [txExportLoading, setTxExportLoading] = useState(false);
+   const [txExportError, setTxExportError] = useState<string | null>(null);
+@@ -241,6 +240,8 @@
+
+   const [defaultSize] = useState(defaultPaidMatrixModalSize);
+ 
+   useEffect(() => {
++    regRequestGen.current += 1;
++    setRegLoading(false);
+     if (open) {
+       setPanel("trend");
+       setHistScope("all");
+@@ -262,6 +263,7 @@
+
+       setRegSuggestion(null);
+       setRegError(null);
+       setRegBody(null);
++      setRegScatterOpen(false);
+     }
+   }, [open, zoneType, landCategory]);
+ 
+@@ -296,10 +298,7 @@
+
+     [filterRequest, rows],
+   );
+ 
+-  /** AI 문맥 라벨: 지역명 · 칸(또는 범위 안내). 지역명이 없으면 칸만 보인다. */
+-  const aiScopeLabel = [aiRegionLabel?.trim(), scopeNote?.trim() || `${zoneType} × ${landCategory}`]
+-    .filter(Boolean)
+-    .join(" · ");
++  const aiScopeLabel = [aiRegionLabel, scopeNote?.trim() || `${zoneType} × ${landCategory}`].filter(Boolean).join(" · ");
+   const aiRegressionContext = useMemo(() => {
+     if (!regResult) return null;
+     return buildLandRegressionContext(regResult, {
+@@ -322,7 +321,6 @@
+
+         metric: isRolling ? rollMetric : "mean",
+         isRolling,
+         asOfMonth: aiAsOfMonth ?? null,
+-        cellStats: aiCellStats ?? null,
+         scope: {
+           regionLabel: aiScopeLabel,
+           regionCodes: filterRequest?.region_codes ?? filterRequest?.region_selections?.map((unit) => unit.code) ?? null,
+@@ -334,10 +332,26 @@
+
+       });
+     }
+     if (panel === "longTerm" && ltData && ltData.series.length > 0) {
+-      return buildLandLongTermContext(ltData, { regionLabel: aiScopeLabel });
++      return buildLandLongTermContext(ltData, { regionLabel: aiScopeLabel, metric: ltMetric });
+     }
+-    return null;
+-  }, [panel, aiRegressionContext, sortedRows, ltData, aiScopeLabel, zoneType, landCategory, isRolling, rollMetric, aiAsOfMonth, aiCellStats, filterRequest]);
++    return {
++      app: "land" as const,
++      panel: {
++        histogram: "LandHistogram",
++        transactions: "LandTransactions",
++        regression: "LandRegressionTab",
++        trend: "TrendCard",
++        longTerm: "TrendCard",
++      }[panel],
++      purpose: "statistics" as const,
++      scope: { region_label: aiScopeLabel },
++      facts: panel === "histogram" && !histLoading && !histError && histData
++        ? { ...histData }
++        : panel === "transactions" && !txLoading && !txError && txData
++          ? { total: txData.total, loaded: txData.items.length }
++          : {},
++    };
++  }, [panel, aiRegressionContext, sortedRows, ltData, aiScopeLabel, zoneType, landCategory, isRolling, rollMetric, ltMetric, histData, histLoading, histError, txData, txLoading, txError, aiAsOfMonth, filterRequest]);
+ 
+   useEffect(() => {
+     if (sortedRows.length === 0) return;
+@@ -610,7 +624,7 @@
+
+       onClose={onClose}
+       initialFullscreen={narrow && isRolling}
+       titleId="paid-matrix-yearly-title"
+-      title={isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
++      title={narrow ? "롤링 추이" : isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
+       headerActions={!narrow && canDetail ? <LandMatrixTabsGuide /> : null}
+       subtitle={
+         <>
+@@ -624,12 +638,12 @@
+
+                 : `분석 기준: ${analysisPeriod} · ${filterRequest.exclude_outlier ? `IQR ${filterRequest.outlier_iqr_multiplier}` : "IQR 미적용"}`}
+             </span>
+           )}
+-          {matrixMode === "group" ? (
++          {!narrow && matrixMode === "group" ? (
+             <span className="block text-xs mt-1 text-slate-400">
+               용도 × 지목군 모드 — 구성 지목 거래를 원장에서 재집계합니다.
+             </span>
+           ) : null}
+-          {scopeNote ? (
++          {!narrow && scopeNote ? (
+             <span className="block text-xs mt-1 text-slate-400">{scopeNote}</span>
+           ) : null}
+         </>
+@@ -935,11 +949,11 @@
+
+ 
+           {canDetail && panel === "trend" && (
+             <>
+-              <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
+-                <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
++              <div className="ch2-rolling-card rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
++                <div className="ch2-rolling-toolbar flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
+                   <div className="flex items-center gap-1">
+                     <p className="text-xs font-semibold text-slate-600">추이 (꺾은선)</p>
+-                    <AnalysisHelpPanel explain={trendExplain} />
++                    {!narrow && <AnalysisHelpPanel explain={trendExplain} />}
+                   </div>
+                   {isRolling && (
+                     <div
+@@ -1187,13 +1201,15 @@
+
+                   {txExportError && (
+                     <p className="text-[10px] text-red-500">{txExportError}</p>
+                   )}
+-                  {traitEnrich && !txLoading && !txError && txData && !txData.trait_enrich_applied && (
++                  {traitEnrich && txData && !txData.trait_enrich_applied && (
+                     <p className="text-[10px] text-amber-700">
+-                      공시지가 자료를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
++                      대장 보강 결과를 아직 읽지 못했습니다.
+                     </p>
+                   )}
+                   {traitEnrich && txData?.trait_enrich_applied && (
+-                    <p className="text-[11px] text-slate-600">거래단가 만원/㎡ · 공시지가 원/㎡</p>
++                    <p className="text-[10px] text-slate-500">
++                      토지특성 대장 연결은 검증 전입니다. 금액이 비어 있으면 필지가 하나로 정해지지 않았거나 아직 계산 전입니다.
++                    </p>
+                   )}
+                 </div>
+                 <div className="flex items-center gap-2 shrink-0">
+@@ -1209,14 +1225,8 @@
+
+                         setTraitEnrich(false);
+                       }}
+                     />
+-                    공시지가 표시
++                    토지특성 대장 보강
+                   </label>
+-                  <button
+-                    type="button"
+-                    aria-label="공시지가 표시 안내"
+-                    onClick={() => setTraitConsentOpen(true)}
+-                    className="rounded-full border border-slate-300 w-5 h-5 text-xs text-slate-700"
+-                  >?</button>
+                   {!txLoading && !txError && txData && (
+                     <div
+                       className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5"
+@@ -1387,6 +1397,7 @@
+
+                     disabled={regLoading}
+                     onClick={async () => {
+                       if (!filterRequest) return;
++                      const gen = ++regRequestGen.current;
+                       setRegLoading(true);
+                       setRegError(null);
+                       setRegResult(null);
+@@ -1394,39 +1405,20 @@
+
+                       try {
+                         const body = currentRegRequest!;
+                         const res = await fetchLandRegression(body);
++                        if (gen !== regRequestGen.current) return;
+                         setRegBody(body);
+                         setRegResult(res);
+                       } catch (e) {
++                        if (gen !== regRequestGen.current) return;
+                         setRegError(parseApiError(e).message);
+                       } finally {
+-                        setRegLoading(false);
++                        if (gen === regRequestGen.current) setRegLoading(false);
+                       }
+                     }}
+                     className="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                   >
+                     {regLoading ? "계산 중…" : "회귀 실행"}
+                   </button>
+-                  <button
+-                    type="button"
+-                    disabled={regLoading}
+-                    onClick={async () => {
+-                      if (!filterRequest) return;
+-                      setRegLoading(true);
+-                      setRegError(null);
+-                      try {
+-                        const body = currentRegRequest!;
+-                        setRegSuggestion(await fetchLandRegressionSuggestion(body));
+-                        setRegSuggestionBody(body);
+-                      } catch (e) {
+-                        setRegError(parseApiError(e).message);
+-                      } finally {
+-                        setRegLoading(false);
+-                      }
+-                    }}
+-                    className="px-4 py-1.5 rounded border border-indigo-500 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50"
+-                  >
+-                    {regLoading ? "계산 중…" : "모형 추천"}
+-                  </button>
+                 </div>
+               </div>
+ 
+@@ -1440,38 +1432,18 @@
+
+                 </p>
+               )}
+ 
+-              {regResult && <LandRegressionResults data={regResult} />}
+-
+-              {regSuggestion && suggestionIsCurrent && (
+-                <div className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-3 space-y-2 text-xs">
+-                  <div className="font-semibold text-indigo-900">
+-                    토지 모형 추천 · 후보 간 공통 표본 n={regSuggestion.selection_n} · AIC 낮은 순
+-                  </div>
+-                  {regSuggestion.warnings.map((w) => (
+-                    <p key={w} className="text-amber-700">⚠ {w}</p>
+-                  ))}
+-                  {regResult && (regSuggestion.selection_n !== regResult.n || regSuggestion.excluded_blocks?.includes("assessed_land_price")) && (
+-                    <p className="text-amber-700">현재 적합 모형과 분석 조건 또는 표본이 다릅니다. 지표를 직접 비교하지 마세요.</p>
+-                  )}
+-                  <div className="space-y-1">
+-                    {regSuggestion.candidates_by_aic.map((candidate) => (
+-                      <div key={`aic-${candidate.rank}`} className="rounded border border-indigo-100 bg-white px-2 py-1">
+-                        #{candidate.rank} · {candidate.blocks.join(" + ")} · {candidate.model_type}
+-                        {" · "}AIC {candidate.aic?.toFixed(1) ?? "—"}
+-                        {" · "}학습 MAPE {candidate.mape != null ? `${candidate.mape}%` : "—"}
+-                      </div>
+-                    ))}
+-                  </div>
+-                </div>
+-              )}
++              {regResult && <div ref={regressionResultRef} tabIndex={-1} aria-label="회귀 결과"><LandRegressionResults data={regResult} /></div>}
+ 
+               {regResult && (
+-                <LandRegressionScatterSection
++                <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700"
++                  onToggle={(event) => setRegScatterOpen(event.currentTarget.open)}>
++                <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">변수별 산점도</summary>
++                <div className="mt-3"><LandRegressionScatterSection
+                   data={regResult}
+                   regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
+-                  zoneType={zoneType}
+-                  landCategory={landCategory}
+-                />
++                  aiContext={regScatterOpen ? aiRegressionContext : null}
++                /></div>
++                </details>
+               )}
+ 
+               {regResult && regBody && (
+@@ -1483,6 +1455,65 @@
+
+                   regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
+                 />
+               )}
++              <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700">
++                <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">다른 변수 조합 비교 · 모형 추천</summary>
++                <div className="mt-3 space-y-3">
++                  <button
++                    type="button"
++                    disabled={regLoading}
++                    onClick={async () => {
++                      if (!filterRequest) return;
++                      const gen = ++regRequestGen.current;
++                      setRegLoading(true);
++                      setRegError(null);
++                      try {
++                        const body = currentRegRequest!;
++                        const suggestion = await fetchLandRegressionSuggestion(body);
++                        if (gen !== regRequestGen.current) return;
++                        setRegSuggestion(suggestion);
++                        setRegSuggestionBody(body);
++                      } catch (e) {
++                        if (gen !== regRequestGen.current) return;
++                        setRegSuggestion(null);
++                        setRegSuggestionBody(null);
++                        setRegError(parseApiError(e).message);
++                      } finally {
++                        if (gen === regRequestGen.current) setRegLoading(false);
++                      }
++                    }}
++                    className="px-4 py-1.5 rounded border border-indigo-500 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
++                  >
++                    {regLoading ? "계산 중…" : regSuggestion && suggestionIsCurrent ? "후보 다시 불러오기" : "후보 불러오기"}
++                  </button>
++                  {regSuggestion && suggestionIsCurrent && <LandModelRecommend data={regSuggestion} pending={regLoading}
++                    differentSample={Boolean(regResult && (regSuggestion.selection_n !== regResult.n || regSuggestion.excluded_blocks?.includes("assessed_land_price")))}
++                    onAdopt={async candidate => {
++                      if (regLoading || !currentRegRequest) return;
++                      const body: LandRegressionRequest = { ...currentRegRequest, variables: { ...candidate.variables }, model_type: candidate.model_type };
++                      const gen = ++regRequestGen.current;
++                      setRegVars(body.variables);
++                      setRegModelType(body.model_type);
++                      setRegLoading(true);
++                      setRegError(null);
++                      setRegResult(null);
++                      setRegBody(null);
++                      try {
++                        const result = await fetchLandRegression(body);
++                        if (gen !== regRequestGen.current) return;
++                        setRegBody(body);
++                        setRegResult(result);
++                        requestAnimationFrame(() => {
++                          regressionResultRef.current?.focus({ preventScroll: true });
++                          regressionResultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
++                        });
++                      } catch (e) {
++                        if (gen === regRequestGen.current) setRegError(parseApiError(e).message);
++                      } finally {
++                        if (gen === regRequestGen.current) setRegLoading(false);
++                      }
++                    }} />}
++                </div>
++              </details>
+             </div>
+           )}
+ 

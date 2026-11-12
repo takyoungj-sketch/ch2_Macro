@@ -1,0 +1,51 @@
+--- origin/main
+
++++ WIP
+
+@@ -61,9 +61,6 @@
+
+     else:
+         _LOG.info("API_TOKEN 미설정 — 인증 미들웨어 비활성 (개발/로컬 모드)")
+     yield
+-    from app.api_param_warn import AGGREGATOR
+-
+-    AGGREGATOR.close()
+ 
+ 
+ app = FastAPI(
+@@ -81,10 +78,6 @@
+
+     allow_headers=["*"],
+ )
+ app.add_middleware(GZipMiddleware, minimum_size=1500)
+-# 집합 1단계 C-05 — 미지원 파라미터 경고·집계(요청은 그대로 통과, 값은 기록하지 않음).
+-from app.api_param_warn import ApiParamWarnMiddleware  # noqa: E402
+-
+-app.add_middleware(ApiParamWarnMiddleware)
+ 
+ 
+ # DECISIONS D-007 — `API_TOKEN` 환경변수가 비어 있으면 통과(개발), 값이 있으면 검사.
+@@ -195,6 +188,9 @@
+
+ 
+     app.include_router(ai2_router, prefix="/api")
+     _LOG.info("AI2 랩 API 활성(관리자): /api/lab/ai2/*")
++from app.ai3.router import router as ai3_router
++
++app.include_router(ai3_router, prefix="/api")
+ _LOG.info("대장DB 조회 API 활성(관리자·로컬): /api/admin/parcel/status")
+ _LOG.info("토지 쌍둥이 실험 API 활성(관리자): /api/admin/land-twin")
+ 
+@@ -340,11 +336,6 @@
+
+     payload: dict = {
+         "status": "ok",
+         "latest_as_of_month": latest.isoformat() if latest else None,
+-        "configured_land_as_of_month": (
+-            settings.stats_v2_default_as_of_month.isoformat()
+-            if settings.stats_v2_default_as_of_month
+-            else None
+-        ),
+     }
+     built = _safe_built_health()
+     if built is not None:

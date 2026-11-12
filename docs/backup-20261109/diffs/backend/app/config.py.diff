@@ -1,0 +1,43 @@
+--- origin/main
+
++++ WIP
+
+@@ -53,7 +53,8 @@
+
+     #: DECISIONS D-007 — 비어 있으면 인증 미들웨어 비활성. 값이 있으면 비-/health 요청은
+     #: `X-Api-Token: <값>` 헤더가 필요하다. 결제·로그인 도입 전 1단 보호용.
+     api_token: str = ""
+-    #: 명시적인 로컬 개발 접근. 운영 기본값은 비활성입니다.
++    #: 명시적으로 켠 로컬 개발 서버의 제품 구독 게이트만 생략한다.
++    #: loopback 접속·로컬 Host·API_TOKEN 미설정 조건을 함께 검사한다.
+     local_dev_access: bool = Field(default=False, validation_alias="CH2_LOCAL_DEV_ACCESS")
+     #: 관리자 API(`/api/admin/*`, `/api/lab/*`)의 대체 인증 토큰.
+     #: 관리자 세션이 없을 때 `X-Qa-Audit-Token` 이 이 값과 같아야 한다. 비어 있으면 토큰 경로는 거부.
+@@ -96,21 +97,19 @@
+
+     ai_monthly_budget_krw: float = Field(default=10000, validation_alias="AI_MONTHLY_BUDGET_KRW")
+     ai_usd_krw: float = Field(default=1400, validation_alias="AI_USD_KRW")
+     ai_usage_log_dir: str = Field(default="", validation_alias="AI_USAGE_LOG_DIR")
+-    #: 집합 1단계 C-05 — 미지원 파라미터 경고·집계 모드(이름만 기록, 거절 없음).
+-    api_param_warn_enabled: bool = Field(default=True, validation_alias="API_PARAM_WARN_ENABLED")
+-    #: JSONL 경로. 상대 경로는 저장소 루트 기준. 운영 경로는 배포 때 정한다.
+-    api_param_warn_path: str = Field(default="logs/api_param_warn.jsonl", validation_alias="API_PARAM_WARN_PATH")
+-    api_param_warn_flush_seconds: int = Field(default=3600, validation_alias="API_PARAM_WARN_FLUSH_SECONDS")
+     #: Enable only after db/077_platform_ai_allowances.sql and client rollout.
+     ai_subscription_quota_enabled: bool = Field(default=False, validation_alias="AI_SUBSCRIPTION_QUOTA_ENABLED")
+     ai_max_output_tokens: int = Field(default=8000, ge=512, le=16000, validation_alias="AI_MAX_OUTPUT_TOKENS")
+-    #: gpt-5·o 계열 추론 강도(minimal|low|medium|high). 비우면 모델 기본값(medium).
+-    ai_reasoning_effort: str = Field(default="low", validation_alias="AI_REASONING_EFFORT")
+     ai_paid_emergency_stop: bool = Field(default=False, validation_alias="AI_PAID_EMERGENCY_STOP")
+     #: AI2 프로토콜 랩(`/api/lab/ai2/*`). 운영 기본 비활성. 켜도 관리자 전용.
+     ai2_lab_enabled: bool = Field(default=False, validation_alias="AI2_LAB_ENABLED")
+     #: AI 요청 제한에서 X-Real-IP 를 믿을 직접 접속 주소(쉼표 구분). nginx 가 같은 호스트일 때 loopback.
+     ai_trusted_proxies: str = Field(default="127.0.0.1,::1", validation_alias="AI_TRUSTED_PROXIES")
++    # AI3 독립 로컬 시험. 기존 AI·AI2의 활성 여부와 무관하다.
++    ai3_enabled: bool = Field(default=False, validation_alias="AI3_ENABLED")
++    ai3_access_token: str = Field(default="", validation_alias="AI3_ACCESS_TOKEN")
++    ai3_monthly_call_limit: int = Field(default=40, ge=1, validation_alias="AI3_MONTHLY_CALL_LIMIT")
++    ai3_session_ttl_seconds: int = Field(default=86400, ge=60, validation_alias="AI3_SESSION_TTL_SECONDS")
+     #: CH2 AI — Tavily 웹 검색 (없으면 DuckDuckGo Instant 폴백)
+     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
+     #: 카카오 Local API (FieldNote 주소 지오코딩 프록시)

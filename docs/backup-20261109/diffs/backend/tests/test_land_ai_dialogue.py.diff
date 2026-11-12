@@ -1,0 +1,300 @@
+--- origin/main
+
++++ WIP
+
+@@ -45,7 +45,7 @@
+
+         assert "7019" not in str(payload)
+         assert payload["sources"]["current"]["context"]["종속변수"] == "log(토지 단가)"
+         fact = reference(payload, "log(면적) 계수")
+-        return "screen", "다른 조건이 같을 때, {{" + fact + "|label}}는 면적과 단가의 음의 관계를 뜻합니다."
++        return "screen", "다른 조건이 같을 때, {{" + fact + "}}는 면적과 단가의 음의 관계를 뜻합니다."
+ 
+     fake_model(monkeypatch, choose)
+     result = ask("면적 계수는 무슨 뜻이야?", regression())
+@@ -58,8 +58,8 @@
+
+ 
+ @pytest.mark.parametrize("answer", [
+     "표본은 0.528건이고 조정 R²는 120입니다.",
+-    "{{previous.f0|label}}입니다.",
+-    "{{current.f0|label}}%입니다.",
++    "{{previous.f0}}입니다.",
++    "{{current.f0}}%입니다.",
+     "단가는 올랐습니다.",
+ ])
+ def test_invalid_screen_claim_does_not_reach_answer(monkeypatch, answer):
+@@ -154,7 +154,7 @@
+
+         assert facts["current.f0"].startswith("조회 거래")
+         assert any(fact.startswith("저층부 p값") for fact in facts.values())
+         assert "기준 구간은 중층부" in " ".join(payload["sources"]["current"]["notes"])
+-        return "screen", "{{current.f0|label}}입니다."
++        return "screen", "{{current.f0}}입니다."
+ 
+     fake_model(monkeypatch, choose)
+     result = ask("저층부 p값은?", AiContext(
+@@ -181,7 +181,7 @@
+
+         assert "R²" in facts and "MAPE" in facts  # available regardless of question wording
+         assert "회귀식이 있다" in notes and "금액(만원)" in notes
+         assert "용도지역 기준 범주 일반상업" in notes
+-        return "screen", "화면에 회귀식이 있습니다. 연면적 계수는 {{" + reference(payload, "연면적 계수") + "|label}}입니다."
++        return "screen", "화면에 회귀식이 있습니다. 연면적 계수는 {{" + reference(payload, "연면적 계수") + "}}입니다."
+ 
+     fake_model(monkeypatch, choose)
+     result = ask("지금 화면의 회귀식이 보이나?", AiContext(
+@@ -438,7 +438,7 @@
+
+         assert payload["sources"]["current"]["context"]["panel"] == panel
+         if "rejected_draft" not in payload:
+             return "screen", "결과는 999입니다."
+-        return "screen", "화면에서 확인한 값은 {{current.f0|label}}입니다."
++        return "screen", "화면에서 확인한 값은 {{current.f0}}입니다."
+ 
+     fake_model(monkeypatch, choose)
+     result = ask("여기서 눈여겨볼 값이 있어?", AiContext(app="land", panel=panel, facts=facts))
+@@ -447,7 +447,7 @@
+
+ 
+ 
+ def test_unverified_sentence_is_dropped_and_verified_sentence_kept(monkeypatch):
+-    fake_model(monkeypatch, lambda _: ("screen", "{{current.f0|label}}입니다. 검증 MAPE는 77%입니다."))
++    fake_model(monkeypatch, lambda _: ("screen", "{{current.f0}}입니다. 검증 MAPE는 77%입니다."))
+     result = ask("이 결과를 어떻게 봐?", regression())
+     # 검증되지 않은 문장만 제거하고, 검증된 문장은 남긴다(§5.2-3).
+     assert "77%" not in result.answer
+@@ -471,7 +471,7 @@
+
+ 
+ @pytest.mark.parametrize("text", ["총액은 1+120입니다", "y+120", "현재 값은 1입니다", "표본은 0.528건입니다"])
+ def test_symbolic_allowance_does_not_admit_observed_numbers(monkeypatch, text):
+-    fake_model(monkeypatch, lambda _: ("screen", "{{current.f2|label}}. " + text))
++    fake_model(monkeypatch, lambda _: ("screen", "{{current.f2}}. " + text))
+     result = ask("설명해줘", regression())
+     # 재작성도 실패하면 위반 문장만 빠지고 검증된 문장은 남는다(§5.2-3).
+     assert text not in result.answer
+@@ -790,222 +790,3 @@
+
+     assert "교란변수" not in json.dumps(rows[0], ensure_ascii=False)
+     stats = question_stats()
+     assert stats["questions"] == 1 and stats["avg_llm_calls"] == 1
+-
+-
+-# --- Opus 검토 보완: kind 무관 단위 검사, 용도지역명 관측 표지어 -------------------
+-
+-
+-@pytest.mark.parametrize("sentence", [
+-    "평균 단가는 2.3만원/㎡입니다.",          # knowledge 로 표시해도 단위 붙은 미참조 숫자
+-    "보관은 거래가 47건으로 가장 많습니다.",    # 화면 용도지역명 + 미참조 숫자
+-    "계관 평균은 3.9 정도입니다.",             # 단위 없어도 용도지역명과 같은 문장
+-])
+-def test_unit_and_zone_name_checks_apply_to_knowledge_kind(sentence):
+-    from app.ai.dialogue import _render, _screen, number_policy
+-
+-    sources = {"current": _screen(land_matrix())}
+-    issues = []
+-    policy = number_policy("이 화면 설명해줘", sources, ["일반 문서"])
+-    assert _render({"kind": "knowledge", "answer": sentence}, sources, issues, policy) is None
+-    assert issues[0].startswith("unverified_numeric_passage")
+-
+-
+-@pytest.mark.parametrize("sentence", [
+-    "예를 들어 거래가 30건뿐이면 평균이 크게 흔들릴 수 있어요.",
+-    "표본이 15건 미만이면 소표본으로 봅니다.",
+-    "가령 단가가 2만원/㎡인 토지 5,000㎡라면 총액은 1억원이에요.",
+-])
+-def test_hypothetical_unit_numbers_still_allowed(sentence):
+-    from app.ai.dialogue import _render, _screen, number_policy
+-
+-    sources = {"current": _screen(land_matrix())}
+-    policy = number_policy("일반적으로 어떻게 봐?", sources, ["일반 문서"])
+-    assert _render({"kind": "knowledge", "answer": sentence}, sources, policy=policy) is not None
+-
+-
+-def test_trend_zone_name_is_an_observation_marker():
+-    from app.ai.dialogue import _render, _screen, number_policy
+-
+-    sources = {"current": _screen(trend_cell())}
+-    issues = []
+-    policy = number_policy("추이 요약해줘", sources)
+-    assert _render({"kind": "knowledge", "answer": "계관 칸은 꾸준히 4.1 수준입니다."}, sources, issues, policy) is None
+-
+-
+-# --- 2026-11-10 운영 T1~T7 후속 ------------------------------------------------
+-
+-
+-def trend_with_cell_total():
+-    ctx = trend_cell()
+-    ctx.facts["cell_total"] = {"count": 220, "mean": 2.9, "median": 2.7, "p25": 2.1, "p75": 3.4,
+-                               "min": 0.9, "max": 7.8, "ci_lower": 2.7, "ci_upper": 3.1, "is_reliable": True}
+-    return ctx
+-
+-
+-def test_t7_refresh_does_not_answer_from_previous_screen(monkeypatch):
+-    seen = []
+-
+-    def choose(payload):
+-        seen.append(set(payload["sources"]))
+-        if len(seen) == 1:
+-            ref = _fact(payload, "2026년 단가 평균")
+-            return "screen", "2026년 평균은 {{" + ref + "}}입니다."
+-        return "knowledge", "지금 화면의 통계가 AI에 전달되지 않아 평균 단가를 말할 수 없어요."
+-
+-    counting_model(monkeypatch, choose)
+-    first = ask("2026년 평균은?", trend_cell())
+-    assert "3.2만원/㎡" in first.answer
+-    # 새로고침: 화면 문맥이 비었다. 같은 세션이어도 이전 화면을 현재처럼 쓰지 않는다.
+-    empty = AiContext(app="land", panel="PaidMatrixCell")
+-    second = ask("평균 단가 얼마야?", empty, first.session_id)
+-    assert seen[1] == {"current"}
+-    assert "3.2" not in second.answer
+-
+-
+-def test_previous_screen_is_available_when_user_asks_for_it(monkeypatch):
+-    def choose(payload):
+-        if "previous" in payload["sources"]:
+-            ref = next(k for k, v in payload["sources"]["previous"]["facts"].items() if v.startswith("2026년 단가 평균"))
+-            return "screen", "아까 본 2026년 평균은 {{" + ref + "}}였어요."
+-        ref = _fact(payload, "2026년 단가 평균")
+-        return "screen", "2026년 평균은 {{" + ref + "}}입니다."
+-
+-    counting_model(monkeypatch, choose)
+-    first = ask("2026년 평균은?", trend_cell())
+-    again = ask("아까 본 2026년 평균 다시 알려줘", AiContext(app="land", panel="PaidMatrixCell"), first.session_id)
+-    assert "3.2만원/㎡ (이전 분석 · 영춘면 · 계관 × 전)" in again.answer
+-
+-
+-def test_reference_inserts_value_and_unit_by_default(monkeypatch):
+-    def choose(payload):
+-        mean = _fact(payload, "2021년 단가 평균")
+-        count = _fact(payload, "2021년 거래 수")
+-        return "screen", "2021년 평균 단가는 {{" + mean + "}}(거래 {{" + count + "}})입니다."
+-
+-    counting_model(monkeypatch, choose)
+-    result = ask("2021년은?", trend_cell())
+-    assert result.answer == "2021년 평균 단가는 2.8만원/㎡(거래 22건)입니다."
+-
+-
+-def test_label_option_still_inserts_metric_name(monkeypatch):
+-    counting_model(monkeypatch, lambda p: ("screen", "{{" + _fact(p, "2021년 거래 수") + "|label}}입니다."))
+-    assert ask("2021년 거래는?", trend_cell()).answer == "2021년 거래 수 22건입니다."
+-
+-
+-def test_modal_sends_whole_cell_stats_and_prefers_them():
+-    from app.ai.dialogue import _screen
+-
+-    evidence = _screen(trend_with_cell_total())
+-    facts = " | ".join(evidence.facts)
+-    assert "계관 × 전 칸 전체 거래 220건" in facts
+-    assert "계관 × 전 칸 전체 단가 중앙값 2.7만원/㎡" in facts
+-    assert "계관 × 전 칸 전체 단가 25% 분위 2.1만원/㎡" in facts
+-    assert any("연도별 값보다 이 값을 먼저" in note for note in evidence.notes)
+-
+-
+-def test_t4_calc_from_whole_cell_and_caution_not_duplicated(monkeypatch):
+-    def choose(payload):
+-        med = _fact(payload, "계관 × 전 칸 전체 단가 중앙값")
+-        p25 = _fact(payload, "계관 × 전 칸 전체 단가 25% 분위")
+-        p75 = _fact(payload, "계관 × 전 칸 전체 단가 75% 분위")
+-        return "screen", ("칸 전체 중앙값 기준 {{calc:" + med + "*5000}}, 25~75% 범위는 {{calc:" + p25 + "*5000}}~"
+-                          "{{calc:" + p75 + "*5000}}입니다. 지역 통계로 낸 산술값이라 그 토지의 적정 가격은 아닙니다.")
+-
+-    counting_model(monkeypatch, choose)
+-    result = ask("이 칸 중앙값으로 5,000㎡면 얼마야?", trend_with_cell_total())
+-    assert "1억 3,500만원" in result.answer and "1억 500만원~1억 7,000만원" in result.answer
+-    assert result.answer.count("적정") == 1
+-
+-
+-def test_t5_prompt_asks_for_one_or_two_sentences_of_context():
+-    from app.ai.dialogue import _SYSTEM
+-
+-    assert "1~2문장" in _SYSTEM and "결론을 낼 수 없다고 먼저" in _SYSTEM
+-
+-
+-def test_t2_product_knowledge_explains_right_skew_iqr():
+-    from app.ai.knowledge.product import product_knowledge_pack
+-
+-    text = product_knowledge_pack(app="land")
+-    assert "하한이 0 이하(음수)" in text and "비싼 쪽만 잘린다" in text
+-
+-
+-def test_reasoning_effort_is_sent_for_reasoning_models(monkeypatch):
+-    import io
+-    from app.ai import llm
+-    from app.config import settings
+-
+-    sent = {}
+-
+-    class Resp(io.BytesIO):
+-        def __enter__(self):
+-            return self
+-
+-        def __exit__(self, *exc):
+-            return False
+-
+-    def fake_urlopen(req, timeout=0):
+-        sent.update(json.loads(req.data.decode("utf-8")))
+-        return Resp(json.dumps({"model": "gpt-5-mini", "usage": {}, "choices": [{"message": {"content": "{}"}}]}).encode())
+-
+-    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+-    monkeypatch.setattr(settings, "openai_model", "gpt-5-mini")
+-    monkeypatch.setattr(settings, "ai_reasoning_effort", "low")
+-    monkeypatch.setattr(llm, "urlopen", fake_urlopen)
+-    monkeypatch.setattr("app.ai.usage_log.assert_quota_or_raise", lambda: {})
+-    llm._openai_chat(system="s", user="u", json_response=True)
+-    assert sent["reasoning_effort"] == "low"
+-
+-
+-# --- 2026-11-10 운영 재점검 후속: 내부 용어, 중앙값 범위, 답변 길이 --------------
+-
+-
+-def test_t7_internal_terms_are_removed_from_answer(monkeypatch):
+-    answer = ("현재 sources의 facts가 비어 있어 PaidMatrixCell 값을 볼 수 없어요. "
+-              "화면을 공유해 주시면 확인할게요. "
+-              "지금 화면의 통계가 AI에 전달되지 않았어요. 지역을 고르고 통계를 연 뒤 다시 물어봐 주세요.")
+-    counting_model(monkeypatch, lambda _: ("knowledge", answer))
+-    result = ask("평균 단가 얼마야?", AiContext(app="land", panel="PaidMatrixCell"))
+-    for term in ("facts", "sources", "PaidMatrixCell", "공유"):
+-        assert term not in result.answer
+-    assert result.answer.startswith("지금 화면의 통계가 AI에 전달되지 않았어요.")
+-
+-
+-@pytest.mark.parametrize("sentence", ["예를 들어 base 금리가 오르면 수요가 줄 수 있어요.", "중앙값은 가운데 값이에요."])
+-def test_internal_term_check_keeps_normal_sentences(sentence):
+-    from app.ai.dialogue import _render, _screen, number_policy
+-
+-    sources = {"current": _screen(trend_cell())}
+-    assert _render({"kind": "knowledge", "answer": sentence}, sources, policy=number_policy("", sources)) is not None
+-
+-
+-def test_median_calc_gets_server_range_when_model_omits_it(monkeypatch):
+-    def choose(payload):
+-        med = _fact(payload, "계관 × 전 칸 전체 단가 중앙값")
+-        return "screen", "칸 전체 중앙값 기준으로 약 {{calc:" + med + "*5000}}입니다."
+-
+-    counting_model(monkeypatch, choose)
+-    result = ask("이 칸 중앙값으로 5,000㎡면 얼마야?", trend_with_cell_total())
+-    assert "1억 3,500만원" in result.answer
+-    assert "25~75% 분위 기준으로는 1억 500만원~1억 7,000만원입니다." in result.answer
+-    assert result.answer.count("25~75%") == 1 and "적정가격" in result.answer
+-
+-
+-def test_median_range_not_added_when_model_already_gave_it(monkeypatch):
+-    def choose(payload):
+-        med = _fact(payload, "계관 × 전 칸 전체 단가 중앙값")
+-        p25 = _fact(payload, "계관 × 전 칸 전체 단가 25% 분위")
+-        p75 = _fact(payload, "계관 × 전 칸 전체 단가 75% 분위")
+-        return "screen", ("중앙값 기준 {{calc:" + med + "*5000}}, 범위 {{calc:" + p25 + "*5000}}~{{calc:"
+-                          + p75 + "*5000}}입니다.")
+-
+-    counting_model(monkeypatch, choose)
+-    result = ask("이 칸 중앙값으로 5,000㎡면 얼마야?", trend_with_cell_total())
+-    assert "25~75% 분위 기준으로는" not in result.answer
+-
+-
+-def test_prompt_limits_general_answer_length():
+-    from app.ai.dialogue import _SYSTEM
+-
+-    assert "3~5문장 이내" in _SYSTEM and "2~4문장" in _SYSTEM
+-    assert "내부 용어" in _SYSTEM and "화면 공유" in _SYSTEM

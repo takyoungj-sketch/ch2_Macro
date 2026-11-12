@@ -1,0 +1,10 @@
+{
+  "backup_commit": "bc5924cee74dd29705f713203d7b197051e056ff",
+  "base": "05fa48fdc707e64f417fefdec2eb05fa96032745",
+  "original_branch_unchanged": true,
+  "original_status_unchanged": true,
+  "original_and_copy_sha256_matches": 212,
+  "remote_files": 210,
+  "local_only_files": 2,
+  "comparison_main": "dfa308262b8f93a466226379b5cf0345ecdbe98b"
+}

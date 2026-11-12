@@ -1,0 +1,108 @@
+--- origin/main
+
++++ WIP
+
+@@ -20,9 +20,7 @@
+
+     zoneType: string;
+     landCategory: string;
+     modelType: "log" | "linear";
+-    /** 회귀 실행 뒤 조건이 바뀌었으면 화면 결과는 마지막 실행 기준이다. */
+     controlsChanged?: boolean;
+-    /** 마지막으로 실행한 회귀 요청 */
+     request?: LandRegressionRequest | null;
+   },
+ ): AiContextPayload {
+@@ -32,7 +30,7 @@
+
+     purpose: "statistics",
+     scope: {
+       region_label: opts.regionLabel,
+-      region_codes: opts.request?.region_codes ?? opts.request?.region_selections?.map((region) => region.code) ?? undefined,
++      region_codes: opts.request?.region_codes ?? opts.request?.region_selections?.map((region) => region.code),
+       filters: {
+         year_from: opts.request?.year_from,
+         year_to: opts.request?.year_to,
+@@ -45,33 +43,9 @@
+
+       ...regData,
+       zone_type: opts.zoneType,
+       land_category: opts.landCategory,
+-      model_type: regData.model_type ?? opts.modelType,
++      model_type: regData.model_type,
+       requested_model_type: opts.modelType,
+       controls_changed: Boolean(opts.controlsChanged),
+-    },
+-  };
+-}
+-
+-export function buildLandScatterContext(
+-  regData: LandRegressionResponse,
+-  opts: {
+-    regionLabel: string;
+-    zoneType: string;
+-    landCategory: string;
+-    activeTab?: "raw" | "partial";
+-  },
+-): AiContextPayload {
+-  return {
+-    app: "land",
+-    panel: "LandRegressionTab",
+-    purpose: "statistics",
+-    scope: { region_label: opts.regionLabel },
+-    facts: {
+-      ...(regData as unknown as Record<string, unknown>),
+-      zone_type: opts.zoneType,
+-      land_category: opts.landCategory,
+-      scatter_tab: opts.activeTab ?? "raw",
+-      unit: "만원/㎡",
+     },
+   };
+ }
+@@ -104,12 +78,10 @@
+
+     regionLabel: string;
+     zoneType: string;
+     landCategory: string;
+-    metric?: "mean" | "median";
++    metric: "mean" | "median";
+     isRolling?: boolean;
+     asOfMonth?: string | null;
+     scope?: LandAiScopeInput;
+-    /** 그 칸의 분석 기간 전체 통계(매트릭스 칸 값). 대표값·면적 곱 계산의 기준. */
+-    cellStats?: StatsResult | null;
+   },
+ ): AiContextPayload {
+   return {
+@@ -121,11 +93,10 @@
+
+       : { region_label: opts.regionLabel },
+     facts: {
+       rows: annotateLandTrendRows(rows, { isRolling: Boolean(opts.isRolling), asOfMonth: opts.asOfMonth }),
+-      trend_metric: opts.metric ?? "mean",
++      trend_metric: opts.metric,
+       period_kind: opts.isRolling ? "rolling" : "calendar",
+       zone_type: opts.zoneType,
+       land_category: opts.landCategory,
+-      cell_total: opts.cellStats ? cellStats(opts.cellStats) : null,
+       reliable_min_n: LAND_RELIABLE_MIN_N,
+     },
+   };
+@@ -133,14 +104,14 @@
+
+ 
+ export function buildLandLongTermContext(
+   data: LongTermTrendResponse,
+-  opts: { regionLabel: string },
++  opts: { regionLabel: string; metric: "mean" | "median" },
+ ): AiContextPayload {
+   return {
+     app: "land",
+     panel: "TrendCard",
+     purpose: "market_analysis",
+     scope: { region_label: opts.regionLabel },
+-    facts: data as unknown as Record<string, unknown>,
++    facts: { ...data, trend_metric: opts.metric },
+   };
+ }
+ 

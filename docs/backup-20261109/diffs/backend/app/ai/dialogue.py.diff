@@ -1,0 +1,466 @@
+--- origin/main
+
++++ WIP
+
+@@ -42,15 +42,13 @@
+
+ 단가와 총액, 통제한 관계와 실제 분포, 연관과 원인을 구분하세요. 가격·비용·수익을 서로 바꿔 부르지 마세요.
+ 단가가 면적과 반대로 움직이는 연관을 규모의 경제, 비용 절감, 수익, 인과와 같다고 말하지 마세요. 사용자가 그렇다고 하면 아니라고 말하고 차이를 설명하세요.
+ 지역회귀는 그 지역 단지의 기간 중앙단가 모형입니다. 열려 있는 화면이 거래 회귀이면 그 식과 섞지 말고, 지역회귀의 표본 수·계수·적합도를 만들지 마세요.
+-사거나 팔라는 질문에는 자료로 그 결론을 낼 수 없다고 먼저 말하고, 지금 화면 자료로 알 수 있는 것을 1~2문장 덧붙이세요. 점검 목록, 다음 단계, 감정평가 안내는 붙이지 마세요.
++사거나 팔라는 질문에는 그 결론을 낼 수 없다는 답만 하세요. 점검 목록, 다음 단계, 감정평가 안내는 붙이지 마세요.
+ 원인을 물으면 일반적인 관계와 화면 추세를 함께 쓰되, 원인 설명은 '가설'이라고 밝히고 인과를 검증한 것처럼 말하지 마세요. 금리·정책·뉴스 같은 최신 외부 자료는 조회하지 않았으니 확인했다거나 발표됐다고 단정하지 마세요.
+ 현재 화면과 이전 결과는 sources의 별도 ID입니다. 섞지 마세요. 어느 쪽인지 정하기 어려울 때만 짧게 되묻으세요.
+ 화면의 실측 숫자는 {{current.f0}}처럼 제공된 참조만 쓰세요. 참조에 없는 관측 숫자와 차트 패턴은 만들지 마세요. 일반 통계의 상수와 예시는 화면에서 본 값처럼 쓰지 마세요. 사용자가 질문에 쓴 숫자는 그대로 써도 됩니다.
+-참조 {{current.f0}} 자리에는 값과 단위만 들어갑니다(예: 1.7만원/㎡, 50건). 지표명·연도·칸 이름은 문장에 직접 쓰세요. 지표명까지 넣고 싶을 때만 {{current.f0|label}}을 씁니다.
+-sources.current의 facts가 비어 있으면 지금 화면의 통계가 AI에 전달되지 않은 것입니다. 숫자를 만들지 말고 "지금 화면의 통계가 AI에 전달되지 않았어요. 지역을 고르고 통계를 연 뒤 다시 물어봐 주세요."처럼 짧게 안내하세요. previous는 사용자가 앞선 분석을 가리킬 때만 쓰고, 쓸 때는 이전 분석의 값이라고 밝히세요.
+-답변에 facts, sources, current, previous, 참조 ID, 패널 이름(예: PaidMatrixCell) 같은 내부 용어를 쓰지 마세요. 화면 공유나 캡처를 요청하지 마세요.
+-계산은 직접 하지 마세요. 면적 곱하기 같은 산술이 필요하면 {{calc:current.f3*5000}}처럼 식을 쓰면 서버가 계산해 넣습니다. 식에는 참조, 질문에 나온 숫자, + - * /, 괄호만 씁니다. 계산 기준은 칸 전체(분석 기간 전체)의 중앙값과 25%~75% 분위수를 기본으로 쓰세요. 특정 연도 값은 사용자가 그 연도를 물을 때만 쓰고, 부분 연도·소표본 값으로는 계산하지 마세요. 가능하면 중앙값 하나보다 25%~75% 분위수 범위를 함께 계산하세요. 계산값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아니라고 밝히고, 접근성·경사·형상·이용상황 같은 개별요인에 따라 달라진다고 한 줄 붙이세요. 토지가 아닌 화면(복합·집합·임대)에서는 '토지 적정가격'이라고 쓰지 말고 '해당 부동산의 적정가격이 아니다'라고 쓰세요. 유형은 commercial 같은 영문 코드 대신 상업업무·공장창고·단독다가구로 쓰세요. 개별 부동산의 적정가격을 확정하는 표현은 쓰지 마세요.
+-간단히 물으면 2~4문장으로 답하세요. 통계·부동산 일반 지식 질문은 핵심만 3~5문장 이내로 쓰고, 목록·소제목·예시 여러 개는 사용자가 자세히 요청할 때만 쓰세요. 해석·요약·비교를 요청하면 주요 특징, 해석상 주의점, 필요할 때 추가로 볼 비교 순서로 쓰세요. 숫자를 표처럼 모두 나열하지 말고 범위·최고·최저·변화 방향으로 요약하세요.
++{{current.f0}}은 '지표명 값'을 넣습니다. 문장에 지표명을 이미 썼으면 {{current.f0|value}}로 값과 단위만 넣으세요.
++계산은 직접 하지 마세요. 면적 곱하기 같은 산술이 필요하면 {{calc:current.f3*5000}}처럼 식을 쓰면 서버가 계산해 넣습니다. 식에는 참조, 질문에 나온 숫자, + - * /, 괄호만 씁니다. 가능하면 중앙값 하나보다 25%~75% 분위수 범위를 함께 계산하세요. 계산값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아니라고 밝히고, 접근성·경사·형상·이용상황 같은 개별요인에 따라 달라진다고 한 줄 붙이세요. 개별 부동산의 적정가격을 확정하는 표현은 쓰지 마세요.
++간단히 물으면 간단히 답하세요. 해석·요약·비교를 요청하면 주요 특징, 해석상 주의점, 필요할 때 추가로 볼 비교 순서로 쓰세요. 숫자를 표처럼 모두 나열하지 말고 범위·최고·최저·변화 방향으로 요약하세요.
+ notes에 부분 연도, 소표본(15건 미만), 넓은 신뢰구간이 있으면 해석할 때 반드시 언급하세요. 부분 연도나 소표본의 평균 차이를 가격 상승·하락으로 단정하지 마세요. 평균과 중앙값이 크게 다르면 분포가 한쪽으로 치우쳤다고 짚으세요.
+ sources의 text_refs는 보고서 본문 출처입니다. 본문을 그대로 반복하지 말고 질문에 맞게 풀어 설명하세요. 본문 수치는 실제 기재된 값 그대로 쓰고 같은 문장 안의 마침표 앞에 해당 참조를 붙이세요. 본문 참조는 화면의 근거 패널에서 확인할 수 있으며 답변 본문에는 원문을 자동 삽입하지 않습니다. 수치형 참조는 기존처럼 숫자 자리에서 사용합니다.
+ 참조 뒤에 단위를 다시 붙이지 마세요. product_knowledge에 없는 메뉴나 내부 경로는 안내하지 마세요.
+@@ -65,47 +63,22 @@
+
+ 
+ # {{current.f3}} 은 '지표명 값', {{current.f3|value}} 는 값+단위만 넣는다.
+ # calc.fN 은 서버가 {{calc:<식>}} 을 계산해 만든 내부 참조다(모델이 직접 쓰지 않는다).
+-_REF = re.compile(r"\{\{((?:current|previous|base|calc)\.f\d+)(?:\|value|\|label)?\}\}")
++_REF = re.compile(r"\{\{((?:current|previous|base|calc)\.f\d+)(?:\|value)?\}\}")
+ _CALC = re.compile(r"\{\{calc:([^{}]{1,200})\}\}")
+-# 사용자에게 보이면 안 되는 내부 용어·요청(2026-11-10 운영 T7). 이 표현이 있는 문장은 뺀다.
+-_INTERNAL_TERMS = re.compile(
+-    r"\bfacts?\b|\bsources?\b|text_refs|identifiers|base_screen|\b(?:current|previous)\b|\bbase\.f\d+"
+-    r"|\b[A-Z][a-z]+[A-Za-z]*(?:Card|Panel|Tab|Modal|Matrix|Cell|List|Detail)\b"
+-    r"|화면\s*(?:을|를)?\s*공유|스크린\s*샷|화면\s*캡처"
+-)
+ # 참조 없는 숫자가 이 표현과 같은 문장에 있으면 화면 관측을 주장한 것으로 본다.
+ _OBSERVATION_MARKERS = (
+     "화면", "현재", "지금", "이 지역", "이 동네", "이 칸", "이 표", "이 결과", "이 모형", "이 회귀",
+     "이 매트릭스", "필터 결과", "선택한 지역", "선택 지역", "해당 지역", "여기",
+ )
+ # 가상 예시·조건문 표지. 단위 붙은 숫자라도 이 문장은 예시로 본다.
+-_HYPOTHETICAL_MARKERS = ("예를 들어", "예컨대", "가령", "예시", "가상", "만약", "라면", "이라면", "가정", "이면", "경우")
++_HYPOTHETICAL_MARKERS = ("예를 들어", "예컨대", "가령", "예시", "가상", "만약", "라면", "이라면", "가정")
+ _DATA_UNIT = re.compile(r"\d\s*(?:건|만원|억|원|㎡|%|퍼센트)")
+-# 모델이 이미 적정가격 주의를 썼으면 서버 문구를 다시 붙이지 않는다.
+-_CAUTION_RE = re.compile(r"적정\s*가격|적정\s*가치|감정\s*평가\s*액")
++_CAUTION_KEY = "적정가격이 아"
+ _CALC_CAUTION = ("이 값은 지역 통계에 따른 산술값이며 해당 토지의 적정가격이 아닙니다. "
+                  "접근성·경사·형상·이용상황 같은 개별요인에 따라 실제 가격은 달라질 수 있습니다.")
+-# B-08: 토지가 아닌 화면(복합·집합·임대 등)에서는 「토지 적정가격」이라고 쓰지 않는다.
+-_CALC_CAUTION_PROPERTY = ("이 값은 지역 통계에 따른 산술값이며 해당 부동산의 적정가격이 아닙니다. "
+-                          "건물 상태·층·접근성·이용상황 같은 개별요인에 따라 실제 가격은 달라질 수 있습니다.")
+-# B-08: 화면 근거에 영문 유형 코드가 그대로 나가지 않게 한다.
+-_ASSET_KO = {"commercial": "상업업무", "factory": "공장창고", "detached": "단독다가구", "all": "전체 유형"}
+-
+-
+-def _asset_ko(value: Any) -> Any:
+-    if not isinstance(value, str) or not value.strip():
+-        return value
+-    parts = [p.strip() for p in value.split(",") if p.strip()]
+-    return "·".join(_ASSET_KO.get(p, p) for p in parts)
+-
+-
+-def _calc_caution(app: Any) -> str:
+-    return _CALC_CAUTION if app in (None, "land") else _CALC_CAUTION_PROPERTY
+ _UNRELATED = re.compile(r"(?:오늘\s*)?(?:저녁|점심)\s*메뉴\s*(?:추천해\s*줘|추천해주세요)|(?:오늘\s*)?날씨\s*(?:알려줘|알려주세요)")
+ _UNOBSERVED = ("규모의 경제", "생산비용", "생산 비용", "인과")
+ _AFFIRM = ("맞습니다", "맞아요", "맞네요", "맞는 말", "있다고 할 수", "관찰된다", "관찰됩니다", "일치합니다", "말할 수 있")
+-# 사용자가 앞선 분석을 명시적으로 가리키는 표현.
+-_ASKS_PREVIOUS = re.compile(r"아까|이전|앞서|앞의|방금|전에\s*(?:본|봤|분석)|지난\s*(?:분석|결과)|그\s*결과|그\s*분석")
+ _FOLLOWUP = re.compile(r"^\s*(?:그럼|그렇다면|그러면|그런데|그렇다는)")
+ _APP_WORDS = {
+     "land": ("토지", "지목"),
+@@ -125,20 +98,14 @@
+
+     identifiers: list[str] = field(default_factory=list)
+     values: dict[int, str] = field(default_factory=dict)
+     text_fact_ids: set[int] = field(default_factory=set)
+-    #: 이 화면에만 있는 관측 표지어(용도지역명 등). 미참조 숫자와 같은 문장이면 관측 주장으로 본다.
+-    observation_terms: list[str] = field(default_factory=list)
+     base: Any = None
+ 
+-    def number(self, label: str, value: Any, unit: str = "", digits: int | None = None) -> None:
++    def number(self, label: str, value: Any, unit: str = "") -> None:
+         if isinstance(value, bool) or not isinstance(value, (int, float)):
+             return
+         if isinstance(value, float) and not math.isfinite(value):
+             return
+-        # B-08: digits 를 주면 화면과 같은 자리수로 반올림해 준다 (복합 회귀 R² 3자리 등).
+-        if digits is not None and isinstance(value, float):
+-            number = f"{value:.{digits}f}"
+-        else:
+-            number = str(value) if isinstance(value, int) else f"{value:.8g}"
++        number = str(value) if isinstance(value, int) else f"{value:.8g}"
+         self.values[len(self.facts)] = f"{number}{unit}"
+         self.facts.append(f"{label} {number}{unit}")
+ 
+@@ -157,11 +124,9 @@
+
+ 
+ def _screen(ctx: AiContext) -> ScreenEvidence:
+     raw = ctx.facts
+-    scope = ctx.scope.model_dump()
+-    scope["asset_type"] = _asset_ko(scope.get("asset_type"))
+     result = ScreenEvidence({
+         "app": ctx.app, "panel": ctx.panel, "purpose": ctx.purpose,
+-        "scope": scope,
++        "scope": ctx.scope.model_dump(),
+     })
+     for key in ("zone_type", "land_category", "scatter_tab", "trend_metric"):
+         if isinstance(raw.get(key), str):
+@@ -315,15 +280,12 @@
+
+         category = str(cell.get("land_category") or "")[:40]
+         label = f"{zone} × {category}"
+         result.identifiers.extend([label, zone, category])
+-        if len(zone) >= 2:
+-            result.observation_terms.append(zone)
+         result.number(f"{label} 거래", cell.get("count"), "건")
+-        for key, metric in (("mean", "평균"), ("median", "중앙값")):
++        for key, metric in (("mean", "평균"), ("median", "중앙값"), ("p25", "25% 분위"), ("p75", "75% 분위")):
+             result.number(f"{label} 단가 {metric}", cell.get(key), "만원/㎡")
+         if index < _LAND_DETAIL_CELLS:
+-            # 입력 크기 관리: 분위수·범위·신뢰구간은 거래 많은 상위 칸만 보낸다.
+-            for key, metric in (("p25", "25% 분위"), ("p75", "75% 분위"), ("min", "최소"), ("max", "최대"),
+-                                ("ci_lower", "평균 95% 신뢰구간 하한"), ("ci_upper", "평균 95% 신뢰구간 상한")):
++            for key, metric in (("min", "최소"), ("max", "최대"), ("ci_lower", "평균 95% 신뢰구간 하한"),
++                                ("ci_upper", "평균 95% 신뢰구간 상한")):
+                 result.number(f"{label} 단가 {metric}", cell.get(key), "만원/㎡")
+         if cell.get("is_reliable") is False:
+             small.append(label)
+@@ -338,8 +300,6 @@
+
+             if not label:
+                 continue
+             result.identifiers.append(label)
+-            if key == "by_zone" and len(label) >= 2:
+-                result.observation_terms.append(label)
+             result.number(f"{kind} {label} 합계 거래", row.get("count"), "건")
+             result.number(f"{kind} {label} 합계 단가 평균", row.get("mean"), "만원/㎡")
+             result.number(f"{kind} {label} 합계 단가 중앙값", row.get("median"), "만원/㎡")
+@@ -390,8 +350,7 @@
+
+         return labels[name]
+     for prefix, kind in (("zone_", "용도지역"), ("use_", "건축물용도"), ("struct_", "구조"), ("road_", "도로조건"), ("atype_", "유형"), ("loc_", "지역")):
+         if name.startswith(prefix):
+-            level = name[len(prefix):]
+-            return f"{kind} {_asset_ko(level) if prefix == 'atype_' else level}"
++            return f"{kind} {name[len(prefix):]}"
+     return name[:80]
+ 
+ 
+@@ -407,10 +366,10 @@
+
+         "식에는 절편과 p<0.1인 항만 표시된다. 추정금액은 표시되지 않은 항을 포함한 전체 적합 모형으로 계산된다."
+     )
+     result.number("적합 표본", primary.get("n"), "건")
+-    result.number("R²", primary.get("r_squared"), digits=3)
+-    result.number("조정 R²", primary.get("adj_r_squared"), digits=3)
+-    result.number("학습 MAPE", primary.get("mape"), "%", digits=2)
+-    result.number("CV-MAPE", primary.get("cv_mape"), "%", digits=2)
++    result.number("R²", primary.get("r_squared"))
++    result.number("조정 R²", primary.get("adj_r_squared"))
++    result.number("학습 MAPE", primary.get("mape"), "%")
++    result.number("CV-MAPE", primary.get("cv_mape"), "%")
+     result.number("모형 F 검정 p값", primary.get("f_p_value"))
+     if isinstance(primary.get("warning"), str) and primary["warning"].strip():
+         result.notes.append(primary["warning"][:240])
+@@ -422,9 +381,8 @@
+
+     ):
+         value = options.get(key)
+         if isinstance(value, str) and value.strip():
+-            shown_value = _asset_ko(value) if key == "asset_type_reference" else value
+-            result.notes.append(f"{kind} 기준 범주 {shown_value[:100]}")
+-            result.identifiers.append(shown_value[:100])
++            result.notes.append(f"{kind} 기준 범주 {value[:100]}")
++            result.identifiers.append(value[:100])
+     for row in _rows(primary.get("coefficients"))[:80]:
+         name = str(row.get("name") or "")
+         if not name:
+@@ -578,7 +536,7 @@
+
+         result.number("탐색 CV-MAPE", metrics.get("cv_mape"), "%")
+         result.number("확인 CV-MAPE", _confirm_mape(recommended), "%")
+         result.number("학습 MAPE", metrics.get("mape"), "%")
+-        result.number("조정 R²", metrics.get("adj_r_squared"), digits=3)
++        result.number("조정 R²", metrics.get("adj_r_squared"))
+         rate = stage1.get("primary_cv_extreme_rate")
+         if isinstance(rate, (int, float)) and not isinstance(rate, bool) and rate > 0.05:
+             result.number("학습 범위를 벗어난 검증 예측", rate * 100, "%")
+@@ -588,7 +546,7 @@
+
+     else:
+         result.notes.append("설명형 추천은 AIC 기준이다. 예측형 순위와 다르다.")
+         result.number("AIC", recommended.get("aic"))
+-        result.number("조정 R²", metrics.get("adj_r_squared"), digits=3)
++        result.number("조정 R²", metrics.get("adj_r_squared"))
+         result.number("학습 MAPE", metrics.get("mape"), "%")
+         result.number("탐색 CV-MAPE", metrics.get("cv_mape"), "%")
+     key = "candidates_predictive" if predictive else "candidates_explanatory"
+@@ -606,7 +564,7 @@
+
+             result.number(f"{prefix}와 탐색 오차 차이", judgments.get(rank, {}).get("cv_gap_pp"), "%p")
+         else:
+             result.number(f"{prefix} AIC", candidate.get("aic"))
+-            result.number(f"{prefix} 조정 R²", row_metrics.get("adj_r_squared"), digits=3)
++            result.number(f"{prefix} 조정 R²", row_metrics.get("adj_r_squared"))
+         result.notes.append(f"{prefix}는 {_scale_name(candidate.get('response_scale'))} · {_block_line(candidate.get('blocks'))}이다.")
+     selected_rank = raw.get("selected_rank")
+     selected = next((row for row in candidates if row.get("rank") == selected_rank), None)
+@@ -627,7 +585,7 @@
+
+         return
+     pool = stage2.get("inspect_pool") if isinstance(stage2.get("inspect_pool"), dict) else {}
+     result.number("Twin1 적합 표본", pool.get("n"), "건")
+-    result.number("Twin1 조정 R²", pool.get("adj_r_squared"), digits=3)
++    result.number("Twin1 조정 R²", pool.get("adj_r_squared"))
+     result.number("Twin1 탐색 CV-MAPE", pool.get("cv_mape"), "%")
+     result.number("Twin1 확인 CV-MAPE", pool.get("confirm_cv_mape"), "%")
+     result.number("Twin1 학습 MAPE", pool.get("mape"), "%")
+@@ -638,7 +596,7 @@
+
+         research = stage2["research"]
+         result.notes.append("Twin2 탐색 오차는 독립적인 확인 검증 결과가 아니다.")
+         result.number("Twin2 적합 표본", research.get("n"), "건")
+-        result.number("Twin2 조정 R²", research.get("adj_r_squared"), digits=3)
++        result.number("Twin2 조정 R²", research.get("adj_r_squared"))
+         result.number("Twin2 탐색 CV-MAPE", research.get("cv_mape"), "%")
+         result.number("Twin2 확인 CV-MAPE", research.get("confirm_cv_mape"), "%")
+         result.number("Twin2 학습 MAPE", research.get("mape"), "%")
+@@ -667,7 +625,7 @@
+
+         row = comparison.get(key)
+         if not isinstance(row, dict):
+             continue
+-        result.number(f"{label} 조정 R²", row.get("adj_r_squared"), digits=3)
++        result.number(f"{label} 조정 R²", row.get("adj_r_squared"))
+         result.number(f"{label} 표본내 MAPE", row.get("mape"), "%")
+         result.number(f"{label} CV-MAPE", row.get("cv_mape"), "%")
+         result.number(f"{label} RMSE", row.get("rmse"), "만원")
+@@ -693,7 +651,7 @@
+
+             if index == 0:
+                 result.number("AIC", candidate.get("aic"))
+                 result.number("BIC", candidate.get("bic"))
+-                result.number("조정 R²", metrics.get("adj_r_squared"), digits=3)
++                result.number("조정 R²", metrics.get("adj_r_squared"))
+                 result.number("CV-MAPE", metrics.get("cv_mape"), "%")
+         return
+     metrics = raw.get("metrics") if isinstance(raw.get("metrics"), dict) else {}
+@@ -796,16 +754,6 @@
+
+     ):
+         result.number(label, raw.get(key), unit)
+     result.number("적합 표본", raw.get("regression_n") if raw.get("regression_n") is not None else raw.get("n"), "건")
+-    y_hat = raw.get("y_hat")
+-    if isinstance(y_hat, (int, float)) and y_hat <= 0:
+-        # B-01: 음수·0 추정을 「추정금액」으로 단정하지 않는다.
+-        result.notes.append(
+-            "모형 추정값이 0 이하다. 선형식 계산 결과이며 실제 거래금액이 아니다. "
+-            "이 값을 추정금액·가격으로 단정해 말하지 말고, 선형식이 이 입력 조건에 맞지 않는다는 신호로 "
+-            "설명한다(표본 범위 안에서도 나올 수 있다). 외삽이라고 단정하지 않는다."
+-        )
+-    elif any(isinstance(raw.get(k), (int, float)) and raw[k] < 0 for k in ("ci_lower", "pi_lower")):
+-        result.notes.append("구간 하한이 0 미만이다. 금액의 하한이 아니라 선형식 구간 계산의 값으로 설명한다.")
+ 
+ 
+ def _histogram(result: ScreenEvidence, raw: dict) -> None:
+@@ -862,18 +810,6 @@
+
+         cell = f"{raw['zone_type']} × {raw['land_category']}"
+         result.context["칸"] = cell
+         result.identifiers.extend([cell, str(raw["zone_type"]), str(raw["land_category"])])
+-        if len(str(raw["zone_type"])) >= 2:
+-            result.observation_terms.append(str(raw["zone_type"]))
+-        total = raw.get("cell_total") if isinstance(raw.get("cell_total"), dict) else None
+-        if total:
+-            result.notes.append(
+-                f"'{cell} 칸 전체' 값은 분석 기간 전체 기준이다. 칸의 대표값·면적 곱 계산에는 연도별 값보다 이 값을 먼저 쓴다."
+-            )
+-            result.number(f"{cell} 칸 전체 거래", total.get("count"), "건")
+-            for key, name in (("mean", "평균"), ("median", "중앙값"), ("p25", "25% 분위"), ("p75", "75% 분위"),
+-                              ("min", "최소"), ("max", "최대"), ("ci_lower", "평균 95% 신뢰구간 하한"),
+-                              ("ci_upper", "평균 95% 신뢰구간 상한")):
+-                result.number(f"{cell} 칸 전체 단가 {name}", total.get(key), "만원/㎡")
+     for row in rows:
+         period = str(row.get("chart_label") or row.get("year") or row.get("period_end") or "구간")[:80]
+         if isinstance(row.get("year"), int) and not row.get("chart_label"):
+@@ -955,7 +891,7 @@
+
+ #   - 지역명·칸 라벨·관측 지시어("화면/현재/이 지역" 등)와 같은 문장 → 위반
+ #   - product_knowledge 문서의 숫자 → 허용
+ #   - 화면 수치와 같은 값을 참조 없이 쓰면(작은 정수 제외) → 위반
+-#   - 단위(건·만원·㎡·%)가 붙은 숫자를 예시·조건 표지 없이 쓰면 → 위반 (kind 무관)
++#   - screen 답변에서 단위(건·만원·㎡·%)가 붙은 숫자를 예시 표지 없이 쓰면 → 위반
+ #   - 그 밖(일반 설명·가상 예시) → 허용
+ # ---------------------------------------------------------------------------
+ 
+@@ -993,7 +929,6 @@
+
+         for label in data.identifiers:
+             if "×" in label or (len(label) >= 3 and re.search(r"[가-힣]", label) and not re.search(r"\d", label)):
+                 markers.append(label)
+-        markers.extend(term for term in data.observation_terms if term)
+     policy.markers = tuple(dict.fromkeys(markers))
+     return policy
+ 
+@@ -1015,7 +950,7 @@
+
+     nontrivial = {n for n in leftover if n != n.to_integral_value() or n > 31}
+     if any(_matches(n, policy.screen_values) for n in nontrivial):
+         return "screen_value"
+-    if not any(marker in sentence for marker in _HYPOTHETICAL_MARKERS):
++    if kind == "screen" and not any(marker in sentence for marker in _HYPOTHETICAL_MARKERS):
+         for match in re.finditer(r"(?<![A-Za-z0-9_.])(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:건|만원|억|원|㎡|%|퍼센트)", prose):
+             if abs(Decimal(match.group(1).replace(",", ""))) in leftover:
+                 return "unit_number"
+@@ -1142,50 +1077,7 @@
+
+ 
+     answer = _CALC.sub(replace, answer)
+     calc.context["expressions"] = expressions
+-    used_refs = {ref for expr in expressions for ref in _CALC_REF.findall(expr)}
+-    ranges = []
+-    for expr in expressions:
+-        found = _median_range(expr, sources, policy.asked, used_refs)
+-        if found and found not in ranges:
+-            ranges.append(found)
+-    calc.context["median_ranges"] = ranges
+     return answer, {**sources, "calc": calc}
+-
+-
+-_SIMPLE_PRODUCT = re.compile(
+-    r"\s*(?:((?:current|previous|base)\.f\d+)\s*\*\s*([\d,]+(?:\.\d+)?)"
+-    r"|([\d,]+(?:\.\d+)?)\s*\*\s*((?:current|previous|base)\.f\d+))\s*"
+-)
+-
+-
+-def _median_range(expr: str, sources: dict[str, ScreenEvidence], asked: set[Decimal],
+-                   used_refs: set[str]) -> tuple[str, str] | None:
+-    """'중앙값 × 면적' 계산이면 같은 칸의 25%·75% 분위 × 면적을 계산한다(모델이 이미 썼으면 None)."""
+-    match = _SIMPLE_PRODUCT.fullmatch(expr)
+-    if not match:
+-        return None
+-    ref = match.group(1) or match.group(4)
+-    constant = match.group(2) or match.group(3)
+-    source, index = ref.split(".f")
+-    data = sources.get(source)
+-    if data is None or int(index) >= len(data.facts):
+-        return None
+-    label = data.facts[int(index)].rsplit(" ", 1)[0]
+-    if "중앙값" not in label:
+-        return None
+-    shown = []
+-    for quantile in ("25% 분위", "75% 분위"):
+-        target = label.replace("중앙값", quantile)
+-        j = next((i for i, fact in enumerate(data.facts)
+-                  if i not in data.text_fact_ids and fact.rsplit(" ", 1)[0] == target), None)
+-        if j is None or f"{source}.f{j}" in used_refs:
+-            return None
+-        try:
+-            value, unit, _ = evaluate_calc(f"{source}.f{j}*{constant}", sources, asked)
+-        except CalcError:
+-            return None
+-        shown.append(format_amount(value, unit))
+-    return shown[0], shown[1]
+ 
+ 
+ def _render(draft: dict, sources: dict[str, ScreenEvidence], issues: list[str] | None = None,
+@@ -1221,8 +1113,6 @@
+
+     if "{{" in remainder or "}}" in remainder or any(ref not in references for ref in ids):
+         return reject("invalid_reference")
+     for sentence in _sentences(answer):
+-        if _INTERNAL_TERMS.search(_REF.sub("", sentence)):
+-            return reject("internal_term:" + sentence[:80])
+         local_refs = _REF.findall(sentence)
+         prose = _clean_numbers(_REF.sub("", sentence))
+         for data in sources.values():
+@@ -1259,7 +1149,7 @@
+
+         for unit in ("만원/㎡", "개월", "만원", "퍼센트", "㎡", "건", "개", "년", "%"):
+             if fact.endswith(unit):
+                 # 서버 삽입값에 이미 포함된 동일 단위의 중복만 정규화한다.
+-                pattern = r"\{\{" + re.escape(ref) + r"(\|value|\|label)?\}\}\s*" + re.escape(unit)
++                pattern = r"\{\{" + re.escape(ref) + r"(\|value)?\}\}\s*" + re.escape(unit)
+                 answer = re.sub(pattern, lambda m: "{{" + ref + (m.group(1) or "") + "}}", answer)
+                 checked_units = re.sub(pattern, lambda m: "{{" + ref + (m.group(1) or "") + "}}", checked_units)
+                 break
+@@ -1293,9 +1183,8 @@
+
+             label=f"{scope} · {fact}", ref=ref, confidence="medium",
+         ))
+         label = fact.rsplit(" ", 1)[0]
+-        # {{ref|label}} 로 지표명까지 넣을 때만, 바로 앞에 모델이 쓴 같은 지표명을 지운다.
+         answer = re.sub(
+-            rf"(?<!\w){re.escape(label)}(?:은|는|이|가)?\s*(?:[=:])?\s*(?={re.escape('{{' + ref + '|label}}')})",
++            rf"(?<!\w){re.escape(label)}(?:은|는|이|가)?\s*(?:[=:])?\s*(?={re.escape('{{' + ref + '}}')})",
+             "", answer,
+         )
+ 
+@@ -1304,35 +1193,22 @@
+
+         index = int(match[1].rsplit("f", 1)[1])
+         if index in sources[source].text_fact_ids:
+             return ""  # Full prose stays in evidence, not repeated in the answer.
+-        value = sources[source].values.get(index, fact.rsplit(" ", 1)[-1])
+-        if source == "calc":
+-            return value
+-        full = match.group(0).endswith("|label}}")
+-        if source == "previous":
+-            # 이전 분석 값은 항상 출처를 밝힌다(현재 화면 값으로 오인 방지).
+-            scope = sources[source].context["scope"].get("region_label") or "선택 범위"
+-            return f"{fact if full else value} (이전 분석 · {scope})"
+-        if "previous" in used:
+-            # 이전 분석과 함께 인용하면 현재 값에도 출처를 붙여 비교가 헷갈리지 않게 한다.
+-            scope = sources[source].context["scope"].get("region_label") or "선택 범위"
+-            return f"{fact if full else value} (현재 화면 · {scope})"
+-        if full and len(used) > 1:
+-            scope = sources[source].context["scope"].get("region_label") or "현재 화면"
++        if source == "calc" or match.group(0).endswith("|value}}"):
++            return sources[source].values.get(index, fact.rsplit(" ", 1)[-1])
++        if source == "previous" or len(used) > 1:
++            scope = sources[source].context["scope"].get("region_label") or (
++                "이전 분석" if source == "previous" else "현재 화면"
++            )
+             return f"{scope}의 {fact}"
+-        return fact if full else value
++        return fact
+ 
+     displayed = _REF.sub(insert, answer).strip()
+     if any(int(ref.rsplit("f", 1)[1]) in sources[references[ref][0]].text_fact_ids for ref in ids):
+         displayed = re.sub(r"[ \t]+([.,;:!?])", r"\1", displayed)
+     if not displayed:
+         return reject("empty_answer_after_references")
+-    ranges = sources["calc"].context.get("median_ranges") if calc_used else None
+-    if ranges and not fragment:
+-        displayed += "\n\n" + " ".join(f"25~75% 분위 기준으로는 {low}~{high}입니다." for low, high in ranges)
+-    if calc_used and not _CAUTION_RE.search(displayed):
+-        current = sources.get("current")
+-        app = current.context.get("app") if current is not None else None
+-        displayed += "\n\n" + _calc_caution(app)
++    if calc_used and _CAUTION_KEY not in displayed:
++        displayed += "\n\n" + _CALC_CAUTION
+     return displayed, evidence, next(iter(used)) if len(used) == 1 else None
+ 
+ 
+@@ -1460,11 +1336,7 @@
+
+     if _unrelated(req.message):
+         question.validation = "refusal"
+         return _refuse(session, req, current, "그 질문은 CH2와 통계 밖이라 답하지 않습니다.")
+-    previous = session.dialogue_evidence
+-    if previous is not None and not current.facts and not _ASKS_PREVIOUS.search(req.message):
+-        # 새로고침 등으로 지금 화면 통계가 비었는데 이전 분석 숫자로 답하지 않는다(T7).
+-        previous = None
+-    sources = _sources(req.message, current, previous)
++    sources = _sources(req.message, current, session.dialogue_evidence)
+     focus = current
+     message = req.message.lower()
+     apps = [app for app, names in _APP_WORDS.items() if any(name in message for name in names)]

@@ -1,0 +1,16 @@
+--- origin/main
+
++++ WIP
+
+@@ -68,6 +68,10 @@
+
+ 
+ def require_admin_access(request: Request) -> None:
+     """FastAPI 의존성. 미들웨어 게이트와 같은 기준을 라우터에서 한 번 더 확인한다."""
++    from app.local_dev_access import local_dev_access_enabled
++
++    if local_dev_access_enabled(request):
++        return
+     status = admin_access_status(request)
+     if status == 401:
+         raise HTTPException(401, "관리자 로그인이 필요합니다.")
