@@ -1,16 +1,6 @@
 name: Deploy CH2 board to VPS
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "deploy/board/**"
-      - "deploy/hub/**"
-      - "deploy/scripts/redeploy-board.sh"
-      - "deploy/scripts/deploy-hub.sh"
-      - "deploy/templates/nginx-ch2data-hub.conf"
-      - "deploy/templates/ch2-board.service"
-      - ".github/workflows/deploy-ch2-board.yml"
   workflow_dispatch:
 
 concurrency:
