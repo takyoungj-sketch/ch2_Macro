@@ -152,6 +152,25 @@ def test_c9_before_side_read_only_and_gates_open(monkeypatch):
     assert settings.api_token == "" and asyncio.run(product_gate.product_gate_response(None)) is None
 
 
+def test_c14_links_main_raw_into_worktree(tmp_path):
+    """c14: 표제부 원천 경로가 저장소 기준이라 worktree 에서 raw 를 못 찾아 실패했다 → 원본 raw 정션."""
+    import os
+
+    c14 = _load("c14_title_copy")
+    main_raw = tmp_path / "main" / "raw"
+    (main_raw / "raw addition").mkdir(parents=True)
+    (main_raw / "raw addition" / "x.txt").write_text("1", encoding="utf-8")
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    link = c14.ensure_raw_link(wt, main_raw)
+    assert (link / "raw addition" / "x.txt").read_text(encoding="utf-8") == "1"
+    assert c14.ensure_raw_link(wt, main_raw) == link        # 두 번째는 그대로
+    os.rmdir(link)                                            # 정션만 지움(원본 유지)
+    assert (main_raw / "raw addition" / "x.txt").exists()
+    with pytest.raises(SystemExit):
+        c14.ensure_raw_link(wt, tmp_path / "none")
+
+
 def test_parcel_step_skipped_and_logged_when_copy_missing(c3, monkeypatch):
     ran: list[str] = []
     monkeypatch.setattr(c3, "database_exists", lambda name: False)
