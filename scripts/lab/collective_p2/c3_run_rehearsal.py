@@ -26,6 +26,10 @@ OUT = ROOT / "logs" / "collective_p2"
 AS_OF = "2026-10-01"
 KAPT = MAIN / "raw" / "raw addition" / "K-apt공동주택관리정보시스템" / "20261002_단지_기본정보.xlsx"
 DBS = {"collective": "collective_stats_p2r", "built": "built_stats_p2r", "rent": "rent_stats_p2r"}
+# 건축물대장 표제부 DB. 로컬 서버에는 원본 parcel_master 가 없어 리허설 사본도 없다 → 사본이 있을 때만 실행.
+PARCEL_DB = "parcel_master_p2r"
+# 실행에 PARCEL_DB 가 있어야 하는 단계(없으면 건너뛰고 c3_steps.jsonl 에 사유 기록)
+NEEDS_PARCEL = {"title_fill_new_keys"}
 
 PROBE = r"""
 import sys, json
@@ -86,9 +90,23 @@ def env_for() -> dict:
                   ("RENT_DATABASE_URL", DBS["rent"])):
         assert REHEARSAL_RE.match(db)
         env[k] = base.set(database=db).render_as_string(hide_password=False)
+    # 표제부 DB 도 리허설 사본으로만(기본값은 같은 서버의 진짜 parcel_master 이고 apply_schema 가 DDL 을 쓴다)
+    assert REHEARSAL_RE.match(PARCEL_DB)
+    env["PARCEL_MASTER_DATABASE_URL"] = base.set(database=PARCEL_DB).render_as_string(hide_password=False)
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     return env
+
+
+def database_exists(name: str) -> bool:
+    from sqlalchemy import create_engine, text
+
+    eng = create_engine(make_url(server_url_from_env()).set(database="postgres"))
+    try:
+        with eng.connect() as c:
+            return bool(c.execute(text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": name}).scalar())
+    finally:
+        eng.dispose()
 
 
 def probe(env) -> dict:
@@ -117,6 +135,12 @@ def main():
         steps = [s for s in steps if s[0] in a.only.split(",")]
     log = OUT / "c3_steps.jsonl"
     for name, cmd in steps:
+        if name in NEEDS_PARCEL and not database_exists(PARCEL_DB):
+            rec = {"step": name, "skipped": f"{PARCEL_DB} 없음(로컬에 원본 parcel_master 없음) — 리허설 불가, 운영 런북에서 드라이런 먼저"}
+            with log.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            print(json.dumps(rec, ensure_ascii=False), flush=True)
+            continue
         got = probe(env)
         t0 = time.time()
         with (OUT / f"c3_{name}.log").open("w", encoding="utf-8") as f:
