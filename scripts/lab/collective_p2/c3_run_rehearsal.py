@@ -74,12 +74,7 @@ def step_list():
         ("rent_sale_map", P(pipe / "rent" / "build_sale_building_map.py")),
         ("built_scope_stats", P(pipe / "built" / "build_scope_stats.py", "--as-of", AS_OF, "--windows", "3,5,7")),
         # 복합 scope mart 는 addr1 칸으로 UPSERT → 이번 as_of 의 옛 시도명 행은 남는다 → 그 as_of 만 지운다(과거 as_of 유지)
-        ("built_scope_legacy_cleanup", P("-c", "import os; from sqlalchemy import create_engine, text; "
-                                              "e = create_engine(os.environ['BUILT_DATABASE_URL']); "
-                                              "c = e.begin().__enter__(); "
-                                              "assert c.execute(text('select current_database()')).scalar().endswith('_p2r'); "
-                                              f"n = c.execute(text(\"DELETE FROM built_scope_stats WHERE as_of_month = '{AS_OF}' "
-                                              "AND addr1 IN ('광주광역시','전라남도')\")).rowcount; c.commit(); print('deleted', n)")),
+        ("built_scope_legacy_cleanup", P(Path(__file__).with_name("c3_built_scope_cleanup.py"), AS_OF)),
     ]
 
 

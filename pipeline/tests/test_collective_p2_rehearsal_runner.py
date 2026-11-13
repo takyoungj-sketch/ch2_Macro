@@ -51,6 +51,56 @@ def test_every_as_of_argument_is_accepted_by_builders(c3):
     assert seen == 8   # 단계 목록의 --as-of 개수(빌더 8개)
 
 
+def _load(name):
+    spec = importlib.util.spec_from_file_location(name, SCRIPT.with_name(f"{name}.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_built_scope_cleanup_commits_only_legacy_rows_of_as_of(tmp_path):
+    """옛 한 줄 코드는 첫 쿼리에서 「Connection is closed」로 실패했다 → 실제 PG 임시 DB 에서 삭제·커밋 확인."""
+    from sqlalchemy import create_engine, text
+
+    sys_path = str(ROOT / "pipeline")
+    import sys
+
+    if sys_path not in sys.path:
+        sys.path.insert(0, sys_path)
+    from collective import migrate_p2_keys as mig
+
+    cl = _load("c3_built_scope_cleanup")
+    fx = "ch2_scope_cleanup_p2r"
+    try:
+        base = make_url(mig.server_url_from_env())
+        admin = create_engine(base.set(database="postgres"), isolation_level="AUTOCOMMIT",
+                              connect_args={"connect_timeout": 3})
+        with admin.connect() as c:
+            c.execute(text(f"DROP DATABASE IF EXISTS {fx}"))
+            c.execute(text(f"CREATE DATABASE {fx}"))
+    except Exception as ex:  # noqa: BLE001
+        pytest.skip(f"로컬 PostgreSQL 임시 DB 생성 불가: {type(ex).__name__}")
+    eng = create_engine(base.set(database=fx))
+    try:
+        with eng.begin() as c:
+            c.execute(text("CREATE TABLE built_scope_stats (as_of_month date, addr1 text)"))
+            c.execute(text("INSERT INTO built_scope_stats VALUES ('2026-10-01','광주광역시'), ('2026-10-01','전라남도'), "
+                           "('2026-10-01','전남광주통합특별시'), ('2026-09-01','전라남도')"))
+        assert cl.cleanup(eng, "2026-10-01") == 2
+        with eng.connect() as c:   # 커밋됨 + 과거 as_of·새 이름 행은 남음
+            left = sorted(tuple(map(str, r)) for r in c.execute(text("SELECT as_of_month, addr1 FROM built_scope_stats")))
+        assert left == [("2026-09-01", "전라남도"), ("2026-10-01", "전남광주통합특별시")]
+        other = create_engine(base.set(database="postgres"))
+        with pytest.raises(SystemExit):
+            cl.cleanup(other, "2026-10-01")   # 리허설 이름이 아니면 쓰기 전에 멈춤
+        other.dispose()
+    finally:
+        eng.dispose()
+        with admin.connect() as c:
+            c.execute(text(f"DROP DATABASE IF EXISTS {fx} WITH (FORCE)"))
+        admin.dispose()
+
+
 def test_parcel_step_skipped_and_logged_when_copy_missing(c3, monkeypatch):
     ran: list[str] = []
     monkeypatch.setattr(c3, "database_exists", lambda name: False)
