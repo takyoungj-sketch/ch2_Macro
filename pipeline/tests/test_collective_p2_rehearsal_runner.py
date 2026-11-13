@@ -35,6 +35,22 @@ def test_parcel_engine_points_only_to_rehearsal_copy(c3):
         assert c3.REHEARSAL_RE.match(make_url(env[k]).database)
 
 
+def test_every_as_of_argument_is_accepted_by_builders(c3):
+    """built_scope_stats 에 `2026-10`(월만)을 넘겨 실패했다 → 모든 단계의 --as-of 가 빌더 형식(월 1일)인지."""
+    import sys
+
+    sys.path.insert(0, str(ROOT / "pipeline"))
+    from build_stats_v2 import parse_as_of_month
+
+    seen = 0
+    for name, cmd in c3.step_list():
+        for i, a in enumerate(cmd):
+            if a == "--as-of":
+                parse_as_of_month(cmd[i + 1])
+                seen += 1
+    assert seen == 8   # 단계 목록의 --as-of 개수(빌더 8개)
+
+
 def test_parcel_step_skipped_and_logged_when_copy_missing(c3, monkeypatch):
     ran: list[str] = []
     monkeypatch.setattr(c3, "database_exists", lambda name: False)
