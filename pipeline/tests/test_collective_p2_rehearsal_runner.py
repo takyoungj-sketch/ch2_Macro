@@ -127,6 +127,31 @@ def test_rollback_compare_classifies_rehearsal_tables():
     assert c8.classify("t", same, None) == "리허설에 없음"
 
 
+def test_c9_before_side_read_only_and_gates_open(monkeypatch):
+    """c9: 전(진짜 로컬 DB)은 모든 세션 읽기 전용, 후는 *_p2r. 처음 실행은 게이트 401 로 화면을 재현하지 못했다."""
+    c9 = _load("c9_screens")
+    monkeypatch.setattr("collective.migrate_p2_keys.server_url_from_env",
+                        lambda: "postgresql+psycopg2://u:p@localhost:5432/postgres")
+    before, after = c9._env("before"), c9._env("after")
+    assert before["PGOPTIONS"] == "-c default_transaction_read_only=on"
+    assert "PGOPTIONS" not in after or after["PGOPTIONS"] == __import__("os").environ.get("PGOPTIONS")
+    for k in ("COLLECTIVE_DATABASE_URL", "BUILT_DATABASE_URL", "RENT_DATABASE_URL"):
+        assert make_url(after[k]).database.endswith("_p2r") and not make_url(before[k]).database.endswith("_p2r")
+
+    import sys
+
+    sys.path.insert(0, str(ROOT / "backend"))
+    import asyncio
+
+    from app import product_gate
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "api_token", "x")
+    monkeypatch.setattr(product_gate, "product_gate_response", product_gate.product_gate_response)
+    c9._open_gates()
+    assert settings.api_token == "" and asyncio.run(product_gate.product_gate_response(None)) is None
+
+
 def test_parcel_step_skipped_and_logged_when_copy_missing(c3, monkeypatch):
     ran: list[str] = []
     monkeypatch.setattr(c3, "database_exists", lambda name: False)

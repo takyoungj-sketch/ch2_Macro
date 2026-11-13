@@ -35,7 +35,22 @@ def _env(side: str) -> dict:
         env[k] = base.set(database=db + sfx).render_as_string(hide_password=False)
     env["PYTHONUTF8"] = "1"
     env["API_PARAM_WARN_ENABLED"] = "false"
+    if side == "before":
+        # 전 = 진짜 로컬 DB. 앱이 붙는 모든 PostgreSQL 세션을 읽기 전용으로(libpq 가 PGOPTIONS 를 읽는다)
+        env["PGOPTIONS"] = "-c default_transaction_read_only=on"
     return env
+
+
+def _open_gates() -> None:
+    """토큰·구독 게이트는 화면 재현 범위 밖 — 인프로세스 앱에서만 연다(처음 실행은 401 로 재현 못 함)."""
+    from app import product_gate
+    from app.config import settings
+
+    async def _open(_request):
+        return None
+
+    settings.api_token = ""
+    product_gate.product_gate_response = _open
 
 
 def run_side(side: str) -> dict:
@@ -47,6 +62,7 @@ def run_side(side: str) -> dict:
     from app.collective.db import get_collective_engine
     from app.main import app
 
+    _open_gates()
     c = TestClient(app)
     eng = get_collective_engine()
     out: dict = {"db": None}
@@ -71,10 +87,13 @@ def run_side(side: str) -> dict:
                             "내수읍": ("충청북도", "청주시", "청원구", "내수읍"),
                             "춘의동": ("경기도", "부천시", "원미구", "춘의동")}.items():
             d, items = lst(*args)
-            other = [i for i in items if (i.get("addr4") or "") != args[3]]
+            # 목록 항목에는 addr4 칸이 없다 → 표시 주소(지번·도로명)에 고른 동 이름이 없는 항목 = 다른 동 주소로 보이는 행
+            other = [i for i in items
+                     if args[3] not in " ".join(str(i.get(f) or "") for f in ("jibun_address", "address", "road_address"))]
             out[f"list_{label}"] = {"n": len(items), "tx": sum(int(i.get("count") or 0) for i in items),
                                     "other_dong_rows": len(other),
-                                    "other_names": sorted({str(i.get("display_name")) for i in other})[:8]}
+                                    "other_names": sorted({str(i.get("display_name")) for i in other})[:8],
+                                    }
         # 광산구 7년 롤링(거래 가장 많은 아파트)
         k = conn.execute(text("""select building_key from collective_building_stats where as_of_month=:a and window_years=7
                                  and asset_type='apartment' and addr1='전남광주통합특별시' and addr2='광산구' order by count desc limit 1"""),
