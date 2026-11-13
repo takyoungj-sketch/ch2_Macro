@@ -338,6 +338,27 @@ def test_rep_address_null_group_col_raises(fx):
             c.execute(text("DROP TABLE IF EXISTS t_rep_null"))
 
 
+def test_c5_named_key_count_equals_count_distinct(fx):
+    """c5 이름 키 수: GROUP BY 집계로 바꾼 쿼리 = 옛 count(DISTINCT) (원본에서 20분 제한 초과로 바꿈)."""
+    import importlib.util
+    import os
+
+    d = Path(__file__).resolve().parents[2] / "scripts" / "lab" / "collective_p2"
+    sys.path.insert(0, str(d))
+    cwd = os.getcwd()
+    try:
+        spec = importlib.util.spec_from_file_location("c5_verify", d / "c5_verify.py")
+        c5 = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(c5)
+    finally:
+        os.chdir(cwd)
+    with fx["eng"].connect() as c:
+        new = c.execute(text(c5.NAMED_KEY_COUNT_SQL)).scalar()
+        old = c.execute(text("select count(distinct building_key) from collective_transactions "
+                             "where coalesce(building_name,'')<>''")).scalar()
+    assert new == old and new > 0
+
+
 def test_deal_type_apply_and_rollback(fx):
     eng = fx["eng"]
     with eng.begin() as c:

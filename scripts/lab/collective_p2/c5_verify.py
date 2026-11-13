@@ -22,6 +22,11 @@ N = "전남광주통합특별시"
 rows: list[tuple] = []
 
 
+NAMED_KEY_COUNT_SQL = ("select count(*) from (select building_key from collective_transactions "
+                       "where coalesce(building_name,'')<>'' group by building_key) z")
+TIMEOUT_MS = 3_600_000  # 원본·리허설 원장 전체 집계(각 6.6M행)
+
+
 def add(name, before, after, ok, note=""):
     rows.append(("OK" if ok else "NG", name, before, after, note))
 
@@ -31,9 +36,9 @@ def one(c, sql, **p):
 
 
 def main():
-    b, a = engine("collective"), engine_db("collective_stats_p2r")
-    bb, ab = engine("built"), engine_db("built_stats_p2r")
-    br, ar = engine("rent"), engine_db("rent_stats_p2r")
+    b, a = engine("collective", TIMEOUT_MS), engine_db("collective_stats_p2r", TIMEOUT_MS)
+    bb, ab = engine("built", TIMEOUT_MS), engine_db("built_stats_p2r", TIMEOUT_MS)
+    br, ar = engine("rent", TIMEOUT_MS), engine_db("rent_stats_p2r", TIMEOUT_MS)
     units = load_split_units()
     with b.connect() as cb, a.connect() as ca:
         # 1 원장 행 수·hash 중복
@@ -50,8 +55,9 @@ def main():
             y = one(ca, "select count(*) from collective_transactions where addr1=:n and contract_year=:y", n=N, y=yr)
             add(f"전남광주 {yr} 원장 행", one(cb, "select count(*) from collective_transactions where addr1=:n and contract_year=:y", n=N, y=yr), y, y == exp, f"기대 {exp:,}")
         # 3 키
-        kb = one(cb, "select count(distinct building_key) from collective_transactions where coalesce(building_name,'')<>''")
-        ka = one(ca, "select count(distinct building_key) from collective_transactions where coalesce(building_name,'')<>''")
+        # count(DISTINCT) 는 정렬만 써서 원본에서 20분 제한을 넘겼다 → GROUP BY(해시 집계)로 같은 값
+        qk = NAMED_KEY_COUNT_SQL
+        kb, ka = one(cb, qk), one(ca, qk)
         exp = kb - 3967 + 168 - len(units) + 3447
         add("이름 키 수", kb, ka, ka == exp, f"예측 {exp:,} = 전 − 호남 옛 3,967 + 새 이름 168 − 분할 {len(units):,} + 조각 3,447")
         km = one(ca, "select count(*) from collective_building_key_map")
