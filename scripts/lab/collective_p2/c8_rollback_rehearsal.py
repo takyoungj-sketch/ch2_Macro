@@ -30,7 +30,9 @@ MARTS = {
     "collective_stats": ["collective_building_stats", "collective_building_rolling_stats", "collective_building_annual_stats",
                          "collective_presale_lifetime_stats", "market_stats", "market_annual_stats",
                          "collective_commercial_cluster_stats", "collective_commercial_cluster_rolling_stats",
-                         "collective_commercial_cluster_annual_stats", "collective_building_attributes", "builder_master"],
+                         # 속성 단계(K-apt·title_fill)·공시지가 단계가 분할 새 키 행을 추가한다 → 덤프에서 표째 되돌림
+                         "collective_commercial_cluster_annual_stats", "collective_building_attributes", "builder_master",
+                         "collective_building_assessed_land_price"],
     "built_stats": ["built_scope_stats"],
     "rent_stats": ["rent_building_stats", "rent_building_rolling_stats"],
 }

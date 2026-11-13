@@ -188,6 +188,13 @@ def test_attribute_steps_pin_snapshot_and_key_list(c3):
     assert make_url(env["DATABASE_URL"]).database == c3.LAND_DB and c3.REHEARSAL_RE.match(c3.LAND_DB)
 
 
+def test_rollback_restores_attribute_and_land_price_tables():
+    """속성·builder_master·공시지가는 분할 새 키 행이 추가되고 키 이전 되돌리기가 그 행을 지우지 않는다 → 덤프 복원 대상."""
+    c8 = _load("c8_rollback_rehearsal")
+    need = {"collective_building_attributes", "builder_master", "collective_building_assessed_land_price"}
+    assert need <= set(c8.MARTS["collective_stats"])
+
+
 def test_parcel_step_skipped_and_logged_when_copy_missing(c3, monkeypatch):
     ran: list[str] = []
     monkeypatch.setattr(c3, "database_exists", lambda name: False)

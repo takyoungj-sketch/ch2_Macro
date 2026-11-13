@@ -27,7 +27,11 @@ def _diff(x: pd.DataFrame, y: pd.DataFrame, key: list[str]) -> tuple[pd.DataFram
         if col in key or col in VOL or f"{col}_b" not in both:
             continue
         b, a = both[f"{col}_b"], both[f"{col}_a"]
-        d = ~((b.isna() & a.isna()) | (b.astype(str) == a.astype(str)))
+        if pd.api.types.is_numeric_dtype(b) and pd.api.types.is_numeric_dtype(a):
+            # NULL 이 섞이면 정수 열이 float 로 읽혀 문자열 비교가 1234 ≠ 1234.0 으로 거짓 차이를 낸다 → 숫자로 비교
+            d = ~((b.isna() & a.isna()) | (b.astype(float) == a.astype(float)))
+        else:
+            d = ~((b.isna() & a.isna()) | (b.astype(str) == a.astype(str)))
         if d.any():
             changed[col] = int(d.sum())
     return m, changed, int((m["_merge"] == "left_only").sum()), int((m["_merge"] == "right_only").sum())
