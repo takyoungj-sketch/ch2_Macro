@@ -48,7 +48,8 @@ def ensure_raw_link(root: Path = ROOT, main_raw: Path = MAIN_RAW) -> Path:
         return link
     if not main_raw.is_dir():
         raise SystemExit(f"원천 raw 없음: {main_raw}")
-    r = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(main_raw)], capture_output=True, text=True)
+    r = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(main_raw)], capture_output=True, text=True,
+                       encoding="cp949", errors="replace")  # cmd 출력은 시스템 코드 페이지
     if r.returncode != 0 or not link.exists():
         raise SystemExit(f"raw 정션 실패: {r.stderr or r.stdout}")
     return link
