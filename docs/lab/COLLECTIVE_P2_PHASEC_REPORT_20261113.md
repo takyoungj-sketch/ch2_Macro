@@ -22,6 +22,29 @@
 - 런북 반영: 운영 롤백 소요의 대부분은 mart 복원(특히 임대 rolling 2시간 23분)이다. 롤백 대신 「빌더 재실행」이 더 빠른 표가 있으면 Phase D 에서 표별로 고른다. 비교 기준은 원본 DB 가 덤프 시점과 같다는 전제 — 운영에서는 덤프 직후 해시를 저장해 두고 비교한다.
 - 디스크: 끝난 뒤 D 30%·C 38% 여유.
 
+## T 결정 2차 반영 (2026-11-14, 코드·문서만 — 실행 없음)
+
+- **표제부 DB:** 런북 5.0 에 원천 파일로 진짜 `parcel_master` 를 만드는 절차를 넣었다(실제 반영 전에 만든다). `p2r` 사본은 실제 반영에 쓰지 않는다.
+- **운영 전용 데이터(코드 전수 조사):** 운영 API 가 직접 쓰는 표는 4개다. promote 전에 운영에서 떠서 로컬 반영본에 합치는 단계를 런북 6.1 에 넣었다. 조사 근거는 런북 2.5.
+  - `collective_building_geocodes`·`collective_commercial_map_geocodes`·`rent_building_geocodes`(지도 좌표 캐시)
+  - `qa_audit_run`(관리자 QA 기록)
+  - built_stats 에 쓰는 경로는 없다.
+- **C-2 판정 저장:** 집합 DB 표 `collective_building_key_c2_units` 로 옮겼다.
+  - 월간 적재(`import_refined`)가 이 표를 읽는다.
+  - 표가 없거나 비었는데 C-2형이 있으면 월간 검사가 그렇게 경고한다. 비상 해제는 유지했다.
+- **옛 키:** C-2 는 가장 큰 그룹이 옛 키를 유지한다.
+  - 미들웨어는 C-2 옛 키를 409 로 막지 않고 열며, 헤더 `X-CH2-Key-C2-Split` 와 응답 `key_split_c2` 를 붙인다.
+  - C-01 1:N 은 그대로 409. C-01 과 C-2 가 겹치는 경우는 테스트로 확인했다.
+- **범위 드라이런 실제 DB 판:** `scripts/ops/collective_p2_local/scope_dryrun.py`(읽기 전용, 진짜 로컬 DB 이름·localhost 가드, Codex 검토 대상).
+- **PG 버전 해시:**
+  - `prod_hash_compare.py pgcheck`: 작은 표로 hash·sums 를 함께 뜬다. 판정은 「hash 같음 / hash 만 다름 → sums / sums 도 다름 → 멈춤」이다.
+  - `--mode sums`: 행 수 + 열마다 값 있는 행 수 + 숫자 합 + 글자 길이 합.
+  - 런북 3.1.
+- **런북 v3:**
+  - 낮 로컬 적용·검증 → T 확인 → 새벽 promote 만(그 사이 동결).
+  - promote 뒤 `analysis_cache` 비우기.
+  - Insight 14 는 wip 생성기로 비교만 한다.
+
 ## C-2 구현 준비·운영 확인 도구 (T 지시 2026-11-14, 코드·테스트만 — 실행·적용 없음)
 
 - **런북 v2**(`docs/ops/COLLECTIVE_P2_RUNBOOK.md`):
