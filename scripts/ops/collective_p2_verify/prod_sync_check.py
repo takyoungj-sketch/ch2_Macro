@@ -1,0 +1,115 @@
+"""집합 2단계 운영 확인 — 시작 전 동기화(로컬 = 운영) 확인(읽기 전용).
+
+promote 는 DB 를 통째로 바꾸므로, 로컬에 반영하기 **전에** 로컬과 운영이 같은 상태여야 차이가 이번 변경분뿐이다.
+  snapshot : 한 DB 의 public 표마다 행 수 · 최신 as_of_month(있으면) · 원장 표의 최근 4개월 계약월별 거래 수를 JSON 으로.
+  compare  : 두 JSON 비교. 다르면 종료 코드 1.
+
+10초 규칙(T 지시): 큰 표(통계상 행 수 > --heavy-rows, 기본 200만)의 정확한 행 수·as_of·월별 거래 수는 10초를 넘을 수 있다.
+  기본은 실행하지 않고 「승인 필요」로 표시하며 통계 추정 행 수(reltuples)만 남긴다(비교 대상 아님).
+  T 승인 뒤 --allow-heavy 로 실행한다(쿼리마다 --heavy-timeout, 기본 300초). 가벼운 쿼리는 10초 제한.
+예상 소요: 기본(가벼운 것만) DB 마다 1분 안 · --allow-heavy collective 약 3~6분 · rent 약 5~10분 · built 1분(로컬 추정, 운영은 최대 2배).
+
+사용:
+  python prod_sync_check.py snapshot --db-env COLLECTIVE_DATABASE_URL --env-file backend/.env --out local_sync_collective.json
+  python prod_sync_check.py snapshot --db-env COLLECTIVE_DATABASE_URL --env-file /opt/ch2_Macro/backend/.env --out prod_sync_collective.json
+  python prod_sync_check.py compare local_sync_collective.json prod_sync_collective.json
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+from _common import LIGHT_MS, Timed, db_name, db_url, md_table, read_json, ro_conn, table_columns, write_json  # noqa: E402
+
+LEDGERS = ("collective_transactions", "collective_commercial_transactions", "rent_transactions", "built_transactions")
+HEAVY_ROWS = 2_000_000
+
+
+def snapshot(conn, *, allow_heavy: bool, heavy_ms: int = 300_000, heavy_rows: int = HEAVY_ROWS) -> dict:
+    t = Timed()
+    out: dict = {"db": db_name(conn), "tables": {}}
+    stats = t.run(conn, "표 목록·추정 행 수", """
+        SELECT c.relname, greatest(c.reltuples, 0)::bigint
+        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') ORDER BY 1""") or []
+    for tb, est in stats:
+        heavy = int(est) > heavy_rows
+        rec: dict = {"est_rows": int(est), "heavy": heavy}
+        if heavy and not allow_heavy:
+            rec["status"] = "승인 필요(10초 초과 예상) — 추정 행 수만"
+            out["tables"][tb] = rec
+            continue
+        ms = heavy_ms if heavy else LIGHT_MS
+        rec["rows"] = t.run(conn, f"{tb} 행 수", f'SELECT count(*) FROM "{tb}"', fetch="scalar", timeout_ms=ms)
+        cols = table_columns(conn, tb)
+        if "as_of_month" in cols:
+            v = t.run(conn, f"{tb} 최신 as_of", f'SELECT max(as_of_month) FROM "{tb}"', fetch="scalar", timeout_ms=ms)
+            rec["max_as_of_month"] = None if v is None else str(v)
+        if tb in LEDGERS and "contract_date" in cols:
+            rows = t.run(conn, f"{tb} 최근 계약월", f"""
+                SELECT to_char(date_trunc('month', contract_date), 'YYYY-MM'), count(*) FROM "{tb}"
+                WHERE contract_date >= (SELECT date_trunc('month', max(contract_date)) - interval '3 months' FROM "{tb}")
+                GROUP BY 1 ORDER BY 1""", timeout_ms=ms)
+            rec["recent_months"] = None if rows is None else {m: int(n) for m, n in rows}
+        if rec["rows"] is None or ("recent_months" in rec and rec["recent_months"] is None):
+            rec["status"] = "시간 초과(승인 필요)"
+        out["tables"][tb] = rec
+    out["_timings"] = t.log
+    return out
+
+
+def compare(a: dict, b: dict) -> tuple[list[tuple], list[str]]:
+    diff, pending = [], []
+    for tb in sorted(set(a["tables"]) | set(b["tables"])):
+        x, y = a["tables"].get(tb), b["tables"].get(tb)
+        if x is None or y is None:
+            diff.append((tb, "표", "있음" if x else "없음", "있음" if y else "없음"))
+            continue
+        if "status" in x or "status" in y:
+            pending.append(tb)
+        for k in ("rows", "max_as_of_month", "recent_months"):
+            if k in x and k in y and x[k] is not None and y[k] is not None and x[k] != y[k]:
+                diff.append((tb, k, x[k], y[k]))
+    return diff, pending
+
+
+def main(argv=None) -> int:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("snapshot")
+    s.add_argument("--db-env", required=True)
+    s.add_argument("--env-file", type=Path, default=None)
+    s.add_argument("--allow-heavy", action="store_true", help="T 승인 뒤에만: 큰 표 정확한 행 수·월별 거래 수")
+    s.add_argument("--heavy-timeout", type=int, default=300)
+    s.add_argument("--heavy-rows", type=int, default=HEAVY_ROWS)
+    s.add_argument("--out", type=Path, required=True)
+    c = sub.add_parser("compare")
+    c.add_argument("left", type=Path)
+    c.add_argument("right", type=Path)
+    a = p.parse_args(argv)
+    if a.cmd == "snapshot":
+        with ro_conn(db_url(a.db_env, a.env_file)) as conn:
+            snap = snapshot(conn, allow_heavy=a.allow_heavy, heavy_ms=a.heavy_timeout * 1000, heavy_rows=a.heavy_rows)
+        write_json(a.out, snap)
+        need = [k for k, v in snap["tables"].items() if "status" in v]
+        print(f"{snap['db']}: 표 {len(snap['tables'])} · 승인 필요/시간 초과 {len(need)} · "
+              f"{sum(x['sec'] for x in snap['_timings']):,.0f}초 → {a.out}")
+        if need:
+            print("승인 필요: " + ", ".join(need))
+        return 0
+    left, right = read_json(a.left), read_json(a.right)
+    diff, pending = compare(left, right)
+    print(f"{left['db']} vs {right['db']}: 다름 {len(diff)} · 비교 못 함(승인 필요) {len(pending)}")
+    if diff:
+        print(md_table(diff, ["표", "항목", "왼쪽", "오른쪽"]))
+    if pending:
+        print("비교 못 한 표(--allow-heavy 필요): " + ", ".join(pending))
+    return 1 if diff else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
