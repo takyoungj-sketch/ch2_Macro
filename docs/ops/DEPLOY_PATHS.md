@@ -38,3 +38,15 @@
 4. 승인된 실제 재배포가 향후 있다면 그 후 `/toss-review/` 및 보존 manifest의 개별 URL이 404인지 다시 확인한다. 소스 부재·스크립트 검토·dry-run은 실제 재배포 검증과 구분한다.
 
 이번 정리에서는 배포 스크립트 실행, 빌드, 서비스 재시작, nginx reload를 하지 않는다.
+
+## 로컬 worktree 정리 (2026-11-13 추가)
+
+에이전트 작업 worktree(`D:\ch2\ch2_Macro-<작업명>`)에는 원본 checkout 의 큰 폴더를 디렉터리 정션으로 이어 둔 경우가 있다.
+예: 집합 2단계 표제부 리허설의 `raw` → `D:\ch2\ch2_Macro\raw`, 프런트 `node_modules`. 정션 안을 지우면 **원본 파일이 지워진다.**
+
+1. worktree 안의 정션을 찾는다: `cmd /c dir /AL /S <worktree>` (속성 L = 재분석 지점).
+2. **정션은 `rmdir <정션 경로>` 로 먼저 해제한다.** `rmdir /S`·`rm -rf`·`Remove-Item -Recurse` 같은 재귀 삭제는 쓰지 않는다.
+3. 해제 뒤 원본 폴더의 파일 수·전체 크기(필요하면 경로·크기·수정 시각 목록)가 해제 전과 같은지 확인한다.
+4. 그다음에 `git worktree remove <worktree>` 로 worktree 를 지운다.
+
+정션 경로는 `.gitignore`(`raw/`, `node_modules/` 등)에 들어 있어 `git status` 에 보이지 않는다. 보이지 않는다고 없는 것이 아니므로 1번을 건너뛰지 않는다.
