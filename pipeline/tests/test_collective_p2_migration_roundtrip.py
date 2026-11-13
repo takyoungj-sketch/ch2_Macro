@@ -359,6 +359,66 @@ def test_c5_named_key_count_equals_count_distinct(fx):
     assert new == old and new > 0
 
 
+def test_c5_rent_synth_aggregate_equals_rowwise(fx):
+    """c5 임대 합성 주소: 원장 계산 키 한 번 집계 + 조인 = 행 단위 대조(기준). 빈 키·NULL 주소·기간 밖·다른 주소 포함."""
+    import importlib.util
+    import os
+
+    d = Path(__file__).resolve().parents[2] / "scripts" / "lab" / "collective_p2"
+    sys.path.insert(0, str(d))
+    cwd = os.getcwd()
+    try:
+        spec = importlib.util.spec_from_file_location("c5_verify", d / "c5_verify.py")
+        c5 = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(c5)
+    finally:
+        os.chdir(cwd)
+    from rent.stats_pack import BUILDING_KEY_SQL
+
+    eng = fx["eng"]
+    with eng.begin() as c:
+        c.execute(text("""CREATE TABLE c5_rt (id serial, building_key text, asset_type text, addr1 text, addr2 text, addr3 text,
+            addr4 text, addr5 text, beopjungri_code text, lot_number text, road_name text, display_name text, building_name text,
+            contract_date date, is_valid bool)"""))
+        c.execute(text("""CREATE TABLE c5_rbs (as_of_month date, window_years int, period_start date, period_end date,
+            building_key text, asset_type text, addr3 text, addr4 text, addr5 text, beopjungri_code text, lot_number text,
+            road_name text)"""))
+        c.execute(text("""INSERT INTO c5_rt (building_key, asset_type, addr1, addr2, addr3, addr4, addr5, beopjungri_code,
+            lot_number, road_name, display_name, building_name, contract_date, is_valid) VALUES
+            ('K1','apartment','서울특별시','강남구','역삼동',NULL,NULL,'1168010100','1','로','가','가','2025-01-01',true),
+            ('',  'rowhouse','서울특별시','강남구','역삼동',NULL,NULL,'1168010100','7','로2','나','나','2025-02-01',true),
+            (NULL,'rowhouse','서울특별시','강남구','역삼동',NULL,NULL,'1168010100','8',NULL,'다','다','2025-02-01',true),
+            ('K3','apartment','서울특별시','강남구','역삼동',NULL,NULL,'1168010100','3','로','라','라','2019-01-01',true),
+            ('K4','apartment','서울특별시','강남구','역삼동',NULL,NULL,'1168010100','4','로','마','마','2025-01-01',false)"""))
+        blank = [r[0] for r in c.execute(text(f"SELECT {BUILDING_KEY_SQL} FROM c5_rt WHERE COALESCE(building_key,'')='' ORDER BY id"))]
+        rows = [
+            ("K1", "apartment", "역삼동", None, None, "1168010100", "1", "로"),          # 있음
+            ("K1", "apartment", "역삼동", None, None, "1168010100", "9", "로"),          # 다른 지번 → 합성
+            (blank[0], "rowhouse", "역삼동", None, None, "1168010100", "7", "로2"),      # 빈 키 → 계산 키로 찾음
+            (blank[1], "rowhouse", "역삼동", None, None, "1168010100", "8", None),       # 빈 키 + NULL 도로명
+            ("K3", "apartment", "역삼동", None, None, "1168010100", "3", "로"),          # 기간 밖 → 합성
+            ("K4", "apartment", "역삼동", None, None, "1168010100", "4", "로"),          # 무효 거래만 → 합성
+        ]
+        for w, (ps, pe) in ((3, ("2023-11-01", "2026-10-31")), (7, ("2018-11-01", "2026-10-31"))):
+            for r in rows:
+                c.execute(text("""INSERT INTO c5_rbs VALUES ('2026-10-01', :w, :ps, :pe, :k, :at, :a3, :a4, :a5, :b, :l, :rd)"""),
+                          {"w": w, "ps": ps, "pe": pe, "k": r[0], "at": r[1], "a3": r[2], "a4": r[3], "a5": r[4], "b": r[5],
+                           "l": r[6], "rd": r[7]})
+    try:
+        with eng.connect() as c:
+            p = {"a": "2026-10-01"}
+            new = dict(c.execute(text(c5.rent_synth_sql("c5_rt", "c5_rbs")), p).all())
+            ref = dict(c.execute(text(c5.rent_synth_rowwise_sql("c5_rt", "c5_rbs")), p).all())
+            # 옛 c5 쿼리(원장 열 building_key 로 대조)는 빈 키 행 2개를 합성으로 잘못 센다
+            raw = c5.rent_synth_rowwise_sql("c5_rt", "c5_rbs").replace("t.bk = m.building_key", "t.building_key = m.building_key")
+            old = dict(c.execute(text(raw), p).all())
+        assert new == ref == {3: 3, 7: 2}
+        assert old == {3: 5, 7: 4}
+    finally:
+        with eng.begin() as c:
+            c.execute(text("DROP TABLE IF EXISTS c5_rt, c5_rbs"))
+
+
 def test_deal_type_apply_and_rollback(fx):
     eng = fx["eng"]
     with eng.begin() as c:

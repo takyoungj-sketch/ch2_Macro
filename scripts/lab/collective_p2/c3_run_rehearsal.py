@@ -61,6 +61,9 @@ def step_list():
         ("dealtype_apply", P(pipe / "collective" / "fix_p2_deal_types.py", "--collective-db", DBS["collective"],
                              "--raw-root", MAIN / "raw", "--logs-dir", MAIN / "logs", "--apply")),
         ("building_stats", P(pipe / "build_collective_building_stats.py", *w, "--replace-as-of", "--prune-annual")),
+        # T 조건부 승인(2026-11-13): 2019~2020 annual 분할 옛 키 행 — 옛 count = 새 조각 합일 때만 삭제(보존 표)
+        ("split_annual_prune", P(pipe / "collective" / "prune_split_annual_p2.py", "--collective-db", DBS["collective"],
+                                 "--apply", "--mismatch-csv", OUT / "c13_split_annual_mismatch.csv")),
         ("building_rolling", P(pipe / "build_collective_building_rolling_stats.py", *w, "--replace-as-of")),
         ("presale_lifetime", P(pipe / "build_collective_presale_lifetime_stats.py", "--as-of", AS_OF, "--replace")),
         ("market_stats", P(pipe / "build_collective_market_stats.py", *w)),

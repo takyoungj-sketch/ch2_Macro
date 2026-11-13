@@ -26,6 +26,50 @@ NAMED_KEY_COUNT_SQL = ("select count(*) from (select building_key from collectiv
                        "where coalesce(building_name,'')<>'' group by building_key) z")
 TIMEOUT_MS = 3_600_000  # 원본·리허설 원장 전체 집계(각 6.6M행)
 
+# 임대 mart 합성 주소 행: mart (키·유형·대표 주소 6칸)과 같은 조합의 유효 거래가 그 창 기간에 하나도 없으면 합성.
+# mart 키는 빌더와 같은 계산 키(빈 키 → 주소 해시)라 원장도 같은 식으로 계산한다.
+_REP = ("addr3", "addr4", "addr5", "beopjungri_code", "lot_number", "road_name")
+
+
+def _rent_key_sql() -> str:
+    from rent.stats_pack import BUILDING_KEY_SQL
+
+    return BUILDING_KEY_SQL
+
+
+def rent_synth_rowwise_sql(tx: str = "rent_transactions", mart: str = "rent_building_stats") -> str:
+    """기준(행 단위 대조): mart 행마다 원장 존재 확인. 정의는 분명하지만 운영 크기에서 1시간 넘음."""
+    rep = " and ".join(f"t.{c} is not distinct from m.{c}" for c in _REP)
+    return f"""
+        with m as (select window_years, period_start, period_end, building_key, asset_type, {", ".join(_REP)}
+                   from {mart} where as_of_month = :a)
+        select m.window_years, count(*) filter (where not exists (
+            select 1 from (select {_rent_key_sql()} as bk, * from {tx}) t
+            where t.bk = m.building_key and t.asset_type = m.asset_type and t.is_valid
+              and t.contract_date between m.period_start and m.period_end and {rep}))
+        from m group by 1"""
+
+
+def rent_synth_sql(tx: str = "rent_transactions", mart: str = "rent_building_stats") -> str:
+    """새 방식: 창 기간마다 원장을 (계산 키·유형·대표 주소)로 한 번 집계 → mart 와 키 `=` 해시 조인(주소 칸은 NULL 같음 비교)."""
+    cols = ", ".join(_REP)
+    rep = " and ".join(f"g.{c} is not distinct from m.{c}" for c in _REP)
+    # g 는 MATERIALIZED(한 번 집계) — 인라인되면 플래너가 mart 행마다 원장을 훑는 상관 하위 계획을 만든다.
+    # g 는 대표 주소 6칸까지 묶었으므로 mart 행 하나에 맞는 g 행은 많아야 하나 → LEFT JOIN 후 짝 없는 행 수.
+    return f"""
+        with m as (select window_years, period_start, period_end, building_key, asset_type, {cols}
+                   from {mart} where as_of_month = :a),
+             p as materialized (select distinct window_years, period_start, period_end from m),
+             g as materialized (
+                   select p.window_years, {_rent_key_sql()} as bk, t.asset_type, {", ".join("t." + c for c in _REP)}
+                   from {tx} t join p on t.contract_date between p.period_start and p.period_end
+                   where t.is_valid
+                   group by 1, 2, 3, {", ".join(str(i + 4) for i in range(len(_REP)))})
+        select m.window_years, count(*) filter (where g.bk is null)
+        from m left join g on g.window_years = m.window_years and g.bk = m.building_key
+                          and g.asset_type = m.asset_type and {rep}
+        group by 1"""
+
 
 def add(name, before, after, ok, note=""):
     rows.append(("OK" if ok else "NG", name, before, after, note))
@@ -160,14 +204,9 @@ def main():
         add("rent_transactions 행 수", x, y, x == y)
         x, y = (one(c, "select count(*) from rent_transactions where building_key = any(:k)", k=list(units)) for c in (cb, ca))
         add("임대 분할 대상 옛 키 행", x, y, y == 0)
-        syn = {int(r[0]): int(r[1]) for r in ca.execute(text("""
-            with m as (select window_years, period_start, period_end, building_key, asset_type, addr3, addr4, addr5, beopjungri_code, lot_number, road_name
-                       from rent_building_stats where as_of_month=:a)
-            select m.window_years, count(*) filter (where not exists (select 1 from rent_transactions t where t.building_key=m.building_key
-              and t.asset_type=m.asset_type and t.is_valid and t.contract_date between m.period_start and m.period_end
-              and t.addr3 is not distinct from m.addr3 and t.addr4 is not distinct from m.addr4 and t.addr5 is not distinct from m.addr5
-              and t.beopjungri_code is not distinct from m.beopjungri_code and t.lot_number is not distinct from m.lot_number
-              and t.road_name is not distinct from m.road_name)) from m group by 1"""), {"a": AS_OF}).all()}
+        # 행마다 원장 열 building_key 로 찾던 옛 쿼리는 계산 키 행(원장 빈 키 367만)을 못 찾아 1시간 제한을 넘기고
+        # 그 행을 합성으로 잘못 셌다 → 원장도 계산 키로 한 번 집계해 조인(rent_synth_sql, 행 단위 기준과 같음을 테스트)
+        syn = {int(r[0]): int(r[1]) for r in ca.execute(text(rent_synth_sql()), {"a": AS_OF}).all()}
         add("임대 mart 합성 주소 행 3/5/7", "2,836/4,037/4,714(A-3)", str(syn), all(v == 0 for v in syn.values()))
         x, y = one(cb, "select count(*) from rent_sale_building_map"), one(ca, "select count(*) from rent_sale_building_map")
         add("rent_sale_building_map 행", x, y, True, "c7 에서 연결 실측")
