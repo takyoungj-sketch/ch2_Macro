@@ -9,8 +9,9 @@ verify_monthly_integrity.py --collective 에서 부른다. 단독 실행도 된�
      동 이름 = addr4(리 아님) 아니면 addr3. 화성 코드 변형처럼 이름이 하나면 해당 없음.
   3. annual 시도·연도·유형 합(count) = 원장 합(2019~)                                   → ERR
   4. (--deep) 최신 as_of building_stats 주소 세트가 그 창의 거래에 실제로 있는지(합성 주소 0) → ERR
-  5. C-2형: 같은 키·같은 법정동 안에서 본번이 다르고 건축년도도 다른 3건+ 묶음이 있는 키 중 C-2 판정 파일 밖 → WARN
-     (C-2 반영 뒤 기대 0). 판정 파일의 분할 키에서 파일에 없는 본번(적재 때 가까운 조각에 붙은 것 등) → WARN 「확인 필요」
+  5. C-2형: 같은 키·같은 법정동 안에서 본번이 다르고 건축년도도 다른 3건+ 묶음이 있는 키 중 C-2 판정 표
+     (collective_building_key_c2_units) 밖 → WARN(C-2 반영 뒤 기대 0). 표가 없거나 비었는데 C-2형이 있으면 그렇게 경고.
+     판정 표의 분할 키에서 표에 없는 본번(적재 때 가까운 조각에 붙은 것 등) → WARN 「확인 필요」
 """
 from __future__ import annotations
 
@@ -26,7 +27,13 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "pipeline"))
 
 from admin_names import LEGACY_SIDO_TO_CURRENT  # noqa: E402
-from collective.building_keys import SPLIT_UNITS_PATH, judged_keys_c2, load_split_units_c2, main_lot_of  # noqa: E402
+from collective.building_keys import (  # noqa: E402
+    SPLIT_UNITS_PATH,
+    c2_table_state,
+    judged_keys_c2,
+    load_split_units_c2,
+    main_lot_of,
+)
 
 LEGACY = sorted(LEGACY_SIDO_TO_CURRENT)
 
@@ -96,20 +103,24 @@ GROUP BY 1, 2, 3
 """
 
 
-def check_c2_shape(rep, cconn, *, units_path: Path | None = None) -> None:
-    """5. C-2형 경고(실패 아님). 출력은 키 앞 12자·법정동 코드·건수만(지번 없음)."""
+def check_c2_shape(rep, cconn) -> None:
+    """5. C-2형 경고(실패 아님). 판정은 집합 DB 표 collective_building_key_c2_units. 출력은 키 앞 12자·법정동 코드·건수만."""
     from sqlalchemy import bindparam
 
-    judged = judged_keys_c2(units_path)
+    state, n_rows = c2_table_state(cconn)
+    judged = judged_keys_c2(cconn)
     rows = cconn.execute(text(C2_SHAPE_SQL)).all()
     pend = [r for r in rows if r[0] not in judged]
-    if pend:
-        rep.warn(f"C-2형(같은 법정동·다른 본번·다른 건축년도 3건+) 판정 밖 {len(pend):,}곳(키·법정동) — 판정 대기")
-        for k, a, bjd in pend[:10]:
-            rep.info(f"{a} {bjd} {k[:12]}…")
+    if pend and state != "ok":
+        rep.warn(f"C-2 판정 표 {'없음' if state == 'missing' else '비어 있음'} — C-2형(같은 법정동·다른 본번·다른 건축년도 3건+) "
+                 f"{len(pend):,}곳(키·법정동)이 판정 없이 남음")
+    elif pend:
+        rep.warn(f"C-2형 판정 밖 {len(pend):,}곳(키·법정동) — 판정 대기(판정 표 {n_rows:,}행)")
     else:
-        rep.ok(f"C-2형 (키·법정동) {len(rows):,}곳 모두 판정 목록 안")
-    units = load_split_units_c2(units_path)
+        rep.ok(f"C-2형 (키·법정동) {len(rows):,}곳 모두 판정 표 안")
+    for k, a, bjd in pend[:10]:
+        rep.info(f"{a} {bjd} {k[:12]}…")
+    units = load_split_units_c2(cconn)
     if not units:
         return
     got = cconn.execute(text(C2_LOTS_SQL).bindparams(bindparam("k", expanding=True)), {"k": sorted(units)}).all()
@@ -121,9 +132,9 @@ def check_c2_shape(rep, cconn, *, units_path: Path | None = None) -> None:
         if main_lot_of(ml) not in {f[0] for f in frags}:
             unknown[(k, str(bjd))] = unknown.get((k, str(bjd)), 0) + 1
     if unknown:
-        rep.warn(f"C-2 분할 키의 판정 파일에 없는 본번 {sum(unknown.values()):,}개 ({len(unknown):,}곳) — 확인 필요")
+        rep.warn(f"C-2 분할 키의 판정 표에 없는 본번 {sum(unknown.values()):,}개 ({len(unknown):,}곳) — 확인 필요")
     else:
-        rep.ok("C-2 분할 키의 본번이 모두 판정 파일 안")
+        rep.ok("C-2 분할 키의 본번이 모두 판정 표 안")
 
 
 class _Rep(Protocol):

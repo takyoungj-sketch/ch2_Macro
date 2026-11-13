@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-from sqlalchemy import bindparam, text
+from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from region_mapping import attach_beopjungri_codes, clean_code_columns, log_mapping_coverage
@@ -29,9 +29,8 @@ from region_mapping import attach_beopjungri_codes, clean_code_columns, log_mapp
 from building_keys import (
     _sha256_series,
     apply_building_key_split,
-    apply_building_key_split_c2,
+    apply_c2_split_from_db,
     attach_building_identity,
-    load_split_units_c2,
 )
 from collective.db_utils import get_collective_engine, get_land_engine_for_region_copy
 from refine import InputKind, detect_input_kind, read_source_file, refine_dataframe
@@ -364,28 +363,10 @@ def _insert_records(engine, records: list[dict]) -> int:
     return inserted
 
 
-def _existing_main_lot_counts(engine, df: pd.DataFrame, units: dict) -> dict[tuple[str, str, str], int]:
-    """C-2 판정 키·법정동의 기존 원장 본번별 거래 수(처음 보는 본번의 3건 판정용). 판정 키가 배치에 없으면 조회 안 함."""
-    keys = sorted(set(df["building_key"]) & set(units))
-    if not keys:
-        return {}
-    with engine.connect() as conn:
-        rows = conn.execute(text(
-            "SELECT building_key, left(beopjungri_code, 10), split_part(btrim(lot_number), '-', 1), count(*) "
-            "FROM collective_transactions WHERE building_key IN :k AND coalesce(btrim(lot_number), '') <> '' "
-            "GROUP BY 1, 2, 3").bindparams(bindparam("k", expanding=True)), {"k": keys}).all()
-    from building_keys import main_lot_of
-
-    return {(k, str(c), main_lot_of(m)): int(n) for k, c, m, n in rows}
-
-
 def _apply_c2_split(engine, df: pd.DataFrame, asset_type: str) -> pd.DataFrame:
-    """C-2 판정 파일이 있을 때만 동작(없거나 비상 해제면 그대로). 확인 필요 건수는 로그로만 남긴다(지번 없음)."""
-    units = load_split_units_c2()
-    if not units or df.empty:
-        return df
-    out = apply_building_key_split_c2(df, asset_type, units=units,
-                                      existing_counts=_existing_main_lot_counts(engine, df, units))
+    """C-2 판정 표(collective_building_key_c2_units)가 있을 때만 동작 — building_keys.apply_c2_split_from_db.
+    확인 필요 건수는 로그로만 남긴다(지번 없음)."""
+    out = apply_c2_split_from_db(engine, df, asset_type)
     review = out.attrs.get("c2_review") or []
     if review:
         log.warning("c2 split: 3건 미만 새 본번을 가장 가까운 조각에 붙임 — 확인 필요 (키·법정동) %d곳, %d행",

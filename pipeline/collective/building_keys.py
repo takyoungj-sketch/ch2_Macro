@@ -249,16 +249,32 @@ def derive_building_key(
 # ---------------------------------------------------------------------------
 # 집합 2단계 C-2: 같은 법정동 안 동명 다른 건물(본번·건축년도) 분할
 # ---------------------------------------------------------------------------
-# 판정 파일(C-01 의 p2_split_units.csv 와 같은 방식). 열:
-#   base_key, asset_type, beopjungri_code(10), main_lot, building_year, part, decision
-#   decision=split: 그 (키·법정동) 의 본번 조각. part 0 = 본 조각(키 유지), 1.. = 새 키.
-#   decision=keep : 판정 결과 유지(조각 열 비움). 월간 경고 검사의 「판정 끝남」 목록으로만 쓴다.
-# 본번이 들어 있으므로 파일을 저장소에 둘지(지번 취급)는 T·Codex 결정 — 경로는 환경변수로 바꿀 수 있다.
-SPLIT_UNITS_C2_PATH = Path(__file__).resolve().parent / "data" / "p2_split_units_c2.csv"
+# 판정은 집합 DB 표 collective_building_key_c2_units 에 둔다(본번이 들어 있어 저장소 파일로 두지 않음 — T 결정 2026-11-14).
+#   base_key, asset_type, beopjungri_code(10), main_lot, building_year, part, decision, source, decided_at, note
+#   decision=split: 그 (키·법정동) 의 본번 조각. part 0 = 본 조각(가장 큰 그룹, 옛 키 유지), 1.. = 새 키.
+#   decision=keep : 판정 결과 유지(본번 열 ''). 월간 경고 검사의 「판정 끝남」 목록으로만 쓴다.
+C2_TABLE = "collective_building_key_c2_units"
+C2_DDL = """
+CREATE TABLE IF NOT EXISTS collective_building_key_c2_units (
+    base_key        varchar(64) NOT NULL,
+    asset_type      varchar(16) NOT NULL,
+    beopjungri_code varchar(10) NOT NULL,
+    main_lot        varchar(16) NOT NULL DEFAULT '',
+    building_year   integer,
+    part            integer,
+    decision        varchar(8)  NOT NULL CHECK (decision IN ('split', 'keep')),
+    source          varchar(32),
+    decided_at      timestamptz NOT NULL DEFAULT now(),
+    note            text,
+    PRIMARY KEY (base_key, beopjungri_code, main_lot),
+    CHECK (decision = 'keep' OR (part IS NOT NULL AND main_lot <> ''))
+)
+"""
 C2_SUFFIX = "|c2:"
 C2_ENV_OFF = "CH2_COLLECTIVE_KEY_SPLIT_C2"
-C2_ENV_PATH = "CH2_COLLECTIVE_KEY_SPLIT_C2_PATH"
 C2_MIN_TX = 3
+
+C2Units = dict[str, dict[str, list[tuple[str, "int | None", int]]]]
 
 
 def main_lot_of(lot: object) -> str:
@@ -282,41 +298,58 @@ def _year(y: object) -> int | None:
         return None
 
 
-def load_split_units_c2(path: str | Path | None = None) -> dict[str, dict[str, list[tuple[str, int | None, int]]]]:
-    """base_key → {법정동10: [(본번, 건축년도, 조각 번호)]}. decision=split 행만. 비상 해제·파일 없음이면 {}."""
-    if os.environ.get(C2_ENV_OFF, "1") == "0":
-        return {}
-    p = Path(path or os.environ.get(C2_ENV_PATH) or SPLIT_UNITS_C2_PATH)
-    if not p.is_file():
-        return {}
-    out: dict[str, dict[str, list[tuple[str, int | None, int]]]] = {}
-    with p.open(encoding="utf-8", newline="") as f:
-        for row in csv.DictReader(f):
-            if row.get("decision") != "split":
-                continue
-            out.setdefault(row["base_key"], {}).setdefault(str(row["beopjungri_code"]).strip(), []).append(
-                (main_lot_of(row["main_lot"]), _year(row.get("building_year")), int(row["part"])))
+def units_from_rows(rows) -> C2Units:
+    """(base_key, beopjungri_code, main_lot, building_year, part, decision) 행들 → base_key → {법정동10: [(본번, 연도, 조각)]}."""
+    out: C2Units = {}
+    for base_key, bjd, main_lot, year, part, decision in rows:
+        if decision != "split":
+            continue
+        out.setdefault(str(base_key), {}).setdefault(str(bjd).strip()[:10], []).append(
+            (main_lot_of(main_lot), _year(year), int(part)))
     return out
 
 
-def judged_keys_c2(path: str | Path | None = None) -> set[str]:
-    """C-2 판정이 끝난 키(분할·유지 모두). 월간 경고 검사에서 뺄 목록."""
-    p = Path(path or os.environ.get(C2_ENV_PATH) or SPLIT_UNITS_C2_PATH)
-    if not p.is_file():
+def c2_table_state(conn) -> tuple[str, int]:
+    """('missing' | 'empty' | 'ok', 판정 행 수)."""
+    from sqlalchemy import text
+
+    if not conn.execute(text("SELECT to_regclass(:t) IS NOT NULL"), {"t": f"public.{C2_TABLE}"}).scalar():
+        return "missing", 0
+    n = int(conn.execute(text(f"SELECT count(*) FROM {C2_TABLE}")).scalar() or 0)
+    return ("ok" if n else "empty"), n
+
+
+def load_split_units_c2(conn) -> C2Units:
+    """집합 DB 의 C-2 판정 표에서 decision=split 행. 비상 해제(CH2_COLLECTIVE_KEY_SPLIT_C2=0)·표 없음이면 {}."""
+    if os.environ.get(C2_ENV_OFF, "1") == "0" or conn is None:
+        return {}
+    from sqlalchemy import text
+
+    if c2_table_state(conn)[0] != "ok":
+        return {}
+    return units_from_rows(conn.execute(text(
+        f"SELECT base_key, beopjungri_code, main_lot, building_year, part, decision FROM {C2_TABLE} "
+        "WHERE decision = 'split'")).all())
+
+
+def judged_keys_c2(conn) -> set[str]:
+    """C-2 판정이 끝난 키(분할·유지 모두). 월간 경고 검사에서 뺄 목록. 표가 없으면 빈 집합."""
+    from sqlalchemy import text
+
+    if conn is None or c2_table_state(conn)[0] == "missing":
         return set()
-    with p.open(encoding="utf-8", newline="") as f:
-        return {r["base_key"] for r in csv.DictReader(f) if r.get("decision") in ("split", "keep")}
+    return {str(r[0]) for r in conn.execute(text(f"SELECT DISTINCT base_key FROM {C2_TABLE}"))}
 
 
 def resolve_c2_part(frags: list[tuple[str, int | None, int]], main_lot: str, year: int | None,
                     n_lot_total: int) -> tuple[str, bool]:
     """행 하나의 C-2 조각 라벨과 「확인 필요」 여부.
 
-    1) 판정 파일에 있는 본번 → 그 조각
+    1) 판정 표에 있는 본번 → 그 조각
     2) 처음 보는 본번: 같은 건축년도 조각이 있으면 그 조각(여럿이면 본번이 가장 가까운 것)
     3) 없고 그 본번 거래(이번 배치 + 기존 원장)가 3건 이상 → 새 조각(라벨 m<본번>, 매달 같은 키)
     4) 3건 미만 → 본번이 가장 가까운 조각에 붙이고 확인 필요
-    라벨: 'p<n>' = 판정 파일 조각, 'm<본번>' = 적재 때 생긴 조각. 'p0' 은 본 조각(키 유지).
+    라벨: 'p<n>' = 판정 표 조각, 'm<본번>' = 적재 때 생긴 조각. 'p0' 은 본 조각(키 유지).
     """
     for m, _y, part in frags:
         if m == main_lot:
@@ -358,19 +391,20 @@ def apply_building_key_split_c2(
     df: pd.DataFrame,
     asset_type: str,
     *,
-    units: dict | None = None,
+    units: C2Units | None = None,
     c01_units: dict | None = None,
     existing_counts: dict[tuple[str, str, str], int] | None = None,
     code_col: str = "beopjungri_code",
 ) -> pd.DataFrame:
     """C-01 분할(apply_building_key_split) 뒤에 호출. C-2 판정 키의 그 법정동 행만 본번·건축년도로 조각을 정한다.
 
+    - units: load_split_units_c2(conn) 결과(집합 DB 판정 표). 비거나 None 이면 그대로 돌려준다.
+
     - 판정 목록 밖 키, 목록 키의 다른 법정동 행, 본 조각(p0) 행은 키 그대로.
     - 분양권은 대상이 아니다(블록 지번).
     - existing_counts: (키, 법정동10, 본번) → 기존 원장 거래 수(처음 보는 본번의 3건 판정용). 없으면 이번 배치만 센다.
     - 확인 필요 행은 df.attrs['c2_review'] 에 (키, 법정동10, 행 수) 요약으로 남긴다(지번은 남기지 않음).
     """
-    units = load_split_units_c2() if units is None else units
     if not units or df.empty or "building_key" not in df.columns or asset_type == _PRESALE_KEY_ASSET:
         return df
     codes = df[code_col].astype(str).str.strip().str[:10] if code_col in df.columns else pd.Series("", index=df.index)
@@ -406,3 +440,30 @@ def apply_building_key_split_c2(
     out.loc[hit, "building_key"] = new_keys
     out.attrs["c2_review"] = [{"building_key": k, "beopjungri_code": c, "rows": n} for (k, c), n in review.items()]
     return out
+
+
+def existing_main_lot_counts(conn, keys: list[str]) -> dict[tuple[str, str, str], int]:
+    """C-2 판정 키의 기존 원장 (키, 법정동10, 본번) 거래 수 — 처음 보는 본번의 3건 판정용."""
+    if not keys:
+        return {}
+    from sqlalchemy import bindparam, text
+
+    rows = conn.execute(text(
+        "SELECT building_key, left(beopjungri_code, 10), split_part(btrim(lot_number), '-', 1), count(*) "
+        "FROM collective_transactions WHERE building_key IN :k AND coalesce(btrim(lot_number), '') <> '' "
+        "GROUP BY 1, 2, 3").bindparams(bindparam("k", expanding=True)), {"k": keys}).all()
+    return {(str(k), str(c), main_lot_of(m)): int(n) for k, c, m, n in rows}
+
+
+def apply_c2_split_from_db(engine, df: pd.DataFrame, asset_type: str) -> pd.DataFrame:
+    """월간 적재용: 집합 DB 의 C-2 판정 표를 읽어 apply_building_key_split_c2 를 적용한다.
+    표가 없거나 비었거나 비상 해제면 그대로 돌려준다. 판정 키가 배치에 없으면 원장을 조회하지 않는다."""
+    if df.empty or engine is None:
+        return df
+    with engine.connect() as conn:
+        units = load_split_units_c2(conn)
+        if not units:
+            return df
+        keys = sorted(set(df["building_key"].astype(str)) & set(units)) if "building_key" in df.columns else []
+        counts = existing_main_lot_counts(conn, keys)
+    return apply_building_key_split_c2(df, asset_type, units=units, existing_counts=counts)

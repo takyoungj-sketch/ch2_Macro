@@ -152,3 +152,120 @@ def test_ai_floor_tool_does_not_pick_a_split_candidate(monkeypatch):
     text = _fmt_impossible(env)
     assert "여러 단지로 나뉘었습니다" in text and "우암동" in text and "내수읍" in text
     assert "유효표본" not in text
+
+
+# --- C-2: 가장 큰 그룹이 옛 키를 유지 → 막지 않고 열되 「분리된 단지 있음」을 붙인다 ---------------------
+
+K = "1" * 64        # C-01 1:N 옛 키
+K1, K2 = "2" * 64, "3" * 64   # C-01 새 키(동 단위)
+K1A = "4" * 64      # K1 의 C-2 조각
+H_OLD, H_NEW, H_C2 = "5" * 64, "6" * 64, "7" * 64   # 호남 1:1 → 새 키에 C-2
+C2ONLY, C2A, C2B = "8" * 64, "9" * 64, "0" * 64
+
+C2MAPS = {"collective": {
+    K: [(K1, 1, 30), (K2, 2, 10)],                       # C-01 분할(409 유지)
+    K1: [(K1A, 1, 6, "c2")],                             # C-01 새 키가 C-2 옛 키
+    H_OLD: [(H_NEW, 0, 5)], H_NEW: [(H_C2, 1, 4, "c2")],  # 1:1 뒤 C-2
+    C2ONLY: [(C2A, 1, 8, "c2"), (C2B, 2, 3, "c2")],
+}}
+
+
+def _c2_app():
+    app = FastAPI()
+
+    @app.get("/api/collective/buildings/{key}/stats/rolling")
+    def rolling(key: str):
+        return {"key": key}
+
+    @app.get("/api/collective/buildings/{key}/list")
+    def as_list(key: str):
+        return [key]
+
+    @app.get("/api/collective/buildings")
+    def lst(request: Request):
+        return {"q": dict(request.query_params)}
+
+    cache = KeyMapCache(loader=lambda name: C2MAPS.get(name, {}), ttl=0)
+    det = lambda a, ks: {C2A: {"display_name": "가동빌라"}}  # noqa: E731
+    app.add_middleware(KeyRemapMiddleware, cache=cache, details=det)
+    return TestClient(app)
+
+
+def test_c2_old_key_opens_largest_group_with_siblings_note():
+    c = _c2_app()
+    r = c.get(f"/api/collective/buildings/{C2ONLY}/stats/rolling")
+    assert r.status_code == 200
+    d = r.json()
+    assert d["key"] == C2ONLY                                    # 옛 키 그대로(가장 큰 그룹)
+    note = d["key_split_c2"]
+    assert note["status"] == "has_split_siblings" and note["building_key"] == C2ONLY
+    assert note["new_keys"] == [C2A, C2B] and note["candidates"][0]["display_name"] == "가동빌라"
+    assert r.headers["x-ch2-key-c2-split"] == f"{C2ONLY}:{C2A}|{C2B}"
+    assert "x-ch2-key-remapped" not in r.headers
+    assert int(r.headers["content-length"]) == len(r.content)
+    # JSON 객체가 아니면 본문은 그대로, 헤더만
+    r = c.get(f"/api/collective/buildings/{C2ONLY}/list")
+    assert r.json() == [C2ONLY] and r.headers["x-ch2-key-c2-split"].startswith(C2ONLY)
+    # query building_key 도 같은 안내
+    r = c.get(f"/api/collective/buildings?building_key={C2ONLY}")
+    assert r.json()["q"] == {"building_key": C2ONLY} and r.json()["key_split_c2"]["new_keys"] == [C2A, C2B]
+
+
+def test_c01_and_c2_overlap():
+    c = _c2_app()
+    # C-01 1:N 옛 키는 그대로 409(C-2 가 있어도)
+    r = c.get(f"/api/collective/buildings/{K}/stats/rolling")
+    assert r.status_code == 409 and [x["building_key"] for x in r.json()["candidates"]] == [K1, K2]
+    # C-01 새 키가 C-2 옛 키 → 그 키로 열고 C-2 안내
+    r = c.get(f"/api/collective/buildings/{K1}/stats/rolling")
+    assert r.status_code == 200 and r.json()["key"] == K1 and r.json()["key_split_c2"]["new_keys"] == [K1A]
+    # 다른 C-01 새 키는 안내 없음
+    r = c.get(f"/api/collective/buildings/{K2}/stats/rolling")
+    assert r.json() == {"key": K2} and "x-ch2-key-c2-split" not in r.headers
+    # 호남 1:1 로 바뀐 키가 C-2 옛 키 → 두 처리 모두
+    r = c.get(f"/api/collective/buildings/{H_OLD}/stats/rolling")
+    assert r.json()["key"] == H_NEW and r.json()["key_split_c2"]["new_keys"] == [H_C2]
+    assert r.headers["x-ch2-key-remapped"] == f"{H_OLD}->{H_NEW}"
+    assert r.headers["x-ch2-key-c2-split"] == f"{H_NEW}:{H_C2}"
+
+
+def test_resolve_key_reports_c2_and_keeps_c01_split():
+    from app.collective.key_remap import resolve_key
+
+    cache = KeyMapCache(loader=lambda name: C2MAPS.get(name, {}), ttl=0)
+    nod = lambda a, ks: {}  # noqa: E731
+    assert resolve_key("collective", K, cache=cache, details=nod)["status"] == "split"
+    r = resolve_key("collective", K1, cache=cache, details=nod)
+    assert r["status"] == "ok" and r["building_key"] == K1 and r["key_split_c2"]["new_keys"] == [K1A]
+    r = resolve_key("collective", H_OLD, cache=cache, details=nod)
+    assert r["status"] == "remapped" and r["building_key"] == H_NEW and r["key_split_c2"]["new_keys"] == [H_C2]
+    assert "key_split_c2" not in resolve_key("collective", K2, cache=cache, details=nod)
+
+
+def test_loader_marks_c2_rows_from_reason():
+    from app.collective import key_remap as kr
+
+    class _Res(list):
+        def scalar(self):
+            return True
+
+    class _Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def execute(self, stmt, params=None):
+            if "to_regclass" in str(stmt):
+                return _Res()
+            return _Res([(K, K1, 1, 30, "split"), (K, K2, 2, 10, "split"), (K1, K1A, 1, 6, "c2_split"),
+                         (H_OLD, H_NEW, 0, 5, "honam_sido")])
+
+    class _Eng:
+        def connect(self):
+            return _Conn()
+
+    m = kr._load_from_engine(_Eng(), "collective_building_key_map")
+    assert m[K] == [(K1, 1, 30, ""), (K2, 2, 10, "")]
+    assert m[K1] == [(K1A, 1, 6, "c2")] and m[H_OLD] == [(H_NEW, 0, 5, "")]

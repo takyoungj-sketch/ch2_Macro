@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """집합 2단계 C-2 — 같은 법정동 안 본번·건축년도 조각 배정(적재 규칙)과 월간 C-2형 경고 검사.
 
-판정 파일 값은 Cursor 확인 뒤 채운다. 여기서는 규칙 코드만 고정한다.
+판정은 집합 DB 표 collective_building_key_c2_units(값은 Cursor 확인 뒤). 여기서는 규칙 코드만 고정한다.
 """
 from __future__ import annotations
 
@@ -91,21 +91,14 @@ def test_unlisted_keys_other_dong_and_presale_unchanged(units):
                                           c01_units={}).equals(pre)
 
 
-def test_emergency_off_and_missing_file_return_original(units, monkeypatch, tmp_path):
+def test_units_from_rows_and_emergency_off(units, monkeypatch):
     key, u = units
-    f = tmp_path / "c2.csv"
-    pd.DataFrame([{"base_key": key, "asset_type": "rowhouse", "beopjungri_code": BJD, "main_lot": "50",
-                   "building_year": 2015, "part": 1, "decision": "split"},
-                  {"base_key": "k" * 64, "asset_type": "rowhouse", "beopjungri_code": BJD, "main_lot": "",
-                   "building_year": "", "part": "", "decision": "keep"}]).to_csv(f, index=False)
-    assert bk.load_split_units_c2(f) == {key: {BJD: [("50", 2015, 1)]}}
-    assert bk.judged_keys_c2(f) == {key, "k" * 64}
+    rows = [(key, BJD, "50", 2015, 1, "split"), (key, BJD, "0010", "2010", 0, "split"), ("k" * 64, BJD, "", None, None, "keep")]
+    assert bk.units_from_rows(rows) == {key: {BJD: [("50", 2015, 1), ("10", 2010, 0)]}}
     monkeypatch.setenv(bk.C2_ENV_OFF, "0")
-    assert bk.load_split_units_c2(f) == {}
+    assert bk.load_split_units_c2(object()) == {}                 # 해제면 DB 를 보지 않고 빈 판정
     df = _frame([_row("50", 2015)])
-    assert bk.apply_building_key_split_c2(df, "rowhouse", c01_units={}).equals(df)   # 해제 → 기존 키
-    monkeypatch.delenv(bk.C2_ENV_OFF)
-    assert bk.load_split_units_c2(tmp_path / "none.csv") == {}
+    assert bk.apply_building_key_split_c2(df, "rowhouse", units=None, c01_units={}).equals(df)   # 판정 없음 → 기존 키
 
 
 def test_c2_on_top_of_c01_split_key(units):
@@ -128,63 +121,113 @@ def test_main_lot_parsing():
     assert bk.main_lot_of("BL-3") == "BL"
 
 
-# --- 월간 경고 검사(실제 PostgreSQL 임시 DB) ---------------------------------
+# --- 판정 표·적재·월간 경고 검사(실제 PostgreSQL 임시 DB) -----------------------------
 
-def test_monthly_check_flags_c2_shape(tmp_path):
+FX = "ch2_c2check_p2r"
+
+
+@pytest.fixture(scope="module")
+def pg():
     from sqlalchemy import create_engine, text
     from sqlalchemy.engine import make_url
 
-    from collective import integrity_p2 as ip
     from collective import migrate_p2_keys as mig
 
-    fx = "ch2_c2check_p2r"
     try:
-        base = make_url(mig.server_url_from_env())
-        admin = create_engine(base.set(database="postgres", drivername="postgresql+psycopg2"),
-                              isolation_level="AUTOCOMMIT", connect_args={"connect_timeout": 3})
+        base = make_url(mig.server_url_from_env()).set(drivername="postgresql+psycopg2")
+        admin = create_engine(base.set(database="postgres"), isolation_level="AUTOCOMMIT",
+                              connect_args={"connect_timeout": 3})
         with admin.connect() as c:
-            c.execute(text(f"DROP DATABASE IF EXISTS {fx}"))
-            c.execute(text(f"CREATE DATABASE {fx}"))
+            c.execute(text(f"DROP DATABASE IF EXISTS {FX}"))
+            c.execute(text(f"CREATE DATABASE {FX}"))
     except Exception as ex:  # noqa: BLE001
         pytest.skip(f"로컬 PostgreSQL 임시 DB 생성 불가: {type(ex).__name__}")
-    eng = create_engine(base.set(database=fx, drivername="postgresql+psycopg2"))
-    try:
-        with eng.begin() as c:
-            c.execute(text("CREATE TABLE collective_transactions (building_key text, asset_type text, "
-                           "beopjungri_code text, lot_number text, building_year int, is_valid bool)"))
-            rows = []
-            rows += [("A", "rowhouse", BJD, "10", 2010)] * 3 + [("A", "rowhouse", BJD, "50", 2015)] * 3   # C-2형
-            rows += [("B", "rowhouse", BJD, "10", 2010)] * 3 + [("B", "rowhouse", BJD, "12", 2010)] * 3   # 같은 해 → 아님
-            rows += [("C", "presale", BJD, "10", 2010)] * 3 + [("C", "presale", BJD, "50", 2015)] * 3     # 분양권 → 아님
-            rows += [("D", "rowhouse", BJD, "10", 2010)] * 3 + [("D", "rowhouse", BJD, "50", 2015)] * 2   # 2건 → 아님
-            rows += [("E", "rowhouse", BJD, "10", 2010)] * 3 + [("E", "rowhouse", BJD, "70", 2018)] * 3   # 판정 파일 안
-            rows += [("E", "rowhouse", BJD, "71", 2018)]                                                 # 파일에 없는 본번
-            c.execute(text("INSERT INTO collective_transactions VALUES (:k, :a, :b, :l, :y, true)"),
-                      [dict(zip("kably", r)) for r in rows])
+    eng = create_engine(base.set(database=FX))
+    with eng.begin() as c:
+        c.execute(text("CREATE TABLE collective_transactions (building_key text, asset_type text, "
+                       "beopjungri_code text, lot_number text, building_year int, is_valid bool)"))
+        rows = []
+        rows += [("A", "rowhouse", BJD, "10", 2010)] * 3 + [("A", "rowhouse", BJD, "50", 2015)] * 3   # C-2형
+        rows += [("B", "rowhouse", BJD, "10", 2010)] * 3 + [("B", "rowhouse", BJD, "12", 2010)] * 3   # 같은 해 → 아님
+        rows += [("C", "presale", BJD, "10", 2010)] * 3 + [("C", "presale", BJD, "50", 2015)] * 3     # 분양권 → 아님
+        rows += [("D", "rowhouse", BJD, "10", 2010)] * 3 + [("D", "rowhouse", BJD, "50", 2015)] * 2   # 2건 → 아님
+        rows += [("E", "rowhouse", BJD, "10", 2010)] * 3 + [("E", "rowhouse", BJD, "70", 2018)] * 3   # 판정 표 안
+        rows += [("E", "rowhouse", BJD, "71", 2018)]                                                 # 표에 없는 본번
+        c.execute(text("INSERT INTO collective_transactions VALUES (:k, :a, :b, :l, :y, true)"),
+                  [dict(zip("kably", r)) for r in rows])
+    yield eng
+    eng.dispose()
+    with admin.connect() as c:
+        c.execute(text(f"DROP DATABASE IF EXISTS {FX} WITH (FORCE)"))
+    admin.dispose()
 
-        f = tmp_path / "c2.csv"
-        pd.DataFrame([{"base_key": "E", "asset_type": "rowhouse", "beopjungri_code": BJD, "main_lot": m,
-                       "building_year": y, "part": p, "decision": "split"} for m, y, p in (("10", 2010, 0), ("70", 2018, 1))]
-                     ).to_csv(f, index=False)
 
-        class R:
-            def __init__(self):
-                self.w, self.o = [], []
+class _Rep:
+    def __init__(self):
+        self.w, self.o = [], []
 
-            def section(self, t): pass
-            def ok(self, m): self.o.append(m)
-            def warn(self, m): self.w.append(m)
-            def err(self, m): raise AssertionError(m)
-            def info(self, m): self.o.append(m)
+    def section(self, t): pass
+    def ok(self, m): self.o.append(m)
+    def warn(self, m): self.w.append(m)
+    def err(self, m): raise AssertionError(m)
+    def info(self, m): self.o.append(m)
 
-        r = R()
-        with eng.connect() as c:
-            ip.check_c2_shape(r, c, units_path=f)
-        assert any("판정 밖 1곳" in w for w in r.w), r.w          # A 만
-        assert any("판정 파일에 없는 본번 1개" in w for w in r.w), r.w   # E 의 71
-        assert not any("presale" in m for m in r.o)                   # 분양권(C)은 C-2형으로 세지 않음
-    finally:
-        eng.dispose()
-        with admin.connect() as c:
-            c.execute(text(f"DROP DATABASE IF EXISTS {fx} WITH (FORCE)"))
-        admin.dispose()
+
+def _check(eng):
+    from collective import integrity_p2 as ip
+
+    r = _Rep()
+    with eng.connect() as c:
+        ip.check_c2_shape(r, c)
+    return r
+
+
+def test_monthly_check_warns_when_table_missing_or_empty(pg):
+    from sqlalchemy import text
+
+    with pg.begin() as c:
+        c.execute(text(f"DROP TABLE IF EXISTS {bk.C2_TABLE}"))
+    r = _check(pg)
+    assert any("C-2 판정 표 없음" in w and "2곳" in w for w in r.w), r.w     # A·E (판정 전)
+    with pg.connect() as c:
+        assert bk.c2_table_state(c) == ("missing", 0) and bk.load_split_units_c2(c) == {} and bk.judged_keys_c2(c) == set()
+    with pg.begin() as c:
+        c.execute(text(bk.C2_DDL))
+    r = _check(pg)
+    assert any("C-2 판정 표 비어 있음" in w for w in r.w), r.w
+    assert not any("presale" in m for m in r.o)                   # 분양권(C)은 C-2형으로 세지 않음
+
+
+def test_monthly_check_and_ingest_read_the_table(pg):
+    from sqlalchemy import text
+
+    with pg.begin() as c:
+        c.execute(text(bk.C2_DDL))
+        c.execute(text(f"DELETE FROM {bk.C2_TABLE}"))
+        c.execute(text(f"INSERT INTO {bk.C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part, decision) "
+                       "VALUES ('E', 'rowhouse', :b, '10', 2010, 0, 'split'), ('E', 'rowhouse', :b, '70', 2018, 1, 'split')"),
+                  {"b": BJD})
+    r = _check(pg)
+    assert any("C-2형 판정 밖 1곳" in w for w in r.w), r.w                       # A 만 남음
+    assert any("판정 표에 없는 본번 1개" in w for w in r.w), r.w                  # E 의 71
+    with pg.connect() as c:
+        assert bk.load_split_units_c2(c) == {"E": {BJD: [("10", 2010, 0), ("70", 2018, 1)]}}
+
+    # 월간 적재: 판정 표를 읽어 키를 배정(실제 키 원문을 재현할 수 있는 행으로)
+    key, raw = _key(_row("10", 2010))
+    with pg.begin() as c:
+        c.execute(text(f"INSERT INTO {bk.C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part, decision) "
+                       "VALUES (:k, 'rowhouse', :b, '10', 2010, 0, 'split'), (:k, 'rowhouse', :b, '50', 2015, 1, 'split')"),
+                  {"k": key, "b": BJD})
+        c.execute(text("INSERT INTO collective_transactions VALUES (:k, 'rowhouse', :b, '80', 2021, true)"), {"k": key, "b": BJD})
+    df = _frame([_row("50", 2015), _row("80", 2021), _row("80", 2021), _row("10", 2010)])
+    out = bk.apply_c2_split_from_db(pg, df, "rowhouse")   # import_refined._apply_c2_split 가 부르는 함수
+    assert list(out["building_key"]) == [bk.c2_key(raw, "p1"), bk.c2_key(raw, "m80"), bk.c2_key(raw, "m80"), key]
+
+
+def test_import_refined_calls_db_reader():
+    """적재 경로가 판정 표 읽기 함수를 부르는지(모듈 import 순서 문제로 import_refined 는 소스로 확인)."""
+    src = (Path(__file__).resolve().parents[1] / "collective" / "import_refined.py").read_text(encoding="utf-8")
+    assert "apply_c2_split_from_db(engine, df, asset_type)" in src
+    assert "df = _apply_c2_split(engine, df, asset_type)" in src
+    assert src.index("apply_building_key_split(df, asset_type)") < src.index("df = _apply_c2_split(engine, df, asset_type)")
