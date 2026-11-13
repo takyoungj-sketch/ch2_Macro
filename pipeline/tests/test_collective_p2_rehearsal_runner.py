@@ -52,6 +52,19 @@ def test_every_as_of_argument_is_accepted_by_builders(c3):
 
 
 def _load(name):
+    import os
+    import sys
+
+    if str(SCRIPT.parent) not in sys.path:
+        sys.path.insert(0, str(SCRIPT.parent))   # c8 은 같은 폴더의 _db 를 import(_db 는 cwd 를 backend 로 바꾼다)
+    cwd = os.getcwd()
+    try:
+        return _load_inner(name)
+    finally:
+        os.chdir(cwd)
+
+
+def _load_inner(name):
     spec = importlib.util.spec_from_file_location(name, SCRIPT.with_name(f"{name}.py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -99,6 +112,19 @@ def test_built_scope_cleanup_commits_only_legacy_rows_of_as_of(tmp_path):
         with admin.connect() as c:
             c.execute(text(f"DROP DATABASE IF EXISTS {fx} WITH (FORCE)"))
         admin.dispose()
+
+
+def test_rollback_compare_classifies_rehearsal_tables():
+    """C-10 보존 표(*_p2_oldjoin)는 리허설이 만든 표로 — 「원본에 없음」(차이)으로 세지 않는다."""
+    c8 = _load("c8_rollback_rehearsal")
+    same, other = (3, "h"), (3, "x")
+    assert c8.classify("t", same, same) == "같음"
+    assert c8.classify("t", same, other) == "다름"
+    assert c8.classify("collective_building_stats_p2_oldjoin", None, same).startswith("이전이 만든 표")
+    assert c8.classify("collective_transactions_p2_before", None, same).startswith("이전이 만든 표")
+    assert c8.classify("collective_building_key_map", None, same).startswith("이전이 만든 표")
+    assert c8.classify("new_table", None, same) == "원본에 없음"
+    assert c8.classify("t", same, None) == "리허설에 없음"
 
 
 def test_parcel_step_skipped_and_logged_when_copy_missing(c3, monkeypatch):

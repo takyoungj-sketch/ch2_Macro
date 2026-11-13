@@ -37,6 +37,21 @@ MARTS = {
 P2_TABLES = {"collective_building_key_map", "collective_cluster_key_map", "rent_building_key_map", "p2_migration_log"}
 
 
+# 리허설이 만든 표의 이름 꼴: 이전 전 보존(*_p2_before), 조인 변경 전 결과 보존(*_p2_oldjoin, C-10)
+REHEARSAL_SUFFIXES = ("_p2_before", "_p2_oldjoin")
+
+
+def classify(t: str, before, after) -> str:
+    """표 하나의 롤백 비교 결과. before/after = (행 수, 해시) 또는 None."""
+    if before is not None and after is not None:
+        return "같음" if before == after else "다름"
+    if after is not None:
+        if t in P2_TABLES or t.endswith(REHEARSAL_SUFFIXES):
+            return "이전이 만든 표(원본에 없음)"
+        return "원본에 없음"
+    return "리허설에 없음"
+
+
 def eng(db, ro):
     u = make_url(server_url_from_env()).set(database=db, drivername="postgresql+psycopg2")
     opts = "-c statement_timeout=0" + (" -c default_transaction_read_only=on" if ro else "")
@@ -94,12 +109,7 @@ def main():
         t0 = time.time()
         hb, ha = table_hashes(eng(src, ro=True)), table_hashes(eng(dst, ro=True))
         for t in sorted(set(hb) | set(ha)):
-            if t in hb and t in ha:
-                rows.append((src, t, hb[t][0], ha[t][0], "같음" if hb[t] == ha[t] else "다름"))
-            elif t in ha:
-                rows.append((src, t, "—", ha[t][0], "이전이 만든 표(원본에 없음)" if t in P2_TABLES or t.endswith("_p2_before") else "원본에 없음"))
-            else:
-                rows.append((src, t, hb[t][0], "—", "리허설에 없음"))
+            rows.append((src, t, hb[t][0] if t in hb else "—", ha[t][0] if t in ha else "—", classify(t, hb.get(t), ha.get(t))))
         timings.append((f"행 해시 비교 {src}", round(time.time() - t0, 1)))
     diff = [r for r in rows if r[4] in ("다름", "리허설에 없음", "원본에 없음")]
     L = ["# C-8 롤백 리허설", "", md_table(timings, ["단계", "초"]), "",
