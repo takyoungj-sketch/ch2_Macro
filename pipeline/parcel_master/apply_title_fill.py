@@ -304,6 +304,23 @@ def filter_fills_new_keys(fills: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [f for f in fills if not f.get("has_attr_row")]
 
 
+def filter_fills_to_keys(fills: list[dict[str, Any]], keys: set[str]) -> list[dict[str, Any]]:
+    """키 목록(예: 집합 2단계 분할 새 키) 안의 키만."""
+    return [f for f in fills if str(f.get("building_key")) in keys]
+
+
+def dictionary_rows_for_keys(df: pd.DataFrame, keys: set[str]) -> pd.DataFrame:
+    return df.loc[df["building_key"].astype(str).str.strip().isin(keys)].copy()
+
+
+def load_keys_file(path: str | Path) -> set[str]:
+    keys = {ln.strip() for ln in Path(path).read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.strip().startswith("#")}
+    if not keys:
+        raise SystemExit(f"키 목록이 비어 있음: {path}")
+    return keys
+
+
 def _exec_many(conn, sql, rows: list[dict[str, Any]]) -> int:
     if not rows:
         return 0
@@ -322,6 +339,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--skip-dictionary", action="store_true")
     p.add_argument("--new-keys-only", action="store_true", help="속성 없는 키만 INSERT. A·B·C·기존 T 안 덮음")
     p.add_argument("--refresh-t", action="store_true", help="대장 달: 기존 T를 표제부 신본으로 갱신")
+    p.add_argument("--keys-file", default=None,
+                   help="building_key 목록 파일. 주면 이 키에만 쓴다(사전 단계 포함). --new-keys-only·--snapshot-ym 필수")
     p.add_argument(
         "--types",
         default=",".join(DEFAULT_TYPES),
@@ -353,9 +372,13 @@ def run(
     types: tuple[TitleKind, ...] = DEFAULT_TYPES,
     new_keys_only: bool = False,
     refresh_t: bool = False,
+    keys: set[str] | None = None,
 ) -> None:
     if new_keys_only and refresh_t:
         raise SystemExit("--new-keys-only 와 --refresh-t 는 같이 쓰지 않는다")
+    if keys is not None and (not keys or not new_keys_only or not snapshot_ym):
+        # 키 목록 범위는 「새 키만·판 지정」에서만(최신 판으로 가거나 기존 행을 덮는 경로를 막는다)
+        raise SystemExit("keys 는 비어 있지 않아야 하고 new_keys_only·snapshot_ym 과 함께 쓴다")
     coll = get_collective_engine()
     parcel = get_parcel_engine()
     from parcel_master.load_title_pilot import apply_schema
@@ -409,6 +432,8 @@ def run(
         fills = classified["fill"]
         if new_keys_only:
             fills = filter_fills_new_keys(fills)
+        if keys is not None:
+            fills = filter_fills_to_keys(fills, keys)
         reverts = [] if new_keys_only else classified["revert"]
         log.info(
             "%s  fill=%s  keep_t=%s  revert=%s  blocked=%s  has_kapt=%s  "
@@ -460,6 +485,9 @@ def run(
         return
     with coll.begin() as conn:
         df = _load(conn, snapshot_ym)
+        if keys is not None:
+            # 사전도 목록 키의 행만 다시 계산·UPDATE(_derive 는 행 단위라 그 키 결과는 판 전체 계산과 같다)
+            df = dictionary_rows_for_keys(df, keys)
         names = _load_display_names(conn, df["building_key"].astype(str).tolist())
         derived = _derive(df, names)
         n_dict = _write(conn, derived)
@@ -475,6 +503,7 @@ def main() -> None:
         types=_parse_types(args.types),
         new_keys_only=args.new_keys_only,
         refresh_t=args.refresh_t,
+        keys=load_keys_file(args.keys_file) if args.keys_file else None,
     )
 
 

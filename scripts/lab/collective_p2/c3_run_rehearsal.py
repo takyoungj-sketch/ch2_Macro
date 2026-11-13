@@ -30,6 +30,11 @@ DBS = {"collective": "collective_stats_p2r", "built": "built_stats_p2r", "rent":
 PARCEL_DB = "parcel_master_p2r"
 # 실행에 PARCEL_DB 가 있어야 하는 단계(없으면 건너뛰고 c3_steps.jsonl 에 사유 기록)
 NEEDS_PARCEL = {"title_fill_new_keys"}
+# 속성 판(지금 판). 이번 이전은 이 판에 분할 새 키만 추가한다(T 결정 2026-11-13 (가)·(a)).
+ATTR_SNAPSHOT = "202607"
+KEYS_FILE = OUT / "p2_split_new_keys.txt"
+# 토지 DB(공시지가 대체 조회) — 리허설에는 사본이 없다. 이름을 리허설 꼴로 두어 진짜 land_stats 로 가지 못하게 한다.
+LAND_DB = "land_stats_p2r"
 
 PROBE = r"""
 import sys, json
@@ -70,10 +75,18 @@ def step_list():
         ("commercial_cluster", P(pipe / "build_collective_commercial_cluster_stats.py", *w, "--replace-as-of", "--prune-annual")),
         ("commercial_cluster_rolling", P(pipe / "build_collective_commercial_cluster_rolling_stats.py", *w, "--replace-as-of")),
         ("rent_building_stats", P(pipe / "rent" / "build_building_stats.py", *w, "--replace-as-of")),
+        # T 결정(2026-11-13, (a)): 속성은 지금 판(ATTR_SNAPSHOT)에 분할 새 키 목록만. 판은 반드시 명시(파일명 추론·최신 판 금지).
+        # 새 키 속성값의 출처는 KAPT(10월 판). K-apt PNU 파일은 저장소 기준 raw 경로라 실행 동안 정션 필요(c14.ensure_raw_link).
+        ("split_keys_file", P(Path(__file__).with_name("c16_split_keys.py"), KEYS_FILE)),
         ("kapt_new_keys_apartment", P(pipe / "build_collective_building_attributes.py", "--kapt-file", KAPT,
-                                      "--asset-type", "apartment", "--new-keys-only")),
+                                      "--asset-type", "apartment", "--new-keys-only",
+                                      "--snapshot-ym", ATTR_SNAPSHOT, "--keys-file", KEYS_FILE)),
         ("title_fill_new_keys", P("-c", f"import sys; sys.path.insert(0, r'{pipe}'); "
-                                        "from parcel_master.apply_title_fill import run; run(dry_run=False, new_keys_only=True)")),
+                                        "from parcel_master.apply_title_fill import run, load_keys_file; "
+                                        f"run(dry_run=False, new_keys_only=True, snapshot_ym='{ATTR_SNAPSHOT}', "
+                                        f"keys=load_keys_file(r'{KEYS_FILE}'))")),
+        ("land_price_new_keys", P("-m", "collective.import_assessed_land_price", "--from-slim",
+                                  "--keys-file", KEYS_FILE, "--insert-only", "--rehearsal")),
         ("rent_sale_map", P(pipe / "rent" / "build_sale_building_map.py")),
         ("built_scope_stats", P(pipe / "built" / "build_scope_stats.py", "--as-of", AS_OF, "--windows", "3,5,7")),
         # 복합 scope mart 는 addr1 칸으로 UPSERT → 이번 as_of 의 옛 시도명 행은 남는다 → 그 as_of 만 지운다(과거 as_of 유지)
@@ -91,6 +104,9 @@ def env_for() -> dict:
     # 표제부 DB 도 리허설 사본으로만(기본값은 같은 서버의 진짜 parcel_master 이고 apply_schema 가 DDL 을 쓴다)
     assert REHEARSAL_RE.match(PARCEL_DB)
     env["PARCEL_MASTER_DATABASE_URL"] = base.set(database=PARCEL_DB).render_as_string(hide_password=False)
+    # 토지 DB(get_engine: DATABASE_URL 우선) — 리허설 이름으로만. 공시지가 --rehearsal 가 이름을 다시 확인한다.
+    assert REHEARSAL_RE.match(LAND_DB)
+    env["DATABASE_URL"] = base.set(database=LAND_DB).render_as_string(hide_password=False)
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     return env

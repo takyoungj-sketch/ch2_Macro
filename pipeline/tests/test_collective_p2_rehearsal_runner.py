@@ -171,6 +171,23 @@ def test_c14_links_main_raw_into_worktree(tmp_path):
         c14.ensure_raw_link(wt, tmp_path / "none")
 
 
+def test_attribute_steps_pin_snapshot_and_key_list(c3):
+    """1차 리허설: title_fill 이 판 없이 돌아 최신 판(202610)으로 갔다 → 속성·공시지가 단계는 판·키 목록 명시."""
+    steps = dict(c3.step_list())
+    kapt = steps["kapt_new_keys_apartment"]
+    assert kapt[kapt.index("--snapshot-ym") + 1] == c3.ATTR_SNAPSHOT == "202607"
+    assert "--new-keys-only" in kapt and kapt[kapt.index("--keys-file") + 1] == str(c3.KEYS_FILE)
+    tfc = " ".join(steps["title_fill_new_keys"])
+    assert f"snapshot_ym='{c3.ATTR_SNAPSHOT}'" in tfc and "keys=load_keys_file(" in tfc and "new_keys_only=True" in tfc
+    lp = steps["land_price_new_keys"]
+    assert "--insert-only" in lp and "--rehearsal" in lp and "--keys-file" in lp
+    names = [n for n, _ in c3.step_list()]
+    assert names.index("split_keys_file") < names.index("kapt_new_keys_apartment") < names.index("title_fill_new_keys") \
+        < names.index("land_price_new_keys")
+    env = c3.env_for()
+    assert make_url(env["DATABASE_URL"]).database == c3.LAND_DB and c3.REHEARSAL_RE.match(c3.LAND_DB)
+
+
 def test_parcel_step_skipped_and_logged_when_copy_missing(c3, monkeypatch):
     ran: list[str] = []
     monkeypatch.setattr(c3, "database_exists", lambda name: False)

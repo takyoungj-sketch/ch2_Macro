@@ -71,6 +71,21 @@ def main():
         (f"builder_master {ym} 원본에만", bm_only_b, bm_only_b == 0, ""),
         (f"builder_master {ym} 리허설에만(추가 danji)", bm_only_a, True, "기존 행 불변이면 추가는 보고만"),
     ]
+    # 공시지가: 기존 키 값 불변, 분할 새 키 밖 추가 0
+    lq = text("SELECT * FROM collective_building_assessed_land_price")
+    with b.connect() as c:
+        lb = pd.read_sql(lq, c)
+    with r.connect() as c:
+        la = pd.read_sql(lq, c)
+    lk = ["building_key", "asset_type"]
+    _, lp_changed, lp_only_b, lp_only_a = _diff(lb[~lb["building_key"].isin(mapped)], la[~la["building_key"].isin(mapped)], lk)
+    lp_new = la[la["building_key"].isin(split_new)]
+    checks += [
+        ("공시지가 기존 키 바뀐 칸", sum(lp_changed.values()), sum(lp_changed.values()) == 0, str(lp_changed) if lp_changed else ""),
+        ("공시지가 기존 키 원본에만", lp_only_b, lp_only_b == 0, ""),
+        ("공시지가 분할 새 키 밖 추가", lp_only_a, lp_only_a == 0, ""),
+        ("공시지가 분할 새 키 행", len(lp_new), True, str(lp_new.groupby("asset_type").size().to_dict())),
+    ]
     assert len(outside_added) == only_a
     print(md_table([("OK" if ok else "NG", n, v, note) for n, v, ok, note in checks], ["판정", "항목", "값", "비고"]))
     raise SystemExit(0 if all(ok for _, _, ok, _ in checks) else 1)

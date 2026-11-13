@@ -423,8 +423,48 @@ def _load_reform_bjd_maps(engine) -> tuple[dict[str, str], dict[str, str]]:
     if old_to_current or current_to_old:
         return old_to_current, current_to_old
     land_engine = get_land_engine_for_region_copy()
+    if _REHEARSAL["on"]:
+        # 리허설: 토지 DB 대체 조회도 리허설 이름(*_p2r) DB 에만. 아니면 접속 전에 멈춘다.
+        from collective.migrate_p2_keys import REHEARSAL_RE
+
+        name = land_engine.url.database or ""
+        if not REHEARSAL_RE.match(name):
+            raise SystemExit(f"리허설 모드: 토지 DB 대체 조회 대상이 리허설 DB 가 아님({name}) — 중단")
     with land_engine.connect() as conn:
         return _reform_bjd_maps(conn)
+
+
+_REHEARSAL = {"on": False}
+
+
+def restrict_candidates_to_keys(candidates: list[dict[str, Any]], keys: set[str]) -> list[dict[str, Any]]:
+    """대표 필지 후보를 키 목록(예: 집합 2단계 분할 새 키) 안으로."""
+    return [c for c in candidates if str(c.get("building_key")) in keys]
+
+
+def upsert_sql(*, insert_only: bool):
+    """insert_only=True 면 이미 있는 (building_key, asset_type) 행은 건드리지 않는다(추가 전용)."""
+    head = """
+        INSERT INTO collective_building_assessed_land_price (
+            building_key, asset_type, representative_pnu,
+            assessed_land_price, assessed_land_price_year, source
+        ) VALUES (
+            :building_key, :asset_type, :pnu,
+            :assessed_land_price, :assessed_land_price_year, :source
+        )
+    """
+    if insert_only:
+        return text(head + " ON CONFLICT (building_key, asset_type) DO NOTHING")
+    return text(head + """
+        ON CONFLICT (building_key, asset_type) DO UPDATE SET
+            representative_pnu = EXCLUDED.representative_pnu,
+            assessed_land_price = EXCLUDED.assessed_land_price,
+            assessed_land_price_year = EXCLUDED.assessed_land_price_year,
+            source = EXCLUDED.source,
+            loaded_at = NOW()
+        WHERE EXCLUDED.assessed_land_price_year >=
+              collective_building_assessed_land_price.assessed_land_price_year
+        """)
 
 
 def load(
@@ -435,6 +475,7 @@ def load(
     candidates: list[dict[str, Any]] | None = None,
     source_label: str = "individual_official_land_price",
     current_to_old_bjd: dict[str, str] | None = None,
+    insert_only: bool = False,
 ) -> tuple[int, int]:
     price_by_pnu = source.set_index("pnu").to_dict(orient="index")
 
@@ -467,25 +508,7 @@ def load(
         )
     if not records:
         return len(candidates), 0
-    sql = text(
-        """
-        INSERT INTO collective_building_assessed_land_price (
-            building_key, asset_type, representative_pnu,
-            assessed_land_price, assessed_land_price_year, source
-        ) VALUES (
-            :building_key, :asset_type, :pnu,
-            :assessed_land_price, :assessed_land_price_year, :source
-        )
-        ON CONFLICT (building_key, asset_type) DO UPDATE SET
-            representative_pnu = EXCLUDED.representative_pnu,
-            assessed_land_price = EXCLUDED.assessed_land_price,
-            assessed_land_price_year = EXCLUDED.assessed_land_price_year,
-            source = EXCLUDED.source,
-            loaded_at = NOW()
-        WHERE EXCLUDED.assessed_land_price_year >=
-              collective_building_assessed_land_price.assessed_land_price_year
-        """
-    )
+    sql = upsert_sql(insert_only=insert_only)
     with engine.begin() as conn:
         conn.execute(sql, records)
     return len(candidates), len(records)
@@ -495,6 +518,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, default=DEFAULT_SOURCE_DIR)
     parser.add_argument("--dry-run", action="store_true", help="원천 스캔·매칭 예상만 하고 DB에 쓰지 않음")
+    parser.add_argument("--keys-file", type=Path, default=None,
+                        help="building_key 목록 파일. 주면 이 키의 대표 필지만(--insert-only 필수)")
+    parser.add_argument("--insert-only", action="store_true", help="이미 있는 행은 덮지 않음(추가 전용)")
+    parser.add_argument("--rehearsal", action="store_true",
+                        help="리허설: 집합 DB·토지 DB 대체 조회가 *_p2r 이름일 때만 진행")
     source_group = parser.add_mutually_exclusive_group()
     source_group.add_argument(
         "--from-parcel-master",
@@ -514,7 +542,17 @@ def main() -> None:
     )
     args = parser.parse_args()
     asset_types = tuple(args.asset_types or ("apartment", "rowhouse", "officetel"))
+    if args.keys_file and not args.insert_only:
+        raise SystemExit("--keys-file 은 --insert-only 와 함께 쓴다(기존 값 덮어쓰기 금지)")
     engine = get_collective_engine()
+    if args.rehearsal:
+        from collective.migrate_p2_keys import REHEARSAL_RE
+
+        _REHEARSAL["on"] = True
+        with engine.connect() as conn:
+            db = conn.execute(text("select current_database()")).scalar()
+        if not REHEARSAL_RE.match(db or ""):
+            raise SystemExit(f"리허설 모드: 집합 DB 가 리허설 DB 가 아님({db}) — 중단")
     old_to_current_bjd, current_to_old_bjd = _load_reform_bjd_maps(engine)
     print(
         f"reform_bjd old_to_current={len(old_to_current_bjd):,} "
@@ -523,6 +561,14 @@ def main() -> None:
     )
     with engine.connect() as conn:
         candidates = _representative_pnus(conn, asset_types)
+    if args.keys_file:
+        keys = {ln.strip() for ln in args.keys_file.read_text(encoding="utf-8").splitlines()
+                if ln.strip() and not ln.strip().startswith("#")}
+        if not keys:
+            raise SystemExit(f"키 목록이 비어 있음: {args.keys_file}")
+        before = len(candidates)
+        candidates = restrict_candidates_to_keys(candidates, keys)
+        print(f"keys-file: candidates {len(candidates):,} / {before:,} (list {len(keys):,})", flush=True)
     target_pnus = {row["pnu"] for row in candidates}
 
     if args.from_parcel_master:
@@ -561,10 +607,11 @@ def main() -> None:
         candidates=candidates,
         source_label=source_label,
         current_to_old_bjd=current_to_old_bjd,
+        insert_only=args.insert_only,
     )
     print(
         f"source_pnu_matched={len(source):,} representative_candidates={candidate_count:,} "
-        f"loaded={loaded:,} asset_types={','.join(asset_types)}",
+        f"loaded={loaded:,} insert_only={args.insert_only} asset_types={','.join(asset_types)}",
         flush=True,
     )
 

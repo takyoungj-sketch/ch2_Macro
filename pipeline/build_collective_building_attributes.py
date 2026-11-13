@@ -432,19 +432,55 @@ def attach_kapt_pnu(kapt: pd.DataFrame) -> pd.DataFrame:
     out = kapt.copy()
     if "pnu" in out.columns and out["pnu"].notna().any():
         return out
-    try:
-        from parcel_master.load_kapt_pnu import load_pnu_map
+    # 필지고유번호 파일을 못 읽으면 멈춘다. 예전에는 로그만 남기고 PNU 없이 계속해
+    # PNU 매칭(tier P 등)이 조용히 빠졌다(집합 2단계 Phase C 리허설에서 발견).
+    from parcel_master.load_kapt_pnu import load_pnu_map
 
+    try:
         pnu_df = load_pnu_map()
-        pnu_map = dict(zip(pnu_df["danji_code"], pnu_df["pnu"]))
-        out["pnu"] = out["단지코드"].map(
-            lambda c: pnu_map.get(str(c).strip()) if pd.notna(c) else None
-        )
-        log.info("attached K-apt pnu rows=%s", int(out["pnu"].notna().sum()))
-    except Exception:
-        log.exception("K-apt PNU attach skipped")
-        out["pnu"] = None
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"K-apt 필지고유번호(PNU) 파일을 읽지 못함 — 중단: {type(exc).__name__}: {exc}") from exc
+    pnu_map = dict(zip(pnu_df["danji_code"], pnu_df["pnu"]))
+    out["pnu"] = out["단지코드"].map(
+        lambda c: pnu_map.get(str(c).strip()) if pd.notna(c) else None
+    )
+    n = int(out["pnu"].notna().sum())
+    if n == 0:
+        raise RuntimeError("K-apt PNU 를 하나도 붙이지 못함 — 중단(파일·단지코드 형식 확인)")
+    log.info("attached K-apt pnu rows=%s", n)
     return out
+
+
+def load_keys_file(path: Path) -> set[str]:
+    """한 줄에 building_key 하나(빈 줄·# 주석 무시). 빈 목록이면 멈춘다(범위 0 을 「전체」로 오해하지 않게)."""
+    keys = {ln.strip() for ln in Path(path).read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.strip().startswith("#")}
+    if not keys:
+        raise SystemExit(f"키 목록이 비어 있음: {path}")
+    return keys
+
+
+def restrict_to_keys(attrs: pd.DataFrame, keys: set[str]) -> pd.DataFrame:
+    if attrs.empty:
+        return attrs
+    return attrs.loc[attrs["building_key"].astype(str).isin(keys)].copy()
+
+
+def referenced_danji_codes(attrs: pd.DataFrame) -> set[str]:
+    """속성 행이 실제로 가리키는 단지 코드(대표 코드 + 다단지 매칭 코드)."""
+    codes: set[str] = set()
+    if attrs.empty:
+        return codes
+    for col in ("danji_code", "match_danji_codes"):
+        if col not in attrs.columns:
+            continue
+        for v in attrs[col].dropna():
+            codes.update(c.strip() for c in str(v).split(",") if c.strip())
+    return codes
+
+
+def builder_master_for_codes(rows: list[dict[str, Any]], codes: set[str]) -> list[dict[str, Any]]:
+    return [r for r in rows if str(r.get("danji_code") or "").strip() in codes]
 
 
 def names_compatible(tx_name: object, kapt_name: object) -> bool:
@@ -1045,6 +1081,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--replace", action="store_true", help="해당 snapshot_ym 행 삭제 후 재적재")
     p.add_argument("--new-keys-only", action="store_true", help="속성 없는 building_key만 INSERT. A·B·C 안 덮음")
     p.add_argument("--dry-run", action="store_true", help="DB 쓰기 없이 리포트만")
+    p.add_argument(
+        "--keys-file",
+        default=None,
+        help="building_key 목록 파일(한 줄 하나). 주면 이 키의 속성 행만 쓰고, builder_master 는 그 행이 "
+        "가리키는 단지 코드만 추가한다(집합 2단계 분할 새 키)",
+    )
     p.add_argument("--apply-ddl", action="store_true", help="DDL 049 적용 후 실행")
     return p.parse_args()
 
@@ -1053,6 +1095,8 @@ def main() -> None:
     args = parse_args()
     if args.replace and args.new_keys_only:
         raise SystemExit("--replace 와 --new-keys-only 는 같이 쓰지 않는다")
+    if args.keys_file and (args.replace or not args.new_keys_only or not args.snapshot_ym):
+        raise SystemExit("--keys-file 은 --new-keys-only 와 --snapshot-ym 을 함께, --replace 없이 쓴다(판 전체 삭제 금지)")
     kapt_path = Path(args.kapt_file) if args.kapt_file else default_kapt_path()
     snapshot_ym = args.snapshot_ym or infer_snapshot_ym(kapt_path)
     log.info("snapshot_ym=%s  kapt=%s  asset_type=%s", snapshot_ym, kapt_path.name, args.asset_type)
@@ -1075,6 +1119,14 @@ def main() -> None:
         before = len(attrs)
         attrs = filter_new_attribute_rows(attrs, existed)
         log.info("new-keys-only: keep %s / %s (existing %s)", len(attrs), before, len(existed))
+    if args.keys_file:
+        keys = load_keys_file(Path(args.keys_file))
+        before = len(attrs)
+        attrs = restrict_to_keys(attrs, keys)
+        codes = referenced_danji_codes(attrs)
+        bm_rows = builder_master_for_codes(bm_rows, codes)
+        log.info("keys-file: keep %s / %s (list %s)  builder_master codes=%s rows=%s",
+                 len(attrs), before, len(keys), len(codes), len(bm_rows))
 
     print_report(attrs, kapt, buildings=buildings)
 
