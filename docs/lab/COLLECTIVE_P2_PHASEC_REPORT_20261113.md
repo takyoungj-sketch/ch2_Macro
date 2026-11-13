@@ -22,6 +22,31 @@
 - 런북 반영: 운영 롤백 소요의 대부분은 mart 복원(특히 임대 rolling 2시간 23분)이다. 롤백 대신 「빌더 재실행」이 더 빠른 표가 있으면 Phase D 에서 표별로 고른다. 비교 기준은 원본 DB 가 덤프 시점과 같다는 전제 — 운영에서는 덤프 직후 해시를 저장해 두고 비교한다.
 - 디스크: 끝난 뒤 D 30%·C 38% 여유.
 
+## C-2 구현 준비·운영 확인 도구 (T 지시 2026-11-14, 코드·테스트만 — 실행·적용 없음)
+
+- **런북 v2**(`docs/ops/COLLECTIVE_P2_RUNBOOK.md`):
+  - T 결정을 반영했다: 로컬 반영 → promote · 운영 덤프 롤백 · 새벽 · C-01+호남+C-2 한 번에 · 30일 보관.
+  - promote 경로(`dump_db_for_promote.py` → `vps_promote_db_sql.sh`, DB 통째 교체, 복원 중 백엔드 전체 중단, land 제외)를 정리했다.
+  - 시작 전 동기화 확인과 월간 동결도 넣었다.
+- **운영 확인 스크립트**(`scripts/ops/collective_p2_verify/`, 읽기 전용, pipeline 미의존):
+  - `prod_c5_core.py`
+  - `prod_hash_compare.py`
+  - `prod_sync_check.py`
+  - 테스트 `pipeline/tests/test_collective_p2_ops_verify.py` 8개(SQL 사본 = 원본 · 읽기 전용 세션 · 시간 초과 기록 · 바뀐 조각만 잡기 · 큰 표 승인 표시 · 지표 위반 검출).
+- **C-2 적재 규칙**(`pipeline/collective/building_keys.py` `apply_building_key_split_c2`):
+  - 판정 파일 `data/p2_split_units_c2.csv` 를 읽는다. 지금은 비어 있어 동작하지 않는다.
+  - 처음 보는 본번은 같은 건축년도 조각에 붙인다. 없고 3건 이상이면 새 조각(`m<본번>`, 매달 같은 키)을 만든다. 3건 미만이면 가장 가까운 조각에 붙이고 확인 필요로 남긴다.
+  - 비상 해제 `CH2_COLLECTIVE_KEY_SPLIT_C2=0`.
+  - 적재(`import_refined`)에 연결했다(파일 없으면 그대로).
+- **월간 경고**(`integrity_p2.check_c2_shape`):
+  - 같은 키·법정동에서 본번·건축년도가 다른 3건+ 묶음이 판정 목록 밖이면 경고한다.
+  - C-2 분할 키의 판정 파일에 없는 본번은 「확인 필요」 경고로 낸다.
+  - 테스트 `test_collective_p2_c2_split.py` 8개.
+- **Insight 재계산 준비**(`scripts/lab/collective_p2/c22_insight_recompute.py`):
+  - before(로컬 원본)·after(리허설)를 공개 스냅샷과 같은 기간으로 계산하고 공개값 옆에 둔다.
+  - Insight 14 생성기는 main 에 없다(`wip/ai-revision-20261109`).
+- **16일 이후 순서:** 런북 12절.
+
 ## C-2 재측정 3차 — 3칸 분류·Cursor 확인 목록 (T 지시 2026-11-14, 측정만·적용 안 함)
 
 `c21_c2_three_way.py` — 리허설 DB(롤백 뒤 = 원본, 연결표 0행 확인)·표제부 사본 읽기 전용, 181초. K-apt 필지 파일은 원본 저장소 raw 에서 경로로 읽기만 했다(정션 없음). 단위는 (2단계 키·법정동), 후보 2,252.
