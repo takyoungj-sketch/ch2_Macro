@@ -37,21 +37,24 @@ REPO = HERE.parents[2]
 DEFAULT_SPLIT_UNITS = REPO / "pipeline" / "collective" / "data" / "p2_split_units.csv"
 
 
-def judged_keys(conn, t: Timed, split_units: Path | None, c2_units: Path | None) -> set[str]:
+def judged_keys(conn, t: Timed, split_units: Path | None) -> set[str]:
+    """판정이 끝난 키: C-01 목록(유지·분할) + 연결표 분할 새 키 + C-2 판정 표(collective_building_key_c2_units)."""
     keys: set[str] = set()
-    for p in (split_units, c2_units):
-        if p and p.is_file():
-            with p.open(encoding="utf-8", newline="") as f:
-                keys |= {r["base_key"] for r in csv.DictReader(f) if r.get("decision") in ("keep", "split")}
+    if split_units and split_units.is_file():
+        with split_units.open(encoding="utf-8", newline="") as f:
+            keys |= {r["base_key"] for r in csv.DictReader(f) if r.get("decision") in ("keep", "split")}
     if table_exists(conn, "collective_building_key_map"):
         rows = t.run(conn, "연결표 분할 새 키", "SELECT DISTINCT new_key FROM collective_building_key_map "
-                     "WHERE reason LIKE '%split%' OR reason LIKE '%c2%'") or []
+                     "WHERE reason LIKE '%split%'") or []
+        keys |= {r[0] for r in rows}
+    if table_exists(conn, "collective_building_key_c2_units"):
+        rows = t.run(conn, "C-2 판정 표 키", "SELECT DISTINCT base_key FROM collective_building_key_c2_units") or []
         keys |= {r[0] for r in rows}
     return keys
 
 
 def collect(cconn, rconn, bconn, *, as_of=None, heavy_ms: int, skip_heavy: bool,
-            split_units: Path | None = DEFAULT_SPLIT_UNITS, c2_units: Path | None = None) -> dict:
+            split_units: Path | None = DEFAULT_SPLIT_UNITS) -> dict:
     t = Timed()
     m: dict = {"db": {"collective": db_name(cconn), "rent": db_name(rconn) if rconn is not None else None,
                       "built": db_name(bconn) if bconn is not None else None}}
@@ -119,12 +122,12 @@ def collect(cconn, rconn, bconn, *, as_of=None, heavy_ms: int, skip_heavy: bool,
         # 6 동 이름 2개+ · C-2형
         rows = t.run(cconn, "동 이름 ≥2 이름 키", S.MULTI_LEAF_SQL, timeout_ms=heavy_ms)
         if rows is not None:
-            judged = judged_keys(cconn, t, split_units, c2_units)
+            judged = judged_keys(cconn, t, split_units)
             m["multi_dong_keys"] = len(rows)
             m["multi_dong_pending"] = len({r[0] for r in rows} - judged)
         rows = t.run(cconn, "C-2형", S.C2_SHAPE_SQL, timeout_ms=heavy_ms)
         if rows is not None:
-            judged = judged_keys(cconn, t, split_units, c2_units)
+            judged = judged_keys(cconn, t, split_units)
             m["c2_shape"] = len(rows)
             m["c2_shape_pending"] = len({r[0] for r in rows} - judged)
     m["_timings"] = t.log
@@ -163,14 +166,13 @@ def main(argv=None) -> int:
     p.add_argument("--heavy-timeout", type=int, default=900, help="무거운 쿼리 시간 제한(초)")
     p.add_argument("--skip-heavy", action="store_true")
     p.add_argument("--split-units", type=Path, default=DEFAULT_SPLIT_UNITS)
-    p.add_argument("--c2-units", type=Path, default=None)
     p.add_argument("--out", type=Path, default=None)
     p.add_argument("--expect", type=Path, default=None, help="비교할 JSON(로컬 반영 뒤 같은 스크립트 결과)")
     a = p.parse_args(argv)
     with ro_conn(db_url(a.collective_env, a.env_file)) as c, ro_conn(db_url(a.rent_env, a.env_file)) as r, \
             ro_conn(db_url(a.built_env, a.env_file)) as b:
         m = collect(c, r, b, as_of=a.as_of, heavy_ms=a.heavy_timeout * 1000, skip_heavy=a.skip_heavy,
-                    split_units=a.split_units, c2_units=a.c2_units)
+                    split_units=a.split_units)
     if a.out:
         write_json(a.out, m)
     print(md_table([(k, v) for k, v in m.items() if not k.startswith("_")], ["지표", "값"]))

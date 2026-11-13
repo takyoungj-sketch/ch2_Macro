@@ -8,6 +8,15 @@
 큰 표는 조각으로 나눈다: building_key 가 있으면 키 첫 글자(16진 16조각), 없고 정수 id 가 있으면 id 범위 N조각, 둘 다 없으면 통째.
 조각마다 쿼리 하나·시간 제한 하나(--timeout, 기본 600초). 출력에는 표 이름·조각 이름·건수·해시만 있다(행 값 없음).
 
+두 가지 방식(--mode):
+  hash (기본): 위 행 해시. 로컬 PG18·운영 PG16 이 같은 행에 같은 해시를 내는지는 미검증이므로, 런북 3절에서 먼저
+               「이미 같다고 알려진 작은 표」(region_codes·region_code_history)로 snapshot·compare 해 본다.
+               같으면 hash 를 그대로 쓰고, 다르면 sums 로 바꾼다(아래 pgcheck 가 둘 다 재서 판정).
+  sums       : 조각마다 행 수 + 열마다 값 있는 행 수 + 숫자 열 합계(numeric 로 바꿔 더함) + 글자 열 길이 합.
+               해시보다 약하지만 PG 버전·정렬 규칙·jsonb 표기에 영향받지 않는다.
+  pgcheck    : 같은 작은 표로 hash·sums 를 한 번에 떠 JSON 하나로 쓴다. 두 쪽 pgcheck JSON 을 compare 하면
+               「hash 같음 → hash 사용 / hash 만 다름 → sums 사용 / sums 도 다름 → 표가 실제로 다름(동기화 문제)」을 출력.
+
 예상 소요(로컬 c8 실측: 전 표 해시 collective 24분 · rent 32분 · built 1분, 운영은 최대 2배):
   기본 대상 표(아래 TARGETS) 기준 collective 약 25~50분 · rent 약 30~65분 · built 1~2분.
 
@@ -43,6 +52,8 @@ TARGETS = {
     "built_stats": ["built_transactions", "built_scope_stats"],
 }
 HEX = "0123456789abcdef"
+PG_CHECK_TABLES = ["region_codes", "region_code_history"]   # 세 DB 모두 있고 작으며 토지에서 복사해 오는 표
+NUMERIC_TYPES = {"smallint", "integer", "bigint", "numeric", "real", "double precision"}
 
 
 def _chunks(conn, t: Timed, table: str, cols: list[str], id_chunks: int, timeout_ms: int):
@@ -64,9 +75,36 @@ def _chunks(conn, t: Timed, table: str, cols: list[str], id_chunks: int, timeout
     return [("all", "true")]
 
 
-def snapshot(conn, tables: list[str], *, exclude: list[str], id_chunks: int = 16, timeout_ms: int = 600_000) -> dict:
+def _col_types(conn, table: str) -> dict[str, str]:
+    from sqlalchemy import text
+
+    return {r[0]: r[1] for r in conn.execute(text(
+        "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=:t "
+        "ORDER BY ordinal_position"), {"t": table})}
+
+
+def sums_sql(table: str, types: dict[str, str], exclude: list[str], cond: str) -> tuple[str, list[str]]:
+    """행 수·열마다 값 있는 행 수·숫자 열 합계·글자 열 길이 합 — 결과 칸 이름 목록과 함께."""
+    parts, names = ["count(*)"], ["rows"]
+    for c, ty in types.items():
+        if c in exclude:
+            continue
+        q = f'"{c}"'
+        parts.append(f"count({q})")
+        names.append(f"{c}.n")
+        if ty in NUMERIC_TYPES:
+            parts.append(f"coalesce(sum({q}::numeric), 0)::text")
+            names.append(f"{c}.sum")
+        elif ty in ("text", "character varying", "character"):
+            parts.append(f"coalesce(sum(length({q})), 0)")
+            names.append(f"{c}.len")
+    return f'SELECT {", ".join(parts)} FROM "{table}" WHERE {cond}', names
+
+
+def snapshot(conn, tables: list[str], *, exclude: list[str], id_chunks: int = 16, timeout_ms: int = 600_000,
+             mode: str = "hash") -> dict:
     t = Timed()
-    out: dict = {"db": db_name(conn), "exclude": exclude, "tables": {}}
+    out: dict = {"db": db_name(conn), "mode": mode, "exclude": exclude, "tables": {}}
     minus = "".join(f" - '{c}'" for c in exclude)
     for tb in tables:
         if not table_exists(conn, tb):
@@ -74,7 +112,13 @@ def snapshot(conn, tables: list[str], *, exclude: list[str], id_chunks: int = 16
             continue
         cols = table_columns(conn, tb)
         parts = {}
+        types = _col_types(conn, tb) if mode == "sums" else {}
         for name, cond in _chunks(conn, t, tb, cols, id_chunks, timeout_ms):
+            if mode == "sums":
+                sql, names = sums_sql(tb, types, exclude, cond)
+                r = t.run(conn, f"{tb} {name}", sql, fetch="one", timeout_ms=timeout_ms)
+                parts[name] = None if r is None else dict(zip(names, (str(v) for v in r)))
+                continue
             r = t.run(conn, f"{tb} {name}",
                       f'SELECT count(*), md5(coalesce(string_agg(h, \'\' ORDER BY h COLLATE "C"), \'\')) '
                       f'FROM (SELECT md5((to_jsonb(x){minus})::text) h FROM "{tb}" x WHERE {cond}) z',
@@ -85,8 +129,16 @@ def snapshot(conn, tables: list[str], *, exclude: list[str], id_chunks: int = 16
     return out
 
 
+def _rows(part) -> object:
+    if isinstance(part, dict):
+        return part.get("rows")
+    return part[0] if part else "—"
+
+
 def compare(a: dict, b: dict) -> list[tuple]:
     diff = []
+    if a.get("mode", "hash") != b.get("mode", "hash"):
+        return [("(설정)", "방식 다름", a.get("mode", "hash"), b.get("mode", "hash"))]
     for tb in sorted(set(a["tables"]) | set(b["tables"])):
         x, y = a["tables"].get(tb), b["tables"].get(tb)
         if x is None or y is None:
@@ -96,10 +148,20 @@ def compare(a: dict, b: dict) -> list[tuple]:
         for part in sorted(set(x) | set(y)):
             px, py = x.get(part), y.get(part)
             if px is None or py is None or px != py:
-                diff.append((tb, part, px[0] if px else "—", py[0] if py else "—"))
+                diff.append((tb, part, _rows(px) if px else "—", _rows(py) if py else "—"))
     if a.get("exclude") != b.get("exclude"):
         diff.append(("(설정)", "제외 열 다름", a.get("exclude"), b.get("exclude")))
     return diff
+
+
+def pg_verdict(a: dict, b: dict) -> str:
+    """pgcheck JSON 두 개 → 어떤 방식을 쓸지."""
+    dh, ds = compare(a["hash"], b["hash"]), compare(a["sums"], b["sums"])
+    if not dh:
+        return "hash 같음 → 해시 비교(--mode hash)를 그대로 쓴다"
+    if not ds:
+        return "hash 만 다름(PG 버전·표기 차이) → --mode sums 로 비교한다"
+    return "sums 도 다름 → 표가 실제로 다르다(동기화 문제, 3절로 돌아가 멈춤)"
 
 
 def main(argv=None) -> int:
@@ -112,7 +174,13 @@ def main(argv=None) -> int:
     s.add_argument("--exclude-cols", default="", help="해시에서 뺄 열(예: id). promote 비교는 비움(같은 덤프라 id 도 같음)")
     s.add_argument("--id-chunks", type=int, default=16)
     s.add_argument("--timeout", type=int, default=600, help="조각 쿼리 시간 제한(초)")
+    s.add_argument("--mode", choices=["hash", "sums"], default="hash")
     s.add_argument("--out", type=Path, required=True)
+    g = sub.add_parser("pgcheck", help="작은 표로 hash·sums 를 함께 떠서 PG 버전 차이를 판정할 재료를 만든다")
+    g.add_argument("--db-env", required=True)
+    g.add_argument("--env-file", type=Path, default=None)
+    g.add_argument("--tables", default=",".join(PG_CHECK_TABLES))
+    g.add_argument("--out", type=Path, required=True)
     c = sub.add_parser("compare")
     c.add_argument("left", type=Path)
     c.add_argument("right", type=Path)
@@ -124,13 +192,26 @@ def main(argv=None) -> int:
             if not tables:
                 raise SystemExit(f"기본 대상 표가 없는 DB: {name} — --tables 로 지정")
             snap = snapshot(conn, tables, exclude=[x for x in a.exclude_cols.split(",") if x],
-                            id_chunks=a.id_chunks, timeout_ms=a.timeout * 1000)
+                            id_chunks=a.id_chunks, timeout_ms=a.timeout * 1000, mode=a.mode)
         write_json(a.out, snap)
         fails = [x for x in snap["_timings"] if not x["ok"]]
         print(f"{name}: 표 {len(tables)} · 조각 쿼리 {len(snap['_timings'])} · 실패 {len(fails)} · "
               f"{sum(x['sec'] for x in snap['_timings']):,.0f}초 → {a.out}")
         return 1 if fails else 0
+    if a.cmd == "pgcheck":
+        tables = [x for x in a.tables.split(",") if x]
+        with ro_conn(db_url(a.db_env, a.env_file)) as conn:
+            both = {"db": db_name(conn), "pgcheck": True,
+                    "hash": snapshot(conn, tables, exclude=[], mode="hash"),
+                    "sums": snapshot(conn, tables, exclude=[], mode="sums")}
+            both["server_version"] = str(conn.exec_driver_sql("SHOW server_version").scalar())
+        write_json(a.out, both)
+        print(f"{both['db']} (PG {both['server_version']}): pgcheck {', '.join(tables)} → {a.out}")
+        return 0
     left, right = read_json(a.left), read_json(a.right)
+    if left.get("pgcheck") and right.get("pgcheck"):
+        print(f"PG {left['server_version']} vs {right['server_version']}: {pg_verdict(left, right)}")
+        return 0 if not compare(left["sums"], right["sums"]) else 1
     diff = compare(left, right)
     print(f"{left['db']} vs {right['db']}: 다른 표·조각 {len(diff)}")
     if diff:

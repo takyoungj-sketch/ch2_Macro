@@ -205,3 +205,48 @@ def test_c5_core_light_metrics_and_violations(fx):
     expect["coverage.attributes"] = 1.0
     assert ("coverage.attributes", 0.5, 1.0) in c5.violations(m, expect)
     assert not any("쿼리 실패" in k for k in bad)
+
+
+def test_local_scope_dryrun_guard_accepts_only_real_local_names():
+    sd = _load(ROOT / "scripts" / "ops" / "collective_p2_local" / "scope_dryrun.py", "sd")
+    sd.guard_url("postgresql+psycopg2://u:p@localhost:5432/collective_stats", "collective_stats")
+    sd.guard_url("postgresql+psycopg2://u:p@127.0.0.1/parcel_master", "parcel_master")
+    for url, want in (("postgresql+psycopg2://u:p@localhost/collective_stats_p2r", "collective_stats"),   # 리허설
+                      ("postgresql+psycopg2://u:p@13.209.203.178/collective_stats", "collective_stats"),  # 원격
+                      ("postgresql+psycopg2://u:p@localhost/rent_stats", "collective_stats"),            # 다른 DB
+                      ("postgresql+psycopg2://u:p@localhost/parcel_master_p2r", "parcel_master")):
+        with pytest.raises(SystemExit):
+            sd.guard_url(url, want)
+    assert sd.outside({"a", "b"}, {"a"}) == {"b"} and sd.outside({"a"}, {"a", "c"}) == set()
+
+
+def test_sums_mode_and_pg_verdict(fx):
+    from sqlalchemy import text
+
+    import _common as C
+
+    hc = _load(OPS / "prod_hash_compare.py", "hc2")
+    url, eng = fx
+    tables = ["collective_transactions", "built_scope_stats"]
+    with C.ro_conn(url) as c:
+        s1 = hc.snapshot(c, tables, exclude=["id"], mode="sums")
+        h1 = hc.snapshot(c, tables, exclude=[], mode="hash")
+    assert s1["mode"] == "sums" and hc.compare(s1, s1) == []
+    part = s1["tables"]["collective_transactions"]["bk=b"]
+    assert part["rows"] == "1" and part["unit_price.sum"] == "100" and part["addr1.len"] == "4"
+    assert hc.compare(s1, h1)[0][1] == "방식 다름"
+    with eng.begin() as c:
+        c.execute(text("UPDATE collective_transactions SET unit_price = 101 WHERE building_key = 'b2'"))
+    try:
+        with C.ro_conn(url) as c:
+            s2 = hc.snapshot(c, tables, exclude=["id"], mode="sums")
+        assert [(x[0], x[1]) for x in hc.compare(s1, s2)] == [("collective_transactions", "bk=b")]
+    finally:
+        with eng.begin() as c:
+            c.execute(text("UPDATE collective_transactions SET unit_price = 100 WHERE building_key = 'b2'"))
+    # 판정: hash 같음 / hash 만 다름 / sums 도 다름
+    same = {"hash": h1, "sums": s1}
+    other_hash = {"hash": {**h1, "tables": {**h1["tables"], "built_scope_stats": {"all": [1, "x"]}}}, "sums": s1}
+    assert hc.pg_verdict(same, same).startswith("hash 같음")
+    assert hc.pg_verdict(same, other_hash).startswith("hash 만 다름")
+    assert hc.pg_verdict(same, {"hash": other_hash["hash"], "sums": s2}).startswith("sums 도 다름")
