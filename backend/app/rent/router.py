@@ -20,6 +20,10 @@ _RB_DIST_JSON = (
     Path(__file__).resolve().parents[3] / "pipeline" / "rent" / "_seoul_rb_distribution.json"
 )
 
+from app.rent.query_guard import (
+    QueryDeadline, request_query_deadline, heavy_query,
+    REGRESSION_TIMEOUT_MESSAGE, TRANSACTIONS_TIMEOUT_MESSAGE,
+)
 from app.rent.db import get_rent_db
 from app.rent.conversion_query import list_conversion_compare
 from app.rent.query import (
@@ -377,6 +381,7 @@ def rent_map_points(
 @router.get("/buildings/{building_key}/transactions", response_model=RentTransactionListResponse)
 def rent_building_transactions(
     building_key: str,
+    deadline: QueryDeadline = Depends(request_query_deadline),
     db: Session = Depends(get_rent_db),
     asset_type: Optional[str] = None,
     contract_date_from: Optional[date] = None,
@@ -384,19 +389,20 @@ def rent_building_transactions(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ):
-    total, rows = list_building_transactions(
-        db,
-        building_key=building_key,
-        asset_type=asset_type,
-        contract_date_from=contract_date_from,
-        contract_date_to=contract_date_to,
-        page=page,
-        page_size=page_size,
-    )
-    return RentTransactionListResponse(
-        total=total,
-        items=[RentTransactionRow(**r) for r in rows],
-    )
+    with heavy_query(db, message=TRANSACTIONS_TIMEOUT_MESSAGE, deadline=deadline) as guarded:
+        total, rows = list_building_transactions(
+            guarded,
+            building_key=building_key,
+            asset_type=asset_type,
+            contract_date_from=contract_date_from,
+            contract_date_to=contract_date_to,
+            page=page,
+            page_size=page_size,
+        )
+        return RentTransactionListResponse(
+            total=total,
+            items=[RentTransactionRow(**r) for r in rows],
+        )
 
 
 def _run_rent_regression(df, body, asset_type, keys, names):
@@ -419,33 +425,36 @@ def _run_rent_regression(df, body, asset_type, keys, names):
 def rent_building_regression(
     building_key: str,
     body: CollectiveRegressionRequest,
+    deadline: QueryDeadline = Depends(request_query_deadline),
     db: Session = Depends(get_rent_db),
     asset_type: Optional[str] = None,
     contract_date_from: Optional[date] = None,
     contract_date_to: Optional[date] = None,
     lease_kind: str = Query("jeonse"),
 ):
-    import pandas as pd
+    with heavy_query(db, message=REGRESSION_TIMEOUT_MESSAGE, deadline=deadline) as guarded:
+        import pandas as pd
 
-    keys = [building_key]
-    rows = fetch_regression_rows(
-        db,
-        building_keys=keys,
-        asset_type=asset_type,
-        contract_date_from=contract_date_from,
-        contract_date_to=contract_date_to,
-        lease_kind=lease_kind,
-    )
-    if len(rows) < 8:
-        raise HTTPException(400, "회귀 표본이 부족합니다. 전세 거래가 더 있는 건물을 선택하세요.")
-    df = pd.DataFrame(rows)
-    name = str(df["display_name"].dropna().iloc[0]) if "display_name" in df.columns else building_key
-    return _run_rent_regression(df, body, asset_type, keys, {building_key: name})
+        keys = [building_key]
+        rows = fetch_regression_rows(
+            guarded,
+            building_keys=keys,
+            asset_type=asset_type,
+            contract_date_from=contract_date_from,
+            contract_date_to=contract_date_to,
+            lease_kind=lease_kind,
+        )
+        if len(rows) < 8:
+            raise HTTPException(400, "회귀 표본이 부족합니다. 전세 거래가 더 있는 건물을 선택하세요.")
+        df = pd.DataFrame(rows)
+        name = str(df["display_name"].dropna().iloc[0]) if "display_name" in df.columns else building_key
+        return _run_rent_regression(df, body, asset_type, keys, {building_key: name})
 
 
 @router.post("/regression/run", response_model=CollectiveRegressionResponse)
 def rent_cohort_regression(
     body: CollectiveRegressionRequest,
+    deadline: QueryDeadline = Depends(request_query_deadline),
     db: Session = Depends(get_rent_db),
     building_key: list[str] = Query(default=[]),
     asset_type: Optional[str] = None,
@@ -453,28 +462,29 @@ def rent_cohort_regression(
     contract_date_to: Optional[date] = None,
     lease_kind: str = Query("jeonse"),
 ):
-    import pandas as pd
+    with heavy_query(db, message=REGRESSION_TIMEOUT_MESSAGE, deadline=deadline) as guarded:
+        import pandas as pd
 
-    keys = [k for k in building_key if k]
-    if len(keys) < 1:
-        raise HTTPException(400, "building_key가 필요합니다.")
-    rows = fetch_regression_rows(
-        db,
-        building_keys=keys,
-        asset_type=asset_type,
-        contract_date_from=contract_date_from,
-        contract_date_to=contract_date_to,
-        lease_kind=lease_kind,
-    )
-    if len(rows) < 8:
-        raise HTTPException(400, "회귀 표본이 부족합니다.")
-    df = pd.DataFrame(rows)
-    names = {
-        str(r["building_key"]): str(r.get("display_name") or r["building_key"])
-        for r in rows
-        if r.get("building_key")
-    }
-    return _run_rent_regression(df, body, asset_type, keys, names)
+        keys = [k for k in building_key if k]
+        if len(keys) < 1:
+            raise HTTPException(400, "building_key가 필요합니다.")
+        rows = fetch_regression_rows(
+            guarded,
+            building_keys=keys,
+            asset_type=asset_type,
+            contract_date_from=contract_date_from,
+            contract_date_to=contract_date_to,
+            lease_kind=lease_kind,
+        )
+        if len(rows) < 8:
+            raise HTTPException(400, "회귀 표본이 부족합니다.")
+        df = pd.DataFrame(rows)
+        names = {
+            str(r["building_key"]): str(r.get("display_name") or r["building_key"])
+            for r in rows
+            if r.get("building_key")
+        }
+        return _run_rent_regression(df, body, asset_type, keys, names)
 
 
 def _sangkwon_ready(conn) -> bool:

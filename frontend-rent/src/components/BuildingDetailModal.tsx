@@ -230,6 +230,7 @@ export default function BuildingDetailModal({
         assetType: row.asset_type,
       }),
     enabled: panel === "transactions",
+    retry: false,
   });
 
   const focusR = buildingRb(row);
@@ -496,7 +497,11 @@ export default function BuildingDetailModal({
       {panel === "transactions" && (
         <div className="space-y-2 flex flex-col min-h-0">
           {txQ.isLoading && <p className="text-xs text-slate-400">불러오는 중…</p>}
-          {txQ.isError && <p className="text-xs text-red-600">거래 목록을 불러오지 못했습니다.</p>}
+          {txQ.isError && <p role="alert" className="text-xs text-red-600">{
+            (txQ.error as { response?: { status?: number } })?.response?.status === 503
+              ? "거래 목록을 찾는 데 시간이 너무 오래 걸려 중단했습니다. 잠시 뒤 다시 시도해 주세요."
+              : "거래 목록을 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요."
+          }</p>}
           {txQ.data && (
             <>
               <div className="flex flex-wrap items-center gap-2">
