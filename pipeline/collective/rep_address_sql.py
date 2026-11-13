@@ -30,7 +30,10 @@ def rep_address_query(
     extra_sel = "".join(f", MAX({c}) AS {c}" for c in rep_extra_max)
     extra_cols = "".join(f", {c}" for c in rep_extra_max)
     tie = ", ".join(f"{c} NULLS LAST" for c in _TIE_ORDER if c in rep_cols)
-    join_on = " AND ".join(f"b.{c} IS NOT DISTINCT FROM r.{c}" for c in group_cols)
+    # `=` 조인(해시 조인). 옛 `IS NOT DISTINCT FROM` 은 해시·머지가 안 돼 중첩 루프(base 행 × 그룹 수)로
+    # 경기 annual 한 쿼리가 10시간을 넘겼다. 그룹 열에 NULL 이 있으면 `=` 는 그 행을 조용히 빠뜨리므로
+    # 조인 전에 NULL 행 수를 세서 0이 아니면 쿼리 자체를 오류로 끝낸다(_null_guard_sql).
+    join_on = " AND ".join(f"b.{c} = r.{c}" for c in group_cols)
     out_rep = ", ".join(f"r.{c}" for c in (*rep_cols, *rep_extra_max))
     grp_rep = ", ".join(f"r.{c}" for c in (*rep_cols, *rep_extra_max))
     return f"""
@@ -49,5 +52,24 @@ SELECT {", ".join("b." + c for c in group_cols)}, {out_rep},
        {aggregates}
 FROM base b
 JOIN rep r ON {join_on}
+WHERE {_null_guard_sql(group_cols)} = 0
 GROUP BY {", ".join("b." + c for c in group_cols)}, {grp_rep}
 """
+
+
+NULL_GUARD_TAG = "rep_address_query: group_cols NULL"
+
+
+def _null_guard_sql(group_cols: list[str]) -> str:
+    """base 의 그룹 열 NULL 행 수. 0이면 0, 아니면 정수 변환 오류로 쿼리를 멈춘다.
+
+    상관 없는 하위 쿼리라 PostgreSQL 이 실행 시작 때 한 번 평가한다(One-Time Filter) —
+    조인 결과가 0행이어도(전부 NULL) 오류가 난다.
+    """
+    cond = " OR ".join(f"{c} IS NULL" for c in group_cols)
+    cols = ", ".join(group_cols)
+    return (
+        f"(SELECT CASE WHEN count(*) = 0 THEN 0 "
+        f"ELSE ('{NULL_GUARD_TAG} rows=' || count(*) || ' ({cols})')::int END "
+        f"FROM base WHERE {cond})"
+    )

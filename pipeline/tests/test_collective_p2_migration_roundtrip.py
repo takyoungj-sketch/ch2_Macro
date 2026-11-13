@@ -268,6 +268,76 @@ def test_rep_address_and_mart_replace(fx):
         assert [(r[1], r[2], r[3]) for r in rep] == [(2020, "경기도", "원장 빌더")]
 
 
+_REP_BASE = ("SELECT building_key, asset_type, addr1, addr2, addr3, addr4, addr5, beopjungri_code, sigungu_code, "
+             "lot_number, road_name, unit_price, contract_date, contract_year FROM {src} WHERE true {addr1_clause}")
+
+
+def _legacy_join(sql: str, group_cols: list[str]) -> str:
+    """옛(IS NOT DISTINCT FROM) 조인 SQL — 새 SQL 에서 조인만 되돌리고 NULL 검사를 뺀다."""
+    from collective.rep_address_sql import _null_guard_sql
+
+    old = sql.replace(f"WHERE {_null_guard_sql(group_cols)} = 0\n", "")
+    for c in group_cols:
+        old = old.replace(f"b.{c} = r.{c}", f"b.{c} IS NOT DISTINCT FROM r.{c}")
+    assert "IS NOT DISTINCT FROM" in old and "count(*) = 0" not in old
+    return old
+
+
+def test_rep_address_eq_join_matches_legacy_join(fx):
+    """`=` 조인 결과 = 옛 IS NOT DISTINCT FROM 결과(그룹 열 NULL 없을 때) — rolling·annual 모양 둘 다."""
+    eng = fx["eng"]
+    with eng.begin() as c:
+        c.execute(text("""INSERT INTO collective_transactions (asset_type, building_key, addr1, addr3, addr4, beopjungri_code,
+            lot_number, contract_year, contract_date, unit_price, building_name) VALUES
+            ('apartment','EQ1','서울특별시','구','갑동','1111111111','1',2024,'2024-01-01',10,'x'),
+            ('apartment','EQ1','서울특별시','구','을동','2222222222','2',2024,'2024-03-01',20,'x'),
+            ('apartment','EQ1','서울특별시','구','을동','2222222222','2',2025,'2025-01-01',30,'x'),
+            ('officetel','EQ1','서울특별시','구',NULL,NULL,NULL,2025,NULL,40,'x'),
+            ('apartment','EQ2','서울특별시','구','병동','3333333333','3',2023,'2023-01-01',50,'x')"""))
+    try:
+        for group_cols in (["building_key", "asset_type"], ["building_key", "asset_type", "contract_year"]):
+            new = rep_address_query(base_sql=_REP_BASE.format(src="collective_transactions", addr1_clause="{addr1_clause}"),
+                                    group_cols=group_cols,
+                                    aggregates="count(*) AS n, array_agg(b.unit_price ORDER BY b.unit_price) AS prices",
+                                    ).format(addr1_clause="")
+            old = _legacy_join(new, group_cols)
+            order = ", ".join(str(i + 1) for i in range(len(group_cols)))
+            with eng.connect() as c:
+                a = [tuple(r) for r in c.execute(text(f"SELECT * FROM ({new}) q ORDER BY {order}"))]
+                b = [tuple(r) for r in c.execute(text(f"SELECT * FROM ({old}) q ORDER BY {order}"))]
+            assert a == b and len(a) >= 4
+            assert any(r[0] == "EQ1" and r[1] == "officetel" for r in a)   # 주소 칸이 NULL 인 그룹도 남는다
+    finally:
+        with eng.begin() as c:
+            c.execute(text("DELETE FROM collective_transactions WHERE building_key IN ('EQ1','EQ2')"))
+
+
+def test_rep_address_null_group_col_raises(fx):
+    """그룹 열 NULL 이 있으면 `=` 조인이 조용히 빠뜨리지 않고 쿼리가 오류로 끝난다(전부 NULL 이어도)."""
+    from sqlalchemy.exc import DataError
+
+    from collective.rep_address_sql import NULL_GUARD_TAG
+
+    eng = fx["eng"]
+    with eng.begin() as c:
+        c.execute(text("CREATE TABLE t_rep_null AS SELECT * FROM collective_transactions WHERE false"))
+        c.execute(text("""INSERT INTO t_rep_null (asset_type, building_key, addr3, contract_year, contract_date, unit_price,
+            building_name) VALUES ('apartment','OK','구',2024,'2024-01-01',1,'x'), ('apartment',NULL,'구',2024,'2024-01-01',1,'x')"""))
+    try:
+        sql = rep_address_query(base_sql=_REP_BASE.format(src="t_rep_null", addr1_clause=""),
+                                group_cols=["building_key", "asset_type"], aggregates="count(*) AS n")
+        for keep in ("building_key IS NULL OR building_key = 'OK'", "building_key IS NULL"):
+            with eng.connect() as c, pytest.raises(DataError) as ei:
+                c.execute(text(sql.replace("WHERE true", f"WHERE ({keep})", 1))).all()
+            assert NULL_GUARD_TAG in str(ei.value) and "rows=1" in str(ei.value)
+        with eng.connect() as c:   # NULL 없으면 그대로 동작
+            rows = c.execute(text(sql.replace("WHERE true", "WHERE building_key = 'OK'", 1))).mappings().all()
+            assert [(r["building_key"], r["n"]) for r in rows] == [("OK", 1)]
+    finally:
+        with eng.begin() as c:
+            c.execute(text("DROP TABLE IF EXISTS t_rep_null"))
+
+
 def test_deal_type_apply_and_rollback(fx):
     eng = fx["eng"]
     with eng.begin() as c:
