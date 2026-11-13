@@ -240,6 +240,36 @@ export type RentRegressionResult = {
   warnings?: string[];
 };
 
+/** 서버 DB 제한(90초)보다 길고 nginx(120초)보다 짧게 — 응답 없이 멈춘 듯 보이지 않게 끊는다. */
+export const RENT_REGRESSION_TIMEOUT_MS = 110_000;
+
+const REGRESSION_SLOW_HINT =
+  "거래가 많은 단지는 지금 분석할 수 없을 수 있습니다. 잠시 뒤 다시 시도해 주세요.";
+
+/** 회귀 실패를 원인별 안내 문구로 바꾼다(시간 초과·504·503·입력 오류). */
+export function rentRegressionErrorMessage(err: unknown): string {
+  const e = err as {
+    code?: string;
+    response?: { status?: number; data?: unknown };
+  } | null;
+  if (!e) return "회귀를 실행하지 못했습니다.";
+  const raw = (e.response?.data as { detail?: unknown } | undefined)?.detail;
+  const detail = typeof raw === "string" && raw.trim() ? raw.trim() : null;
+  const status = e.response?.status;
+  if (e.code === "ECONNABORTED" || e.code === "ETIMEDOUT") {
+    return `응답이 ${Math.round(RENT_REGRESSION_TIMEOUT_MS / 1000)}초 안에 오지 않아 중단했습니다. ${REGRESSION_SLOW_HINT}`;
+  }
+  if (status === 503) {
+    return detail ?? `서버가 지금 이 분석을 처리할 수 없습니다. ${REGRESSION_SLOW_HINT}`;
+  }
+  if (status === 504 || status === 502) {
+    return `서버 응답 시간이 초과되었습니다. ${REGRESSION_SLOW_HINT}`;
+  }
+  if (detail) return detail;
+  if (!e.response) return "서버에 연결하지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.";
+  return "회귀를 실행하지 못했습니다.";
+}
+
 function regressionAssetType(assetType: string): string {
   return assetType === "detached" ? "apartment" : assetType;
 }
@@ -267,13 +297,14 @@ export async function runRentRegression(params: {
     const { data } = await api.post<RentRegressionResult>(
       `/buildings/${encodeURIComponent(keys[0] ?? "")}/regression/run`,
       body,
-      { params: query },
+      { params: query, timeout: RENT_REGRESSION_TIMEOUT_MS },
     );
     return data;
   }
   const { data } = await api.post<RentRegressionResult>("/regression/run", body, {
     params: { ...query, building_key: keys },
     paramsSerializer: { indexes: null },
+    timeout: RENT_REGRESSION_TIMEOUT_MS,
   });
   return data;
 }
