@@ -9,6 +9,8 @@ verify_monthly_integrity.py --collective 에서 부른다. 단독 실행도 된�
      동 이름 = addr4(리 아님) 아니면 addr3. 화성 코드 변형처럼 이름이 하나면 해당 없음.
   3. annual 시도·연도·유형 합(count) = 원장 합(2019~)                                   → ERR
   4. (--deep) 최신 as_of building_stats 주소 세트가 그 창의 거래에 실제로 있는지(합성 주소 0) → ERR
+  5. C-2형: 같은 키·같은 법정동 안에서 본번이 다르고 건축년도도 다른 3건+ 묶음이 있는 키 중 C-2 판정 파일 밖 → WARN
+     (C-2 반영 뒤 기대 0). 판정 파일의 분할 키에서 파일에 없는 본번(적재 때 가까운 조각에 붙은 것 등) → WARN 「확인 필요」
 """
 from __future__ import annotations
 
@@ -24,7 +26,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "pipeline"))
 
 from admin_names import LEGACY_SIDO_TO_CURRENT  # noqa: E402
-from collective.building_keys import SPLIT_UNITS_PATH  # noqa: E402
+from collective.building_keys import SPLIT_UNITS_PATH, judged_keys_c2, load_split_units_c2, main_lot_of  # noqa: E402
 
 LEGACY = sorted(LEGACY_SIDO_TO_CURRENT)
 
@@ -69,6 +71,59 @@ SELECT m.window_years, count(*) FILTER (WHERE NOT EXISTS (
     AND t.lot_number IS NOT DISTINCT FROM m.lot_number AND t.road_name IS NOT DISTINCT FROM m.road_name))
 FROM m GROUP BY 1 ORDER BY 1
 """
+
+
+# C-2형: 3건+ 본번 묶음(분양권 제외)끼리 본번·건축년도(최빈)가 모두 다른 쌍이 있는 (키·유형·법정동)
+C2_SHAPE_SQL = """
+WITH g AS (
+  SELECT building_key, asset_type, left(beopjungri_code, 10) AS bjd, split_part(btrim(lot_number), '-', 1) AS ml,
+         count(*) AS n, mode() WITHIN GROUP (ORDER BY building_year) AS y
+  FROM collective_transactions
+  WHERE is_valid AND asset_type <> 'presale' AND beopjungri_code IS NOT NULL AND coalesce(btrim(lot_number), '') <> ''
+  GROUP BY 1, 2, 3, 4
+  HAVING count(*) >= 3
+)
+SELECT DISTINCT a.building_key, a.asset_type, a.bjd
+FROM g a JOIN g b ON a.building_key = b.building_key AND a.asset_type = b.asset_type AND a.bjd = b.bjd
+WHERE a.ml < b.ml AND a.y IS NOT NULL AND b.y IS NOT NULL AND a.y <> b.y
+"""
+
+C2_LOTS_SQL = """
+SELECT building_key, left(beopjungri_code, 10), split_part(btrim(lot_number), '-', 1), count(*)
+FROM collective_transactions
+WHERE building_key IN :k AND coalesce(btrim(lot_number), '') <> ''
+GROUP BY 1, 2, 3
+"""
+
+
+def check_c2_shape(rep, cconn, *, units_path: Path | None = None) -> None:
+    """5. C-2형 경고(실패 아님). 출력은 키 앞 12자·법정동 코드·건수만(지번 없음)."""
+    from sqlalchemy import bindparam
+
+    judged = judged_keys_c2(units_path)
+    rows = cconn.execute(text(C2_SHAPE_SQL)).all()
+    pend = [r for r in rows if r[0] not in judged]
+    if pend:
+        rep.warn(f"C-2형(같은 법정동·다른 본번·다른 건축년도 3건+) 판정 밖 {len(pend):,}곳(키·법정동) — 판정 대기")
+        for k, a, bjd in pend[:10]:
+            rep.info(f"{a} {bjd} {k[:12]}…")
+    else:
+        rep.ok(f"C-2형 (키·법정동) {len(rows):,}곳 모두 판정 목록 안")
+    units = load_split_units_c2(units_path)
+    if not units:
+        return
+    got = cconn.execute(text(C2_LOTS_SQL).bindparams(bindparam("k", expanding=True)), {"k": sorted(units)}).all()
+    unknown: dict[tuple[str, str], int] = {}
+    for k, bjd, ml, _n in got:
+        frags = units.get(k, {}).get(str(bjd))
+        if frags is None:
+            continue
+        if main_lot_of(ml) not in {f[0] for f in frags}:
+            unknown[(k, str(bjd))] = unknown.get((k, str(bjd)), 0) + 1
+    if unknown:
+        rep.warn(f"C-2 분할 키의 판정 파일에 없는 본번 {sum(unknown.values()):,}개 ({len(unknown):,}곳) — 확인 필요")
+    else:
+        rep.ok("C-2 분할 키의 본번이 모두 판정 파일 안")
 
 
 class _Rep(Protocol):
@@ -116,6 +171,8 @@ def check_collective_p2(rep: _Rep, cconn, bconn=None, *, deep: bool = False, as_
             rep.info(f"{r[0]} {r[1]} {r[2]}: annual {int(r[3]):,} / 원장 {int(r[4]):,}")
     else:
         rep.ok("annual 시도·연도·유형 합 = 원장 합(2019~)")
+
+    check_c2_shape(rep, cconn)
 
     if deep:
         a = as_of or cconn.execute(text("SELECT max(as_of_month) FROM collective_building_stats")).scalar()
