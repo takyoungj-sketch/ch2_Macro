@@ -5,7 +5,8 @@
  * - `GET /api/features` 를 한 번 읽어 켜진 기능 이름을 보관한다(앱 전체 공유 저장소).
  * - 꺼진 기능의 탭·칸은 그리지 않는다. 관리자에게만 켜진 기능에는 「비공개」 배지를 단다.
  * - 같은 탭에서 권한이 바뀌면(로그인·로그아웃·staff 세션 만료) 화면 데이터를 비운다:
- *   창이 다시 보일 때 다시 읽고, 기능 목록이 달라졌으면 페이지를 새로 불러온다.
+ *   창이 다시 보일 때 다시 읽고, 기능 목록이 실제로 달라졌을 때만 페이지를 새로 불러온다.
+ *   통신 오류·비정상 응답은 「확인 실패」로 보고 현재 상태를 그대로 둔다(새로고침하지 않음).
  *   react-query 캐시·모달 상태·불러온 거래목록이 모두 메모리에서 사라진다.
  */
 import { useSyncExternalStore } from "react";
@@ -30,27 +31,34 @@ function sig(features: string[], privateFeatures: string[]): string {
   return `${[...features].sort().join(",")}|${[...privateFeatures].sort().join(",")}`;
 }
 
-async function load(): Promise<void> {
-  let features: string[] = [];
-  let privateFeatures: string[] = [];
+function isNameList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === "string");
+}
+
+/** 확인 실패(통신 오류·비정상 응답)는 null. 현재 상태를 유지하고 새로고침하지 않는다. */
+async function fetchFeatures(): Promise<{ features: string[]; privateFeatures: string[] } | null> {
   try {
     const res = await fetch("/api/features", { credentials: "include", cache: "no-store" });
-    if (res.ok) {
-      const body = (await res.json()) as { features?: string[]; private?: string[] };
-      features = Array.isArray(body.features) ? body.features : [];
-      privateFeatures = Array.isArray(body.private) ? body.private : [];
-    }
+    if (!res.ok) return null;
+    const body = (await res.json()) as { features?: unknown; private?: unknown };
+    if (!body || !isNameList(body.features) || !isNameList(body.private)) return null;
+    return { features: body.features, privateFeatures: body.private };
   } catch {
-    // 읽지 못하면 모두 꺼진 것으로 본다(사용자 화면이 기본).
+    return null;
   }
-  const next = sig(features, privateFeatures);
+}
+
+async function load(): Promise<void> {
+  const got = await fetchFeatures();
+  if (got === null) return; // 확인 실패 — 처음이면 모두 꺼진 상태(사용자 화면)로 남는다.
+  const next = sig(got.features, got.privateFeatures);
   if (signature !== null && next !== signature) {
-    // 권한이 바뀌었다 — 관리자 때 받은 값이 화면에 남지 않게 새로 시작한다.
+    // 실제 권한 목록이 바뀌었다 — 관리자 때 받은 값이 화면에 남지 않게 새로 시작한다.
     window.location.reload();
     return;
   }
   signature = next;
-  state = { loaded: true, features: new Set(features), privateFeatures: new Set(privateFeatures) };
+  state = { loaded: true, features: new Set(got.features), privateFeatures: new Set(got.privateFeatures) };
   listeners.forEach((fn) => fn());
 }
 

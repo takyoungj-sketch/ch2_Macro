@@ -20,6 +20,11 @@ from app.platform.entitlements import apply_staff_entitlements, list_entitlement
 from app.platform.jwt_util import COOKIE_NAME, decode_access_token
 
 _LOGIN = "로그인이 필요합니다."
+# D-085 대장 연결 요청을 본문(trait_enrich)으로 판정하는 경로.
+_LEDGER_BODY_PATHS = (
+    "/api/paid/matrix-cell-transactions",
+    "/api/paid/matrix-cell-transactions/export",
+)
 _SUBSCRIBE = "구독이 필요합니다."
 
 _ALWAYS_OPEN_PREFIXES = (
@@ -250,14 +255,26 @@ async def product_gate_response(request: Request) -> JSONResponse | None:
         detail = "관리자 로그인이 필요합니다." if status == 401 else "관리자만 이용할 수 있습니다."
         return JSONResponse(status_code=status, content={"detail": detail})
     # D-085 관리자 전용 기능 — 라우트 의존성과 같은 기준(이중 방어). 구독 판정보다 먼저.
-    from app.feature_gates import HIDDEN_DETAIL, feature_enabled, gated_feature_for_path
+    from app.feature_gates import (
+        HIDDEN_DETAIL,
+        LAND_LEDGER_LINK,
+        feature_enabled,
+        feature_mode,
+        gated_feature_for_path,
+        is_admin,
+    )
 
     gated = gated_feature_for_path(request.method, path)
-    if gated is not None and not feature_enabled(request, gated):
-        return JSONResponse(status_code=403, content={"detail": HIDDEN_DETAIL})
+    if gated is not None:
+        if not feature_enabled(request, gated):
+            return JSONResponse(status_code=403, content={"detail": HIDDEN_DETAIL})
+        # 스위치가 관리자로 판정한 요청(QA 토큰 포함)은 이 기능 경로의 구독 검사도 같은 기준으로 통과.
+        if feature_mode(gated) == "admin" and is_admin(request):
+            return None
     if request.method == "POST" and path in {
         "/api/paid/matrix-yearly",
         "/api/free/v2/stats/bulk",
+        *_LEDGER_BODY_PATHS,
     }:
         raw = await request.body()
         if raw:
@@ -265,6 +282,15 @@ async def product_gate_response(request: Request) -> JSONResponse | None:
                 body = json.loads(raw)
             except json.JSONDecodeError:
                 body = None
+    if (
+        path in _LEDGER_BODY_PATHS
+        and isinstance(body, dict)
+        and body.get("trait_enrich")
+        and feature_mode(LAND_LEDGER_LINK) == "admin"
+        and feature_enabled(request, LAND_LEDGER_LINK)
+    ):
+        # 대장 연결 요청(공시지가 표시·CSV 열)도 같은 기준: 스위치가 관리자로 본 요청은 통과.
+        return None
     if not needs_macro(request.method, path, request.query_params, body):
         return None
     access = caller_access(request)

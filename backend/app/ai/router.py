@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Query, Request, Response
 import secrets
 from app.ai.sessions import session_owner
-from app.ai.feature_filter import filter_ai_body
+from app.ai.feature_filter import ai_feature_scope, current_used, filter_ai_body, stored_result_visible
 from app.platform.jwt_util import COOKIE_NAME, decode_access_token
 
 from app.ai.bundles.registry import BUNDLE_REGISTRY, suggested_questions
@@ -64,7 +64,8 @@ def ai_chat(body: AiChatRequest, request: Request, response: Response):
     """세션 기반 AI 대화 — Screen-bound + Reasoning Bundle."""
     check_ai_rate_limit(request)
     body = filter_ai_body(body, request)  # D-085 비공개 기능 값 걷어내기
-    return _run_with_allowance(body, request, response, handle_chat)
+    with ai_feature_scope(request, body.context):  # 세션 재생·제품 지식도 같은 기준
+        return _run_with_allowance(body, request, response, handle_chat)
 
 
 def _run_with_allowance(body, request, response, handler):
@@ -99,7 +100,12 @@ def _run_with_allowance(body, request, response, handler):
         # Deterministic refusals and failed model answers do not consume questions.
         success = result.llm_used and not result.error_code and result.route != "refusal"
         result.quota = {"request_id": ticket.id}
-        quota.finish(ticket, result.model_dump(mode="json") if success else None,
+        stored = None
+        if success:
+            stored = result.model_dump(mode="json")
+            # D-085: 이 결과가 쓴 비공개 기능. 결과 조회 때 현재 요청자 기준으로 거른다.
+            stored["feature_tags"] = sorted(current_used())
+        quota.finish(ticket, stored,
                      error=result.error_code or (None if success else "not_chargeable"))
         result.quota = {**quota.snapshot(engine, grant), "request_id": ticket.id}
         return result
@@ -141,7 +147,16 @@ def ai_request_result(request_id: str, request: Request):
             raise HTTPException(404, "작업을 찾을 수 없습니다.")
         payload = c.execute(select(quota.results.c.payload).where(quota.results.c.request_id == row["id"])).scalar()
     import json
-    return {"request_id": request_id, "status": row["status"], "result": json.loads(payload) if payload else None}
+    result = json.loads(payload) if payload else None
+    if result is not None:
+        from app.feature_gates import enabled_features
+
+        # D-085: 저장된 결과도 현재 요청자의 기능 상태로 거른다(꺼진 기능 화면의 결과는 주지 않음).
+        if not stored_result_visible(result, frozenset(enabled_features(request))):
+            result = None
+        else:
+            result.pop("feature_tags", None)
+    return {"request_id": request_id, "status": row["status"], "result": result}
 
 
 @router.post("/history", response_model=AiHistoryRecordResponse)
@@ -149,7 +164,7 @@ def ai_history_record(body: AiHistoryRecordRequest, request: Request, response: 
     """성공한 분석 Bundle을 Analysis History에 자동 기록 (채팅 없이)."""
     check_ai_rate_limit(request)
     body = filter_ai_body(body, request)  # D-085
-    with session_owner(_owner(request, response)):
+    with ai_feature_scope(request, body.context), session_owner(_owner(request, response)):
         return handle_history_record(body)
 
 
@@ -158,6 +173,11 @@ def ai_explain(body: AiExplainRequest, request: Request, response: Response):
     """Explain layer만 자연어화 (LLM 없이 presets 우선)."""
     check_ai_rate_limit(request)
     body = filter_ai_body(body, request)  # D-085
+    with ai_feature_scope(request, body.context):
+        return _ai_explain(body, request, response)
+
+
+def _ai_explain(body: AiExplainRequest, request: Request, response: Response):
     from app.config import settings
     if settings.ai_subscription_quota_enabled:
         return _run_with_allowance(AiChatRequest(message=body.message or "이 화면을 설명해 주세요.",

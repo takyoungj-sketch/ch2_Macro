@@ -1547,7 +1547,12 @@ def _answer_land(req: AiChatRequest, session: AiSession, question: QuestionLog) 
         refusal = draft["kind"] == "refusal"
         answer = validate_answer(answer, "refusal" if refusal else "ch2")
         if evidence and any(item.ref and not item.ref.startswith("calc.") for item in evidence):
+            from app.ai.feature_filter import current_used
+
+            # D-085: 근거를 만든 요청이 쓴 비공개 기능을 붙여 둔다. previous 를 다시 쓰면 그 표지도 잇는다.
+            carried = session.dialogue_evidence_features if source == "previous" else frozenset()
             session.dialogue_evidence = focus
+            session.dialogue_evidence_features = carried | current_used()
         if draft["kind"] == "knowledge":
             session.dialogue_product_app = apps[0]
     else:
