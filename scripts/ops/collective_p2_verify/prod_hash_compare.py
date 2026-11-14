@@ -153,7 +153,7 @@ def default_tables(conn, name: str) -> list[str]:
     return base + [t for t in pres if t not in base]
 
 
-def evaluate(a: dict, b: dict) -> dict:
+def evaluate(a: dict, b: dict, *, required: set[str] | None = None) -> dict:
     """{status, diff, unverified}. 조각 쿼리 실패(시간 초과 등)·필수 표가 양쪽에 없음 → 검증 못 함. 값이 다르면 차이."""
     diff, unv = [], []
     if a.get("mode", "hash") != b.get("mode", "hash"):
@@ -162,8 +162,10 @@ def evaluate(a: dict, b: dict) -> dict:
         diff.append(("(설정)", "제외 열 다름", a.get("exclude"), b.get("exclude")))
     # 필수 표 = DB 이름의 기본 대상(TARGETS) + 두 스냅샷이 요청한 표. 결과 JSON 의 키가 아니라 이 목록을 순회한다
     # (JSON 에서 표 하나가 빠져 있어도 「비교할 게 없어 통과」가 되지 않게).
-    required = (set(TARGETS.get(a.get("db"), [])) | set(TARGETS.get(b.get("db"), []))
-                | set(a.get("requested") or []) | set(b.get("requested") or []))
+    # required 를 주면 그 목록만 필수(PG 버전 확인 = 지정한 작은 표). 주지 않으면 전체 비교 기준.
+    if required is None:
+        required = (set(TARGETS.get(a.get("db"), [])) | set(TARGETS.get(b.get("db"), []))
+                    | set(a.get("requested") or []) | set(b.get("requested") or []))
     for tb in sorted(required | set(a["tables"]) | set(b["tables"])):
         x, y = a["tables"].get(tb), b["tables"].get(tb)
         if tb in required and (x is None or y is None):
@@ -210,8 +212,10 @@ def pg_result(a: dict, b: dict) -> dict:
             for t, v in tabs.items():
                 if v is None:
                     unv.append(f"{side.get('db')} {mode}: {t} 표 없음")
-    eh = evaluate(a.get("hash") or {"tables": {}}, b.get("hash") or {"tables": {}})
-    es = evaluate(a.get("sums") or {"tables": {}}, b.get("sums") or {"tables": {}})
+    # PG 확인은 지정한 작은 표만 필수(전체 비교의 TARGETS 를 들이면 실제 DB 이름에서 늘 「필수 표 없음」이 된다)
+    pg_req = set(PG_CHECK_TABLES)
+    eh = evaluate(a.get("hash") or {"tables": {}}, b.get("hash") or {"tables": {}}, required=pg_req)
+    es = evaluate(a.get("sums") or {"tables": {}}, b.get("sums") or {"tables": {}}, required=pg_req)
     unv += [f"hash {t}: {w}" for t, w in eh["unverified"]] + [f"sums {t}: {w}" for t, w in es["unverified"]]
     fails = snapshot_failures(*(s.get(m) or {} for s in (a, b) for m in ("hash", "sums")))
     if unv or fails:

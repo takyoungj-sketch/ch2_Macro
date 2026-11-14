@@ -295,12 +295,20 @@ def test_sums_mode_and_pg_verdict(fx):
     finally:
         with eng.begin() as c:
             c.execute(text("UPDATE collective_transactions SET unit_price = 100 WHERE building_key = 'b2'"))
-    # 판정: hash 같음 / hash 만 다름 / sums 도 다름
-    same = {"hash": h1, "sums": s1}
-    other_hash = {"hash": {**h1, "tables": {**h1["tables"], "built_scope_stats": {"all": [1, "x"]}}}, "sums": s1}
+    # 판정: PG 확인은 지정한 작은 표만 필수 — 그 밖 표로 뜬 스냅샷은 「검증 못 함」(4차 검토)
+    assert hc.pg_verdict({"hash": h1, "sums": s1}, {"hash": h1, "sums": s1}).startswith("검증 못 함")
+    # 작은 표로 뜬 스냅샷: hash 같음 / hash 만 다름 / sums 도 다름
+    import json
+
+    pg = _pg_snaps(fx, hc, "collective_stats")
+    same = {"hash": pg["hash"], "sums": pg["sums"]}
+    oh = json.loads(json.dumps(same))
+    oh["hash"]["tables"]["region_codes"]["all"] = [2, "x"]
     assert hc.pg_verdict(same, same).startswith("hash 같음")
-    assert hc.pg_verdict(same, other_hash).startswith("hash 만 다름")
-    assert hc.pg_verdict(same, {"hash": other_hash["hash"], "sums": s2}).startswith("sums 도 다름")
+    assert hc.pg_verdict(same, oh).startswith("hash 만 다름")
+    os_ = json.loads(json.dumps(oh))
+    os_["sums"]["tables"]["region_codes"]["all"]["rows"] = "9"
+    assert hc.pg_verdict(same, os_).startswith("sums 도 다름")
 
 
 def test_scope_dryrun_host_guard_blocks_bypass():
@@ -463,7 +471,11 @@ def test_false_success_cases_now_unverified(fx, tmp_path):
 
     sc = _load(OPS / "prod_sync_check.py", "sc_fs")
     hc = _load(OPS / "prod_hash_compare.py", "hc_fs")
-    url, _ = fx
+    url, eng = fx
+    from sqlalchemy import text
+
+    with eng.begin() as c:   # ③ 은 작은 표가 없는 상태가 전제(다른 테스트가 만들었을 수 있음)
+        c.execute(text("DROP TABLE IF EXISTS region_codes, region_code_history"))
     with C.ro_conn(url) as c:
         snap = sc.snapshot(c, allow_heavy=True, heavy_rows=-1)
         pg = {"db": snap["db"], "pgcheck": True, "server_version": "18",
@@ -628,3 +640,76 @@ def test_result_time_is_oldest_snapshot_measured_at(fx, tmp_path):
         assert og.validate_result(res, [good["db"]], kind=kind)[0] == "unverified"
         C.write_json(f2, {k: v for k, v in good.items() if k != "measured_at"})          # 측정 시각 없음
         assert mod.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2
+
+
+# --- 4차 검토: 필수 표를 모드별로(전체 비교 = TARGETS, PG 확인 = 지정한 작은 표만) ----------------------
+
+def _pg_snaps(fx, hc, db_name):
+    """fixture DB 에 작은 표를 두고 pgcheck 스냅샷을 뜬 뒤, DB 이름만 실제 이름으로 바꾼다(운영·로컬 실제 DB 흉내)."""
+    import json
+
+    from sqlalchemy import text
+
+    import _common as C
+
+    url, eng = fx
+    with eng.begin() as c:
+        c.execute(text("CREATE TABLE IF NOT EXISTS region_codes (code text, name text)"))
+        c.execute(text("CREATE TABLE IF NOT EXISTS region_code_history (code text, n int)"))
+        c.execute(text("DELETE FROM region_codes"))
+        c.execute(text("INSERT INTO region_codes VALUES ('11', '서울'), ('26', '부산')"))
+    with C.ro_conn(url) as c:
+        pg = {"pgcheck": True, "server_version": "18.6",
+              "hash": hc.snapshot(c, hc.PG_CHECK_TABLES, exclude=[], mode="hash"),
+              "sums": hc.snapshot(c, hc.PG_CHECK_TABLES, exclude=[], mode="sums")}
+    pg = json.loads(json.dumps(pg))
+    pg["db"] = db_name
+    for m in ("hash", "sums"):
+        pg[m]["db"] = db_name
+    return pg
+
+
+@pytest.mark.parametrize("db_name", ["collective_stats", "rent_stats", "built_stats"])
+def test_pgcheck_real_db_name_normal_passes(fx, tmp_path, db_name):
+    """실제 DB 이름으로 정상 PG 확인 → 0. (전체 비교의 필수 목록 TARGETS[db] 를 들이지 않는다)"""
+    import json
+
+    import _common as C
+
+    hc = _load(OPS / "prod_hash_compare.py", f"hc_pgreal_{db_name}")
+    pg = _pg_snaps(fx, hc, db_name)
+    assert set(hc.TARGETS[db_name]) - set(hc.PG_CHECK_TABLES)               # 전체 비교라면 필수 표 없음이 될 이름
+    r = hc.pg_result(pg, pg)
+    assert r["status"] == "pass" and r["use_mode"] == "hash", r
+    f1, f2, out = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "r.json"
+    C.write_json(f1, pg)
+    C.write_json(f2, {**pg, "server_version": "16.14"})
+    assert hc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 0
+    res = json.loads(out.read_text(encoding="utf-8"))
+    assert res["status"] == "pass" and res["kind"] == "prod_hash_pgcheck" and res["left_db"] == db_name
+    # 같은 DB 이름의 전체 비교는 여전히 TARGETS 를 필수로 본다(작은 표만 있으면 검증 못 함)
+    assert hc.evaluate(pg["hash"], pg["hash"])["status"] == "unverified"
+
+
+@pytest.mark.parametrize("missing", ["region_codes", "region_code_history"])
+def test_pgcheck_small_table_missing_is_unverified(fx, tmp_path, missing):
+    """작은 표 하나가 빠지면(한쪽 결과에서 키 삭제·표 없음) → 2."""
+    import json
+
+    import _common as C
+
+    hc = _load(OPS / "prod_hash_compare.py", f"hc_pgmiss_{missing}")
+    pg = _pg_snaps(fx, hc, "collective_stats")
+    for how in ("key", "none"):
+        other = json.loads(json.dumps(pg))
+        for m in ("hash", "sums"):
+            if how == "key":
+                del other[m]["tables"][missing]
+            else:
+                other[m]["tables"][missing] = None
+        assert hc.pg_result(pg, other)["status"] == "unverified"
+        f1, f2, out = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "r.json"
+        C.write_json(f1, pg)
+        C.write_json(f2, other)
+        assert hc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2, how
+        assert json.loads(out.read_text(encoding="utf-8"))["use_mode"] is None
