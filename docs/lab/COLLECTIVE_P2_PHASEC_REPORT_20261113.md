@@ -22,6 +22,22 @@
 - 런북 반영: 운영 롤백 소요의 대부분은 mart 복원(특히 임대 rolling 2시간 23분)이다. 롤백 대신 「빌더 재실행」이 더 빠른 표가 있으면 Phase D 에서 표별로 고른다. 비교 기준은 원본 DB 가 덤프 시점과 같다는 전제 — 운영에서는 덤프 직후 해시를 저장해 두고 비교한다.
 - 디스크: 끝난 뒤 D 30%·C 38% 여유.
 
+## Codex P2 검토 반영 (2026-11-14, 코드·문서만 — 운영 접근·실행 없음)
+
+| # | 항목 | 반영 |
+|---|---|---|
+| 1 | 실제 적용 모드 | `migrate_p2_keys`·`fix_p2_deal_types`·`prune_split_annual_p2` 에 `--real-apply`. 쓰기 조건: 플래그 + `--confirm-db` 재입력 일치 + DB 마다 동기화 통과 결과 파일(`--sync-result`, 48시간 이내). 허용 대상은 collective/built/rent_stats. 리허설 가드는 그대로. 런북 5절 명령 교체 |
+| 2 | C-2 새 조각 고정 | 새 조각을 판정 표에 자동 등록(`source=auto_ingest`, 조각 번호 = 최대+1). 다음 달은 표 기준. 기존 거래 수는 base_key + 모든 파생 조각 키 합. Codex 시나리오(3건 → 새 조각, 다음 달 1건) 테스트. 월간 검사가 자동 등록 수를 경고 |
+| 3 | c5 | 남은 옛 키 = 정확한 C-01 사유(`split`·`honam_sido+split`, `c2_split` 제외). `c2_shape_pending` 을 ZERO 에 |
+| 4 | 검증 못 함 | `prod_sync_check`·`prod_hash_compare`(+ `prod_c5_core`) 결과 통과 0 / 차이 1 / 검증 못 함 2. 큰 표 건너뜀·조각 실패·필수 표 없음 = 검증 못 함. 해시 기본 대상에 보존 표(`*_p2_before` 자동)·C-2 판정 표. `--result-out` 결과 파일 |
+| 5 | `--skip-heavy` | 무거운 검사는 실행하지 않고 「건너뜀」(→ 검증 못 함). 가벼운 검사는 쿼리마다 10초 |
+| 6 | 호스트 가드 | `scope_dryrun.py`: SQLAlchemy 실제 접속 인자로 판정. URL 쿼리 `host`·`hostaddr`·`service`, 원격 `PGHOST`·`PGHOSTADDR`, `PGSERVICE` 거부. 우회 8사례 테스트. `statement_timeout` + 전체 시간 제한(종료 코드 3) |
+| 7 | C-2 화면 안내 | 집합 `BuildingKeySplitGuard` 가 `key_split_c2` 를 읽어 「같은 이름의 단지 중 가장 큰 단지를 보고 있습니다」 + 분리된 단지 링크(`KeySplitC2Notice`). C-01 409 대화상자 그대로. 임대: `/api/rent/buildings/{key}/key-status` + `RentKeySplitGuard`. tsc 두 앱 통과, 컴포넌트 테스트(esbuild + node:test, 새 의존성 없음) 각 3개 |
+| 8 | health 대기 | `vps_promote_db_sql.sh`·런북 롤백 명령: `/health` 최대 60초(2초 간격) 재시도, 실패 시 종료 코드 1. 가짜 curl 테스트 |
+| + | QA 기록 병합 | 런북 6.1: id 충돌이면 내용 비교 → 다르면 운영 행에 새 id, 대응 CSV, 시퀀스 `setval` 보정 |
+| + | 원자성 | 런북 2.3a: 3개 DB 는 각각 따로라 전체가 원자적이지 않음, 실패 지점별 되돌리는 범위 |
+| + | 실측표 | 런북 2.3: 단계 합계 약 47분·API 중단 약 36분(일괄·재개 표시). **단계별 Codex 실측표 원본은 받지 못해 칸을 비워 둠** |
+
 ## T 결정 2차 반영 (2026-11-14, 코드·문서만 — 실행 없음)
 
 - **표제부 DB:** 런북 5.0 에 원천 파일로 진짜 `parcel_master` 를 만드는 절차를 넣었다(실제 반영 전에 만든다). `p2r` 사본은 실제 반영에 쓰지 않는다.
