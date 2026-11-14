@@ -1,4 +1,4 @@
-# 집합 2단계 운영 런북 (초안 v4 — Codex 검토 반영)
+# 집합 2단계 운영 런북 (초안 v5 — Codex 재검토 반영)
 
 > **상태:** 초안 v4 (2026-11-14, Claude Code — Codex P2 검토 8+4 항목 반영). **실행하지 않았다.** C-2 칸은 Cursor 확인(16일 이후)·T 결정 뒤 채운다.
 > **실행 절차:** Codex 검토 → T 승인 → Codex 실행(로컬 반영 → promote) → Opus 운영 확인.
@@ -200,7 +200,8 @@ py scripts/ops/collective_p2_verify/prod_sync_check.py compare logs/collective_p
    --result-out logs/collective_p2/sync_result_collective.json
 ```
 
-- **결과는 셋:** 통과(종료 코드 0) / 차이(1) / 검증 못 함(2).
+- **결과는 셋:** 통과(종료 코드 0) / 차이(1) / 검증 못 함(2). 결과는 내기 전에 `ops_guards.validate_result` 를 거친다.
+  - 스냅샷 쿼리 실패, 빈 스냅샷, 서로 다른 DB 비교는 「검증 못 함」이다(예전 거짓 성공).
   - 큰 표를 건너뛰었거나(`--allow-heavy` 없이 200만 행 초과 표) 쿼리가 시간 초과면 「검증 못 함」이다.
   - 필수 표가 양쪽 모두 없어도 「검증 못 함」이다.
   - **실제 적용(5절)은 「통과」 결과 파일만 받는다.** 그래서 큰 표 비교(T 승인)를 포함해 통과를 받아야 한다.
@@ -238,6 +239,8 @@ python3 prod_hash_compare.py pgcheck --db-env COLLECTIVE_DATABASE_URL --env-file
 py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective_p2/pgcheck_local.json pgcheck_prod.json
 ```
 
+- PG 확인도 `--result-out` 과 종료 코드 0/1/2 를 낸다(결과 파일 종류 `prod_hash_pgcheck`, `validate_result` 를 거침).
+  - 작은 표가 한쪽이라도 없거나 쿼리가 실패하면 「검증 못 함」(2)이다. 예전에는 표가 없어도 「hash 같음」이 나왔다.
 - 결과에 따라 다음과 같이 한다.
   - 「hash 같음」 → 7.2 를 `--mode hash`(기본)로 한다.
   - 「hash 만 다름」 → 7.2 를 `--mode sums` 로 한다(조각마다 행 수 + 열마다 값 있는 행 수 + 숫자 열 합계 + 글자 열 길이 합).
@@ -318,10 +321,16 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 
 **실제 적용 모드(`--real-apply`) — 키 이전·거래유형 보정·annual 정리 공통:**
 
-- 쓰기는 세 조건을 모두 만족해야 한다(하나라도 빠지면 쓰기 전에 멈춤).
+- 쓰기는 네 조건을 모두 만족해야 한다(하나라도 빠지면 쓰기 전에 멈춤). 판정은 공통 가드 `scripts/ops/collective_p2_verify/ops_guards.py`.
   1. `--real-apply` 플래그
   2. 대상 DB 이름을 `--confirm-db` 로 **다시 입력**(대상마다 한 번, 목록이 정확히 같아야 함)
-  3. 대상 DB 마다 3절 동기화 확인 **통과** 결과 파일(`--sync-result`, `prod_sync_check compare --result-out`, 48시간 이내)
+  3. 접속 대상이 **로컬 루프백**(`ops_guards.assert_local_target`).
+     - libpq 최종 접속 인자로 판정한다: URL 쿼리의 host·hostaddr 와 `PGHOST`·`PGHOSTADDR` 환경변수 포함. hostaddr 가 host 보다 먼저 쓰인다.
+     - `service`·`PGSERVICE`·`PGSERVICEFILE` 은 거부한다.
+  4. 대상 DB 마다 3절 동기화 확인 결과 파일(`--sync-result`)이 `ops_guards.validate_result` 로 **통과**.
+     - 필수 필드·형식을 갖춰야 한다.
+     - 측정 시각은 미래가 아니고 48시간 이내여야 한다.
+     - 대상 목록이 일치하고, 실패 기록이 없고, diff·unverified 가 모두 0 이어야 한다.
 - 허용 대상은 `collective_stats`·`built_stats`·`rent_stats` 뿐이다(`land_stats`·`*_p2r` 거부).
 - 쓰기 직전 `current_database()` 가 지정 이름과 같은지 다시 본다.
 - `--real-apply` 는 적용만 한다. 실제 DB 되돌리기는 로컬 덤프 복원이고, `--rollback` 과 같이 쓰면 거부된다.
@@ -333,12 +342,19 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
   - `import_refined` 가 이 표를 읽어 `building_keys.apply_building_key_split_c2` 로 키를 배정한다.
   - 처음 보는 본번이 3건 이상이라 새 조각이 생기면, 그 조각을 **판정 표에 자동 등록**한다(`source=auto_ingest`, 조각 번호 = 그 키·동의 최대 + 1). 다음 달에는 표를 기준으로 같은 조각에 배정되므로, 3건 → 새 조각 다음 달 1건이 다른 조각으로 새지 않는다.
   - 처음 보는 본번의 「기존 거래 수」는 base_key 와 그 **모든 파생 조각 키**를 합해 센다.
+  - **동시 실행 안전:**
+    - 배치에 든 판정 키마다 base_key 단위 advisory lock(`pg_advisory_xact_lock`)을 잡는다. 잡은 뒤 판정 표를 다시 읽고 조각 번호를 배정한다. 두 적재가 동시에 「최대+1」을 같은 번호로 배정하지 않는다.
+    - 자동 등록이 `DO NOTHING` 으로 충돌하면(잠금 밖 다른 쓰기) 표의 실제 조각 번호를 다시 읽어 그 값으로 다시 배정한다.
   - 월간 검사가 자동 등록 조각 수를 「판정 검토 대상」 경고로 보여 준다.
   - 표가 없거나 비면 그대로다. 비상 해제는 `CH2_COLLECTIVE_KEY_SPLIT_C2=0`.
 - **옛 키:**
   - 가장 큰 그룹(`part 0`)이 옛 키를 유지하고, 나머지 그룹만 새 키가 된다.
   - 연결표 `collective_building_key_map` 에 `reason` 에 `c2` 가 들어간 행(예 `c2_split`)으로 「옛 키 → 새 조각 키」를 남긴다.
-  - 키 재매핑 미들웨어는 C-2 옛 키를 409 로 막지 않고 그 키로 연다. 응답 헤더 `X-CH2-Key-C2-Split` 와 JSON 객체 응답의 `key_split_c2`(「분리된 단지 있음」·새 키 목록)를 붙인다.
+  - 키 재매핑 미들웨어는 C-2 옛 키를 409 로 막지 않고 그 키로 연다.
+  - `/key-status` 는 숫자를 돌려주지 않으므로 `product_gate` 에서 무료 집합 화면을 볼 수 있는 사용자(비로그인 포함)에게 연다. 임대 `/key-status` 는 임대 화면과 같은 규칙이다.
+  - 화면(집합·임대):
+    - 조회에 실패하면(401·403·5xx·연결) 「정상」이 아니라 「단지 분리 여부를 확인할 수 없습니다」로 알린다.
+    - 분리된 단지 링크를 누르면 기존 행을 복사하지 않는다. 후보 키의 실제 목록 행을 다시 조회한 뒤 상세를 연다. 조회하는 동안 로딩을 보이고, 실패하면 안내한다. 응답 헤더 `X-CH2-Key-C2-Split` 와 JSON 객체 응답의 `key_split_c2`(「분리된 단지 있음」·새 키 목록)를 붙인다.
   - C-01 옛 키(1:N)는 그대로 409. C-01 새 키가 다시 C-2 옛 키면 그 키로 열고 C-2 안내를 붙인다(테스트로 확인).
 - **남은 일:** 1회성 이전(`migrate_p2_keys`)에 C-2 판정 표를 읽어 원장 키·연결표를 바꾸는 단계를 연결하는 일은 C-2 확정 뒤에 한다(12절 3).
 
@@ -379,8 +395,12 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
     - `*_p2r` 는 거부한다.
     - 접속 호스트는 localhost 만 허용한다.
     - 모든 세션 읽기 전용이다.
-  - 시간 제한: 쿼리마다 `statement_timeout`(`--statement-timeout`, 기본 600초) + 전체 실행 시간 제한(`--max-minutes`, 기본 30분, 넘으면 종료 코드 3).
-  - 호스트는 SQLAlchemy 실제 접속 인자로 판정한다. URL 쿼리의 `host`·`hostaddr`·`service` 와 원격 `PGHOST`·`PGHOSTADDR`·`PGSERVICE` 는 거부한다.
+  - 시간 제한:
+    - 쿼리마다 `statement_timeout`(`--statement-timeout`, 기본 600초)을 둔다.
+    - 전체 실행 시간 제한(`--max-minutes`, 기본 30분)은 **실제 타이머**다. 진행 중인 쿼리가 있어도 끝내고 종료 코드 3 을 낸다.
+  - 호스트는 공통 가드 `ops_guards.assert_local_target` 로 판정한다(실제 적용 모드와 같음).
+    - URL 쿼리 host·hostaddr 와 원격 `PGHOST`·`PGHOSTADDR`(localhost URL + 원격 `PGHOSTADDR` 포함)를 거부한다.
+    - service·`PGSERVICE`·`PGSERVICEFILE` 도 거부한다.
   - 기대: 모든 「목록 밖」 = 0(아니면 종료 코드 1, 실행하지 않음). 예상 5~10분.
   - 명령: `py scripts/ops/collective_p2_local/scope_dryrun.py --keys-file <목록> --kapt-file <K-apt xlsx> --snapshot-ym 202607`
 
@@ -437,11 +457,13 @@ sudo -u postgres /usr/lib/postgresql/16/bin/pg_dump -Fc --data-only -d rent_stat
    - 로컬로 가져와 **임시 DB**(예 `prod_only_tmp`)에 복원한다.
    - 그다음 로컬 반영본에 합친다.
      - geocode 3표: `building_key`(비주거는 `cluster_key`)에 키 이전을 적용한다. 연결표로 1:1 은 새 키, 분할 옛 키 좌표는 버린다(동이 갈려 좌표가 맞지 않음). 그 뒤 `INSERT … ON CONFLICT (키) DO NOTHING` 한다. 로컬에 이미 있는 키는 로컬 값을 유지한다.
-     - `qa_audit_run`(관리자 QA 기록) — **id 충돌을 비교해 합친다:**
-       1. 운영 행의 `id` 가 로컬에 없으면 그대로 추가한다.
-       2. 같은 `id` 가 로컬에도 있으면, `id` 를 뺀 모든 열을 비교한다. 같으면 같은 기록이므로 건너뛴다.
-       3. 다르면 서로 다른 기록이다. 운영 행에 **새 id**(`nextval` 로 받은 로컬 시퀀스 값)를 주어 추가하고, 옛 id → 새 id 대응을 `logs/collective_p2/qa_audit_id_remap.csv` 에 남긴다.
-       4. 끝나면 시퀀스를 보정한다: `SELECT setval(pg_get_serial_sequence('qa_audit_run','id'), (SELECT max(id) FROM qa_audit_run));`
+     - `qa_audit_run`(관리자 QA 기록) — **시퀀스를 먼저 맞춘 뒤 id 충돌을 비교해 합친다:**
+       0. **운영 행을 넣기 전에** 로컬 시퀀스를 `max(로컬 max(id), 운영 max(id))` 보다 크게 맞춘다. 새로 받는 id 가 운영에만 있는 id 와 겹치지 않게 하기 위해서다.
+          `SELECT setval(pg_get_serial_sequence('qa_audit_run','id'), GREATEST((SELECT coalesce(max(id),0) FROM qa_audit_run), <운영 max(id)>) + 1, false);`
+       1. 운영 행의 `id` 가 로컬에 없으면 그 id 그대로 추가한다.
+       2. 같은 `id` 가 로컬에도 있으면 `id` 를 뺀 모든 열을 비교한다. 같으면 같은 기록이므로 건너뛴다.
+       3. 다르면 서로 다른 기록이다. 운영 행에 **새 id**(`nextval` — 0번 덕분에 양쪽 어느 id 와도 겹치지 않음)를 주어 추가한다. 옛 id → 새 id 대응은 `logs/collective_p2/qa_audit_id_remap.csv` 에 남긴다.
+       4. 끝나면 시퀀스가 `max(id)` 이상인지 다시 확인한다: `SELECT last_value >= (SELECT max(id) FROM qa_audit_run) FROM qa_audit_run_id_seq;`
        - 건수 확인: 합친 뒤 행 수 = 로컬 원래 행 + 1번 행 + 3번 행.
    - 합친 뒤 5.4 의 `prod_c5_core`(가벼운 지표)·해시 스냅샷을 다시 뜨고, promote 용 덤프를 다시 만든다(2.2).
    - 이 합치기 SQL 은 C-2 확정 뒤 리허설 때 스크립트로 만들어 리허설 DB 에서 시험한다(13절 C-9).
@@ -538,8 +560,11 @@ sudo -u postgres /usr/lib/postgresql/16/bin/pg_restore -d ${DB} --no-owner --no-
 sudo -u postgres psql -d ${DB} -v ON_ERROR_STOP=1 -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ch2app;" \
   -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ch2app;" -c "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO ch2app;"
 sudo systemctl start ch2-macro-backend
-# /health 는 재시작 직후 실패할 수 있다 → 최대 60초(2초 간격 30번) 다시 묻는다
-ok=0; for i in $(seq 1 30); do if curl -sf --max-time 3 http://127.0.0.1:8000/health; then ok=1; break; fi; sleep 2; done
+# /health 는 재시작 직후 실패할 수 있다 → 다시 묻되 전체를 60초 안으로(curl 은 남은 시간·3초 중 짧은 쪽, 쉼은 2초 이하)
+deadline=$((SECONDS + 60)); ok=0
+while :; do rem=$((deadline - SECONDS)); (( rem > 0 )) || break
+  if curl -sf --max-time "$(( rem < 3 ? rem : 3 ))" http://127.0.0.1:8000/health; then ok=1; break; fi
+  rem=$((deadline - SECONDS)); (( rem > 0 )) || break; sleep "$(( rem < 2 ? rem : 2 ))"; done
 [ "$ok" = 1 ] || { echo "ERROR: /health 60초 안에 응답 없음" >&2; exit 1; }
 ```
 

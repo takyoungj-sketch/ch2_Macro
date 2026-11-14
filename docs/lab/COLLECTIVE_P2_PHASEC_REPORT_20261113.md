@@ -22,6 +22,22 @@
 - 런북 반영: 운영 롤백 소요의 대부분은 mart 복원(특히 임대 rolling 2시간 23분)이다. 롤백 대신 「빌더 재실행」이 더 빠른 표가 있으면 Phase D 에서 표별로 고른다. 비교 기준은 원본 DB 가 덤프 시점과 같다는 전제 — 운영에서는 덤프 직후 해시를 저장해 두고 비교한다.
 - 디스크: 끝난 뒤 D 30%·C 38% 여유.
 
+## Codex 재검토 반영 (2026-11-14, 코드·문서만 — 운영 접근·실행 없음)
+
+| # | 항목 | 반영 |
+|---|---|---|
+| 공통 | 가드 모듈 | `scripts/ops/collective_p2_verify/ops_guards.py`(운영 확인 폴더와 함께 배포, 표준 라이브러리 + SQLAlchemy 만). `assert_local_target`(libpq 최종 인자·PGHOST/PGHOSTADDR/PGSERVICE/PGSERVICEFILE, hostaddr 우선, 키 대소문자 무시, 루프백만) · `validate_result`(필수 필드·형식·시각 미래 금지·48시간·대상 일치·실패 기록 0·diff·unverified 0) |
+| 1 | 실제 적용 | `--real-apply` 는 대상마다 `assert_local_target`(engine_for 로 만든 엔진) 통과 + 결과 파일 `validate_result` 통과 |
+| 2 | C-2 동시 실행 | base_key 단위 advisory lock 뒤 판정 표 다시 읽기 · 자동 등록 `DO NOTHING` 충돌 시 실제 값 다시 읽어 재배정(재충돌이면 적재 중단). 동시 실행 재현 테스트는 잠금을 끄면 실패함을 확인 |
+| 3 | 거짓 성공 | `prod_sync_check`·`prod_hash_compare`·PG 확인 모두 결과 전에 `validate_result`. PG 확인도 `--result-out`·0/1/2. 재구성한 거짓 성공 ① 빈 스냅샷(표 목록 시간 초과) ② 빈 해시 대상 ③ 작은 표 없음인데 「hash 같음」 ④ 서로 다른 DB 비교 → 모두 「검증 못 함」(2). **Codex 의 재현 3건 원문은 받지 못해 이 저장소에서 재구성** |
+| 4 | scope_dryrun | `ops_guards.assert_local_target` 사용, localhost + 원격 PGHOSTADDR 거부 테스트 |
+| 5 | 후보 전환 | 집합·임대 `App.tsx`: 기존 행 복사 대신 후보의 동(addr3·addr4)으로 목록을 다시 조회해 후보 키의 실제 행으로 상세 전환(`candidateSwitch.tsx`), 조회 중 로딩·실패 안내, 상세 모달은 키가 바뀌면 새로 그림(`key`) |
+| 6 | key-status | `product_gate`: 집합 `/key-status` 는 무료 화면 사용자(비로그인 포함) 허용, 임대는 임대 화면 규칙. 프론트는 조회 실패를 「확인 불가」로 표시(정상으로 보지 않음) |
+| 7 | QA 병합 | 운영 행을 넣기 전에 시퀀스를 `max(로컬, 운영) id` 보다 크게 → 같은 id 비교 → 다르면 새 id |
+| + | 타이머 | `scope_dryrun` 전체 제한이 실제 타이머(쿼리 도중에도 종료 코드 3) |
+| + | health | curl 은 남은 시간·3초 중 짧은 쪽, 쉼은 2초 이하 → 전체가 60초를 넘지 않음(스크립트·런북 롤백). 가짜 curl 로 전체 시간 확인 |
+| + | 컴포넌트 테스트 | 후보 클릭 → 재조회 → 새 수치 표시(기존 행 수치 아님) · 재조회 실패/행 없음 안내 · `/key-status` 401·403·500·연결 실패 → 「확인 불가」(두 앱 각 7개) |
+
 ## Codex P2 검토 반영 (2026-11-14, 코드·문서만 — 운영 접근·실행 없음)
 
 | # | 항목 | 반영 |
