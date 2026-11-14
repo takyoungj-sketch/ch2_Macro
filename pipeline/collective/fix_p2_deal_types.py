@@ -32,7 +32,13 @@ sys.path.insert(0, str(REPO / "pipeline"))
 sys.path.insert(0, str(REPO / "pipeline" / "collective"))
 sys.path.insert(0, str(REPO / "pipeline" / "collective_commercial"))
 
-from collective.migrate_p2_keys import PROTECTED, REHEARSAL_RE, GuardError, assert_rehearsal_db, engine_for  # noqa: E402
+from collective.migrate_p2_keys import (  # noqa: E402
+    GuardError,
+    add_real_apply_args,
+    assert_rehearsal_db,
+    check_write_targets,
+    engine_for,
+)
 from collective.refine import read_source_file, refine_dataframe  # noqa: E402
 
 log = logging.getLogger("fix_p2_deal_types")
@@ -228,13 +234,18 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--logs-dir", default=str(REPO / "logs"))
     p.add_argument("--run-file", action="append", default=[], help="비주거 실행 경로 목록(여러 번). 기본: logs-dir 의 목록 전체")
     p.add_argument("--base-url", default="")
+    add_real_apply_args(p)
     a = p.parse_args(argv)
+    if a.real_apply and a.rollback:
+        raise GuardError("--real-apply 는 적용만 한다(실제 DB 되돌리기는 런북의 로컬 덤프 복원)")
+    if a.real_apply:
+        a.apply = True
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     do_p = a.presale or not a.commercial
     do_c = a.commercial or not a.presale
     write = a.apply or a.rollback
-    if write and (a.collective_db in PROTECTED or not REHEARSAL_RE.match(a.collective_db)):
-        raise GuardError(f"쓰기 대상 DB 이름이 리허설 이름(…_p2r)이 아님: {a.collective_db}")
+    if write:
+        check_write_targets([a.collective_db], a)
     eng = engine_for(a.collective_db, read_only=not write, base_url=a.base_url or None)
     if a.rollback:
         with eng.begin() as conn:

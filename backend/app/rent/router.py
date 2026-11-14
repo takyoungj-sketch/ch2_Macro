@@ -282,6 +282,13 @@ def rent_sale_join(
     )
 
 
+@router.get("/buildings/{building_key}/key-status")
+def rent_building_key_status(building_key: str) -> dict:
+    """옛 키 확인용(집합 2단계, 집합 /buildings/{key}/key-status 와 같음). key_remap 미들웨어가 1:1 은 새 키로 바꾸고,
+    분할(C-01)은 409 후보 목록으로, C-2 옛 키는 그대로 열며 응답에 key_split_c2 를 붙인다. DB 조회 없음."""
+    return {"key_status": "ok", "building_key": building_key}
+
+
 @router.get("/buildings/{building_key}/rolling", response_model=RentRollingResponse)
 def rent_building_rolling(
     building_key: str,

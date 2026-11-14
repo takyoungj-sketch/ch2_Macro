@@ -109,6 +109,7 @@ def test_main_app_registers_middleware_and_key_status_route():
     assert any(m.cls is KeyRemapMiddleware for m in app.user_middleware)
     paths = {getattr(r, "path", "") for r in app.routes}
     assert "/api/collective/buildings/{building_key}/key-status" in paths
+    assert "/api/rent/buildings/{building_key}/key-status" in paths      # 임대 C-2 안내용(DB 조회 없음)
 
 
 def test_rent_sale_key_and_cohort_body():

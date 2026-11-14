@@ -182,11 +182,42 @@ def test_sync_check_marks_heavy_tables_until_approved(fx):
     assert ct["rows"] == 3 and ct["recent_months"] == {"2026-09": 1, "2026-10": 2}
     assert heavy["tables"]["built_scope_stats"]["max_as_of_month"] == "2026-10-01"
     assert "max_as_of_month" not in heavy["tables"]["rent_transactions"]         # as_of_month 열 없는 표는 안 셈
-    d, pending = sc.compare(heavy, {**heavy, "tables": {**heavy["tables"],
-                                                        "collective_transactions": {**ct, "rows": 4}}})
-    assert d == [("collective_transactions", "rows", 3, 4)] and pending == []
-    d, pending = sc.compare(light, heavy)
-    assert d == [] and "collective_transactions" in pending
+    r = sc.compare(heavy, {**heavy, "tables": {**heavy["tables"], "collective_transactions": {**ct, "rows": 4}}})
+    assert r["status"] == "diff" and r["diff"] == [("collective_transactions", "rows", 3, 4)] and r["unverified"] == []
+    r = sc.compare(light, heavy)                                    # 큰 표를 건너뜀 → 차이 없어도 검증 못 함
+    assert r["status"] == "unverified" and r["diff"] == [] and ("collective_transactions" in {t for t, _ in r["unverified"]})
+    assert sc.compare(heavy, heavy)["status"] == "pass"
+
+
+def test_sync_check_required_tables_prod_written_tables_and_exit_codes(fx, tmp_path):
+    import json
+
+    import _common as C
+
+    sc = _load(OPS / "prod_sync_check.py", "sc3")
+    url, _ = fx
+    with C.ro_conn(url) as c:
+        snap = sc.snapshot(c, allow_heavy=True, heavy_rows=-1)
+    # 필수 표가 양쪽 모두 없으면 검증 못 함(DB 이름이 collective_stats 인 척)
+    a = {**snap, "db": "collective_stats"}
+    r = sc.compare(a, a)
+    assert r["status"] == "unverified" and ("market_stats", "필수 표 없음") in r["unverified"]
+    # 운영 API 가 쓰는 표의 차이는 허용 목록(멈춤 사유 아님)
+    geo = {**snap, "tables": {**snap["tables"], "collective_building_geocodes": {"rows": 5, "est_rows": 5, "heavy": False}}}
+    r = sc.compare(snap, geo)
+    assert r["status"] == "pass" and r["allowed_diff"] and r["diff"] == []
+    # CLI 종료 코드 0/1/2 와 결과 파일
+    f1, f2 = tmp_path / "l.json", tmp_path / "r.json"
+    C.write_json(f1, snap)
+    C.write_json(f2, snap)
+    out = tmp_path / "res.json"
+    assert sc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 0
+    res = json.loads(out.read_text(encoding="utf-8"))
+    assert res["kind"] == "prod_sync_check" and res["status"] == "pass" and res["left_db"] == snap["db"] and res["created_at"]
+    C.write_json(f2, {**snap, "tables": {**snap["tables"], "collective_transactions": {**snap["tables"]["collective_transactions"], "rows": 9}}})
+    assert sc.main(["compare", str(f1), str(f2)]) == 1
+    C.write_json(f2, {**snap, "tables": {**snap["tables"], "collective_transactions": {"est_rows": 3, "heavy": True, "status": "승인 필요"}}})
+    assert sc.main(["compare", str(f1), str(f2)]) == 2
 
 
 def test_c5_core_light_metrics_and_violations(fx):
@@ -196,15 +227,35 @@ def test_c5_core_light_metrics_and_violations(fx):
     url, _ = fx
     with C.ro_conn(url) as c, C.ro_conn(url) as r, C.ro_conn(url) as b:
         m = c5.collect(c, r, b, heavy_ms=60_000, skip_heavy=True, split_units=None)
+        full = c5.collect(c, r, b, heavy_ms=60_000, skip_heavy=False, split_units=None)
     assert m["as_of"] == "2026-10-01"
-    assert m["legacy_sido.collective_transactions"] == 1 and m["legacy_sido.built_scope_stats(as_of)"] == 1
+    # --skip-heavy: 무거운 검사는 실행하지 않고 「건너뜀」, 가벼운 검사는 10초 제한으로 실행
+    assert m["legacy_sido.collective_transactions"] == c5.SKIPPED and m["annual_vs_ledger_mismatch"] == c5.SKIPPED
+    assert m["c2_shape_pending"] == c5.SKIPPED and m["synthetic.building_stats"] == c5.SKIPPED
+    assert not any(x["query"].startswith("옛 시도명 collective") for x in m["_timings"])
+    assert all(x["timeout_ms"] == C.LIGHT_MS for x in m["_timings"])
+    assert m["legacy_sido.built_scope_stats(as_of)"] == 1
     assert m["coverage.attributes"] == 0.5 and m["coverage.attributes.n"] == [1, 2]
-    bad = {k for k, _, _ in c5.violations(m)}
+    assert c5.status_of(m) == "diff"                                      # 가벼운 검사에서 이미 위반(scope 옛 시도명)
+    assert full["legacy_sido.collective_transactions"] == 1
+    bad = {k for k, _, _ in c5.violations(full)}
     assert {"legacy_sido.collective_transactions", "legacy_sido.built_scope_stats(as_of)"} <= bad
-    expect = {k: v for k, v in m.items() if not k.startswith("_")}
+    expect = {k: v for k, v in full.items() if not k.startswith("_")}
     expect["coverage.attributes"] = 1.0
-    assert ("coverage.attributes", 0.5, 1.0) in c5.violations(m, expect)
-    assert not any("쿼리 실패" in k for k in bad)
+    assert ("coverage.attributes", 0.5, 1.0) in c5.violations(full, expect)
+    # 위반 없이 건너뜀만 있으면 「검증 못 함」
+    clean = {"db": {}, "as_of": "x", "legacy_sido.a": 0, "annual_vs_ledger_mismatch": c5.SKIPPED, "_timings": []}
+    assert c5.status_of(clean) == "unverified" and c5.EXIT["unverified"] == 2
+    assert c5.status_of({**clean, "annual_vs_ledger_mismatch": 0}) == "pass"
+    assert c5.status_of({**clean, "c2_shape_pending": 3}) == "diff"         # c2_shape_pending 은 0 이어야 함
+
+
+def test_c5_old_key_check_uses_exact_c01_reasons():
+    src = (OPS / "prod_c5_core.py").read_text(encoding="utf-8")
+    c5 = _load(OPS / "prod_c5_core.py", "pc5r")
+    assert c5.C01_SPLIT_REASONS == ("split", "honam_sido+split") and "c2_split" not in c5.C01_SPLIT_REASONS
+    assert "reason IN :r" in src and "LIKE '%split%')\"" not in src
+    assert "c2_shape_pending" in c5.ZERO
 
 
 def test_local_scope_dryrun_guard_accepts_only_real_local_names():
@@ -250,3 +301,73 @@ def test_sums_mode_and_pg_verdict(fx):
     assert hc.pg_verdict(same, same).startswith("hash 같음")
     assert hc.pg_verdict(same, other_hash).startswith("hash 만 다름")
     assert hc.pg_verdict(same, {"hash": other_hash["hash"], "sums": s2}).startswith("sums 도 다름")
+
+
+def test_scope_dryrun_host_guard_blocks_bypass():
+    """호스트는 SQLAlchemy 실제 접속 인자로 판정 — URL 쿼리·환경변수 우회를 막는다."""
+    sd = _load(ROOT / "scripts" / "ops" / "collective_p2_local" / "scope_dryrun.py", "sd2")
+    ok = "postgresql+psycopg2://u:p@localhost:5432/collective_stats"
+    sd.guard_url(ok, "collective_stats", environ={})
+    sd.guard_url("postgresql+psycopg2://u:p@/collective_stats", "collective_stats", environ={})            # 소켓(환경변수 없음)
+    sd.guard_url("postgresql+psycopg2://u:p@/collective_stats", "collective_stats", environ={"PGHOST": "127.0.0.1"})
+    assert sd.connect_params(ok)["host"] == "localhost"
+    for url, env in (
+        ("postgresql+psycopg2://u:p@localhost/collective_stats?host=13.209.203.178", {}),   # URL 은 localhost, 실제는 원격
+        ("postgresql+psycopg2://u:p@localhost/collective_stats?hostaddr=10.0.0.5", {}),
+        ("postgresql+psycopg2://u:p@localhost/collective_stats?HOST=10.0.0.5", {}),
+        ("postgresql+psycopg2://u:p@localhost/collective_stats?service=prod", {}),
+        ("postgresql+psycopg2://u:p@/collective_stats", {"PGHOST": "13.209.203.178"}),      # 호스트 비고 환경변수가 원격
+        ("postgresql+psycopg2://u:p@/collective_stats", {"PGHOSTADDR": "10.0.0.5"}),
+        ("postgresql+psycopg2://u:p@/collective_stats", {"PGSERVICE": "prod"}),
+        ("postgresql+psycopg2://u:p@localhost,13.209.203.178/collective_stats", {}),        # 여러 호스트 중 원격
+    ):
+        with pytest.raises(SystemExit):
+            sd.guard_url(url, "collective_stats", environ=env)
+
+
+def test_scope_dryrun_deadline_and_timeouts_wired():
+    sd = _load(ROOT / "scripts" / "ops" / "collective_p2_local" / "scope_dryrun.py", "sd3")
+    d = sd.Deadline(0)
+    with pytest.raises(SystemExit) as e:
+        d.check("x")
+    assert e.value.code == sd.TIMEOUT_EXIT
+    src = (ROOT / "scripts" / "ops" / "collective_p2_local" / "scope_dryrun.py").read_text(encoding="utf-8")
+    assert "statement_timeout=" in src and "SHOW statement_timeout" in src and src.count("dl.check(") >= 5
+
+
+def test_hash_compare_three_states_and_default_targets(fx, tmp_path):
+    import json
+
+    from sqlalchemy import text
+
+    import _common as C
+
+    hc = _load(OPS / "prod_hash_compare.py", "hc3")
+    url, eng = fx
+    assert "collective_building_key_c2_units" in hc.TARGETS["collective_stats"]
+    with eng.begin() as c:
+        c.execute(text("CREATE TABLE IF NOT EXISTS rent_transactions_p2_before (id int)"))
+    with C.ro_conn(url) as c:
+        tabs = hc.default_tables(c, "collective_stats")
+        assert "rent_transactions_p2_before" in tabs and tabs[0] == "collective_transactions"   # 보존 표 자동 포함
+        s1 = hc.snapshot(c, ["collective_transactions", "built_scope_stats", "rent_transactions_p2_before"], exclude=[])
+    assert hc.evaluate(s1, s1)["status"] == "pass"
+    broken = json.loads(json.dumps(s1))
+    broken["tables"]["collective_transactions"]["bk=a"] = None                       # 조각 쿼리 실패(시간 초과 등)
+    r = hc.evaluate(s1, broken)
+    assert r["status"] == "unverified" and r["diff"] == []
+    diff = json.loads(json.dumps(s1))
+    diff["tables"]["built_scope_stats"]["all"] = [9, "x"]
+    assert hc.evaluate(s1, diff)["status"] == "diff"
+    req = {**s1, "db": "collective_stats", "tables": {**s1["tables"], "market_stats": None}}
+    r = hc.evaluate(req, req)                                                        # 필수 표가 양쪽 모두 없음
+    assert r["status"] == "unverified" and ("market_stats", "필수 표 없음") in r["unverified"]
+    f1, f2, out = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "r.json"
+    C.write_json(f1, s1)
+    C.write_json(f2, s1)
+    assert hc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 0
+    assert json.loads(out.read_text(encoding="utf-8"))["kind"] == "prod_hash_compare"
+    C.write_json(f2, diff)
+    assert hc.main(["compare", str(f1), str(f2)]) == 1
+    C.write_json(f2, broken)
+    assert hc.main(["compare", str(f1), str(f2)]) == 2

@@ -26,7 +26,12 @@ _PIPE = Path(__file__).resolve().parents[1]
 if str(_PIPE) not in sys.path:
     sys.path.insert(0, str(_PIPE))
 
-from collective.migrate_p2_keys import assert_rehearsal_db, engine_for  # noqa: E402
+from collective.migrate_p2_keys import (  # noqa: E402
+    add_real_apply_args,
+    assert_rehearsal_db,
+    check_write_targets,
+    engine_for,
+)
 
 T = "collective_building_annual_stats"
 KEEP = "collective_building_annual_split_p2_before"
@@ -96,15 +101,22 @@ def rollback(eng, dbname: str) -> int:
         return int(n or 0)
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--collective-db", required=True)
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--rollback", action="store_true")
     ap.add_argument("--mismatch-csv", default="", help="불일치 목록 CSV 경로(키만, 지번 없음)")
-    a = ap.parse_args()
+    add_real_apply_args(ap)
+    a = ap.parse_args(argv)
     if a.apply and a.rollback:
         raise SystemExit("--apply 와 --rollback 은 같이 쓰지 않는다")
+    if a.real_apply and a.rollback:
+        raise SystemExit("--real-apply 는 적용만 한다(실제 DB 되돌리기는 보존 표 --rollback 이 아니라 런북의 로컬 덤프 복원)")
+    if a.real_apply:
+        a.apply = True
+    if a.apply or a.rollback:
+        check_write_targets([a.collective_db], a)
     if a.rollback:
         print(json.dumps({"restored": rollback(engine_for(a.collective_db, read_only=False), a.collective_db)}))
         return

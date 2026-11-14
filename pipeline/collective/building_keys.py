@@ -341,15 +341,19 @@ def judged_keys_c2(conn) -> set[str]:
     return {str(r[0]) for r in conn.execute(text(f"SELECT DISTINCT base_key FROM {C2_TABLE}"))}
 
 
+NEW_PART = "new"
+C2_AUTO_SOURCE = "auto_ingest"
+
+
 def resolve_c2_part(frags: list[tuple[str, int | None, int]], main_lot: str, year: int | None,
                     n_lot_total: int) -> tuple[str, bool]:
     """행 하나의 C-2 조각 라벨과 「확인 필요」 여부.
 
-    1) 판정 표에 있는 본번 → 그 조각
+    1) 판정 표에 있는 본번(사람 판정·자동 등록 모두) → 그 조각
     2) 처음 보는 본번: 같은 건축년도 조각이 있으면 그 조각(여럿이면 본번이 가장 가까운 것)
-    3) 없고 그 본번 거래(이번 배치 + 기존 원장)가 3건 이상 → 새 조각(라벨 m<본번>, 매달 같은 키)
+    3) 없고 그 본번 거래(이번 배치 + 기존 원장: 본 키와 모든 파생 조각 키)가 3건 이상 → NEW_PART(새 조각을 만들어 표에 등록)
     4) 3건 미만 → 본번이 가장 가까운 조각에 붙이고 확인 필요
-    라벨: 'p<n>' = 판정 표 조각, 'm<본번>' = 적재 때 생긴 조각. 'p0' 은 본 조각(키 유지).
+    라벨은 'p<조각 번호>'. 'p0' 은 본 조각(가장 큰 그룹, 옛 키 유지).
     """
     for m, _y, part in frags:
         if m == main_lot:
@@ -365,7 +369,7 @@ def resolve_c2_part(frags: list[tuple[str, int | None, int]], main_lot: str, yea
     if same:
         return f"p{nearest(same)[2]}", False
     if n_lot_total >= C2_MIN_TX:
-        return f"m{main_lot}", False
+        return NEW_PART, False
     return f"p{nearest(frags)[2]}", True
 
 
@@ -387,6 +391,12 @@ def c2_key(raw: str, label: str) -> str:
     return hashlib.sha256((raw + C2_SUFFIX + label).encode("utf-8")).hexdigest()
 
 
+def c2_derived_keys(raw: str, units_for_key: dict[str, list[tuple]]) -> set[str]:
+    """한 base_key 의 모든 파생 조각 키(p0 제외). 기존 거래 수를 셀 때 본 키와 함께 센다."""
+    parts = {f[2] for frags in units_for_key.values() for f in frags if f[2] != 0}
+    return {c2_key(raw, f"p{n}") for n in parts}
+
+
 def apply_building_key_split_c2(
     df: pd.DataFrame,
     asset_type: str,
@@ -398,12 +408,12 @@ def apply_building_key_split_c2(
 ) -> pd.DataFrame:
     """C-01 분할(apply_building_key_split) 뒤에 호출. C-2 판정 키의 그 법정동 행만 본번·건축년도로 조각을 정한다.
 
-    - units: load_split_units_c2(conn) 결과(집합 DB 판정 표). 비거나 None 이면 그대로 돌려준다.
-
-    - 판정 목록 밖 키, 목록 키의 다른 법정동 행, 본 조각(p0) 행은 키 그대로.
-    - 분양권은 대상이 아니다(블록 지번).
-    - existing_counts: (키, 법정동10, 본번) → 기존 원장 거래 수(처음 보는 본번의 3건 판정용). 없으면 이번 배치만 센다.
-    - 확인 필요 행은 df.attrs['c2_review'] 에 (키, 법정동10, 행 수) 요약으로 남긴다(지번은 남기지 않음).
+    - units: load_split_units_c2(conn) 결과(집합 DB 판정 표). 비거나 None 이면 그대로 돌려준다(호출자의 dict 는 바꾸지 않음).
+    - 판정 목록 밖 키, 목록 키의 다른 법정동 행, 본 조각(p0) 행은 키 그대로. 분양권은 대상이 아니다.
+    - existing_counts: (base_key, 법정동10, 본번) → 기존 원장 거래 수(본 키 + 모든 파생 조각 키 합). 없으면 이번 배치만 센다.
+    - 새 조각: 그 (키·법정동)의 조각 번호 최대값 + 1 을 배정하고 df.attrs['c2_new_parts'] 에 등록할 행으로 남긴다.
+      호출자(apply_c2_split_from_db)가 판정 표에 출처 C2_AUTO_SOURCE 로 저장 → 다음 달은 표를 기준으로 같은 조각에 배정된다.
+    - 확인 필요 행은 df.attrs['c2_review'] 에 (키, 법정동10, 행 수) 요약(지번 없음).
     """
     if not units or df.empty or "building_key" not in df.columns or asset_type == _PRESALE_KEY_ASSET:
         return df
@@ -411,6 +421,7 @@ def apply_building_key_split_c2(
     hit = pd.Series([c in units.get(k, {}) for k, c in zip(df["building_key"], codes)], index=df.index, dtype=bool)
     if not hit.any():
         return df
+    work = {k: {c: list(fr) for c, fr in v.items()} for k, v in units.items()}   # 이번 배치 안에서 새 조각을 더해 간다
     c01 = load_split_units() if c01_units is None else c01_units
     out = df.copy()
     sub = out.loc[hit]
@@ -420,10 +431,17 @@ def apply_building_key_split_c2(
     sub_codes = codes.loc[hit]
     batch_n = pd.Series(1, index=sub.index).groupby([sub["building_key"], sub_codes, lots]).transform("sum")
     existing_counts = existing_counts or {}
-    new_keys, review = [], {}
+    new_keys, review, new_parts = [], {}, []
     bad = 0
-    for idx, k, c, m, y, rb, bn in zip(sub.index, sub["building_key"], sub_codes, lots, years, raw_base, batch_n):
-        label, need = resolve_c2_part(units[k][c], m, y, int(bn) + int(existing_counts.get((k, c, m), 0)))
+    for k, c, m, y, rb, bn in zip(sub["building_key"], sub_codes, lots, years, raw_base, batch_n):
+        frags = work[k][c]
+        label, need = resolve_c2_part(frags, m, y, int(bn) + int(existing_counts.get((k, c, m), 0)))
+        if label == NEW_PART:
+            part = max(f[2] for fr in work[k].values() for f in fr) + 1
+            frags.append((m, y, part))
+            new_parts.append({"base_key": k, "asset_type": asset_type, "beopjungri_code": c, "main_lot": m,
+                              "building_year": y, "part": part, "decision": "split", "source": C2_AUTO_SOURCE})
+            label = f"p{part}"
         if label == "p0":
             new_keys.append(k)
         else:
@@ -439,31 +457,64 @@ def apply_building_key_split_c2(
         log.warning("c2 split: 원문 재현 불일치 %d행 — 키 유지", bad)
     out.loc[hit, "building_key"] = new_keys
     out.attrs["c2_review"] = [{"building_key": k, "beopjungri_code": c, "rows": n} for (k, c), n in review.items()]
+    out.attrs["c2_new_parts"] = new_parts
     return out
 
 
-def existing_main_lot_counts(conn, keys: list[str]) -> dict[tuple[str, str, str], int]:
-    """C-2 판정 키의 기존 원장 (키, 법정동10, 본번) 거래 수 — 처음 보는 본번의 3건 판정용."""
-    if not keys:
+def existing_main_lot_counts(conn, key_groups: dict[str, set[str]]) -> dict[tuple[str, str, str], int]:
+    """(base_key, 법정동10, 본번) → 기존 원장 거래 수. base_key 와 그 파생 조각 키(key_groups[base])를 모두 센다."""
+    owner = {k: base for base, ks in key_groups.items() for k in ({base} | set(ks))}
+    if not owner:
         return {}
     from sqlalchemy import bindparam, text
 
     rows = conn.execute(text(
         "SELECT building_key, left(beopjungri_code, 10), split_part(btrim(lot_number), '-', 1), count(*) "
         "FROM collective_transactions WHERE building_key IN :k AND coalesce(btrim(lot_number), '') <> '' "
-        "GROUP BY 1, 2, 3").bindparams(bindparam("k", expanding=True)), {"k": keys}).all()
-    return {(str(k), str(c), main_lot_of(m)): int(n) for k, c, m, n in rows}
+        "GROUP BY 1, 2, 3").bindparams(bindparam("k", expanding=True)), {"k": sorted(owner)}).all()
+    out: dict[tuple[str, str, str], int] = {}
+    for k, c, m, n in rows:
+        key = (owner[str(k)], str(c), main_lot_of(m))
+        out[key] = out.get(key, 0) + int(n)
+    return out
+
+
+def register_c2_parts(conn, parts: list[dict]) -> int:
+    """적재 때 생긴 새 조각을 판정 표에 자동 등록 행(source=auto_ingest)으로 저장. 이미 있는 (키·법정동·본번)은 그대로."""
+    if not parts:
+        return 0
+    from sqlalchemy import text
+
+    res = conn.execute(text(
+        f"INSERT INTO {C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part, decision, source, note) "
+        "VALUES (:base_key, :asset_type, :beopjungri_code, :main_lot, :building_year, :part, :decision, :source, "
+        "'월간 적재 자동 등록 — 판정 검토 대상') ON CONFLICT (base_key, beopjungri_code, main_lot) DO NOTHING"), parts)
+    return int(res.rowcount or 0)
 
 
 def apply_c2_split_from_db(engine, df: pd.DataFrame, asset_type: str) -> pd.DataFrame:
-    """월간 적재용: 집합 DB 의 C-2 판정 표를 읽어 apply_building_key_split_c2 를 적용한다.
+    """월간 적재용: 집합 DB 의 C-2 판정 표를 읽어 키를 배정하고, 새 조각은 표에 자동 등록한다.
     표가 없거나 비었거나 비상 해제면 그대로 돌려준다. 판정 키가 배치에 없으면 원장을 조회하지 않는다."""
-    if df.empty or engine is None:
+    if df.empty or engine is None or "building_key" not in df.columns or asset_type == _PRESALE_KEY_ASSET:
         return df
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         units = load_split_units_c2(conn)
         if not units:
             return df
-        keys = sorted(set(df["building_key"].astype(str)) & set(units)) if "building_key" in df.columns else []
-        counts = existing_main_lot_counts(conn, keys)
-    return apply_building_key_split_c2(df, asset_type, units=units, existing_counts=counts)
+        hit = df["building_key"].astype(str).isin(units)
+        if not hit.any():
+            return df
+        sub = df.loc[hit]
+        c01 = load_split_units()
+        groups: dict[str, set[str]] = {}
+        for k, rb in zip(sub["building_key"].astype(str), building_key_raw_series(sub, asset_type)):
+            if k in groups:
+                continue
+            raw = _key_raw_for(rb, k, c01)
+            groups[k] = c2_derived_keys(raw, units[k]) if raw is not None else set()
+        counts = existing_main_lot_counts(conn, groups)
+        out = apply_building_key_split_c2(df, asset_type, units=units, c01_units=c01, existing_counts=counts)
+        n = register_c2_parts(conn, out.attrs.get("c2_new_parts") or [])
+        if n:
+            log.warning("c2 split: 새 조각 %d개를 판정 표에 자동 등록(source=%s) — 판정 검토 대상", n, C2_AUTO_SOURCE)
+    return out

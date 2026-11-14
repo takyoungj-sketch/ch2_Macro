@@ -66,14 +66,78 @@ class GuardError(RuntimeError):
     pass
 
 
+# 실제 적용 모드(--real-apply): 로컬 실제 DB 에 쓰는 유일한 길. 조건 셋을 모두 통과한 이름만 이 집합에 들어간다.
+REAL_TARGETS = {"collective_stats", "built_stats", "rent_stats"}
+SYNC_RESULT_KIND = "prod_sync_check"
+SYNC_RESULT_MAX_AGE_H = 48
+_REAL_ALLOWED: set[str] = set()
+
+
+def enable_real_apply(targets: list[str], confirm: list[str], sync_results: list[Path], *,
+                      max_age_h: float = SYNC_RESULT_MAX_AGE_H, now=None) -> set[str]:
+    """실제 적용 허가. ① 대상이 실제 DB 이름(REAL_TARGETS)일 것 ② --confirm-db 로 다시 입력한 이름 목록이 대상과 같을 것
+    ③ 대상 DB 마다 시작 전 동기화 확인 결과 파일(prod_sync_check compare --result-out, status=pass, max_age_h 이내)이 있을 것.
+    통과하면 그 이름만 assert_rehearsal_db 에서 허용한다(리허설 가드는 그대로)."""
+    import datetime as _dt
+
+    targets = [t for t in targets if t]
+    if not targets:
+        raise GuardError("실제 적용 대상 DB 가 없음")
+    bad = [t for t in targets if t not in REAL_TARGETS]
+    if bad:
+        raise GuardError(f"실제 적용 대상이 아닌 DB 이름: {bad} (허용: {sorted(REAL_TARGETS)})")
+    if sorted(c for c in confirm if c) != sorted(targets):
+        raise GuardError("--confirm-db 로 다시 입력한 DB 이름이 대상과 다름")
+    now = now or _dt.datetime.now(_dt.timezone.utc)
+    passed: set[str] = set()
+    for p in sync_results:
+        p = Path(p)
+        if not p.is_file():
+            raise GuardError(f"동기화 확인 결과 파일 없음: {p}")
+        d = json.loads(p.read_text(encoding="utf-8"))
+        if d.get("kind") != SYNC_RESULT_KIND:
+            raise GuardError(f"동기화 확인 결과 파일이 아님: {p}")
+        if d.get("status") != "pass":
+            raise GuardError(f"동기화 확인이 통과가 아님({d.get('status')}): {p}")
+        made = _dt.datetime.fromisoformat(str(d.get("created_at")))
+        if (now - made).total_seconds() > max_age_h * 3600:
+            raise GuardError(f"동기화 확인 결과가 {max_age_h}시간보다 오래됨: {p}")
+        passed |= {str(d.get("left_db")), str(d.get("right_db"))} & set(targets) if d.get("left_db") == d.get("right_db") else set()
+    missing = [t for t in targets if t not in passed]
+    if missing:
+        raise GuardError(f"동기화 확인 통과 결과가 없는 대상: {missing}")
+    _REAL_ALLOWED.update(targets)
+    return set(targets)
+
+
 def assert_rehearsal_db(conn: Connection, expected: str) -> str:
-    """쓰기 전 확인: 접속 DB 이름 = 지정 이름, 리허설 패턴, 보호 목록 밖."""
+    """쓰기 전 확인: 접속 DB 이름 = 지정 이름, 리허설 패턴, 보호 목록 밖.
+    실제 적용 모드에서 enable_real_apply 를 통과한 실제 DB 이름만 예외로 허용한다."""
     cur = conn.execute(text("SELECT current_database()")).scalar()
     if cur != expected:
         raise GuardError(f"접속 DB({cur}) ≠ 지정 DB({expected})")
+    if cur in _REAL_ALLOWED:
+        return cur
     if cur in PROTECTED or not REHEARSAL_RE.match(cur or ""):
         raise GuardError(f"리허설 DB 이름이 아님: {cur} — 쓰기 거부")
     return cur
+
+
+def add_real_apply_args(p) -> None:
+    p.add_argument("--real-apply", action="store_true",
+                   help="실제 로컬 DB 에 적용(런북 5절). --confirm-db·--sync-result 필요")
+    p.add_argument("--confirm-db", action="append", default=[], help="실제 적용 대상 DB 이름을 다시 입력(대상마다 한 번)")
+    p.add_argument("--sync-result", action="append", default=[], help="prod_sync_check compare --result-out 결과(통과) 파일")
+
+
+def check_write_targets(names: list[str], a) -> None:
+    """쓰기 전 이름 확인: --real-apply 면 실제 적용 허가, 아니면 리허설 이름만."""
+    if getattr(a, "real_apply", False):
+        enable_real_apply(names, a.confirm_db, [Path(x) for x in a.sync_result])
+        return
+    for n in names:
+        if n and (n in PROTECTED or not REHEARSAL_RE.match(n)):
+            raise GuardError(f"쓰기 대상 DB 이름이 리허설 이름(…_p2r)이 아님: {n}")
 
 
 def _sha(s: str) -> str:
@@ -754,15 +818,18 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--verify", action="store_true")
     p.add_argument("--split-units", default="", help="분할 목록 CSV(기본 pipeline/collective/data/p2_split_units.csv)")
     p.add_argument("--base-url", default="", help="DB 서버 URL(기본 backend/.env). DB 이름은 위 인자로 바꾼다")
+    add_real_apply_args(p)
     a = p.parse_args(argv)
+    if a.real_apply and (a.rollback or a.verify):
+        raise GuardError("--real-apply 는 적용만 한다(실제 DB 되돌리기는 런북의 로컬 덤프 복원)")
+    if a.real_apply:
+        a.apply = True
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     units = load_split_units(a.split_units or None)
     base = a.base_url or None
     write = a.apply or a.rollback
     if write:
-        for n in (a.collective_db, a.built_db, a.rent_db):
-            if n and (n in PROTECTED or not REHEARSAL_RE.match(n)):
-                raise GuardError(f"쓰기 대상 DB 이름이 리허설 이름(…_p2r)이 아님: {n}")
+        check_write_targets([a.collective_db, a.built_db, a.rent_db], a)
     ce = engine_for(a.collective_db, read_only=not write, base_url=base)
     be = engine_for(a.built_db, read_only=not write, base_url=base) if a.built_db else None
     re_ = engine_for(a.rent_db, read_only=not write, base_url=base) if a.rent_db else None
@@ -783,7 +850,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps({"split_base_keys": len(units), "counts": plan.counts, "problems": plan.problems},
                      ensure_ascii=False, indent=1, default=str))
     if not a.apply:
-        print("드라이런 — 쓰지 않았다. 쓰려면 --apply (리허설 DB만).")
+        print("드라이런 — 쓰지 않았다. 쓰려면 --apply (리허설 DB) 또는 --real-apply (실제 DB, 런북 5절).")
         return 0
     if any("충돌" in x for x in plan.problems):
         print("새 키 충돌이 있어 중단")

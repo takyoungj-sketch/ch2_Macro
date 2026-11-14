@@ -28,6 +28,8 @@ sys.path.insert(0, str(REPO / "pipeline"))
 
 from admin_names import LEGACY_SIDO_TO_CURRENT  # noqa: E402
 from collective.building_keys import (  # noqa: E402
+    C2_AUTO_SOURCE,
+    C2_TABLE,
     SPLIT_UNITS_PATH,
     c2_table_state,
     judged_keys_c2,
@@ -123,6 +125,9 @@ def check_c2_shape(rep, cconn) -> None:
     units = load_split_units_c2(cconn)
     if not units:
         return
+    n_auto = int(cconn.execute(text(f"SELECT count(*) FROM {C2_TABLE} WHERE source = :s"), {"s": C2_AUTO_SOURCE}).scalar() or 0)
+    if n_auto:
+        rep.warn(f"C-2 월간 적재 자동 등록 조각 {n_auto:,}개(source={C2_AUTO_SOURCE}) — 판정 검토 대상")
     got = cconn.execute(text(C2_LOTS_SQL).bindparams(bindparam("k", expanding=True)), {"k": sorted(units)}).all()
     unknown: dict[tuple[str, str], int] = {}
     for k, bjd, ml, _n in got:

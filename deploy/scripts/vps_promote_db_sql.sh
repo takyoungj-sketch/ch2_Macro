@@ -35,7 +35,21 @@ GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO ch2app;
 SQL
 
 sudo systemctl restart ch2-macro-backend
-sleep 4
-curl -sf http://127.0.0.1:8000/health | head -c 400
-echo
+# 재시작 직후에는 아직 응답하지 않을 수 있다 → 최대 60초(2초 간격 30번) 다시 묻는다. 끝내 실패하면 종료 코드 1.
+HEALTH_URL="${CH2_HEALTH_URL:-http://127.0.0.1:8000/health}"
+HEALTH_WAIT="${CH2_HEALTH_WAIT_SEC:-60}"
+wait_health() {
+  local deadline=$((SECONDS + HEALTH_WAIT)) body
+  while (( SECONDS < deadline )); do
+    if body=$(curl -sf --max-time 3 "$HEALTH_URL"); then
+      printf '%s' "$body" | head -c 400
+      echo
+      return 0
+    fi
+    sleep 2
+  done
+  echo "ERROR: $HEALTH_URL 이 ${HEALTH_WAIT}초 안에 응답하지 않음" >&2
+  return 1
+}
+wait_health
 echo "OK: $DB promote from $INPUT"

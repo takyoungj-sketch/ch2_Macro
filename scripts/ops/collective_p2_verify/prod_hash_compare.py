@@ -34,7 +34,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from _common import Timed, db_name, db_url, md_table, read_json, ro_conn, table_columns, table_exists, write_json  # noqa: E402
+from _common import (  # noqa: E402
+    EXIT, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn, table_columns,
+    table_exists, write_json, write_result,
+)
 
 # 이번 반영이 바꾸는 표(원장·부속·통계·연결표·보존 표). 보존 표(_p2_before)는 promote 로 같이 올라가므로 함께 비교한다.
 TARGETS = {
@@ -46,12 +49,15 @@ TARGETS = {
         "collective_commercial_cluster_annual_stats", "collective_building_attributes", "builder_master",
         "collective_building_assessed_land_price", "collective_building_geocodes", "new_apartment_complex_year",
         "collective_building_key_map", "collective_cluster_key_map", "p2_migration_log",
+        "collective_building_key_c2_units",            # C-2 판정 표
     ],
     "rent_stats": ["rent_transactions", "rent_building_stats", "rent_building_rolling_stats", "rent_sale_building_map",
                    "rent_building_geocodes", "rent_building_key_map"],
     "built_stats": ["built_transactions", "built_scope_stats"],
 }
 HEX = "0123456789abcdef"
+# 보존 표(키 이전 전 행·annual 정리 전 행·연결표 사본)도 기본 대상 — 이름 꼴로 찾아 더한다
+PRESERVE_LIKE = r"%\_p2\_before"
 PG_CHECK_TABLES = ["region_codes", "region_code_history"]   # 세 DB 모두 있고 작으며 토지에서 복사해 오는 표
 NUMERIC_TYPES = {"smallint", "integer", "bigint", "numeric", "real", "double precision"}
 
@@ -135,23 +141,47 @@ def _rows(part) -> object:
     return part[0] if part else "—"
 
 
-def compare(a: dict, b: dict) -> list[tuple]:
-    diff = []
+def default_tables(conn, name: str) -> list[str]:
+    """기본 대상 = TARGETS[DB] + 이 DB 의 보존 표(*_p2_before)."""
+    from sqlalchemy import text
+
+    pres = [r[0] for r in conn.execute(text(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE :p ORDER BY 1"),
+        {"p": PRESERVE_LIKE})]
+    base = list(TARGETS.get(name, []))
+    return base + [t for t in pres if t not in base]
+
+
+def evaluate(a: dict, b: dict) -> dict:
+    """{status, diff, unverified}. 조각 쿼리 실패(시간 초과 등)·필수 표가 양쪽에 없음 → 검증 못 함. 값이 다르면 차이."""
+    diff, unv = [], []
     if a.get("mode", "hash") != b.get("mode", "hash"):
-        return [("(설정)", "방식 다름", a.get("mode", "hash"), b.get("mode", "hash"))]
-    for tb in sorted(set(a["tables"]) | set(b["tables"])):
-        x, y = a["tables"].get(tb), b["tables"].get(tb)
-        if x is None or y is None:
-            if x != y:
-                diff.append((tb, "—", "표 없음" if x is None else "있음", "표 없음" if y is None else "있음"))
-            continue
-        for part in sorted(set(x) | set(y)):
-            px, py = x.get(part), y.get(part)
-            if px is None or py is None or px != py:
-                diff.append((tb, part, _rows(px) if px else "—", _rows(py) if py else "—"))
+        return {"status": DIFF, "diff": [("(설정)", "방식 다름", a.get("mode", "hash"), b.get("mode", "hash"))], "unverified": []}
     if a.get("exclude") != b.get("exclude"):
         diff.append(("(설정)", "제외 열 다름", a.get("exclude"), b.get("exclude")))
-    return diff
+    required = set(TARGETS.get(a.get("db"), [])) | set(TARGETS.get(b.get("db"), []))
+    for tb in sorted(set(a["tables"]) | set(b["tables"])):
+        x, y = a["tables"].get(tb), b["tables"].get(tb)
+        if x is None and y is None:
+            if tb in required:
+                unv.append((tb, "필수 표 없음"))
+            continue
+        if x is None or y is None:
+            diff.append((tb, "—", "표 없음" if x is None else "있음", "표 없음" if y is None else "있음"))
+            continue
+        for part in sorted(set(x) | set(y)):
+            px, py = x.get(part, "누락"), y.get(part, "누락")
+            if px is None or py is None:
+                unv.append((tb, f"{part} 조각 쿼리 실패"))
+            elif px != py:
+                diff.append((tb, part, _rows(px) if px != "누락" else "—", _rows(py) if py != "누락" else "—"))
+    status = DIFF if diff else UNVERIFIED if unv else PASS
+    return {"status": status, "diff": diff, "unverified": unv}
+
+
+def compare(a: dict, b: dict) -> list[tuple]:
+    """차이 목록만(검증 못 함은 evaluate 로)."""
+    return evaluate(a, b)["diff"]
 
 
 def pg_verdict(a: dict, b: dict) -> str:
@@ -184,11 +214,12 @@ def main(argv=None) -> int:
     c = sub.add_parser("compare")
     c.add_argument("left", type=Path)
     c.add_argument("right", type=Path)
+    c.add_argument("--result-out", type=Path, default=None)
     a = p.parse_args(argv)
     if a.cmd == "snapshot":
         with ro_conn(db_url(a.db_env, a.env_file)) as conn:
             name = db_name(conn)
-            tables = [x for x in a.tables.split(",") if x] or TARGETS.get(name)
+            tables = [x for x in a.tables.split(",") if x] or default_tables(conn, name)
             if not tables:
                 raise SystemExit(f"기본 대상 표가 없는 DB: {name} — --tables 로 지정")
             snap = snapshot(conn, tables, exclude=[x for x in a.exclude_cols.split(",") if x],
@@ -197,7 +228,9 @@ def main(argv=None) -> int:
         fails = [x for x in snap["_timings"] if not x["ok"]]
         print(f"{name}: 표 {len(tables)} · 조각 쿼리 {len(snap['_timings'])} · 실패 {len(fails)} · "
               f"{sum(x['sec'] for x in snap['_timings']):,.0f}초 → {a.out}")
-        return 1 if fails else 0
+        if fails:
+            print("조각 쿼리 실패가 있어 이 스냅샷으로는 검증 못 함(종료 코드 2)")
+        return EXIT[UNVERIFIED] if fails else EXIT[PASS]
     if a.cmd == "pgcheck":
         tables = [x for x in a.tables.split(",") if x]
         with ro_conn(db_url(a.db_env, a.env_file)) as conn:
@@ -212,11 +245,17 @@ def main(argv=None) -> int:
     if left.get("pgcheck") and right.get("pgcheck"):
         print(f"PG {left['server_version']} vs {right['server_version']}: {pg_verdict(left, right)}")
         return 0 if not compare(left["sums"], right["sums"]) else 1
-    diff = compare(left, right)
-    print(f"{left['db']} vs {right['db']}: 다른 표·조각 {len(diff)}")
-    if diff:
-        print(md_table(diff, ["표", "조각", "왼쪽 행", "오른쪽 행"]))
-    return 1 if diff else 0
+    r = evaluate(left, right)
+    print(f"{left['db']} vs {right['db']}: {STATUS_KO[r['status']]} — 다른 표·조각 {len(r['diff'])} · 검증 못 함 {len(r['unverified'])}")
+    if r["diff"]:
+        print(md_table(r["diff"], ["표", "조각", "왼쪽 행", "오른쪽 행"]))
+    if r["unverified"]:
+        print(md_table(r["unverified"], ["표", "사유"]))
+    if a.result_out:
+        write_result(a.result_out, kind="prod_hash_compare", status=r["status"], left_db=left["db"], right_db=right["db"],
+                     detail={"diff": len(r["diff"]), "unverified": [f"{t}: {why}" for t, why in r["unverified"]]})
+    print(f"종료 코드 {EXIT[r['status']]} (0 통과 · 1 차이 · 2 검증 못 함)")
+    return EXIT[r["status"]]
 
 
 if __name__ == "__main__":

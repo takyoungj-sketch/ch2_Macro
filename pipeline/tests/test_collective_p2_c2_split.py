@@ -65,18 +65,28 @@ def test_new_month_lots_existing_new_and_small(units):
     out = bk.apply_building_key_split_c2(_frame(rows), "rowhouse", units=u, c01_units={},
                                          existing_counts={(key, BJD, "80"): 1})
     assert out["building_key"].iat[0] == bk.c2_key(raw, "p1")
-    assert out["building_key"].iat[1] == out["building_key"].iat[2] == bk.c2_key(raw, "m80")
+    assert out["building_key"].iat[1] == out["building_key"].iat[2] == bk.c2_key(raw, "p2")   # 새 조각 = 최대 조각 + 1
     assert out["building_key"].iat[3] == key
     assert out.attrs["c2_review"] == [{"building_key": key, "beopjungri_code": BJD, "rows": 1}]
+    assert out.attrs["c2_new_parts"] == [{"base_key": key, "asset_type": "rowhouse", "beopjungri_code": BJD, "main_lot": "80",
+                                          "building_year": 2021, "part": 2, "decision": "split", "source": "auto_ingest"}]
+    assert u[key][BJD] == [("10", 2010, 0), ("11", 2010, 0), ("50", 2015, 1)]   # 호출자의 판정 dict 는 바뀌지 않음
 
 
-def test_new_part_key_is_stable_across_months(units):
-    """3건+ 새 본번은 달이 바뀌어도 같은 키(라벨 m<본번>)."""
+def test_new_part_is_registered_and_reused_next_month(units):
+    """Codex 재현: 3건 → 새 조각. 다음 달 1건은 (등록된) 같은 조각으로 — 등록이 없으면 가장 가까운 조각으로 새던 문제."""
     key, u = units
     a = bk.apply_building_key_split_c2(_frame([_row("80", 2021)] * 3), "rowhouse", units=u, c01_units={})
-    b = bk.apply_building_key_split_c2(_frame([_row("80", 2021)]), "rowhouse", units=u, c01_units={},
-                                       existing_counts={(key, BJD, "80"): 3})
+    reg = a.attrs["c2_new_parts"]
+    u2 = bk.units_from_rows([(key, BJD, f, y, pt, "split") for f, y, pt in (("10", 2010, 0), ("11", 2010, 0), ("50", 2015, 1))]
+                            + [(r["base_key"], r["beopjungri_code"], r["main_lot"], r["building_year"], r["part"], "split")
+                               for r in reg])
+    b = bk.apply_building_key_split_c2(_frame([_row("80", 2021)]), "rowhouse", units=u2, c01_units={})
     assert a["building_key"].iat[0] == b["building_key"].iat[0] != key
+    assert b.attrs["c2_new_parts"] == [] and b.attrs["c2_review"] == []
+    # 등록 없이 다음 달 1건만 오면(옛 동작) 가장 가까운 조각(p1, 본번 50)에 붙어 키가 갈렸다
+    c = bk.apply_building_key_split_c2(_frame([_row("80", 2021)]), "rowhouse", units=u, c01_units={})
+    assert c["building_key"].iat[0] != a["building_key"].iat[0]
 
 
 def test_unlisted_keys_other_dong_and_presale_unchanged(units):
@@ -222,7 +232,32 @@ def test_monthly_check_and_ingest_read_the_table(pg):
         c.execute(text("INSERT INTO collective_transactions VALUES (:k, 'rowhouse', :b, '80', 2021, true)"), {"k": key, "b": BJD})
     df = _frame([_row("50", 2015), _row("80", 2021), _row("80", 2021), _row("10", 2010)])
     out = bk.apply_c2_split_from_db(pg, df, "rowhouse")   # import_refined._apply_c2_split 가 부르는 함수
-    assert list(out["building_key"]) == [bk.c2_key(raw, "p1"), bk.c2_key(raw, "m80"), bk.c2_key(raw, "m80"), key]
+    k80 = bk.c2_key(raw, "p2")
+    assert list(out["building_key"]) == [bk.c2_key(raw, "p1"), k80, k80, key]
+    with pg.connect() as c:                                # 새 조각이 판정 표에 자동 등록됨(출처 표시)
+        reg = c.execute(text(f"SELECT main_lot, building_year, part, decision, source FROM {bk.C2_TABLE} "
+                             "WHERE base_key = :k ORDER BY part, main_lot"), {"k": key}).all()
+    assert ("80", 2021, 2, "split", "auto_ingest") in [tuple(r) for r in reg]
+
+    # Codex 재현 시나리오: 그 3건이 원장에 들어간 뒤 다음 달 1건 → 같은 조각(표 기준)
+    with pg.begin() as c:
+        c.execute(text("DELETE FROM collective_transactions WHERE building_key = :k AND lot_number = '80'"), {"k": key})
+        c.execute(text("INSERT INTO collective_transactions VALUES (:k, 'rowhouse', :b, '80', 2021, true)"),
+                  [{"k": k80, "b": BJD}] * 3)
+    nxt = bk.apply_c2_split_from_db(pg, _frame([_row("80", 2021)]), "rowhouse")
+    assert nxt["building_key"].iat[0] == k80 and nxt.attrs["c2_new_parts"] == []
+
+    # 기존 거래 수는 본 키 + 파생 조각 키를 모두 센다: 본번 90 의 2건이 p1 조각 키에 있고 이번 달 1건 → 3건 → 새 조각
+    k1 = bk.c2_key(raw, "p1")
+    with pg.begin() as c:
+        c.execute(text("INSERT INTO collective_transactions VALUES (:k, 'rowhouse', :b, '90', 2019, true)"),
+                  [{"k": k1, "b": BJD}] * 2)
+    with pg.connect() as c:
+        units = bk.load_split_units_c2(c)
+        counts = bk.existing_main_lot_counts(c, {key: bk.c2_derived_keys(raw, units[key])})
+    assert counts[(key, BJD, "90")] == 2 and counts[(key, BJD, "80")] == 3
+    out = bk.apply_c2_split_from_db(pg, _frame([_row("90", 2019)]), "rowhouse")
+    assert out["building_key"].iat[0] == bk.c2_key(raw, "p3") and out.attrs["c2_new_parts"][0]["part"] == 3
 
 
 def test_import_refined_calls_db_reader():

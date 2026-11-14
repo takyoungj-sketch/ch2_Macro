@@ -9,8 +9,12 @@
 
 가드(진짜 로컬 DB 이름):
   - 집합 DB 이름 = --collective-db(기본 collective_stats), 표제부 DB = --parcel-db(기본 parcel_master) 와 정확히 같아야 한다.
-  - *_p2r(리허설) 이름은 거부한다(리허설은 c15 를 쓴다). 접속 호스트는 localhost·127.0.0.1·::1 만 허용(운영 접속 차단).
-  - 모든 세션 PGOPTIONS default_transaction_read_only=on, 시작 때 SHOW 로 확인.
+  - *_p2r(리허설) 이름은 거부한다(리허설은 c15 를 쓴다).
+  - 접속 호스트는 SQLAlchemy 가 드라이버에 실제로 넘기는 접속 인자(dialect.create_connect_args)로 판정한다.
+    URL 쿼리의 host·hostaddr·service 는 거부(`…@localhost/db?host=원격` 우회 차단). 호스트가 비면 libpq 가 쓰는
+    PGHOST·PGHOSTADDR·PGSERVICE 환경변수도 확인. 허용: localhost·127.0.0.1·::1·유닉스 소켓 경로.
+  - 모든 세션 PGOPTIONS default_transaction_read_only=on + statement_timeout(--statement-timeout, 기본 600초), 시작 때 SHOW 로 확인.
+  - 전체 실행 시간 제한 --max-minutes(기본 30분): 단계마다 확인하고 넘으면 중단(종료 코드 3).
 출력: 표준출력 JSON(건수만) + --outside-csv(목록 밖 키, 지번 없음, logs/ 에 둘 것)
 예상 소요: 약 5~10분(K-apt 파일 읽기·표제부 PNU 적재가 대부분, 로컬 리허설 c15 실측 기반)
 
@@ -33,20 +37,65 @@ for p in (PIPE, PIPE / "collective"):
         sys.path.insert(0, str(p))
 
 REHEARSAL_RE = re.compile(r"_p2r(_[a-z0-9]+)?$")
-LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", None, ""}
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+BANNED_QUERY = {"host", "hostaddr", "service"}
+TIMEOUT_EXIT = 3
 
 
-def guard_url(url: str, expected_db: str) -> None:
+def _is_local(h: str) -> bool:
+    return h in LOCAL_HOSTS or h.startswith("/")          # 유닉스 소켓 경로
+
+
+def connect_params(url: str) -> dict:
+    """SQLAlchemy 가 psycopg2 에 실제로 넘길 접속 인자(접속은 하지 않음)."""
+    from sqlalchemy import create_engine
+
+    eng = create_engine(url)
+    try:
+        _args, kw = eng.dialect.create_connect_args(eng.url)
+    finally:
+        eng.dispose()
+    return dict(kw)
+
+
+def guard_url(url: str, expected_db: str, *, environ=None) -> None:
     """실제 로컬 DB 이름·로컬 호스트만 허용. 어긋나면 SystemExit(값은 출력하지 않음)."""
     from sqlalchemy.engine import make_url
 
+    env = os.environ if environ is None else environ
     u = make_url(url)
-    if u.host not in LOCAL_HOSTS:
+    if BANNED_QUERY & {k.lower() for k in u.query}:
+        raise SystemExit("URL 쿼리에 host·hostaddr·service 가 있음 — 중단(호스트 우회 차단)")
+    kw = connect_params(url)
+    hosts = [h for h in str(kw.get("host") or "").split(",") if h] + \
+            [h for h in str(kw.get("hostaddr") or "").split(",") if h]
+    if kw.get("service"):
+        raise SystemExit("service 접속 — 중단(실제 호스트를 확인할 수 없음)")
+    if not hosts:   # libpq 가 환경변수로 정한다
+        if env.get("PGSERVICE"):
+            raise SystemExit("PGSERVICE 환경변수 — 중단(실제 호스트를 확인할 수 없음)")
+        hosts = [h for h in (env.get("PGHOST", "") + "," + env.get("PGHOSTADDR", "")).split(",") if h]
+    if any(not _is_local(h) for h in hosts):
         raise SystemExit("로컬 호스트가 아님 — 중단(운영 접속 차단)")
-    if REHEARSAL_RE.search(u.database or ""):
-        raise SystemExit(f"리허설 DB({u.database}) — 이 도구는 실제 로컬 DB 용(리허설은 c15)")
-    if u.database != expected_db:
-        raise SystemExit(f"DB 이름이 {expected_db} 가 아님: {u.database}")
+    db = kw.get("dbname") or kw.get("database") or u.database
+    if REHEARSAL_RE.search(db or ""):
+        raise SystemExit(f"리허설 DB({db}) — 이 도구는 실제 로컬 DB 용(리허설은 c15)")
+    if db != expected_db:
+        raise SystemExit(f"DB 이름이 {expected_db} 가 아님: {db}")
+
+
+class Deadline:
+    def __init__(self, minutes: float):
+        import time
+
+        self._t = time.monotonic() + minutes * 60
+
+    def check(self, step: str) -> None:
+        import time
+
+        if time.monotonic() > self._t:
+            print(f"전체 실행 시간 제한을 넘어 중단: {step} 전")
+            raise SystemExit(TIMEOUT_EXIT)
 
 
 def outside(written: set[str], keys: set[str]) -> set[str]:
@@ -61,9 +110,12 @@ def main(argv=None) -> int:
     ap.add_argument("--collective-db", default="collective_stats")
     ap.add_argument("--parcel-db", default="parcel_master")
     ap.add_argument("--outside-csv", type=Path, default=ROOT / "logs" / "collective_p2" / "scope_outside_local.csv")
+    ap.add_argument("--statement-timeout", type=int, default=600, help="쿼리마다 시간 제한(초)")
+    ap.add_argument("--max-minutes", type=float, default=30, help="전체 실행 시간 제한(분)")
     a = ap.parse_args(argv)
+    dl = Deadline(a.max_minutes)
 
-    os.environ["PGOPTIONS"] = "-c default_transaction_read_only=on"
+    os.environ["PGOPTIONS"] = f"-c default_transaction_read_only=on -c statement_timeout={int(a.statement_timeout) * 1000}"
     from parcel_master.db_utils import get_collective_engine, get_parcel_engine
 
     coll, parcel = get_collective_engine(), get_parcel_engine()
@@ -80,6 +132,8 @@ def main(argv=None) -> int:
             assert c.execute(text("SELECT current_database()")).scalar() == want
             if c.execute(text("SHOW default_transaction_read_only")).scalar() != "on":
                 raise SystemExit("읽기 전용 세션이 아님 — 중단")
+            if c.execute(text("SHOW statement_timeout")).scalar() in ("0", None):
+                raise SystemExit("statement_timeout 이 걸리지 않음 — 중단")
 
     spec = importlib.util.spec_from_file_location("bca", PIPE / "build_collective_building_attributes.py")
     bca = importlib.util.module_from_spec(spec)
@@ -94,6 +148,7 @@ def main(argv=None) -> int:
     rows_out: list[tuple[str, str, str]] = []
 
     # K-apt
+    dl.check("K-apt")
     with coll.connect() as conn:
         region_map = bca.load_region_map(conn)
         buildings = bca.load_buildings(conn, "apartment")
@@ -112,6 +167,7 @@ def main(argv=None) -> int:
     rows_out += [("kapt", "apartment", k) for k in sorted(outside(wk, keys))]
 
     # title_fill (K-apt 단계를 먼저 돌린 상태를 흉내: K-apt 가 쓸 키는 has_attr_row)
+    dl.check("title_fill")
     with coll.connect() as conn:
         kapt_pnus = {str(r[0]) for r in conn.execute(text(tf.KAPT_PNU_SQL), {"ym": ym})}
         incheon = tf._incheon_current_to_old_bjd(conn)
@@ -119,6 +175,7 @@ def main(argv=None) -> int:
         by_pnu = tf._title_by_pnu(conn)
     out["title_fill"] = {}
     for kind in tf.DEFAULT_TYPES:
+        dl.check(f"title_fill {kind}")
         with coll.connect() as conn:
             b = tf.load_buildings(conn, kind)
             at = pd.read_sql(text(tf.ATTR_SQL), conn, params={"ym": ym, "asset_type": kind})
@@ -138,6 +195,7 @@ def main(argv=None) -> int:
         rows_out += [("title_fill", kind, k) for k in sorted(outside(fk, keys))]
 
     # 사전 단계: 계산 대상 행이 목록 키뿐인지
+    dl.check("사전 단계")
     with coll.connect() as conn:
         df = dic._load(conn, ym)
     sub = tf.dictionary_rows_for_keys(df, keys)
@@ -145,6 +203,7 @@ def main(argv=None) -> int:
     out["dictionary"] = {"rows_now_in_list": len(sub), "outside": len(outside(dk, keys)), "rows_in_snapshot": len(df)}
 
     # 공시지가(추가 전용)
+    dl.check("공시지가")
     with coll.connect() as conn:
         cands = ialp.restrict_candidates_to_keys(ialp._representative_pnus(conn, ("apartment", "rowhouse", "officetel")), keys)
         have_lp = {(str(r[0]).strip(), r[1]) for r in conn.execute(text(

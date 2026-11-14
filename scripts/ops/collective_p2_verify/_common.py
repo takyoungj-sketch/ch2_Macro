@@ -109,6 +109,20 @@ def read_json(path: Path) -> Any:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+# 비교 결과 세 가지와 종료 코드(T·Codex: 「검증 못 함」은 통과로 세지 않는다)
+PASS, DIFF, UNVERIFIED = "pass", "diff", "unverified"
+EXIT = {PASS: 0, DIFF: 1, UNVERIFIED: 2}
+STATUS_KO = {PASS: "통과", DIFF: "차이", UNVERIFIED: "검증 못 함"}
+
+
+def write_result(path: Path, *, kind: str, status: str, left_db: str, right_db: str, detail: dict) -> None:
+    """compare 결과 파일. 실제 적용 모드(migrate_p2_keys --real-apply --sync-result)가 이 파일의 status=pass 를 요구한다."""
+    import datetime as _dt
+
+    write_json(path, {"kind": kind, "status": status, "left_db": left_db, "right_db": right_db,
+                      "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(), **detail})
+
+
 def md_table(rows, headers) -> str:
     out = ["| " + " | ".join(headers) + " |", "|" + "---|" * len(headers)]
     out += ["| " + " | ".join(str(v) for v in r) + " |" for r in rows]

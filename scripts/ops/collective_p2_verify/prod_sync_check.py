@@ -23,10 +23,23 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from _common import LIGHT_MS, Timed, db_name, db_url, md_table, read_json, ro_conn, table_columns, write_json  # noqa: E402
+from _common import (  # noqa: E402
+    EXIT, LIGHT_MS, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn,
+    table_columns, write_json, write_result,
+)
 
 LEDGERS = ("collective_transactions", "collective_commercial_transactions", "rent_transactions", "built_transactions")
 HEAVY_ROWS = 2_000_000
+# 이 표가 양쪽 모두 없으면 「검증 못 함」(한쪽만 없으면 「차이」)
+REQUIRED = {
+    "collective_stats": ["collective_transactions", "collective_commercial_transactions", "collective_building_stats",
+                         "collective_building_rolling_stats", "collective_building_annual_stats",
+                         "collective_building_attributes", "market_stats"],
+    "rent_stats": ["rent_transactions", "rent_building_stats", "rent_building_rolling_stats", "rent_sale_building_map"],
+    "built_stats": ["built_transactions", "built_scope_stats"],
+}
+# 운영 API 가 직접 쓰는 표(런북 2.5) — 차이가 나도 멈춤 사유가 아니라 promote 전 합칠 대상
+PROD_WRITTEN = ("collective_building_geocodes", "collective_commercial_map_geocodes", "qa_audit_run", "rent_building_geocodes")
 
 
 def snapshot(conn, *, allow_heavy: bool, heavy_ms: int = 300_000, heavy_rows: int = HEAVY_ROWS) -> dict:
@@ -62,19 +75,24 @@ def snapshot(conn, *, allow_heavy: bool, heavy_ms: int = 300_000, heavy_rows: in
     return out
 
 
-def compare(a: dict, b: dict) -> tuple[list[tuple], list[str]]:
-    diff, pending = [], []
+def compare(a: dict, b: dict, *, allowed: tuple[str, ...] = PROD_WRITTEN) -> dict:
+    """{status, diff, allowed_diff, unverified}. 큰 표를 건너뛰었거나(승인 필요·시간 초과) 필수 표가 양쪽에 없으면 검증 못 함."""
+    diff, allowed_diff, unv = [], [], []
     for tb in sorted(set(a["tables"]) | set(b["tables"])):
         x, y = a["tables"].get(tb), b["tables"].get(tb)
         if x is None or y is None:
-            diff.append((tb, "표", "있음" if x else "없음", "있음" if y else "없음"))
+            (allowed_diff if tb in allowed else diff).append((tb, "표", "있음" if x else "없음", "있음" if y else "없음"))
             continue
         if "status" in x or "status" in y:
-            pending.append(tb)
+            unv.append((tb, x.get("status") or y.get("status")))
         for k in ("rows", "max_as_of_month", "recent_months"):
             if k in x and k in y and x[k] is not None and y[k] is not None and x[k] != y[k]:
-                diff.append((tb, k, x[k], y[k]))
-    return diff, pending
+                (allowed_diff if tb in allowed else diff).append((tb, k, x[k], y[k]))
+    for tb in REQUIRED.get(a.get("db"), []) + REQUIRED.get(b.get("db"), []):
+        if tb not in a["tables"] and tb not in b["tables"] and (tb, "필수 표 없음") not in unv:
+            unv.append((tb, "필수 표 없음"))
+    status = DIFF if diff else UNVERIFIED if unv else PASS
+    return {"status": status, "diff": diff, "allowed_diff": allowed_diff, "unverified": unv}
 
 
 def main(argv=None) -> int:
@@ -90,6 +108,8 @@ def main(argv=None) -> int:
     c = sub.add_parser("compare")
     c.add_argument("left", type=Path)
     c.add_argument("right", type=Path)
+    c.add_argument("--result-out", type=Path, default=None,
+                   help="결과 파일(실제 적용 모드 --sync-result 로 넘김). 통과일 때만 실제 적용이 허용된다")
     a = p.parse_args(argv)
     if a.cmd == "snapshot":
         with ro_conn(db_url(a.db_env, a.env_file)) as conn:
@@ -102,13 +122,23 @@ def main(argv=None) -> int:
             print("승인 필요: " + ", ".join(need))
         return 0
     left, right = read_json(a.left), read_json(a.right)
-    diff, pending = compare(left, right)
-    print(f"{left['db']} vs {right['db']}: 다름 {len(diff)} · 비교 못 함(승인 필요) {len(pending)}")
-    if diff:
-        print(md_table(diff, ["표", "항목", "왼쪽", "오른쪽"]))
-    if pending:
-        print("비교 못 한 표(--allow-heavy 필요): " + ", ".join(pending))
-    return 1 if diff else 0
+    r = compare(left, right)
+    print(f"{left['db']} vs {right['db']}: {STATUS_KO[r['status']]} — 차이 {len(r['diff'])} · "
+          f"운영 전용 표 차이(허용) {len(r['allowed_diff'])} · 검증 못 함 {len(r['unverified'])}")
+    if r["diff"]:
+        print(md_table(r["diff"], ["표", "항목", "왼쪽", "오른쪽"]))
+    if r["allowed_diff"]:
+        print("운영 전용 표(promote 전 합칠 대상, 런북 6.1):")
+        print(md_table(r["allowed_diff"], ["표", "항목", "왼쪽", "오른쪽"]))
+    if r["unverified"]:
+        print("검증 못 함(--allow-heavy 필요·필수 표 없음):")
+        print(md_table(r["unverified"], ["표", "사유"]))
+    if a.result_out:
+        write_result(a.result_out, kind="prod_sync_check", status=r["status"], left_db=left["db"], right_db=right["db"],
+                     detail={"diff": len(r["diff"]), "allowed_diff": len(r["allowed_diff"]),
+                             "unverified": [t for t, _ in r["unverified"]]})
+    print(f"종료 코드 {EXIT[r['status']]} (0 통과 · 1 차이 · 2 검증 못 함)")
+    return EXIT[r["status"]]
 
 
 if __name__ == "__main__":

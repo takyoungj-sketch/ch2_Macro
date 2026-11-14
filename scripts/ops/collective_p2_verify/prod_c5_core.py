@@ -31,7 +31,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import sql_copies as S  # noqa: E402
-from _common import Timed, db_name, db_url, md_table, read_json, ro_conn, table_exists, write_json  # noqa: E402
+from _common import LIGHT_MS, Timed, db_name, db_url, md_table, read_json, ro_conn, table_exists, write_json  # noqa: E402
 
 REPO = HERE.parents[2]
 DEFAULT_SPLIT_UNITS = REPO / "pipeline" / "collective" / "data" / "p2_split_units.csv"
@@ -53,107 +53,143 @@ def judged_keys(conn, t: Timed, split_units: Path | None) -> set[str]:
     return keys
 
 
+# C-01 분할 사유(연결표 reason 정확한 값). C-2(c2_split)는 본 조각이 옛 키를 그대로 쓰므로 「남은 옛 키」 검사에서 뺀다.
+C01_SPLIT_REASONS = ("split", "honam_sido+split")
+SKIPPED = "건너뜀"
+
+
 def collect(cconn, rconn, bconn, *, as_of=None, heavy_ms: int, skip_heavy: bool,
             split_units: Path | None = DEFAULT_SPLIT_UNITS) -> dict:
+    """가벼운 검사는 쿼리마다 10초(LIGHT_MS), 무거운 검사는 heavy_ms. skip_heavy 면 무거운 검사는 실행하지 않고 「건너뜀」."""
     t = Timed()
     m: dict = {"db": {"collective": db_name(cconn), "rent": db_name(rconn) if rconn is not None else None,
                       "built": db_name(bconn) if bconn is not None else None}}
-    a = as_of or t.run(cconn, "최신 as_of", "SELECT max(as_of_month) FROM collective_building_stats", fetch="scalar")
+
+    def heavy(conn, key, label, sql, params=None, fetch="all"):
+        if skip_heavy:
+            m[key] = SKIPPED
+            return None
+        return t.run(conn, label, sql, params, timeout_ms=heavy_ms, fetch=fetch)
+
+    a = as_of or t.run(cconn, "최신 as_of", "SELECT max(as_of_month) FROM collective_building_stats", fetch="scalar",
+                       timeout_ms=LIGHT_MS)
     m["as_of"] = str(a)
     leg = {"l": S.LEGACY_SIDO}
-    # 1 옛 시도명
-    for name, conn, sql, p in (
-        ("collective_transactions", cconn, "SELECT count(*) FROM collective_transactions WHERE addr1 = ANY(:l)", leg),
-        ("collective_commercial_transactions", cconn,
-         "SELECT count(*) FROM collective_commercial_transactions WHERE addr1 = ANY(:l)", leg),
-        ("built_transactions", bconn, "SELECT count(*) FROM built_transactions WHERE addr1 = ANY(:l)", leg),
-        ("rent_transactions", rconn, "SELECT count(*) FROM rent_transactions WHERE addr1 = ANY(:l)", leg),
-        ("built_scope_stats(as_of)", bconn, "SELECT count(*) FROM built_scope_stats WHERE as_of_month = :a AND addr1 = ANY(:l)",
-         {**leg, "a": a}),
+    # 1 옛 시도명 — 원장 전체 훑기(무거움) / 복합 scope 한 as_of(가벼움)
+    for name, conn, sql in (
+        ("collective_transactions", cconn, "SELECT count(*) FROM collective_transactions WHERE addr1 = ANY(:l)"),
+        ("collective_commercial_transactions", cconn, "SELECT count(*) FROM collective_commercial_transactions WHERE addr1 = ANY(:l)"),
+        ("built_transactions", bconn, "SELECT count(*) FROM built_transactions WHERE addr1 = ANY(:l)"),
+        ("rent_transactions", rconn, "SELECT count(*) FROM rent_transactions WHERE addr1 = ANY(:l)"),
     ):
         if conn is None:
             continue
-        # 원장 전체 훑기라 큰 표는 10초를 넘을 수 있다 → 무거움 시간 사용(인덱스 없으면 순차 스캔)
-        v = t.run(conn, f"옛 시도명 {name}", sql, p, timeout_ms=heavy_ms, fetch="scalar")
-        m[f"legacy_sido.{name}"] = None if v is None else int(v)
-    # 4 분할 키 수
+        key = f"legacy_sido.{name}"
+        v = heavy(conn, key, f"옛 시도명 {name}", sql, leg, fetch="scalar")
+        if m.get(key) != SKIPPED:
+            m[key] = None if v is None else int(v)
+    if bconn is not None:
+        v = t.run(bconn, "옛 시도명 built_scope_stats(as_of)",
+                  "SELECT count(*) FROM built_scope_stats WHERE as_of_month = :a AND addr1 = ANY(:l)", {**leg, "a": a},
+                  fetch="scalar", timeout_ms=LIGHT_MS)
+        m["legacy_sido.built_scope_stats(as_of)"] = None if v is None else int(v)
+    # 4 분할 키 수 — 연결표(가벼움) · 남은 C-01 옛 키 원장 행(무거움)
     if table_exists(cconn, "collective_building_key_map"):
         rows = t.run(cconn, "연결표 사유별", "SELECT reason, count(*), count(DISTINCT old_key), count(DISTINCT new_key) "
-                     "FROM collective_building_key_map GROUP BY 1 ORDER BY 1") or []
+                     "FROM collective_building_key_map GROUP BY 1 ORDER BY 1", timeout_ms=LIGHT_MS) or []
         for reason, n, o, nk in rows:
             m[f"keymap.{reason}.rows"], m[f"keymap.{reason}.old_keys"], m[f"keymap.{reason}.new_keys"] = int(n), int(o), int(nk)
-        v = t.run(cconn, "분할 옛 키 남은 원장 행",
-                  # C-01 분할 옛 키는 원장에서 모두 사라져야 한다. C-2 는 본 조각이 옛 키를 그대로 쓰므로 세지 않는다.
+        v = heavy(cconn, "split_old_key_rows_left", "C-01 분할 옛 키 남은 원장 행",
                   "SELECT count(*) FROM collective_transactions t WHERE t.building_key IN (SELECT old_key FROM "
-                  "collective_building_key_map WHERE reason LIKE '%split%')",
-                  timeout_ms=heavy_ms, fetch="scalar")
-        m["split_old_key_rows_left"] = None if v is None else int(v)
+                  "collective_building_key_map WHERE reason IN :r)", {"r": C01_SPLIT_REASONS}, fetch="scalar")
+        if m.get("split_old_key_rows_left") != SKIPPED:
+            m["split_old_key_rows_left"] = None if v is None else int(v)
     else:
         m["keymap"] = "연결표 없음"
     if rconn is not None and table_exists(rconn, "rent_building_key_map"):
-        v = t.run(rconn, "임대 연결표 행", "SELECT count(*) FROM rent_building_key_map", fetch="scalar")
+        v = t.run(rconn, "임대 연결표 행", "SELECT count(*) FROM rent_building_key_map", fetch="scalar", timeout_ms=LIGHT_MS)
         m["rent_keymap.rows"] = None if v is None else int(v)
-    # 5 커버리지
+    # 5 커버리지(가벼움: 최신 as_of 5년 아파트 단지만)
     for nm, tbl in (("attributes", "collective_building_attributes"), ("land_price", "collective_building_assessed_land_price"),
                     ("geocodes", "collective_building_geocodes")):
         r = t.run(cconn, f"커버리지 {nm}", f"""SELECT count(*) FILTER (WHERE EXISTS (SELECT 1 FROM {tbl} x WHERE x.building_key = s.building_key)),
                    count(*) FROM collective_building_stats s
                    WHERE s.as_of_month = :a AND s.window_years = 5 AND s.asset_type = 'apartment'""", {"a": a},
-                  timeout_ms=heavy_ms, fetch="one")
+                  timeout_ms=LIGHT_MS, fetch="one")
         if r is not None:
             m[f"coverage.{nm}"] = round(int(r[0]) / max(int(r[1]), 1), 6)
             m[f"coverage.{nm}.n"] = [int(r[0]), int(r[1])]
-    if not skip_heavy:
-        # 2 합성 주소
-        rows = t.run(cconn, "합성 주소 building_stats", S.SYNTH_SQL, {"as_of": a}, timeout_ms=heavy_ms)
-        if rows is not None:
-            for w, n in rows:
-                m[f"synthetic.building_stats.{int(w)}y"] = int(n)
-        if rconn is not None:
+    # 2 합성 주소(무거움)
+    rows = heavy(cconn, "synthetic.building_stats", "합성 주소 building_stats", S.SYNTH_SQL, {"as_of": a})
+    if rows is not None:
+        m.pop("synthetic.building_stats", None)
+        for w, n in rows:
+            m[f"synthetic.building_stats.{int(w)}y"] = int(n)
+    if rconn is not None:
+        if skip_heavy:
+            m["synthetic.rent_building_stats"] = SKIPPED
+        else:
             ra = t.run(rconn, "임대 최신 as_of", "SELECT max(as_of_month) FROM rent_building_stats", fetch="scalar",
                        timeout_ms=heavy_ms)
             rows = t.run(rconn, "합성 주소 rent_building_stats", S.RENT_SYNTH_SQL, {"a": ra}, timeout_ms=heavy_ms)
             if rows is not None:
                 for w, n in rows:
                     m[f"synthetic.rent_building_stats.{int(w)}y"] = int(n)
-        # 3 annual = 원장
-        rows = t.run(cconn, "annual 합 = 원장 합", S.ANNUAL_VS_LEDGER_SQL, timeout_ms=heavy_ms)
-        m["annual_vs_ledger_mismatch"] = None if rows is None else len(rows)
-        # 6 동 이름 2개+ · C-2형
-        rows = t.run(cconn, "동 이름 ≥2 이름 키", S.MULTI_LEAF_SQL, timeout_ms=heavy_ms)
-        if rows is not None:
-            judged = judged_keys(cconn, t, split_units)
-            m["multi_dong_keys"] = len(rows)
-            m["multi_dong_pending"] = len({r[0] for r in rows} - judged)
-        rows = t.run(cconn, "C-2형", S.C2_SHAPE_SQL, timeout_ms=heavy_ms)
-        if rows is not None:
-            judged = judged_keys(cconn, t, split_units)
-            m["c2_shape"] = len(rows)
-            m["c2_shape_pending"] = len({r[0] for r in rows} - judged)
+    # 3 annual = 원장(무거움)
+    rows = heavy(cconn, "annual_vs_ledger_mismatch", "annual 합 = 원장 합", S.ANNUAL_VS_LEDGER_SQL)
+    if rows is not None:
+        m["annual_vs_ledger_mismatch"] = len(rows)
+    # 6 동 이름 2개+ · C-2형(무거움)
+    rows = heavy(cconn, "multi_dong_pending", "동 이름 ≥2 이름 키", S.MULTI_LEAF_SQL)
+    if rows is not None:
+        judged = judged_keys(cconn, t, split_units)
+        m["multi_dong_keys"] = len(rows)
+        m["multi_dong_pending"] = len({r[0] for r in rows} - judged)
+    rows = heavy(cconn, "c2_shape_pending", "C-2형", S.C2_SHAPE_SQL)
+    if rows is not None:
+        judged = judged_keys(cconn, t, split_units)
+        m["c2_shape"] = len(rows)
+        m["c2_shape_pending"] = len({r[0] for r in rows} - judged)
     m["_timings"] = t.log
     return m
 
 
-ZERO = ("legacy_sido.", "synthetic.", "annual_vs_ledger_mismatch", "split_old_key_rows_left", "multi_dong_pending")
+ZERO = ("legacy_sido.", "synthetic.", "annual_vs_ledger_mismatch", "split_old_key_rows_left", "multi_dong_pending",
+        "c2_shape_pending")
+PASS, DIFF, UNVERIFIED = "pass", "diff", "unverified"
+EXIT = {PASS: 0, DIFF: 1, UNVERIFIED: 2}
 
 
 def violations(m: dict, expect: dict | None = None) -> list[tuple[str, object, object]]:
+    """기대값(0·로컬 결과) 위반만. 건너뜀·쿼리 실패는 unverified() 로 따로 센다."""
     bad = []
     for k, v in m.items():
         if k.startswith("_") or k in ("db", "as_of"):
             continue
-        if any(k.startswith(z) for z in ZERO) and v not in (0, None):
+        if any(k.startswith(z) for z in ZERO) and v not in (0, None, SKIPPED):
             bad.append((k, v, 0))
     if expect:
         for k, v in expect.items():
-            if k.startswith("_") or k in ("db",):
+            if k.startswith("_") or k in ("db",) or v == SKIPPED or m.get(k) == SKIPPED:
                 continue
             if m.get(k) != v:
                 bad.append((k, m.get(k), v))
-    for x in m.get("_timings", []):
-        if not x["ok"]:
-            bad.append((f"쿼리 실패: {x['query']}", x.get("error"), "성공"))
     return bad
+
+
+def unverified(m: dict) -> list[tuple[str, object]]:
+    out = [(k, SKIPPED) for k, v in m.items() if v == SKIPPED]
+    out += [(f"쿼리 실패: {x['query']}", x.get("error")) for x in m.get("_timings", []) if not x["ok"]]
+    out += [(k, "값 없음") for k, v in m.items() if any(k.startswith(z) for z in ZERO) and v is None]
+    return out
+
+
+def status_of(m: dict, expect: dict | None = None) -> str:
+    if violations(m, expect):
+        return DIFF
+    if unverified(m):
+        return UNVERIFIED
+    return PASS
 
 
 def main(argv=None) -> int:
@@ -164,7 +200,7 @@ def main(argv=None) -> int:
     p.add_argument("--built-env", default="BUILT_DATABASE_URL")
     p.add_argument("--as-of", default=None)
     p.add_argument("--heavy-timeout", type=int, default=900, help="무거운 쿼리 시간 제한(초)")
-    p.add_argument("--skip-heavy", action="store_true")
+    p.add_argument("--skip-heavy", action="store_true", help="무거운 검사는 실행하지 않고 「건너뜀」(결과는 검증 못 함)")
     p.add_argument("--split-units", type=Path, default=DEFAULT_SPLIT_UNITS)
     p.add_argument("--out", type=Path, default=None)
     p.add_argument("--expect", type=Path, default=None, help="비교할 JSON(로컬 반영 뒤 같은 스크립트 결과)")
@@ -173,17 +209,24 @@ def main(argv=None) -> int:
             ro_conn(db_url(a.built_env, a.env_file)) as b:
         m = collect(c, r, b, as_of=a.as_of, heavy_ms=a.heavy_timeout * 1000, skip_heavy=a.skip_heavy,
                     split_units=a.split_units)
+    expect = read_json(a.expect) if a.expect else None
+    st = status_of(m, expect)
+    m["_status"] = st
     if a.out:
         write_json(a.out, m)
     print(md_table([(k, v) for k, v in m.items() if not k.startswith("_")], ["지표", "값"]))
     print()
     print(md_table([(x["query"], x["sec"], x["timeout_ms"] // 1000, "OK" if x["ok"] else x.get("error"))
                     for x in m["_timings"]], ["쿼리", "초", "제한(초)", "결과"]))
-    bad = violations(m, read_json(a.expect) if a.expect else None)
+    bad, unv = violations(m, expect), unverified(m)
     if bad:
-        print("\n## 확인 필요\n")
+        print("\n## 차이\n")
         print(md_table(bad, ["지표", "값", "기대"]))
-    return 1 if bad else 0
+    if unv:
+        print("\n## 검증 못 함\n")
+        print(md_table(unv, ["지표", "사유"]))
+    print(f"\n결과: {st} (종료 코드 {EXIT[st]}: 0 통과 · 1 차이 · 2 검증 못 함)")
+    return EXIT[st]
 
 
 if __name__ == "__main__":
