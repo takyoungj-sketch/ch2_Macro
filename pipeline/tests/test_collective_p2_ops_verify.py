@@ -327,10 +327,20 @@ def test_scope_dryrun_host_guard_blocks_bypass():
 
 def test_scope_dryrun_deadline_and_timeouts_wired():
     sd = _load(ROOT / "scripts" / "ops" / "collective_p2_local" / "scope_dryrun.py", "sd3")
-    d = sd.Deadline(0)
+    d = sd.Deadline(0, start_timer=False)
     with pytest.raises(SystemExit) as e:
         d.check("x")
     assert e.value.code == sd.TIMEOUT_EXIT
+    # 실제 타이머: 시간이 되면(쿼리 도중이라도) 끝내는 함수가 불린다 — 테스트에서는 os._exit 대신 이벤트
+    import threading
+
+    ev = threading.Event()
+    t = sd.Deadline(0.002, on_expire=ev.set)        # 0.12초
+    assert ev.wait(5), "타이머가 울리지 않음"
+    t.cancel()
+    t2 = sd.Deadline(0.05, on_expire=ev.clear)     # 취소하면 울리지 않음
+    t2.cancel()
+    assert ev.is_set()
     src = (ROOT / "scripts" / "ops" / "collective_p2_local" / "scope_dryrun.py").read_text(encoding="utf-8")
     assert "statement_timeout=" in src and "SHOW statement_timeout" in src and src.count("dl.check(") >= 5
 
@@ -371,3 +381,160 @@ def test_hash_compare_three_states_and_default_targets(fx, tmp_path):
     assert hc.main(["compare", str(f1), str(f2)]) == 1
     C.write_json(f2, broken)
     assert hc.main(["compare", str(f1), str(f2)]) == 2
+
+
+# --- 공통 가드(ops_guards) ---------------------------------------------------------------------
+
+def test_ops_guards_assert_local_target():
+    import ops_guards as og
+
+    assert og.assert_local_target("postgresql+psycopg2://u:p@localhost:5432/x", environ={}) == ["localhost"]
+    assert og.assert_local_target("postgresql+psycopg2://u:p@127.0.0.2/x", environ={}) == ["127.0.0.2"]
+    assert og.assert_local_target("postgresql+psycopg2://u:p@[::1]/x", environ={})
+    assert og.assert_local_target("postgresql+psycopg2://u:p@/x", environ={}) == ["(기본 유닉스 소켓)"]
+    for url, env in (
+        ("postgresql+psycopg2://u:p@localhost/x", {"PGHOSTADDR": "13.209.203.178"}),   # 항목 4: localhost + 원격 PGHOSTADDR
+        ("postgresql+psycopg2://u:p@localhost/x?hostaddr=10.0.0.5", {}),
+        ("postgresql+psycopg2://u:p@localhost/x?host=10.0.0.5", {}),
+        ("postgresql+psycopg2://u:p@/x", {"PGHOST": "db.example.com"}),
+        ("postgresql+psycopg2://u:p@localhost/x", {"PGSERVICE": "prod"}),
+        ("postgresql+psycopg2://u:p@localhost/x", {"PGSERVICEFILE": "/etc/pg_service.conf"}),
+        ("postgresql+psycopg2://u:p@localhost/x?service=prod", {}),
+        ("postgresql+psycopg2://u:p@localhost,10.0.0.5/x", {}),
+        ("postgresql+psycopg2://u:p@localhost.evil.com/x", {}),
+    ):
+        with pytest.raises(og.TargetError):
+            og.assert_local_target(url, environ=env)
+
+
+def test_scope_dryrun_localhost_with_remote_pghostaddr_refused():
+    """항목 4: URL 은 localhost 인데 환경변수 PGHOSTADDR 가 원격 — libpq 는 hostaddr 로 접속하므로 거부."""
+    sd = _load(ROOT / "scripts" / "ops" / "collective_p2_local" / "scope_dryrun.py", "sd4")
+    with pytest.raises(SystemExit, match="루프백"):
+        sd.guard_url("postgresql+psycopg2://u:p@localhost:5432/collective_stats", "collective_stats",
+                     environ={"PGHOSTADDR": "13.209.203.178"})
+    src = (ROOT / "scripts" / "ops" / "collective_p2_local" / "scope_dryrun.py").read_text(encoding="utf-8")
+    assert "ops_guards.assert_local_target" in src
+
+
+def test_ops_guards_validate_result():
+    import datetime as dt
+
+    import _common as C
+    import ops_guards as og
+
+    now = dt.datetime.now(dt.timezone.utc)
+    good = C.make_result(kind="prod_sync_check", status="pass", left_db="collective_stats", right_db="collective_stats",
+                         diff=0, unverified=[], failures=[])
+    assert og.validate_result(good, ["collective_stats"]) == ("pass", [])
+    cases = {
+        "future": {**good, "created_at": (now + dt.timedelta(hours=1)).isoformat()},
+        "old": {**good, "created_at": (now - dt.timedelta(hours=49)).isoformat()},
+        "naive": {**good, "created_at": now.replace(tzinfo=None).isoformat()},
+        "targets": {**good, "targets": ["collective_stats", "rent_stats"]},
+        "failures": {**good, "failures": ["x"]},
+        "unverified": {**good, "unverified": ["t"]},
+        "bad_status": {**good, "status": "ok"},
+        "status_unv": {**good, "status": "unverified"},
+        "dbs": {**good, "right_db": "rent_stats"},
+        "kind": {**good, "kind": "other"},
+        "diff_type": {**good, "diff": "0"},
+    }
+    for name, obj in cases.items():
+        st, why = og.validate_result(obj, ["collective_stats"])
+        assert st == "unverified" and why, name
+    st, _ = og.validate_result({**good, "diff": 2, "status": "diff"}, ["collective_stats"])
+    assert st == "diff"
+    for f in og.REQUIRED_FIELDS:
+        assert og.validate_result({k: v for k, v in good.items() if k != f}, ["collective_stats"])[0] == "unverified", f
+    assert og.validate_result(["x"], ["collective_stats"])[0] == "unverified"
+    assert og.validate_result(good, ["rent_stats"])[0] == "unverified"
+
+
+def test_false_success_cases_now_unverified(fx, tmp_path):
+    """거짓 성공 재현(Codex 재검토 — 이 저장소에서 재구성한 3건 + 1): 예전에는 종료 코드 0 이었다.
+    ① 동기화: 스냅샷의 표 목록 쿼리가 시간 초과 → 표 0개 → 「차이 없음」 통과
+    ② 해시: 대상 표가 양쪽 다 0개 → 「다른 조각 0」 통과
+    ③ PG 확인: 작은 표(region_codes 등)가 양쪽 모두 없음 → 「hash 같음」 통과(+ 종료 코드 0 고정)
+    ④ 동기화: 서로 다른 DB 스냅샷을 비교"""
+    import json
+
+    import _common as C
+
+    sc = _load(OPS / "prod_sync_check.py", "sc_fs")
+    hc = _load(OPS / "prod_hash_compare.py", "hc_fs")
+    url, _ = fx
+    with C.ro_conn(url) as c:
+        snap = sc.snapshot(c, allow_heavy=True, heavy_rows=-1)
+        pg = {"db": snap["db"], "pgcheck": True, "server_version": "18",
+              "hash": hc.snapshot(c, ["region_codes", "region_code_history"], exclude=[], mode="hash"),
+              "sums": hc.snapshot(c, ["region_codes", "region_code_history"], exclude=[], mode="sums")}
+    f1, f2, out = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "r.json"
+
+    # ①
+    empty = {"db": snap["db"], "tables": {}, "_timings": [{"query": "표 목록·추정 행 수", "sec": 10, "timeout_ms": 10000,
+                                                          "ok": False, "error": "시간 초과"}]}
+    C.write_json(f1, empty)
+    C.write_json(f2, empty)
+    assert sc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2
+    res = json.loads(out.read_text(encoding="utf-8"))
+    assert res["status"] == "unverified" and res["failures"] and res["validation"]
+    # ②
+    hempty = {"db": snap["db"], "mode": "hash", "exclude": [], "tables": {}, "_timings": []}
+    C.write_json(f1, hempty)
+    C.write_json(f2, hempty)
+    assert hc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2
+    assert json.loads(out.read_text(encoding="utf-8"))["status"] == "unverified"
+    # ③ (fixture DB 에는 region_codes 가 없다)
+    assert pg["hash"]["tables"]["region_codes"] is None
+    C.write_json(f1, pg)
+    C.write_json(f2, pg)
+    assert hc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2
+    res = json.loads(out.read_text(encoding="utf-8"))
+    assert res["kind"] == "prod_hash_pgcheck" and res["status"] == "unverified" and res["use_mode"] is None
+    # ④
+    C.write_json(f1, snap)
+    C.write_json(f2, {**snap, "db": "rent_stats"})
+    assert sc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2
+    assert "비교한 두 DB 이름" in "; ".join(json.loads(out.read_text(encoding="utf-8"))["validation"])
+    # 정상 스냅샷은 그대로 통과
+    C.write_json(f2, snap)
+    assert sc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 0
+    from collective import migrate_p2_keys  # noqa: F401  (결과 파일이 실제 적용 모드가 받는 형식인지)
+    import ops_guards as og
+
+    assert og.validate_result(json.loads(out.read_text(encoding="utf-8")), [snap["db"]], kind="prod_sync_check")[0] == "pass"
+
+
+def test_pgcheck_result_states(fx, tmp_path):
+    import json
+
+    from sqlalchemy import text
+
+    import _common as C
+
+    hc = _load(OPS / "prod_hash_compare.py", "hc_pg")
+    url, eng = fx
+    with eng.begin() as c:
+        c.execute(text("CREATE TABLE IF NOT EXISTS region_codes (code text, name text)"))
+        c.execute(text("CREATE TABLE IF NOT EXISTS region_code_history (code text, n int)"))
+        c.execute(text("DELETE FROM region_codes"))
+        c.execute(text("INSERT INTO region_codes VALUES ('11', '서울')"))
+    with C.ro_conn(url) as c:
+        pg = {"db": "x", "pgcheck": True, "server_version": "18",
+              "hash": hc.snapshot(c, hc.PG_CHECK_TABLES, exclude=[], mode="hash"),
+              "sums": hc.snapshot(c, hc.PG_CHECK_TABLES, exclude=[], mode="sums")}
+    pg["db"] = pg["hash"]["db"]
+    r = hc.pg_result(pg, pg)
+    assert r["status"] == "pass" and r["use_mode"] == "hash"
+    other = json.loads(json.dumps(pg))
+    other["hash"]["tables"]["region_codes"]["all"] = [1, "다른 해시"]            # PG 버전 차이 흉내
+    r = hc.pg_result(pg, other)
+    assert r["status"] == "pass" and r["use_mode"] == "sums"
+    other["sums"]["tables"]["region_codes"]["all"]["rows"] = "9"
+    assert hc.pg_result(pg, other)["status"] == "diff"
+    f1, f2, out = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "r.json"
+    C.write_json(f1, pg)
+    C.write_json(f2, other)
+    assert hc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 1
+    assert json.loads(out.read_text(encoding="utf-8"))["status"] == "diff"

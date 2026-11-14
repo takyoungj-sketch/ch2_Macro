@@ -75,3 +75,17 @@ def test_catalog_map_and_lab_stay_open():
     assert needs_macro("GET", "/api/auth/status", {}) is False
     assert needs_macro("GET", "/api/built/lab/twin-experiments", {}) is False
     assert needs_macro("GET", "/health", {}) is False
+
+
+def test_key_status_follows_free_screen_rules():
+    """집합 2단계 /key-status 는 숫자가 없다 — 무료 집합 화면을 볼 수 있으면(비로그인 포함) 열리고,
+    임대는 임대 화면(/api/rent/buildings)과 같은 규칙."""
+    from app.product_gate import is_key_status_path
+
+    key = "a" * 64
+    assert needs_macro("GET", f"/api/collective/buildings/{key}/key-status", {}) is False
+    assert needs_macro("GET", f"/api/rent/buildings/{key}/key-status", {}) == needs_macro("GET", "/api/rent/buildings", {})
+    assert needs_macro("POST", f"/api/collective/buildings/{key}/key-status", {}) is True     # GET 만
+    assert needs_macro("GET", f"/api/collective/buildings/{key}/transactions", {}) is True    # 다른 상세는 그대로
+    assert is_key_status_path(f"/api/rent/buildings/{key}/key-status")
+    assert not is_key_status_path(f"/api/collective/buildings/{key}/stats/rolling")

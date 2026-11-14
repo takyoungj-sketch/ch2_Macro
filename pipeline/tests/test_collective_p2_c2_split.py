@@ -266,3 +266,116 @@ def test_import_refined_calls_db_reader():
     assert "apply_c2_split_from_db(engine, df, asset_type)" in src
     assert "df = _apply_c2_split(engine, df, asset_type)" in src
     assert src.index("apply_building_key_split(df, asset_type)") < src.index("df = _apply_c2_split(engine, df, asset_type)")
+
+
+def _seed_key(pg, name):
+    """새 base_key(이름만 다르게) — p0 = 본번 10(2010), p1 = 본번 50(2015)."""
+    from sqlalchemy import text
+
+    key, raw = _key(_row("10", 2010, name=name))
+    with pg.begin() as c:
+        c.execute(text(bk.C2_DDL))
+        c.execute(text(f"DELETE FROM {bk.C2_TABLE} WHERE base_key = :k"), {"k": key})
+        c.execute(text(f"INSERT INTO {bk.C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part, decision) "
+                       "VALUES (:k, 'rowhouse', :b, '10', 2010, 0, 'split'), (:k, 'rowhouse', :b, '50', 2015, 1, 'split')"),
+                  {"k": key, "b": BJD})
+    return key, raw
+
+
+def test_concurrent_ingests_get_distinct_part_numbers(pg, monkeypatch):
+    """Codex 재현(동시 실행): 같은 키에 처음 보는 본번이 두 실행에서 동시에 새 조각이 되면, 잠금 없이는 둘 다
+    「최대+1 = 2」를 배정해 서로 다른 본번이 같은 조각 키로 합쳐졌다. advisory lock 뒤 다시 읽으면 2·3 으로 갈린다."""
+    import threading
+    import time
+
+    from sqlalchemy import text
+
+    key, raw = _seed_key(pg, "동시빌라")
+    real = bk.existing_main_lot_counts
+
+    def slow(conn, groups):                      # 잠금 안에서 오래 머물게 해 겹침을 확실히 만든다
+        time.sleep(0.6)
+        return real(conn, groups)
+
+    monkeypatch.setattr(bk, "existing_main_lot_counts", slow)
+    barrier = threading.Barrier(2)
+    out: dict[str, pd.DataFrame] = {}
+    errs: list[BaseException] = []
+
+    def run(lot, year):
+        try:
+            df = _frame([_row(lot, year, name="동시빌라")] * 3)
+            barrier.wait()
+            out[lot] = bk.apply_c2_split_from_db(pg, df, "rowhouse")
+        except BaseException as ex:  # noqa: BLE001
+            errs.append(ex)
+
+    ts = [threading.Thread(target=run, args=a) for a in (("80", 2021), ("90", 2019))]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join(30)
+    assert not errs, errs
+    k80, k90 = out["80"]["building_key"].iat[0], out["90"]["building_key"].iat[0]
+    assert k80 != k90 and {k80, k90} == {bk.c2_key(raw, "p2"), bk.c2_key(raw, "p3")}
+    with pg.connect() as c:
+        rows = {r[0]: r[1] for r in c.execute(text(
+            f"SELECT main_lot, part FROM {bk.C2_TABLE} WHERE base_key = :k AND source = 'auto_ingest'"), {"k": key})}
+    assert sorted(rows.values()) == [2, 3] and len(rows) == 2
+
+
+def test_same_new_lot_twice_concurrently_same_part(pg, monkeypatch):
+    """같은 본번이 두 실행에서 동시에 새 조각이 되면 같은 조각·같은 키(두 번째는 잠금 뒤 다시 읽어 표의 값을 쓴다)."""
+    import threading
+    import time
+
+    key, raw = _seed_key(pg, "동시빌라2")
+    real = bk.existing_main_lot_counts
+
+    def slow(conn, groups):
+        time.sleep(0.4)
+        return real(conn, groups)
+
+    monkeypatch.setattr(bk, "existing_main_lot_counts", slow)
+    barrier = threading.Barrier(2)
+    keys: list[str] = []
+
+    def run():
+        df = _frame([_row("80", 2021, name="동시빌라2")] * 3)
+        barrier.wait()
+        keys.append(bk.apply_c2_split_from_db(pg, df, "rowhouse")["building_key"].iat[0])
+
+    ts = [threading.Thread(target=run) for _ in range(2)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join(30)
+    assert keys == [bk.c2_key(raw, "p2")] * 2
+
+
+def test_do_nothing_conflict_rereads_actual_part(pg, monkeypatch):
+    """잠금 밖에서 누가 먼저 같은 본번을 다른 조각 번호(7)로 넣어 둔 경우 — 등록이 DO NOTHING 이면 표의 실제 값을 다시 읽어 쓴다."""
+    from sqlalchemy import text
+
+    key, raw = _seed_key(pg, "충돌빌라")
+    with pg.begin() as c:
+        c.execute(text(f"INSERT INTO {bk.C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part, decision, source) "
+                       "VALUES (:k, 'rowhouse', :b, '80', 2021, 7, 'split', 'manual')"), {"k": key, "b": BJD})
+    real = bk.load_split_units_c2
+    calls = {"n": 0}
+
+    def stale(conn):                               # 처음 두 번(잠금 전·잠금 뒤)은 본번 80 을 모르는 낡은 판정
+        calls["n"] += 1
+        u = real(conn)
+        if calls["n"] <= 2 and key in u:
+            u = {**u, key: {b: [f for f in fr if f[0] != "80"] for b, fr in u[key].items()}}
+        return u
+
+    monkeypatch.setattr(bk, "load_split_units_c2", stale)
+    out = bk.apply_c2_split_from_db(pg, _frame([_row("80", 2021, name="충돌빌라")] * 3), "rowhouse")
+    assert out["building_key"].iat[0] == bk.c2_key(raw, "p7")          # 배정했던 p2 가 아니라 표의 실제 값
+    assert calls["n"] == 3                                             # 충돌 뒤 다시 읽음
+    with pg.connect() as c:
+        parts = [r[0] for r in c.execute(text(f"SELECT part FROM {bk.C2_TABLE} WHERE base_key = :k AND main_lot = '80'"),
+                                         {"k": key})]
+    assert parts == [7]

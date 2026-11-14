@@ -135,7 +135,18 @@ def _is_rolling_stats_path(path: str) -> bool:
     return path.endswith("/stats/rolling") or path.endswith("/stats/rolling-by-area")
 
 
+def is_key_status_path(path: str) -> bool:
+    """집합 2단계 키 상태 확인(/buildings/{key}/key-status). 숫자를 돌려주지 않는다(키·안내·후보 이름만)."""
+    return path.endswith("/key-status") and (
+        path.startswith("/api/collective/buildings/") or path.startswith("/api/rent/buildings/"))
+
+
 def _collective_open(method: str, path: str, query: Mapping[str, str]) -> bool:
+    # 키 상태 확인은 숫자가 없으므로 무료 집합 화면(목록·5년 롤링)을 볼 수 있는 사용자(비로그인 포함)에게 연다.
+    # 임대 /api/rent/buildings/{key}/key-status 는 임대 화면과 같은 규칙(_MACRO_PREFIXES)을 따른다 — 임대 화면을
+    # 볼 수 있는 사용자면 열리고, 못 보는 사용자는 화면 자체가 없다.
+    if method == "GET" and is_key_status_path(path) and path.startswith("/api/collective/"):
+        return True
     if method == "GET" and (
         path.startswith("/api/collective/regions/")
         or path == "/api/collective/meta/filters"

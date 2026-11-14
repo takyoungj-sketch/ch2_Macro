@@ -73,13 +73,25 @@ SYNC_RESULT_MAX_AGE_H = 48
 _REAL_ALLOWED: set[str] = set()
 
 
+def _ops_guards():
+    """공통 가드 모듈(scripts/ops/collective_p2_verify/ops_guards.py — 운영 확인 스크립트와 같은 파일)."""
+    import sys as _sys
+
+    d = str(REPO / "scripts" / "ops" / "collective_p2_verify")
+    if d not in _sys.path:
+        _sys.path.insert(0, d)
+    import ops_guards
+
+    return ops_guards
+
+
 def enable_real_apply(targets: list[str], confirm: list[str], sync_results: list[Path], *,
                       max_age_h: float = SYNC_RESULT_MAX_AGE_H, now=None) -> set[str]:
     """실제 적용 허가. ① 대상이 실제 DB 이름(REAL_TARGETS)일 것 ② --confirm-db 로 다시 입력한 이름 목록이 대상과 같을 것
-    ③ 대상 DB 마다 시작 전 동기화 확인 결과 파일(prod_sync_check compare --result-out, status=pass, max_age_h 이내)이 있을 것.
-    통과하면 그 이름만 assert_rehearsal_db 에서 허용한다(리허설 가드는 그대로)."""
-    import datetime as _dt
-
+    ③ 대상 DB 마다 시작 전 동기화 확인 결과 파일이 ops_guards.validate_result 로 「통과」일 것
+       (필수 필드·형식·측정 시각(미래 금지, max_age_h 이내)·대상 목록 일치·실패 기록 없음·diff·unverified 0).
+    통과하면 그 이름만 assert_rehearsal_db 에서 허용한다(리허설 가드는 그대로). 로컬 호스트 확인은 check_write_targets."""
+    og = _ops_guards()
     targets = [t for t in targets if t]
     if not targets:
         raise GuardError("실제 적용 대상 DB 가 없음")
@@ -88,21 +100,24 @@ def enable_real_apply(targets: list[str], confirm: list[str], sync_results: list
         raise GuardError(f"실제 적용 대상이 아닌 DB 이름: {bad} (허용: {sorted(REAL_TARGETS)})")
     if sorted(c for c in confirm if c) != sorted(targets):
         raise GuardError("--confirm-db 로 다시 입력한 DB 이름이 대상과 다름")
-    now = now or _dt.datetime.now(_dt.timezone.utc)
     passed: set[str] = set()
     for p in sync_results:
         p = Path(p)
         if not p.is_file():
             raise GuardError(f"동기화 확인 결과 파일 없음: {p}")
-        d = json.loads(p.read_text(encoding="utf-8"))
-        if d.get("kind") != SYNC_RESULT_KIND:
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except ValueError as ex:
+            raise GuardError(f"동기화 확인 결과 파일을 읽을 수 없음: {p}") from ex
+        if not isinstance(d, dict) or d.get("kind") != SYNC_RESULT_KIND:
             raise GuardError(f"동기화 확인 결과 파일이 아님: {p}")
-        if d.get("status") != "pass":
-            raise GuardError(f"동기화 확인이 통과가 아님({d.get('status')}): {p}")
-        made = _dt.datetime.fromisoformat(str(d.get("created_at")))
-        if (now - made).total_seconds() > max_age_h * 3600:
-            raise GuardError(f"동기화 확인 결과가 {max_age_h}시간보다 오래됨: {p}")
-        passed |= {str(d.get("left_db")), str(d.get("right_db"))} & set(targets) if d.get("left_db") == d.get("right_db") else set()
+        db = d.get("left_db")
+        if db not in targets:
+            raise GuardError(f"동기화 확인 결과의 DB({db})가 실제 적용 대상이 아님: {p}")
+        st, why = og.validate_result(d, [db], kind=SYNC_RESULT_KIND, now=now, max_age_h=max_age_h)
+        if st != og.PASS:
+            raise GuardError(f"동기화 확인이 통과가 아님({st}): {p} — {'; '.join(why)}")
+        passed.add(db)
     missing = [t for t in targets if t not in passed]
     if missing:
         raise GuardError(f"동기화 확인 통과 결과가 없는 대상: {missing}")
@@ -130,9 +145,16 @@ def add_real_apply_args(p) -> None:
     p.add_argument("--sync-result", action="append", default=[], help="prod_sync_check compare --result-out 결과(통과) 파일")
 
 
-def check_write_targets(names: list[str], a) -> None:
-    """쓰기 전 이름 확인: --real-apply 면 실제 적용 허가, 아니면 리허설 이름만."""
+def check_write_targets(names: list[str], a, *, base_url: str | None = None) -> None:
+    """쓰기 전 이름 확인: --real-apply 면 접속 대상이 로컬 루프백인지(ops_guards.assert_local_target, libpq 최종 인자·
+    PGHOST/PGHOSTADDR/PGSERVICE 포함) 먼저 보고 실제 적용 허가, 아니면 리허설 이름만."""
     if getattr(a, "real_apply", False):
+        og = _ops_guards()
+        for n in [x for x in names if x]:
+            try:
+                og.assert_local_target(engine_for(n, read_only=True, base_url=base_url))
+            except og.TargetError as ex:
+                raise GuardError(f"실제 적용 거부: {ex}") from ex
         enable_real_apply(names, a.confirm_db, [Path(x) for x in a.sync_result])
         return
     for n in names:
@@ -829,7 +851,7 @@ def main(argv: list[str] | None = None) -> int:
     base = a.base_url or None
     write = a.apply or a.rollback
     if write:
-        check_write_targets([a.collective_db, a.built_db, a.rent_db], a)
+        check_write_targets([a.collective_db, a.built_db, a.rent_db], a, base_url=base)
     ce = engine_for(a.collective_db, read_only=not write, base_url=base)
     be = engine_for(a.built_db, read_only=not write, base_url=base) if a.built_db else None
     re_ = engine_for(a.rent_db, read_only=not write, base_url=base) if a.rent_db else None

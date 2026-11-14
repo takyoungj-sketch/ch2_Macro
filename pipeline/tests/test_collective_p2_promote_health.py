@@ -65,4 +65,33 @@ def test_promote_and_runbook_rollback_use_60s_wait():
     assert 'HEALTH_WAIT="${CH2_HEALTH_WAIT_SEC:-60}"' in s and "sleep 4\ncurl" not in s
     rb = RUNBOOK.read_text(encoding="utf-8")
     assert "curl -sf http://127.0.0.1:8000/health\n" not in rb          # 롤백 명령도 한 번 묻고 끝나지 않음
-    assert "for i in $(seq 1 30)" in rb
+    assert "deadline=$((SECONDS + 60))" in rb and "--max-time \"$(( rem < 3 ? rem : 3 ))\"" in rb
+
+
+def test_wait_health_total_time_bounded(tmp_path):
+    """curl 이 매번 오래 걸려도(가짜 curl 이 --max-time 만큼 기다렸다 실패) 전체가 HEALTH_WAIT 를 넘지 않는다."""
+    import time
+
+    bash = _bash()
+    if not bash:
+        pytest.skip("bash 없음")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    log = tmp_path / "args"
+    (fake / "curl").write_text(
+        "#!/usr/bin/env bash\n"
+        f'echo "$@" >> "{log.as_posix()}"\n'
+        'while [ $# -gt 0 ]; do if [ "$1" = "--max-time" ]; then sleep "$2"; fi; shift; done\n'
+        "exit 28\n", encoding="utf-8", newline="\n")
+    os.chmod(fake / "curl", 0o755)
+    fp = fake.as_posix()
+    if re.match(r"^[A-Za-z]:", fp):
+        fp = "/" + fp[0].lower() + fp[2:]
+    code = "set -euo pipefail\n" + _func() + "\nwait_health\n"
+    t0 = time.time()
+    r = subprocess.run([bash, "-c", f'export PATH="{fp}:$PATH"; {code}'], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", env={**os.environ, "CH2_HEALTH_WAIT_SEC": "5"}, timeout=60)
+    took = time.time() - t0
+    assert r.returncode == 1 and took < 5 + 2.5, took          # 마감(5초) + 셸 시작 여유
+    waits = [int(x.split("--max-time ")[1].split()[0]) for x in log.read_text().splitlines()]
+    assert waits and max(waits) <= 3 and sum(waits) <= 5

@@ -36,7 +36,7 @@ sys.path.insert(0, str(HERE))
 
 from _common import (  # noqa: E402
     EXIT, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn, table_columns,
-    table_exists, write_json, write_result,
+    finalize_result, make_result, snapshot_failures, table_exists, write_json,
 )
 
 # 이번 반영이 바꾸는 표(원장·부속·통계·연결표·보존 표). 보존 표(_p2_before)는 promote 로 같이 올라가므로 함께 비교한다.
@@ -185,13 +185,58 @@ def compare(a: dict, b: dict) -> list[tuple]:
 
 
 def pg_verdict(a: dict, b: dict) -> str:
-    """pgcheck JSON 두 개 → 어떤 방식을 쓸지."""
-    dh, ds = compare(a["hash"], b["hash"]), compare(a["sums"], b["sums"])
-    if not dh:
-        return "hash 같음 → 해시 비교(--mode hash)를 그대로 쓴다"
-    if not ds:
-        return "hash 만 다름(PG 버전·표기 차이) → --mode sums 로 비교한다"
-    return "sums 도 다름 → 표가 실제로 다르다(동기화 문제, 3절로 돌아가 멈춤)"
+    """pgcheck JSON 두 개 → 어떤 방식을 쓸지(사람이 읽는 문장). 판정 자체는 pg_result."""
+    return pg_result(a, b)["verdict"]
+
+
+def pg_result(a: dict, b: dict) -> dict:
+    """PG 버전 확인 결과 파일 객체. 비교할 표가 양쪽 모두 실제로 있고 쿼리 실패가 없어야 판정한다.
+    hash 같음·hash 만 다름 → pass(쓸 방식 기록) / sums 도 다름 → diff / 그 밖 → unverified."""
+    unv: list[str] = []
+    a = {**a, "db": a.get("db") or (a.get("hash") or {}).get("db")}
+    b = {**b, "db": b.get("db") or (b.get("hash") or {}).get("db")}
+    for side in (a, b):
+        for mode in ("hash", "sums"):
+            snap = side.get(mode) or {}
+            tabs = snap.get("tables") or {}
+            if not tabs:
+                unv.append(f"{side.get('db')} {mode}: 비교할 표가 없음")
+            for t, v in tabs.items():
+                if v is None:
+                    unv.append(f"{side.get('db')} {mode}: {t} 표 없음")
+    eh = evaluate(a.get("hash") or {"tables": {}}, b.get("hash") or {"tables": {}})
+    es = evaluate(a.get("sums") or {"tables": {}}, b.get("sums") or {"tables": {}})
+    unv += [f"hash {t}: {w}" for t, w in eh["unverified"]] + [f"sums {t}: {w}" for t, w in es["unverified"]]
+    fails = snapshot_failures(*(s.get(m) or {} for s in (a, b) for m in ("hash", "sums")))
+    if unv or fails:
+        status, verdict, mode = "unverified", "검증 못 함 — 작은 표가 없거나 쿼리 실패(해시 방식을 정하지 못함)", None
+    elif not eh["diff"]:
+        status, verdict, mode = "pass", "hash 같음 → 해시 비교(--mode hash)를 그대로 쓴다", "hash"
+    elif not es["diff"]:
+        status, verdict, mode = "pass", "hash 만 다름(PG 버전·표기 차이) → --mode sums 로 비교한다", "sums"
+    else:
+        status, verdict, mode = "diff", "sums 도 다름 → 표가 실제로 다르다(동기화 문제, 3절로 돌아가 멈춤)", None
+    obj = make_result(kind="prod_hash_pgcheck", status=status, left_db=a.get("db"), right_db=b.get("db"),
+                      diff=len(es["diff"]) if status == "diff" else 0, unverified=unv, failures=fails,
+                      detail={"verdict": verdict, "use_mode": mode,
+                              "server_versions": [a.get("server_version"), b.get("server_version")]})
+    out = finalize_result(obj, [a.get("db")])
+    if out["status"] != "pass":
+        out["use_mode"] = None
+        if out["status"] == "unverified":
+            out["verdict"] = "검증 못 함 — " + "; ".join(out.get("validation") or unv or fails)[:300]
+    return out
+
+
+def hash_result(left: dict, right: dict, r: dict) -> dict:
+    unv = [f"{t}: {why}" for t, why in r["unverified"]]
+    for s in (left, right):
+        if not s.get("tables"):
+            unv.append(f"{s.get('db')}: 스냅샷에 표가 없음")
+    obj = make_result(kind="prod_hash_compare", status=r["status"], left_db=left.get("db"), right_db=right.get("db"),
+                      diff=len(r["diff"]), unverified=unv, failures=snapshot_failures(left, right),
+                      detail={"mode": left.get("mode", "hash")})
+    return finalize_result(obj, [left.get("db")])
 
 
 def main(argv=None) -> int:
@@ -243,17 +288,24 @@ def main(argv=None) -> int:
         return 0
     left, right = read_json(a.left), read_json(a.right)
     if left.get("pgcheck") and right.get("pgcheck"):
-        print(f"PG {left['server_version']} vs {right['server_version']}: {pg_verdict(left, right)}")
-        return 0 if not compare(left["sums"], right["sums"]) else 1
+        res = pg_result(left, right)
+        print(f"PG {left.get('server_version')} vs {right.get('server_version')}: {res['verdict']}")
+        if a.result_out:
+            write_json(a.result_out, res)
+        print(f"종료 코드 {EXIT[res['status']]} (0 통과 · 1 차이 · 2 검증 못 함)")
+        return EXIT[res["status"]]
     r = evaluate(left, right)
+    res = hash_result(left, right, r)
+    r["status"] = res["status"]
     print(f"{left['db']} vs {right['db']}: {STATUS_KO[r['status']]} — 다른 표·조각 {len(r['diff'])} · 검증 못 함 {len(r['unverified'])}")
     if r["diff"]:
         print(md_table(r["diff"], ["표", "조각", "왼쪽 행", "오른쪽 행"]))
     if r["unverified"]:
         print(md_table(r["unverified"], ["표", "사유"]))
+    if res.get("validation"):
+        print("결과 검증(ops_guards.validate_result): " + "; ".join(res["validation"]))
     if a.result_out:
-        write_result(a.result_out, kind="prod_hash_compare", status=r["status"], left_db=left["db"], right_db=right["db"],
-                     detail={"diff": len(r["diff"]), "unverified": [f"{t}: {why}" for t, why in r["unverified"]]})
+        write_json(a.result_out, res)
     print(f"종료 코드 {EXIT[r['status']]} (0 통과 · 1 차이 · 2 검증 못 함)")
     return EXIT[r["status"]]
 

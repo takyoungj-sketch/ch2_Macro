@@ -25,11 +25,23 @@ def _reset():
     mig._REAL_ALLOWED.clear()
 
 
-def _result(tmp_path, db, status="pass", hours_ago=1, kind="prod_sync_check"):
-    f = tmp_path / f"sync_{db}_{status}_{hours_ago}_{kind}.json"
-    made = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours_ago)
-    f.write_text(json.dumps({"kind": kind, "status": status, "left_db": db, "right_db": db,
-                             "created_at": made.isoformat()}), encoding="utf-8")
+OPS = ROOT / "scripts" / "ops" / "collective_p2_verify"
+if str(OPS) not in sys.path:
+    sys.path.insert(0, str(OPS))
+import _common as C  # noqa: E402
+
+
+_N = [0]
+
+
+def _result(tmp_path, db, status="pass", hours_ago=1, kind="prod_sync_check", **over):
+    """prod_sync_check compare --result-out 과 같은 형식(make_result)."""
+    obj = C.make_result(kind=kind, status=status, left_db=db, right_db=db, diff=0, unverified=[], failures=[])
+    obj["created_at"] = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours_ago)).isoformat()
+    obj.update(over)
+    _N[0] += 1
+    f = tmp_path / f"sync_{db}_{status}_{_N[0]}.json"
+    f.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
     return f
 
 
@@ -76,6 +88,19 @@ def test_real_apply_needs_all_three_conditions(tmp_path):
         mig.enable_real_apply(["land_stats"], ["land_stats"], [_result(tmp_path, "land_stats")])
     with pytest.raises(mig.GuardError, match="실제 적용 대상이 아닌"):
         mig.enable_real_apply(["collective_stats_p2r"], ["collective_stats_p2r"], [_result(tmp_path, "collective_stats_p2r")])
+    # validate_result: 미래 시각·실패 기록·diff·unverified·대상 불일치·필드 빠짐 → 모두 통과 아님
+    one = (["collective_stats"], ["collective_stats"])
+    for bad in (dict(hours_ago=-2), dict(failures=["q 시간 초과"]), dict(diff=1), dict(unverified=["rent_transactions"]),
+                dict(targets=["collective_stats", "rent_stats"]), dict(right_db="rent_stats"), dict(created_at="어제")):
+        kw = {k: v for k, v in bad.items() if k == "hours_ago"}
+        with pytest.raises(mig.GuardError, match="통과가 아님"):
+            mig.enable_real_apply(*one, [_result(tmp_path, "collective_stats", **kw, **{k: v for k, v in bad.items() if k != "hours_ago"})])
+    f = _result(tmp_path, "collective_stats")
+    d = json.loads(f.read_text(encoding="utf-8"))
+    del d["failures"]
+    f.write_text(json.dumps(d), encoding="utf-8")
+    with pytest.raises(mig.GuardError, match="통과가 아님"):
+        mig.enable_real_apply(*one, [f])
     assert mig._REAL_ALLOWED == set()
     assert mig.enable_real_apply(names, list(reversed(names)), ok) == set(names)
     assert mig.assert_rehearsal_db(_Conn("collective_stats"), "collective_stats") == "collective_stats"
@@ -120,3 +145,21 @@ def test_sync_result_file_from_prod_sync_check_is_accepted(tmp_path):
     C.write_result(f, kind="prod_sync_check", status="pass", left_db="collective_stats", right_db="collective_stats",
                    detail={"diff": 0})
     assert mig.enable_real_apply(["collective_stats"], ["collective_stats"], [f]) == {"collective_stats"}
+
+
+def test_real_apply_requires_local_loopback_target(tmp_path, monkeypatch):
+    """--real-apply 는 접속 대상이 로컬 루프백이어야 한다 — URL 은 localhost 라도 libpq 최종 인자(PGHOSTADDR 등)가 원격이면 거부."""
+    good = [str(_result(tmp_path, "collective_stats"))]
+    args = ["--collective-db", "collective_stats", "--real-apply", "--confirm-db", "collective_stats", "--sync-result", *good]
+    for k in ("PGHOST", "PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("PGHOSTADDR", "10.0.0.5")
+    with pytest.raises(mig.GuardError, match="실제 적용 거부"):
+        mig.main(["--base-url", "postgresql+psycopg2://u:p@localhost:5432/postgres", *args])
+    monkeypatch.delenv("PGHOSTADDR")
+    with pytest.raises(mig.GuardError, match="실제 적용 거부"):
+        mig.main(["--base-url", "postgresql+psycopg2://u:p@localhost:5432/postgres?host=13.209.203.178", *args])
+    monkeypatch.setenv("PGSERVICE", "prod")
+    with pytest.raises(mig.GuardError, match="실제 적용 거부"):
+        mig.main(["--base-url", "postgresql+psycopg2://u:p@localhost:5432/postgres", *args])
+    assert mig._REAL_ALLOWED == set()

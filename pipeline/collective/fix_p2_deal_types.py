@@ -245,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     do_c = a.commercial or not a.presale
     write = a.apply or a.rollback
     if write:
-        check_write_targets([a.collective_db], a)
+        check_write_targets([a.collective_db], a, base_url=a.base_url or None)
     eng = engine_for(a.collective_db, read_only=not write, base_url=a.base_url or None)
     if a.rollback:
         with eng.begin() as conn:

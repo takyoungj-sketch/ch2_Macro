@@ -115,12 +115,46 @@ EXIT = {PASS: 0, DIFF: 1, UNVERIFIED: 2}
 STATUS_KO = {PASS: "통과", DIFF: "차이", UNVERIFIED: "검증 못 함"}
 
 
-def write_result(path: Path, *, kind: str, status: str, left_db: str, right_db: str, detail: dict) -> None:
-    """compare 결과 파일. 실제 적용 모드(migrate_p2_keys --real-apply --sync-result)가 이 파일의 status=pass 를 요구한다."""
+def make_result(*, kind: str, status: str, left_db: str, right_db: str, diff: int, unverified: list,
+                failures: list, detail: dict | None = None) -> dict:
+    """compare 결과(파일로 쓰기 전). ops_guards.validate_result 가 요구하는 필드를 모두 담는다."""
     import datetime as _dt
 
-    write_json(path, {"kind": kind, "status": status, "left_db": left_db, "right_db": right_db,
-                      "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(), **detail})
+    return {"kind": kind, "status": status, "left_db": left_db, "right_db": right_db,
+            "targets": sorted({x for x in (left_db, right_db) if x}),
+            "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+            "diff": int(diff), "unverified": list(unverified), "failures": list(failures), **(detail or {})}
+
+
+def finalize_result(obj: dict, expected_targets) -> dict:
+    """결과를 내기 전에 validate_result 를 거친다. 검증이 통과가 아니면 status 를 그 판정으로 낮춘다(사유 기록)."""
+    from ops_guards import validate_result
+
+    st, why = validate_result(obj, expected_targets, kind=obj.get("kind"))
+    out = dict(obj)
+    if st != obj.get("status") or why:
+        out["status"] = st
+        out["validation"] = why
+    return out
+
+
+def snapshot_failures(*snaps: dict) -> list[str]:
+    """스냅샷 안의 쿼리 실패(시간 초과 등) 기록."""
+    out = []
+    for s in snaps:
+        for x in (s or {}).get("_timings", []):
+            if not x.get("ok"):
+                out.append(f"{s.get('db')}: {x.get('query')} ({x.get('error')})")
+    return out
+
+
+def write_result(path: Path, *, kind: str, status: str, left_db: str, right_db: str, detail: dict) -> None:
+    """(이전 호출 호환) 결과 파일. 실제 적용 모드는 make_result→finalize_result 를 거친 파일만 통과로 받는다."""
+    obj = make_result(kind=kind, status=status, left_db=left_db, right_db=right_db,
+                      diff=int(detail.get("diff", 0)), unverified=list(detail.get("unverified", [])),
+                      failures=list(detail.get("failures", [])),
+                      detail={k: v for k, v in detail.items() if k not in ("diff", "unverified", "failures")})
+    write_json(path, finalize_result(obj, [left_db]))
 
 
 def md_table(rows, headers) -> str:

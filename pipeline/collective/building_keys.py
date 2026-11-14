@@ -479,42 +479,88 @@ def existing_main_lot_counts(conn, key_groups: dict[str, set[str]]) -> dict[tupl
     return out
 
 
-def register_c2_parts(conn, parts: list[dict]) -> int:
-    """적재 때 생긴 새 조각을 판정 표에 자동 등록 행(source=auto_ingest)으로 저장. 이미 있는 (키·법정동·본번)은 그대로."""
+def register_c2_parts(conn, parts: list[dict]) -> list[dict]:
+    """적재 때 생긴 새 조각을 판정 표에 자동 등록 행(source=auto_ingest)으로 저장.
+    이미 있는 (키·법정동·본번)은 DO NOTHING — 그 경우 표의 실제 값(조각 번호)을 다시 읽어 돌려준다.
+    반환: 등록 시도한 행마다 {..., "registered": bool, "actual_part": 표에 있는 조각 번호}."""
     if not parts:
-        return 0
+        return []
     from sqlalchemy import text
 
-    res = conn.execute(text(
-        f"INSERT INTO {C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part, decision, source, note) "
-        "VALUES (:base_key, :asset_type, :beopjungri_code, :main_lot, :building_year, :part, :decision, :source, "
-        "'월간 적재 자동 등록 — 판정 검토 대상') ON CONFLICT (base_key, beopjungri_code, main_lot) DO NOTHING"), parts)
-    return int(res.rowcount or 0)
+    out = []
+    for r in parts:
+        got = conn.execute(text(
+            f"INSERT INTO {C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part, decision, source, note) "
+            "VALUES (:base_key, :asset_type, :beopjungri_code, :main_lot, :building_year, :part, :decision, :source, "
+            "'월간 적재 자동 등록 — 판정 검토 대상') ON CONFLICT (base_key, beopjungri_code, main_lot) DO NOTHING "
+            "RETURNING part"), r).scalar()
+        if got is not None:
+            out.append({**r, "registered": True, "actual_part": int(got)})
+            continue
+        actual = conn.execute(text(
+            f"SELECT part, decision FROM {C2_TABLE} WHERE base_key = :base_key AND beopjungri_code = :beopjungri_code "
+            "AND main_lot = :main_lot"), r).one_or_none()
+        out.append({**r, "registered": False,
+                    "actual_part": None if actual is None or actual[0] is None else int(actual[0]),
+                    "actual_decision": None if actual is None else actual[1]})
+    return out
+
+
+def _lock_c2_keys(conn, keys: list[str]) -> None:
+    """base_key 단위 advisory lock(트랜잭션 끝까지). 정렬된 순서로 잡아 교착을 피한다.
+    같은 키를 동시에 적재하는 두 실행이 같은 조각 번호(최대+1)를 따로 배정하지 않게 한다."""
+    from sqlalchemy import text
+
+    for k in sorted(set(keys)):
+        conn.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:k, 0))"), {"k": "ch2:c2:" + k})
+
+
+def _c2_assign(conn, df: pd.DataFrame, asset_type: str, units: C2Units, c01: dict) -> pd.DataFrame:
+    hit = df["building_key"].astype(str).isin(units)
+    sub = df.loc[hit]
+    groups: dict[str, set[str]] = {}
+    for k, rb in zip(sub["building_key"].astype(str), building_key_raw_series(sub, asset_type)):
+        if k in groups:
+            continue
+        raw = _key_raw_for(rb, k, c01)
+        groups[k] = c2_derived_keys(raw, units[k]) if raw is not None else set()
+    counts = existing_main_lot_counts(conn, groups)
+    return apply_building_key_split_c2(df, asset_type, units=units, c01_units=c01, existing_counts=counts)
 
 
 def apply_c2_split_from_db(engine, df: pd.DataFrame, asset_type: str) -> pd.DataFrame:
     """월간 적재용: 집합 DB 의 C-2 판정 표를 읽어 키를 배정하고, 새 조각은 표에 자동 등록한다.
-    표가 없거나 비었거나 비상 해제면 그대로 돌려준다. 판정 키가 배치에 없으면 원장을 조회하지 않는다."""
+
+    - 표가 없거나 비었거나 비상 해제면 그대로 돌려준다. 판정 키가 배치에 없으면 원장을 조회하지 않는다.
+    - 배치에 든 판정 키마다 advisory lock 을 잡은 뒤 판정 표를 **다시 읽고** 배정한다(동시 실행 안전).
+    - 등록이 DO NOTHING 으로 충돌하면(잠금 밖 다른 쓰기) 표의 실제 조각 번호를 다시 읽어 그 값으로 다시 배정한다."""
     if df.empty or engine is None or "building_key" not in df.columns or asset_type == _PRESALE_KEY_ASSET:
         return df
     with engine.begin() as conn:
-        units = load_split_units_c2(conn)
-        if not units:
+        pre = load_split_units_c2(conn)
+        if not pre:
             return df
-        hit = df["building_key"].astype(str).isin(units)
-        if not hit.any():
+        keys = sorted(set(df["building_key"].astype(str)) & set(pre))
+        if not keys:
             return df
-        sub = df.loc[hit]
+        _lock_c2_keys(conn, keys)
+        units = load_split_units_c2(conn)               # 잠금 뒤 다시 읽기 — 다른 실행이 방금 등록한 조각 반영
+        if not units or not (set(keys) & set(units)):
+            return df
         c01 = load_split_units()
-        groups: dict[str, set[str]] = {}
-        for k, rb in zip(sub["building_key"].astype(str), building_key_raw_series(sub, asset_type)):
-            if k in groups:
-                continue
-            raw = _key_raw_for(rb, k, c01)
-            groups[k] = c2_derived_keys(raw, units[k]) if raw is not None else set()
-        counts = existing_main_lot_counts(conn, groups)
-        out = apply_building_key_split_c2(df, asset_type, units=units, c01_units=c01, existing_counts=counts)
-        n = register_c2_parts(conn, out.attrs.get("c2_new_parts") or [])
+        out = _c2_assign(conn, df, asset_type, units, c01)
+        res = register_c2_parts(conn, out.attrs.get("c2_new_parts") or [])
+        conflict = [r for r in res if not r["registered"]]
+        if conflict:
+            log.warning("c2 split: 자동 등록 충돌 %d건 — 판정 표의 실제 값으로 다시 배정", len(conflict))
+            units = load_split_units_c2(conn)
+            out = _c2_assign(conn, df, asset_type, units, c01)
+            res2 = register_c2_parts(conn, out.attrs.get("c2_new_parts") or [])
+            if any(not r["registered"] for r in res2):
+                raise RuntimeError("c2 split: 다시 배정한 뒤에도 자동 등록이 충돌함 — 적재 중단(판정 표 확인)")
+            res = [r for r in res if r["registered"]] + res2
+        n = sum(1 for r in res if r["registered"])
         if n:
             log.warning("c2 split: 새 조각 %d개를 판정 표에 자동 등록(source=%s) — 판정 검토 대상", n, C2_AUTO_SOURCE)
+        out.attrs["c2_registered"] = res
     return out

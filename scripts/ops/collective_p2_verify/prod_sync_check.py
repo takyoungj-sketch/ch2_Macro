@@ -25,7 +25,7 @@ sys.path.insert(0, str(HERE))
 
 from _common import (  # noqa: E402
     EXIT, LIGHT_MS, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn,
-    table_columns, write_json, write_result,
+    finalize_result, make_result, snapshot_failures, table_columns, write_json,
 )
 
 LEDGERS = ("collective_transactions", "collective_commercial_transactions", "rent_transactions", "built_transactions")
@@ -95,6 +95,18 @@ def compare(a: dict, b: dict, *, allowed: tuple[str, ...] = PROD_WRITTEN) -> dic
     return {"status": status, "diff": diff, "allowed_diff": allowed_diff, "unverified": unv}
 
 
+def result_of(left: dict, right: dict, r: dict) -> dict:
+    """compare 결과 → 결과 파일 객체. 스냅샷 쿼리 실패·빈 스냅샷도 기록하고 validate_result 를 거친다."""
+    unv = [t for t, _ in r["unverified"]]
+    for s in (left, right):
+        if not s.get("tables"):
+            unv.append(f"{s.get('db')}: 스냅샷에 표가 없음")
+    obj = make_result(kind="prod_sync_check", status=r["status"], left_db=left.get("db"), right_db=right.get("db"),
+                      diff=len(r["diff"]), unverified=unv, failures=snapshot_failures(left, right),
+                      detail={"allowed_diff": len(r["allowed_diff"])})
+    return finalize_result(obj, [left.get("db")])
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -123,6 +135,8 @@ def main(argv=None) -> int:
         return 0
     left, right = read_json(a.left), read_json(a.right)
     r = compare(left, right)
+    res = result_of(left, right, r)
+    r["status"] = res["status"]
     print(f"{left['db']} vs {right['db']}: {STATUS_KO[r['status']]} — 차이 {len(r['diff'])} · "
           f"운영 전용 표 차이(허용) {len(r['allowed_diff'])} · 검증 못 함 {len(r['unverified'])}")
     if r["diff"]:
@@ -133,10 +147,10 @@ def main(argv=None) -> int:
     if r["unverified"]:
         print("검증 못 함(--allow-heavy 필요·필수 표 없음):")
         print(md_table(r["unverified"], ["표", "사유"]))
+    if res.get("validation"):
+        print("결과 검증(ops_guards.validate_result): " + "; ".join(res["validation"]))
     if a.result_out:
-        write_result(a.result_out, kind="prod_sync_check", status=r["status"], left_db=left["db"], right_db=right["db"],
-                     detail={"diff": len(r["diff"]), "allowed_diff": len(r["allowed_diff"]),
-                             "unverified": [t for t, _ in r["unverified"]]})
+        write_json(a.result_out, res)
     print(f"종료 코드 {EXIT[r['status']]} (0 통과 · 1 차이 · 2 검증 못 함)")
     return EXIT[r["status"]]
 
