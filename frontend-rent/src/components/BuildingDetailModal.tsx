@@ -196,10 +196,9 @@ function PeerPicker({
 /** D-085: 임대 회귀가 비공개일 때 탭 자리 안내. 집합 바로 열기 링크는 B2. */
 function RentRegressionHiddenNotice() {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200">
-      <p className="font-semibold">전세 보증금 회귀는 준비 중입니다.</p>
-      <p className="text-xs text-slate-600 dark:text-slate-300">
-        같은 단지의 매매 거래로 본 층·면적 효용지수는 집합 분석에서 볼 수 있습니다.
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200">
+      <p>
+        층·면적·연식에 따른 가격 차이(효용지수·회귀분석)는 집합부동산(매매) 에서 제공합니다. 전월세 자료는 계약 형태가 섞여 있고 시점에 따른 변동이 커서, 이 화면에서는 전세가율·전환율·롤링 추이를 제공합니다.
       </p>
     </div>
   );
