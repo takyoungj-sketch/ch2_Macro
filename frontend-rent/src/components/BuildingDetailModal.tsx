@@ -11,6 +11,7 @@ import RentRegressionPanel from "./RentRegressionPanel";
 import RentTransactionTable from "./RentTransactionTable";
 import RollingTrendChart from "./RollingTrendChart";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { PrivateFeatureBadge, useFeature } from "@ch2/macro-shell/features";
 
 type PanelMode = "conversion" | "rolling" | "transactions" | "regression";
 type RollingSeriesId = "jeonse" | "mixed_deposit" | "mixed_monthly" | "monthly";
@@ -192,6 +193,18 @@ function PeerPicker({
   );
 }
 
+/** D-085: 임대 회귀가 비공개일 때 탭 자리 안내. 집합 바로 열기 링크는 B2. */
+function RentRegressionHiddenNotice() {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200">
+      <p className="font-semibold">전세 보증금 회귀는 준비 중입니다.</p>
+      <p className="text-xs text-slate-600 dark:text-slate-300">
+        같은 단지의 매매 거래로 본 층·면적 효용지수는 집합 분석에서 볼 수 있습니다.
+      </p>
+    </div>
+  );
+}
+
 export default function BuildingDetailModal({
   row,
   windowYears,
@@ -208,6 +221,7 @@ export default function BuildingDetailModal({
   onClose: () => void;
 }) {
   const [panel, setPanel] = useState<PanelMode>("conversion");
+  const rentRegressionOn = useFeature("rent_regression");
   const [extraKeys, setExtraKeys] = useState<string[]>([]);
   const [rollingSeries, setRollingSeries] = useState<RollingSeriesId>("jeonse");
 
@@ -320,6 +334,7 @@ export default function BuildingDetailModal({
               onClick={() => setPanel(id)}
             >
               {label}
+              {id === "regression" && <PrivateFeatureBadge feature="rent_regression" />}
             </button>
           ))}
         </div>
@@ -518,13 +533,14 @@ export default function BuildingDetailModal({
         </div>
       )}
 
-      {panel === "regression" && (
+      {panel === "regression" && rentRegressionOn && (
         <RentRegressionPanel
           buildingKey={row.building_key}
           extraKeys={extraKeys}
           assetType={row.asset_type}
         />
       )}
+      {panel === "regression" && !rentRegressionOn && <RentRegressionHiddenNotice />}
 
     </DraggableModalShell>
     </>

@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Query, Request, Response
 import secrets
 from app.ai.sessions import session_owner
+from app.ai.feature_filter import filter_ai_body
 from app.platform.jwt_util import COOKIE_NAME, decode_access_token
 
 from app.ai.bundles.registry import BUNDLE_REGISTRY, suggested_questions
@@ -62,6 +63,7 @@ def ai_health():
 def ai_chat(body: AiChatRequest, request: Request, response: Response):
     """세션 기반 AI 대화 — Screen-bound + Reasoning Bundle."""
     check_ai_rate_limit(request)
+    body = filter_ai_body(body, request)  # D-085 비공개 기능 값 걷어내기
     return _run_with_allowance(body, request, response, handle_chat)
 
 
@@ -146,6 +148,7 @@ def ai_request_result(request_id: str, request: Request):
 def ai_history_record(body: AiHistoryRecordRequest, request: Request, response: Response):
     """성공한 분석 Bundle을 Analysis History에 자동 기록 (채팅 없이)."""
     check_ai_rate_limit(request)
+    body = filter_ai_body(body, request)  # D-085
     with session_owner(_owner(request, response)):
         return handle_history_record(body)
 
@@ -154,6 +157,7 @@ def ai_history_record(body: AiHistoryRecordRequest, request: Request, response: 
 def ai_explain(body: AiExplainRequest, request: Request, response: Response):
     """Explain layer만 자연어화 (LLM 없이 presets 우선)."""
     check_ai_rate_limit(request)
+    body = filter_ai_body(body, request)  # D-085
     from app.config import settings
     if settings.ai_subscription_quota_enabled:
         return _run_with_allowance(AiChatRequest(message=body.message or "이 화면을 설명해 주세요.",

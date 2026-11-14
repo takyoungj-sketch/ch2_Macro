@@ -28,6 +28,7 @@ _ALWAYS_OPEN_PREFIXES = (
     "/docs",
     "/redoc",
     "/api/auth/",
+    "/api/features",
     "/api/billing/",
     "/api/board/",
     "/api/ops/",
@@ -248,6 +249,12 @@ async def product_gate_response(request: Request) -> JSONResponse | None:
             return None
         detail = "관리자 로그인이 필요합니다." if status == 401 else "관리자만 이용할 수 있습니다."
         return JSONResponse(status_code=status, content={"detail": detail})
+    # D-085 관리자 전용 기능 — 라우트 의존성과 같은 기준(이중 방어). 구독 판정보다 먼저.
+    from app.feature_gates import HIDDEN_DETAIL, feature_enabled, gated_feature_for_path
+
+    gated = gated_feature_for_path(request.method, path)
+    if gated is not None and not feature_enabled(request, gated):
+        return JSONResponse(status_code=403, content={"detail": HIDDEN_DETAIL})
     if request.method == "POST" and path in {
         "/api/paid/matrix-yearly",
         "/api/free/v2/stats/bulk",

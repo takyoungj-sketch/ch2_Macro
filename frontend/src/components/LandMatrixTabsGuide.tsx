@@ -1,4 +1,5 @@
 import GuideDialog from "@ch2/macro-shell/GuideDialog";
+import { useFeature } from "@ch2/macro-shell/features";
 
 const tabs = [
   {
@@ -17,9 +18,10 @@ const tabs = [
     caution: "전체 조회 대상이 1만 건을 넘으면 화면 목록과 집계는 불러온 거래만 반영합니다. CSV는 같은 분석 조건의 전체 거래를 대상으로 합니다.",
   },
   {
+    id: "regression",
     title: "회귀 분석",
     feature: "면적, 도로조건, 거래유형 등 변수를 선택해 토지 단가와의 통계적 관계를 분석하고, 모형 비교와 조건별 추정을 살펴봅니다.",
-    caution: "변수·결측치·이상치 처리에 따라 분석 표본이 달라집니다. 공시지가 모형은 지분거래와 공시지가 미연결 거래를 제외합니다. 계수와 추정값을 인과관계나 개별 토지의 적정가격으로 해석하지 않도록 유의해 주세요.",
+    caution: "변수·결측치·이상치 처리에 따라 분석 표본이 달라집니다. {LEDGER}계수와 추정값을 인과관계나 개별 토지의 적정가격으로 해석하지 않도록 유의해 주세요.",
   },
   {
     title: "장기 추세",
@@ -28,7 +30,16 @@ const tabs = [
   },
 ];
 
+const LEDGER_CAUTION = "공시지가 모형은 지분거래와 공시지가 미연결 거래를 제외합니다. ";
+const COUNT_KO = ["", "한", "두", "세", "네", "다섯"];
+
 export default function LandMatrixTabsGuide() {
+  // D-085: 비공개 기능의 탭 설명은 보이지 않는다.
+  const regressionOn = useFeature("land_regression");
+  const ledgerOn = useFeature("land_ledger_link");
+  const shown = tabs
+    .filter((t) => regressionOn || t.id !== "regression")
+    .map((t) => ({ ...t, caution: t.caution.replace("{LEDGER}", ledgerOn ? LEDGER_CAUTION : "") }));
   return (
     <GuideDialog
       id="land-matrix-tabs-guide"
@@ -39,9 +50,9 @@ export default function LandMatrixTabsGuide() {
       oncePerVisit
     >
       <p id="land-matrix-tabs-guide-summary">
-        선택한 매트릭스 셀을 다섯 가지 관점에서 살펴봅니다. 각 탭의 분석 범위와 주의사항을 확인해 주세요.
+        선택한 매트릭스 셀을 {COUNT_KO[shown.length]} 가지 관점에서 살펴봅니다. 각 탭의 분석 범위와 주의사항을 확인해 주세요.
       </p>
-      {tabs.map(({ title, feature, caution }, index) => (
+      {shown.map(({ title, feature, caution }, index) => (
         <section key={title} className="analysis-guide__section">
           <h3>{index + 1}. {title}</h3>
           <p>{feature}</p>
