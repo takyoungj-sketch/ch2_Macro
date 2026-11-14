@@ -13,6 +13,7 @@ import type {
   StatsWindowYears,
 } from "../types";
 import { attachApiScreenHeader } from "@ch2/macro-shell/apiScreen";
+import type { KeySplitC2Note } from "../components/KeySplitC2Notice";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
@@ -140,6 +141,20 @@ export async function fetchConversionValidate() {
 export async function fetchRbDistribution() {
   const { data } = await api.get<RentRbDistributionReport>("/rb-distribution");
   return data;
+}
+
+/** 집합 2단계 — 임대 단지 키 상태. C-2 옛 키면 key_split_c2(가장 큰 그룹으로 열림). 실패·409 는 null(화면을 막지 않음). */
+export async function fetchRentKeyStatus(
+  buildingKey: string,
+): Promise<{ key_status: "ok"; building_key: string; key_split_c2?: KeySplitC2Note } | null> {
+  try {
+    const { data } = await api.get<{ key_status: "ok"; building_key: string; key_split_c2?: KeySplitC2Note }>(
+      `/buildings/${encodeURIComponent(buildingKey)}/key-status`,
+    );
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchRentRolling(params: {

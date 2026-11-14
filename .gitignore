@@ -69,3 +69,6 @@ data/cache/
 
 # 청주 대장 실험의 로컬 원문·SQLite·압축 근거 (코드와 요약은 별도 관리)
 data/research/cheongju_ledger/
+
+# 프런트 컴포넌트 테스트 임시 묶음(scripts/component-tests.mjs 가 만들고 지움)
+.component-tests-tmp/

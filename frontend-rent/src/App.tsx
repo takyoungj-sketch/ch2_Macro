@@ -19,6 +19,7 @@ import AiAssistantPanel from "./components/AiAssistantPanel";
 import { Ai2HeaderSlot, singleScreenRegion } from "@ch2/ai2-entry/Ai2Entry";
 import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import BuildingDetailModal from "./components/BuildingDetailModal";
+import RentKeySplitGuard from "./components/RentKeySplitGuard";
 import RentAnalysisGuide from "./components/RentAnalysisGuide";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
@@ -656,6 +657,15 @@ export default function App() {
       </div>
 
       {selected && scope && (
+        <RentKeySplitGuard
+          buildingKey={selected.building_key}
+          displayName={selected.display_name}
+          onOpenKey={(key, cand) => {
+            // C-2 분리된 단지: 지금 목록에 있으면 그 행으로, 없으면 이름만 바꿔 같은 화면으로 연다(상세는 키로 다시 조회)
+            const hit = items.find((r) => r.building_key === key);
+            setSelected(hit ?? { ...selected, building_key: key, display_name: cand.display_name || selected.display_name });
+          }}
+        >
         <BuildingDetailModal
           row={selected}
           windowYears={scope.windowYears}
@@ -668,6 +678,7 @@ export default function App() {
           statsAsOfLabel={buildingsQ.data?.stats_as_of_label}
           onClose={() => setSelected(null)}
         />
+        </RentKeySplitGuard>
       )}
       {showSangkwon && addr2 && (
         <SangkwonAnalysisModal

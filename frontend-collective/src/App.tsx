@@ -859,7 +859,16 @@ export default function App() {
         />
       )}
       {selected && scope && (
-        <BuildingKeySplitGuard buildingKey={selected.building_key} displayName={selected.display_name} onClose={() => setSelected(null)}>
+        <BuildingKeySplitGuard
+          buildingKey={selected.building_key}
+          displayName={selected.display_name}
+          onClose={() => setSelected(null)}
+          onOpenKey={(key, cand) => {
+            // C-2 분리된 단지: 지금 목록에 있으면 그 행으로, 없으면 이름만 바꿔 같은 화면으로 연다(상세는 키로 다시 조회)
+            const hit = (buildingsQ.data?.items ?? []).find((r) => r.building_key === key);
+            setSelected(hit ?? { ...selected, building_key: key, display_name: cand.display_name || selected.display_name });
+          }}
+        >
         <BuildingDetailModal
           row={selected}
           assetType={scope.assetType}
