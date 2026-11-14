@@ -83,10 +83,15 @@ def _make_tag() -> dict:
 def _tag(item: dict[str, Any]) -> None:
     """표지는 항상 남긴다(쓴 기능이 없으면 used=[]). 표지 없는 항목은 비관리자에게 재생되지 않는다."""
     if isinstance(item, dict):
-        from app.ai.feature_filter import make_tag, tag_used
+        from app.ai.feature_filter import make_tag, tag_unknown, tag_used
 
-        prior = tag_used(item.get(FEATURE_TAG)) or frozenset()
-        item[FEATURE_TAG] = make_tag(prior | set(make_tag()["used"]))
+        had = FEATURE_TAG in item
+        prior_tag = item.get(FEATURE_TAG)
+        prior = tag_used(prior_tag)
+        now = make_tag()
+        # 이미 있던 표지가 깨졌거나 출처 불명이면 그 표시를 잇는다.
+        unknown = bool(now.get("unknown")) or (had and (prior is None or tag_unknown(prior_tag)))
+        item[FEATURE_TAG] = make_tag((prior or frozenset()) | set(now["used"]), unknown=unknown)
 
 
 def purge_hidden(session: AiSession) -> None:

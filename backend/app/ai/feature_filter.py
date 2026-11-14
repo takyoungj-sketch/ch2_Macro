@@ -65,6 +65,7 @@ ALL = frozenset(FEATURES)
 _enabled: ContextVar[frozenset | None] = ContextVar("ch2_ai_features_enabled", default=None)
 _used: ContextVar[frozenset] = ContextVar("ch2_ai_features_used", default=frozenset())
 _admin: ContextVar[bool] = ContextVar("ch2_ai_features_admin", default=False)
+_unknown: ContextVar[bool] = ContextVar("ch2_ai_features_unknown", default=False)
 
 
 # ── facts 고치기 ───────────────────────────────────────────────
@@ -165,8 +166,15 @@ def add_used(tag: Any) -> None:
     """이 요청의 답이 이전 근거를 쓸 수 있게 되면, 그 근거의 표지를 이 요청 표지에 합친다
     (답 표지 = 현재 요청에서 쓴 것 ∪ 이전 근거에서 쓴 것)."""
     used = tag_used(tag)
+    if used is None or tag_unknown(tag):
+        # 표지 없는 근거(출처 불명)를 썼다 — 이후 재저장·재질문을 거쳐도 이 표시는 유지된다.
+        _unknown.set(True)
     if used:
         _used.set(_used.get() | used)
+
+
+def current_unknown() -> bool:
+    return bool(_unknown.get())
 
 
 def is_admin_now() -> bool:
@@ -178,9 +186,18 @@ def is_admin_now() -> bool:
 TAG_VERSION = 1
 
 
-def make_tag(used: Iterable[str] | None = None) -> dict:
-    """저장·세션 항목에 붙이는 표지. 쓴 비공개 기능이 없어도 표지는 항상 남긴다."""
-    return {"v": TAG_VERSION, "used": sorted(set(current_used() if used is None else used))}
+def make_tag(used: Iterable[str] | None = None, *, unknown: bool | None = None) -> dict:
+    """저장·세션 항목에 붙이는 표지. 쓴 비공개 기능이 없어도 표지는 항상 남긴다.
+    인자를 생략하면 이 요청의 표지(현재 요청 ∪ 이전 근거, 출처 불명 포함)를 쓴다."""
+    tag: dict = {"v": TAG_VERSION, "used": sorted(set(current_used() if used is None else used))}
+    if (current_unknown() if unknown is None else unknown):
+        tag["unknown"] = True
+    return tag
+
+
+def tag_unknown(tag: Any) -> bool:
+    """출처 불명 표시가 붙은 표지인가(표지 자체가 없는 경우는 tag_used 가 None 으로 따로 본다)."""
+    return isinstance(tag, dict) and bool(tag.get("unknown"))
 
 
 def tag_used(tag: Any) -> frozenset | None:
@@ -198,13 +215,14 @@ def replay_allowed(tag: Any, *, has_evidence: bool = True) -> bool:
     - 관리자: 그대로 허용.
     - 비관리자: 표지가 있고, 표지의 기능 중 지금 꺼진 것이 하나도 없을 때만 허용.
       표지가 없거나 비어 있는데(옛 형식 포함) 근거가 있으면 거절.
+      출처 불명(`unknown`) 표지는 거절 — 표지 없는 근거를 거쳐 만든 답이다.
     """
     if is_admin_now():
         return True
     if not has_evidence:
         return True
     used = tag_used(tag)
-    if used is None:
+    if used is None or tag_unknown(tag):
         return False
     return used <= current_enabled()
 
@@ -219,9 +237,11 @@ def ai_feature_scope(request: Request, context=None):
     t1 = _enabled.set(enabled)
     t2 = _used.set(used)
     t3 = _admin.set(is_admin(request))
+    t4 = _unknown.set(False)
     try:
         yield enabled
     finally:
+        _unknown.reset(t4)
         _admin.reset(t3)
         _used.reset(t2)
         _enabled.reset(t1)

@@ -387,6 +387,87 @@ def test_empty_screen_followup_carries_previous_tags(monkeypatch):
         assert not stored_result_visible(fake.stored["b"])
 
 
+# ── Codex 4차: 출처 불명(unknown) 표지 전파 ───────────────────────────
+
+def test_unknown_tag_is_sticky_and_refused(monkeypatch):
+    from app.ai.feature_filter import add_used, ai_feature_scope, make_tag, replay_allowed
+
+    _as_role(monkeypatch, "admin")
+    with ai_feature_scope(_req()):
+        add_used(None)  # 표지 없는 근거를 썼다
+        first = make_tag()
+    assert first == {"v": 1, "used": [], "unknown": True}
+    with ai_feature_scope(_req()):
+        add_used(first)  # 다시 이어 써도 유지
+        assert make_tag().get("unknown") is True
+        assert replay_allowed(first)  # 관리자는 그대로
+    _as_role(monkeypatch, "member")
+    with ai_feature_scope(_req()):
+        assert not replay_allowed(first)
+        assert make_tag().get("unknown") is None  # 새 요청은 깨끗하게 시작
+
+
+def test_untagged_evidence_via_admin_followup_not_leaked_to_user(monkeypatch):
+    """Codex 재현: 표지 없는 근거(123건·R² 0.456) → 관리자가 재질문 → 일반 사용자가 같은 세션을 재사용.
+    일반 사용자에게 두 수치가 전달되지 않아야 한다."""
+    from types import SimpleNamespace
+
+    from app.ai import allowances as quota
+    from app.ai.dialogue import _screen
+    from app.ai.schemas import AiContext
+    from app.ai.sessions import MemorySessionStore, get_or_create, session_owner, set_session_store
+
+    fake, c = _quota_client(monkeypatch)
+    user = SimpleNamespace(id=7, role="admin")
+    monkeypatch.setattr(quota, "request_user", lambda _r: user)
+    payloads = []
+
+    def draft(*, user, system, json_response, timeout=45):
+        payload = json.loads(user)
+        payloads.append(payload)
+        if "passages" in payload:
+            return json.dumps({"general_indices": []})
+        for source in ("current", "previous"):
+            facts = payload["sources"].get(source, {}).get("facts", {})
+            if facts:
+                return json.dumps({"kind": "screen", "answer": "{{" + next(iter(facts)) + "}}입니다."}, ensure_ascii=False)
+        return json.dumps({"kind": "knowledge", "answer": "어떤 결과인지 알려 주세요."}, ensure_ascii=False)
+
+    monkeypatch.setattr("app.ai.dialogue.llm._openai_chat", draft)
+    set_session_store(MemorySessionStore())
+    try:
+        with session_owner("user:7"):
+            s = get_or_create(None)
+            ctx = AiContext(**_land_regression_ctx())
+            s.dialogue_evidence = _screen(ctx)  # 표지 없는 근거(배포 전 세션 등)
+            s.dialogue_evidence_features = None
+            sid = s.session_id
+        empty = {"app": "land", "panel": "TrendCard", "facts": {}}
+
+        _as_role(monkeypatch, "admin")
+        r = c.post("/api/ai/chat", json={"message": "아까 회귀 결과 다시 알려줘", "session_id": sid, "context": empty})
+        assert r.status_code == 200, r.text
+        assert "123" in r.json()["answer"]  # 관리자는 그대로 재생
+        with session_owner("user:7"):
+            s = get_or_create(sid)
+        assert s.dialogue_evidence_features.get("unknown") is True
+        assert s.turns[-1].features.get("unknown") is True
+
+        user.role = "member"
+        _as_role(monkeypatch, "member")
+        monkeypatch.setenv("FEATURE_LAND_REGRESSION", "admin")
+        payloads.clear()
+        r = c.post("/api/ai/chat", json={
+            "request_id": "m1", "message": "아까 회귀 결과 다시 알려줘", "session_id": sid, "context": empty,
+        })
+        assert r.status_code == 200, r.text
+        sent = json.dumps(payloads, ensure_ascii=False)
+        assert "123" not in sent and "0.456" not in sent
+        assert "123" not in r.json()["answer"] and "0.456" not in r.json()["answer"]
+    finally:
+        set_session_store(MemorySessionStore())
+
+
 # ── 2. QA 토큰은 기능 경로의 구독 검사도 통과 ───────────────────────────
 
 def test_qa_token_reaches_rent_regression_through_real_gates(monkeypatch):
