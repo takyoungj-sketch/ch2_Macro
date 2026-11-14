@@ -589,10 +589,9 @@ export type { BuildingStatsRow };
 
 /** 집합 2단계 — 옛 단지 키 확인. 1:1 이면 새 키, 분할(409)이면 후보 목록, C-2 옛 키면 key_split_c2(가장 큰 그룹으로 열림). */
 import type { KeySplitC2Note } from "../components/KeySplitC2Notice";
+/** 분할 후보 — 키·이름·동만(키 상태 응답에는 통계 숫자가 없다) */
 export type BuildingKeyCandidate = {
   building_key: string;
-  split_part: number;
-  n_tx: number;
   display_name?: string;
   addr3?: string | null;
   addr4?: string | null;

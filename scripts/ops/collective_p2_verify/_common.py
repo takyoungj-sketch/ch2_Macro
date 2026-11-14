@@ -115,15 +115,44 @@ EXIT = {PASS: 0, DIFF: 1, UNVERIFIED: 2}
 STATUS_KO = {PASS: "통과", DIFF: "차이", UNVERIFIED: "검증 못 함"}
 
 
-def make_result(*, kind: str, status: str, left_db: str, right_db: str, diff: int, unverified: list,
-                failures: list, detail: dict | None = None) -> dict:
-    """compare 결과(파일로 쓰기 전). ops_guards.validate_result 가 요구하는 필드를 모두 담는다."""
+def now_iso() -> str:
     import datetime as _dt
 
+    return _dt.datetime.now(_dt.timezone.utc).isoformat()
+
+
+def oldest_measured(*snaps: dict) -> tuple[str | None, list[str]]:
+    """입력 스냅샷들의 measured_at 중 가장 오래된 값. 없거나 형식이 틀린 스냅샷은 사유로 돌려준다."""
+    import datetime as _dt
+
+    times, why = [], []
+    for s in snaps:
+        v = (s or {}).get("measured_at")
+        try:
+            t = _dt.datetime.fromisoformat(str(v))
+            if t.tzinfo is None:
+                raise ValueError
+            times.append(t)
+        except (TypeError, ValueError):
+            why.append(f"{(s or {}).get('db')}: 스냅샷 측정 시각(measured_at) 없음·형식 오류")
+    return (min(times).isoformat() if times and not why else None), why
+
+
+def make_result(*, kind: str, status: str, left_db: str, right_db: str, diff: int, unverified: list,
+                failures: list, detail: dict | None = None, snapshots: tuple = ()) -> dict:
+    """compare 결과(파일로 쓰기 전). ops_guards.validate_result 가 요구하는 필드를 모두 담는다.
+    created_at = 입력 스냅샷 중 **가장 오래된 measured_at**(비교한 시각이 아니라 자료를 잰 시각). 48시간 검사는 이 값으로 한다.
+    스냅샷 없이 부르면(이전 호출 호환) 지금 시각. 측정 시각을 알 수 없는 스냅샷이 있으면 검증 못 함 항목에 넣는다."""
+    unv = list(unverified)
+    created = now_iso()
+    if snapshots:
+        oldest, why = oldest_measured(*snapshots)
+        unv += why
+        created = oldest or created
     return {"kind": kind, "status": status, "left_db": left_db, "right_db": right_db,
             "targets": sorted({x for x in (left_db, right_db) if x}),
-            "created_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
-            "diff": int(diff), "unverified": list(unverified), "failures": list(failures), **(detail or {})}
+            "created_at": created, "compared_at": now_iso(),
+            "diff": int(diff), "unverified": unv, "failures": list(failures), **(detail or {})}
 
 
 def finalize_result(obj: dict, expected_targets) -> dict:

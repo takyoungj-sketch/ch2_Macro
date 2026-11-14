@@ -9,6 +9,8 @@
     ({status: "has_split_siblings", message, building_key, new_keys, candidates})를 붙인다.
     C-01 로 1:1 바뀐 키가 다시 C-2 옛 키면 두 처리가 차례로 적용된다(C-01 1:N 은 그대로 409).
   - 연결표에 없거나 표가 없으면(이전 전) 그대로 통과.
+**응답에는 통계 숫자를 넣지 않는다**(무료 화면 사용자·비로그인도 /key-status 를 받으므로): 후보는 키·이름·동(addr3~5)만.
+  거래 수(n_tx)·창 건수·조각 번호는 내보내지 않는다. 건수가 필요하면 화면이 기존 목록 API 에서 가져온다.
 대상: /api/collective/buildings/{key}/…, /api/collective/analysis/hedonic/buildings/{key}/…,
       /api/rent/buildings/{key}/…, 그리고 이 앱들의 query `building_key`.
 연결표: 집합 DB `collective_building_key_map`, 임대 DB `rent_building_key_map`(migrate_p2_keys.py 가 만든다).
@@ -75,8 +77,17 @@ def _default_loader(app: str) -> KeyMap:
     return _load_from_engine(get_collective_engine(), "collective_building_key_map")
 
 
+CANDIDATE_FIELDS = ("display_name", "addr3", "addr4", "addr5")
+
+
+def _candidate(key: str, det: dict[str, Any] | None) -> dict[str, Any]:
+    """후보 한 건 — 키·이름·동만(숫자 없음). details 가 다른 칸을 돌려줘도 버린다."""
+    d = det or {}
+    return {"building_key": key, **{k: d[k] for k in CANDIDATE_FIELDS if d.get(k) not in (None, "")}}
+
+
 def _default_details(app: str, keys: list[str]) -> dict[str, dict[str, Any]]:
-    """분할 후보 표시용(집합만): 최신 as_of 5년 mart 의 이름·주소·건수."""
+    """분할 후보 표시용(집합만): 최신 as_of 5년 mart 의 이름·주소(건수는 읽지 않음)."""
     if app != "collective" or not keys:
         return {}
     from app.collective.db import get_collective_engine
@@ -86,11 +97,11 @@ def _default_details(app: str, keys: list[str]) -> dict[str, dict[str, Any]]:
         return {}
     with eng.connect() as c:
         rows = c.execute(text("""
-            SELECT DISTINCT ON (building_key) building_key, display_name, addr3, addr4, addr5, count
+            SELECT DISTINCT ON (building_key) building_key, display_name, addr3, addr4, addr5
             FROM collective_building_stats WHERE building_key = ANY(:k)
             ORDER BY building_key, as_of_month DESC, window_years DESC"""), {"k": keys}).mappings().all()
     return {r["building_key"]: {"display_name": r["display_name"], "addr3": r["addr3"], "addr4": r["addr4"],
-                                "addr5": r["addr5"], "n_tx_window": int(r["count"] or 0)} for r in rows}
+                                "addr5": r["addr5"]} for r in rows}
 
 
 class KeyMapCache:
@@ -141,8 +152,7 @@ def resolve_key(app: str, key: str, *, cache: KeyMapCache | None = None,
             det = details(app, [t[0] for t in news])
         except Exception:  # noqa: BLE001
             det = {}
-        return {"status": "split", "building_key": key,
-                "candidates": [{"building_key": t[0], "split_part": t[1], "n_tx": t[2], **det.get(t[0], {})} for t in news]}
+        return {"status": "split", "building_key": key, "candidates": [_candidate(t[0], det.get(t[0])) for t in news]}
     status, final = ("remapped", news[0][0]) if news else ("ok", key)
     out: dict[str, Any] = {"status": status, "building_key": final, "candidates": []}
     _, c2 = split_entries(kmap.get(final))
@@ -154,16 +164,16 @@ def resolve_key(app: str, key: str, *, cache: KeyMapCache | None = None,
 def c2_note(key: str, c2: list[tuple], det: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     det = det or {}
     return {"status": "has_split_siblings", "message": C2_MESSAGE, "building_key": key,
-            "new_keys": [t[0] for t in c2],
-            "candidates": [{"building_key": t[0], "split_part": t[1], "n_tx": t[2], **det.get(t[0], {})} for t in c2]}
+            "new_keys": [t[0] for t in c2], "candidates": [_candidate(t[0], det.get(t[0])) for t in c2]}
 
 
 def split_detail_text(cands: list[dict[str, Any]]) -> str:
+    """안내문 — 이름·동만(건수 없음)."""
     names = []
     for c in cands[:6]:
         where = " ".join(str(x) for x in (c.get("addr3"), c.get("addr4"), c.get("addr5")) if x)
         nm = c.get("display_name") or "단지"
-        names.append(f"{nm}({where}, {c.get('n_tx', 0)}건)" if where else f"{nm}({c.get('n_tx', 0)}건)")
+        names.append(f"{nm}({where})" if where else nm)
     return SPLIT_MESSAGE + (" 후보: " + ", ".join(names) if names else "")
 
 
@@ -174,10 +184,11 @@ class _Split(Exception):
 
 class KeyRemapMiddleware:
     def __init__(self, app, cache: KeyMapCache | None = None,
-                 details: Callable[[str, list[str]], dict[str, dict[str, Any]]] = _default_details):
+                 details: Callable[[str, list[str]], dict[str, dict[str, Any]]] | None = None):
         self.app = app
         self.cache = cache or CACHE
-        self.details = details
+        # None 이면 부를 때마다 모듈의 _default_details(테스트에서 바꿔 끼울 수 있게)
+        self.details = details or (lambda a, ks: globals()["_default_details"](a, ks))
 
     async def _map(self, app_name: str) -> KeyMap:
         import anyio
@@ -356,7 +367,7 @@ class KeyRemapMiddleware:
             det = await anyio.to_thread.run_sync(self.details, app_name, [t[0] for t in news])
         except Exception:  # noqa: BLE001
             det = {}
-        cands = [{"building_key": t[0], "split_part": t[1], "n_tx": t[2], **det.get(t[0], {})} for t in news]
+        cands = [_candidate(t[0], det.get(t[0])) for t in news]
         # detail 은 문자열(기존 화면 오류 표시가 그대로 읽는다), 구조화 정보는 최상위 칸
         body = {"detail": split_detail_text(cands), "key_status": "split", "message": SPLIT_MESSAGE,
                 "old_key": old, "candidates": cands}

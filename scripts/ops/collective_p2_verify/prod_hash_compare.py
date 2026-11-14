@@ -36,7 +36,7 @@ sys.path.insert(0, str(HERE))
 
 from _common import (  # noqa: E402
     EXIT, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn, table_columns,
-    finalize_result, make_result, snapshot_failures, table_exists, write_json,
+    finalize_result, make_result, now_iso, snapshot_failures, table_exists, write_json,
 )
 
 # 이번 반영이 바꾸는 표(원장·부속·통계·연결표·보존 표). 보존 표(_p2_before)는 promote 로 같이 올라가므로 함께 비교한다.
@@ -110,7 +110,8 @@ def sums_sql(table: str, types: dict[str, str], exclude: list[str], cond: str) -
 def snapshot(conn, tables: list[str], *, exclude: list[str], id_chunks: int = 16, timeout_ms: int = 600_000,
              mode: str = "hash") -> dict:
     t = Timed()
-    out: dict = {"db": db_name(conn), "mode": mode, "exclude": exclude, "tables": {}}
+    out: dict = {"db": db_name(conn), "measured_at": now_iso(), "mode": mode, "exclude": exclude,
+                 "requested": list(tables), "tables": {}}
     minus = "".join(f" - '{c}'" for c in exclude)
     for tb in tables:
         if not table_exists(conn, tb):
@@ -159,12 +160,17 @@ def evaluate(a: dict, b: dict) -> dict:
         return {"status": DIFF, "diff": [("(설정)", "방식 다름", a.get("mode", "hash"), b.get("mode", "hash"))], "unverified": []}
     if a.get("exclude") != b.get("exclude"):
         diff.append(("(설정)", "제외 열 다름", a.get("exclude"), b.get("exclude")))
-    required = set(TARGETS.get(a.get("db"), [])) | set(TARGETS.get(b.get("db"), []))
-    for tb in sorted(set(a["tables"]) | set(b["tables"])):
+    # 필수 표 = DB 이름의 기본 대상(TARGETS) + 두 스냅샷이 요청한 표. 결과 JSON 의 키가 아니라 이 목록을 순회한다
+    # (JSON 에서 표 하나가 빠져 있어도 「비교할 게 없어 통과」가 되지 않게).
+    required = (set(TARGETS.get(a.get("db"), [])) | set(TARGETS.get(b.get("db"), []))
+                | set(a.get("requested") or []) | set(b.get("requested") or []))
+    for tb in sorted(required | set(a["tables"]) | set(b["tables"])):
         x, y = a["tables"].get(tb), b["tables"].get(tb)
+        if tb in required and (x is None or y is None):
+            where = "양쪽" if x is None and y is None else "왼쪽" if x is None else "오른쪽"
+            unv.append((tb, f"필수 표 없음({where})"))
+            continue
         if x is None and y is None:
-            if tb in required:
-                unv.append((tb, "필수 표 없음"))
             continue
         if x is None or y is None:
             diff.append((tb, "—", "표 없음" if x is None else "있음", "표 없음" if y is None else "있음"))
@@ -219,7 +225,8 @@ def pg_result(a: dict, b: dict) -> dict:
     obj = make_result(kind="prod_hash_pgcheck", status=status, left_db=a.get("db"), right_db=b.get("db"),
                       diff=len(es["diff"]) if status == "diff" else 0, unverified=unv, failures=fails,
                       detail={"verdict": verdict, "use_mode": mode,
-                              "server_versions": [a.get("server_version"), b.get("server_version")]})
+                              "server_versions": [a.get("server_version"), b.get("server_version")]},
+                      snapshots=tuple(s.get(m) or {} for s in (a, b) for m in ("hash", "sums")))
     out = finalize_result(obj, [a.get("db")])
     if out["status"] != "pass":
         out["use_mode"] = None
@@ -235,7 +242,7 @@ def hash_result(left: dict, right: dict, r: dict) -> dict:
             unv.append(f"{s.get('db')}: 스냅샷에 표가 없음")
     obj = make_result(kind="prod_hash_compare", status=r["status"], left_db=left.get("db"), right_db=right.get("db"),
                       diff=len(r["diff"]), unverified=unv, failures=snapshot_failures(left, right),
-                      detail={"mode": left.get("mode", "hash")})
+                      detail={"mode": left.get("mode", "hash")}, snapshots=(left, right))
     return finalize_result(obj, [left.get("db")])
 
 

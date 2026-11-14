@@ -371,7 +371,7 @@ def test_hash_compare_three_states_and_default_targets(fx, tmp_path):
     assert hc.evaluate(s1, diff)["status"] == "diff"
     req = {**s1, "db": "collective_stats", "tables": {**s1["tables"], "market_stats": None}}
     r = hc.evaluate(req, req)                                                        # 필수 표가 양쪽 모두 없음
-    assert r["status"] == "unverified" and ("market_stats", "필수 표 없음") in r["unverified"]
+    assert r["status"] == "unverified" and ("market_stats", "필수 표 없음(양쪽)") in r["unverified"]
     f1, f2, out = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "r.json"
     C.write_json(f1, s1)
     C.write_json(f2, s1)
@@ -538,3 +538,93 @@ def test_pgcheck_result_states(fx, tmp_path):
     C.write_json(f2, other)
     assert hc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 1
     assert json.loads(out.read_text(encoding="utf-8"))["status"] == "diff"
+
+
+# --- 3차 검토(C-2 리허설 전 필수 4건) -----------------------------------------------------------
+
+def test_guard_query_allowlist_and_dsn_bypass():
+    """URL 쿼리는 sslmode·connect_timeout·application_name 만. Codex 재현 `?dsn=host%3D192.0.2.1` 은 거부."""
+    import ops_guards as og
+
+    ok = "postgresql+psycopg2://u:p@localhost:5432/x?sslmode=require&connect_timeout=5&application_name=ch2"
+    assert og.assert_local_target(ok, environ={}) == ["localhost"]
+    for url in (
+        "postgresql+psycopg2://u:p@localhost:5432/x?dsn=host%3D192.0.2.1",       # Codex 재현
+        "postgresql+psycopg2://u:p@/x?dsn=host%3D192.0.2.1",                      # 호스트 없이 dsn 만
+        "postgresql+psycopg2://u:p@localhost/x?options=-c%20foo%3Dbar",
+        "postgresql+psycopg2://u:p@localhost/x?target_session_attrs=any",
+        "postgresql+psycopg2://u:p@localhost/x?SSLMODE=require",                  # 대소문자 바꾼 키도 허용 밖
+        "postgresql+psycopg2://u:p@localhost/x?passfile=/tmp/p",
+    ):
+        with pytest.raises(og.TargetError, match="허용되지 않은"):
+            og.assert_local_target(url, environ={})
+
+
+def test_guard_reads_hosts_from_final_driver_dsn():
+    """허용 목록을 통과한 뒤에도 판정은 psycopg2 최종 DSN(parse_dsn) 기준 — dsn 문자열 안 호스트가 드러나는지."""
+    import ops_guards as og
+
+    kw = og.libpq_params("postgresql+psycopg2://u:p@localhost:5432/x")
+    assert kw["host"] == "localhost" and kw["dbname"] == "x"
+    from psycopg2.extensions import make_dsn, parse_dsn
+
+    hidden = dict(parse_dsn(make_dsn("host=192.0.2.1", dbname="x")))          # 쿼리 검사가 없었다면 이 값이 쓰였다
+    hosts = og.final_hosts(hidden, {})
+    assert hosts == ["192.0.2.1"] and not og._is_loopback(hosts[0])
+
+
+def test_hash_compare_iterates_required_tables_built_scope_missing(tmp_path):
+    """Codex 재현: 결과 JSON 에서 built_scope_stats 가 빠져 있으면 예전에는 비교할 게 없어 통과. 필수 표 목록을 순회해 검증 못 함(2)."""
+    import json
+
+    import _common as C
+
+    hc = _load(OPS / "prod_hash_compare.py", "hc_req")
+    t = C.now_iso()
+    base = {"db": "built_stats", "measured_at": t, "mode": "hash", "exclude": [], "requested": ["built_transactions", "built_scope_stats"],
+            "tables": {"built_transactions": {"id1": [3, "h"]}, "built_scope_stats": {"all": [2, "h2"]}}, "_timings": []}
+    assert hc.evaluate(base, base)["status"] == "pass"
+    for broken in (
+        {**base, "tables": {"built_transactions": {"id1": [3, "h"]}}},                       # 키 자체가 빠짐
+        {**base, "tables": {"built_transactions": {"id1": [3, "h"]}}, "requested": ["built_transactions"]},  # 요청 목록도 조작
+    ):
+        r = hc.evaluate(base, broken)
+        assert r["status"] == "unverified" and ("built_scope_stats", "필수 표 없음(오른쪽)") in r["unverified"], r
+    f1, f2, out = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "r.json"
+    C.write_json(f1, base)
+    C.write_json(f2, {**base, "tables": {"built_transactions": {"id1": [3, "h"]}}})
+    assert hc.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2
+    assert json.loads(out.read_text(encoding="utf-8"))["status"] == "unverified"
+
+
+def test_result_time_is_oldest_snapshot_measured_at(fx, tmp_path):
+    """Codex 재현: 72시간 된 스냅샷을 지금 다시 compare 하면 예전에는 결과 시각이 「지금」이라 48시간 검사를 통과했다.
+    결과 시각 = 입력 스냅샷 중 가장 오래된 measured_at → 검증 못 함(2)."""
+    import datetime as dt
+    import json
+
+    import _common as C
+    import ops_guards as og
+
+    sc = _load(OPS / "prod_sync_check.py", "sc_t")
+    hc = _load(OPS / "prod_hash_compare.py", "hc_t")
+    url, _ = fx
+    with C.ro_conn(url) as c:
+        snap = sc.snapshot(c, allow_heavy=True, heavy_rows=-1)
+        hs = hc.snapshot(c, ["collective_transactions"], exclude=[])
+    assert snap["measured_at"] and hs["measured_at"] and hs["requested"] == ["collective_transactions"]
+    old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=72)).isoformat()
+    f1, f2, out = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "r.json"
+    for mod, good, kind in ((sc, snap, "prod_sync_check"), (hc, hs, "prod_hash_compare")):
+        C.write_json(f1, good)
+        C.write_json(f2, good)
+        assert mod.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 0
+        res = json.loads(out.read_text(encoding="utf-8"))
+        assert res["created_at"] == good["measured_at"] and res["compared_at"]           # 결과 시각 = 측정 시각
+        C.write_json(f2, {**good, "measured_at": old})                                   # 한쪽이 72시간 전
+        assert mod.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2
+        res = json.loads(out.read_text(encoding="utf-8"))
+        assert res["created_at"] == old and any("오래됨" in w for w in res.get("validation", [])), res
+        assert og.validate_result(res, [good["db"]], kind=kind)[0] == "unverified"
+        C.write_json(f2, {k: v for k, v in good.items() if k != "measured_at"})          # 측정 시각 없음
+        assert mod.main(["compare", str(f1), str(f2), "--result-out", str(out)]) == 2

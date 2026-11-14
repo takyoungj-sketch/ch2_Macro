@@ -13,7 +13,7 @@ import { keyStatusFromError } from "../../src/api/client";
 
 type Row = { building_key: string; display_name: string; count: number; median: number };
 const CUR: Row = { building_key: "a".repeat(64), display_name: "한빛", count: 120, median: 900 };
-const CAND: KeySplitC2Candidate = { building_key: "b".repeat(64), split_part: 1, n_tx: 30, display_name: "한빛", addr3: "상록구", addr4: "사동" };
+const CAND: KeySplitC2Candidate = { building_key: "b".repeat(64), display_name: "한빛", addr3: "상록구", addr4: "사동" };
 
 function Selected({ row }: { row: Row }) {
   return <p>{`${row.display_name} · ${row.count}건 · 중앙값 ${row.median}`}</p>;

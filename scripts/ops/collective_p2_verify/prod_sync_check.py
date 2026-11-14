@@ -25,7 +25,7 @@ sys.path.insert(0, str(HERE))
 
 from _common import (  # noqa: E402
     EXIT, LIGHT_MS, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn,
-    finalize_result, make_result, snapshot_failures, table_columns, write_json,
+    finalize_result, make_result, now_iso, snapshot_failures, table_columns, write_json,
 )
 
 LEDGERS = ("collective_transactions", "collective_commercial_transactions", "rent_transactions", "built_transactions")
@@ -44,7 +44,7 @@ PROD_WRITTEN = ("collective_building_geocodes", "collective_commercial_map_geoco
 
 def snapshot(conn, *, allow_heavy: bool, heavy_ms: int = 300_000, heavy_rows: int = HEAVY_ROWS) -> dict:
     t = Timed()
-    out: dict = {"db": db_name(conn), "tables": {}}
+    out: dict = {"db": db_name(conn), "measured_at": now_iso(), "tables": {}}
     stats = t.run(conn, "표 목록·추정 행 수", """
         SELECT c.relname, greatest(c.reltuples, 0)::bigint
         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -103,7 +103,7 @@ def result_of(left: dict, right: dict, r: dict) -> dict:
             unv.append(f"{s.get('db')}: 스냅샷에 표가 없음")
     obj = make_result(kind="prod_sync_check", status=r["status"], left_db=left.get("db"), right_db=right.get("db"),
                       diff=len(r["diff"]), unverified=unv, failures=snapshot_failures(left, right),
-                      detail={"allowed_diff": len(r["allowed_diff"])})
+                      detail={"allowed_diff": len(r["allowed_diff"])}, snapshots=(left, right))
     return finalize_result(obj, [left.get("db")])
 
 

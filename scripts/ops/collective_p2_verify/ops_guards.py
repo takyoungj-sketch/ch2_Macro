@@ -3,10 +3,13 @@
 
 운영 서버에는 pipeline 이 배포되지 않으므로 이 파일은 표준 라이브러리 + SQLAlchemy 만 쓴다(운영 확인 폴더와 함께 복사).
 
-- assert_local_target(engine | URL): libpq 가 최종으로 쓸 접속 인자로 호스트를 판정해 로컬 루프백만 허용.
-    · SQLAlchemy dialect.create_connect_args 결과(URL 쿼리의 host·hostaddr 포함)
+- assert_local_target(engine | URL): **허용 목록 방식.** 드라이버가 최종 해석한 접속 정보로 호스트를 판정해 로컬 루프백만 허용.
+    · URL 쿼리는 sslmode·connect_timeout·application_name 만 허용. 그 밖(dsn·service·host·hostaddr·options …)은 모두 거부
+    · psycopg2 에 실제로 넘어갈 DSN(SQLAlchemy create_connect_args → psycopg2.extensions.make_dsn)을 parse_dsn 으로 풀어
+      host·hostaddr 를 본다(`?dsn=host%3D…` 처럼 dsn 문자열 안에 숨은 호스트도 드러난다)
     · hostaddr 가 없으면 PGHOSTADDR, host 가 없으면 PGHOST 환경변수(libpq 규칙 — hostaddr 는 host 보다 먼저 쓰인다)
     · service(인자·PGSERVICE)·PGSERVICEFILE 이 있으면 실제 호스트를 알 수 없으므로 거부
+    · host·hostaddr 가 하나라도 루프백(localhost·127.0.0.0/8·::1·유닉스 소켓)이 아니면 거부
 - validate_result(obj, expected_targets, kind=…): compare 결과 파일 검증. 하나라도 어긋나면 「검증 못 함」.
     필수 필드·형식 / 측정 시각(미래 금지, 48시간 이내) / 대상 목록 일치 / 실패 기록 없음 / diff·unverified 모두 0
 """
@@ -42,15 +45,30 @@ def _is_loopback(h: str) -> bool:
         return False
 
 
-def libpq_params(target: Any) -> dict:
-    """SQLAlchemy 가 psycopg2(libpq)에 넘길 접속 인자. target = Engine 또는 URL 문자열·URL 객체. 접속하지 않는다."""
-    from sqlalchemy import create_engine
+ALLOWED_QUERY = frozenset({"sslmode", "connect_timeout", "application_name"})
+
+
+def _url_of(target: Any):
     from sqlalchemy.engine import Engine, make_url
 
     if isinstance(target, Engine):
-        _a, kw = target.dialect.create_connect_args(target.url)
-        return dict(kw)
-    u = make_url(target) if not hasattr(target, "drivername") else target
+        return target.url
+    return make_url(target) if not hasattr(target, "drivername") else target
+
+
+def check_query(target: Any) -> None:
+    """URL 쿼리 허용 목록. 허용 밖 키가 하나라도 있으면 TargetError(키 이름만 알리고 값은 출력하지 않음)."""
+    bad = sorted(k for k in _url_of(target).query if k not in ALLOWED_QUERY)
+    if bad:
+        raise TargetError(f"URL 쿼리에 허용되지 않은 접속 옵션: {bad} (허용: {sorted(ALLOWED_QUERY)})")
+
+
+def libpq_params(target: Any) -> dict:
+    """psycopg2(libpq)가 최종으로 쓰는 접속 정보. target = Engine 또는 URL. 접속하지 않는다.
+    SQLAlchemy create_connect_args → psycopg2.extensions.make_dsn(dsn 문자열 + 키워드 합치기) → parse_dsn."""
+    from sqlalchemy import create_engine
+
+    u = _url_of(target)
     if u.drivername == "postgresql":
         u = u.set(drivername="postgresql+psycopg2")
     eng = create_engine(u)
@@ -58,7 +76,18 @@ def libpq_params(target: Any) -> dict:
         _a, kw = eng.dialect.create_connect_args(eng.url)
     finally:
         eng.dispose()
-    return dict(kw)
+    kw = dict(kw)
+    try:
+        from psycopg2.extensions import make_dsn, parse_dsn
+    except ImportError:                                     # psycopg2 없으면 키워드 그대로(dsn 이 있으면 판정 불가)
+        if "dsn" in kw:
+            raise TargetError("dsn 접속 문자열을 풀 수 없음(psycopg2 없음)") from None
+        return kw
+    dsn = kw.pop("dsn", None)
+    try:
+        return dict(parse_dsn(make_dsn(dsn, **{k: v for k, v in kw.items() if v is not None})))
+    except Exception as ex:  # noqa: BLE001
+        raise TargetError(f"접속 정보를 해석할 수 없음: {type(ex).__name__}") from None
 
 
 def final_hosts(kw: Mapping[str, Any], environ: Mapping[str, str] | None = None) -> list[str]:
@@ -75,6 +104,7 @@ def final_hosts(kw: Mapping[str, Any], environ: Mapping[str, str] | None = None)
 
 def assert_local_target(target: Any, *, environ: Mapping[str, str] | None = None) -> list[str]:
     """로컬 루프백(localhost·127.0.0.0/8·::1·유닉스 소켓)만 허용. 값(비밀번호 등)은 메시지에 넣지 않는다."""
+    check_query(target)
     kw = libpq_params(target)
     hosts = final_hosts(kw, environ)
     if not hosts:

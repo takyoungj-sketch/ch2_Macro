@@ -75,7 +75,7 @@ export default function BuildingRegressionPage() {
                       <li key={c.building_key}>
                         <a className="text-blue-600 hover:underline dark:text-blue-400" href={u.toString()}>
                           {c.display_name || params.displayName || "단지"}
-                          {where ? ` · ${where}` : ""} · {c.n_tx.toLocaleString()}건
+                          {where ? ` · ${where}` : ""}
                         </a>
                       </li>
                     );

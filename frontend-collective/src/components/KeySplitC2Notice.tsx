@@ -3,10 +3,9 @@
  * 서버(key_remap)는 옛 키를 가장 큰 그룹으로 열고 응답에 key_split_c2 를 붙인다. 이 안내는 그 사실과 분리된 단지 링크를 보여 준다.
  * (C-01 분할 409 화면은 BuildingKeySplitGuard 의 기존 대화상자 그대로)
  */
+/** 후보 — 키·이름·동만(서버가 통계 숫자를 내보내지 않는다. 건수가 필요하면 목록 API 에서) */
 export type KeySplitC2Candidate = {
   building_key: string;
-  split_part: number;
-  n_tx: number;
   display_name?: string;
   addr3?: string | null;
   addr4?: string | null;
@@ -26,7 +25,7 @@ export const C2_NOTICE_TEXT = "같은 이름의 단지 중 가장 큰 단지를 
 export function c2CandidateLabel(c: KeySplitC2Candidate, fallbackName?: string): string {
   const where = [c.addr3, c.addr4, c.addr5].filter(Boolean).join(" ");
   const name = c.display_name || fallbackName || "단지";
-  return `${name}${where ? ` · ${where}` : ""} · ${c.n_tx.toLocaleString()}건`;
+  return `${name}${where ? ` · ${where}` : ""}`;
 }
 
 export function hasC2Siblings(note: KeySplitC2Note | null | undefined): note is KeySplitC2Note {

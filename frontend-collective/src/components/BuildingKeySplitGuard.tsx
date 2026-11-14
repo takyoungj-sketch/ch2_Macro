@@ -71,7 +71,7 @@ export default function BuildingKeySplitGuard({
             return (
               <li key={c.building_key}>
                 {c.display_name || displayName || "단지"}
-                {where ? ` · ${where}` : ""} · {c.n_tx.toLocaleString()}건
+                {where ? ` · ${where}` : ""}
               </li>
             );
           })}

@@ -64,10 +64,11 @@ def test_split_returns_409_with_candidates():
     assert r.status_code == 409
     d = r.json()
     assert isinstance(d["detail"], str) and "여러" not in d["detail"] or "나뉘었습니다" in d["detail"]
-    assert "삼일(우암동, 7건)" in d["detail"]
+    assert "삼일(우암동)" in d["detail"] and "건" not in d["detail"]          # 안내문에 건수 없음
     assert d["key_status"] == "split" and d["old_key"] == OLDS
     assert [x["building_key"] for x in d["candidates"]] == [P1, P2]
-    assert d["candidates"][0]["addr4"] == "우암동" and d["candidates"][1]["n_tx"] == 3
+    assert d["candidates"][0]["addr4"] == "우암동"
+    assert all(set(c) <= {"building_key", "display_name", "addr3", "addr4", "addr5"} for c in d["candidates"])
     assert c.get(f"/api/rent/buildings/{OLDS}/rolling").status_code == 409
 
 
@@ -270,3 +271,48 @@ def test_loader_marks_c2_rows_from_reason():
     m = kr._load_from_engine(_Eng(), "collective_building_key_map")
     assert m[K] == [(K1, 1, 30, ""), (K2, 2, 10, "")]
     assert m[K1] == [(K1A, 1, 6, "c2")] and m[H_OLD] == [(H_NEW, 0, 5, "")]
+
+
+
+def _numbers(obj, path=""):
+    """JSON 안의 숫자 값(정수·실수) 위치 목록. bool 은 숫자로 보지 않는다."""
+    out = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            out += _numbers(v, f"{path}.{k}")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            out += _numbers(v, f"{path}[{i}]")
+    elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
+        out.append(path)
+    return out
+
+
+def test_key_status_has_no_statistics_for_anonymous(monkeypatch):
+    """/key-status 는 비로그인에게도 열린다 → C-01 409 본문·안내문과 C-2 후보 목록에 통계 숫자가 없어야 한다.
+    실제 앱(product_gate → key_remap 순서)으로 쿠키 없이 부른다."""
+    from app import main
+    from app.collective import key_remap as kr
+    from fastapi.testclient import TestClient
+
+    maps = {"collective": {OLDS: [(P1, 1, 7), (P2, 2, 3)], C2ONLY: [(C2A, 1, 8, "c2"), (C2B, 2, 3, "c2")]}}
+    monkeypatch.setattr(kr.CACHE, "_loader", lambda name: maps.get(name, {}))
+    monkeypatch.setattr(kr.CACHE, "_ttl", 0)
+    kr.CACHE.clear()
+    # 상세 함수가 건수를 섞어 돌려줘도(예전 n_tx_window) 응답에는 나가지 않는다
+    monkeypatch.setattr(kr, "_default_details", lambda a, ks: {
+        k: {"display_name": "삼일", "addr4": "우암동", "n_tx_window": 99, "count": 5} for k in ks})
+    c = TestClient(main.app)
+    r = c.get(f"/api/collective/buildings/{OLDS}/key-status")
+    assert r.status_code == 409
+    body = r.json()
+    assert _numbers(body) == [], _numbers(body)
+    assert not any(ch.isdigit() for ch in body["detail"]) and not any(ch.isdigit() for ch in body["message"])
+    assert [x["building_key"] for x in body["candidates"]] == [P1, P2]
+    r = c.get(f"/api/collective/buildings/{C2ONLY}/key-status")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["key_split_c2"]["new_keys"] == [C2A, C2B]
+    assert _numbers(body) == [], _numbers(body)
+    assert all(set(x) <= {"building_key", "display_name", "addr3", "addr4", "addr5"} for x in body["key_split_c2"]["candidates"])
+    kr.CACHE.clear()

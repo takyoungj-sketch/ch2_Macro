@@ -49,8 +49,8 @@ def _fmt_impossible(env: ToolEnvelope) -> str:
         names = []
         for c in split[:6]:
             where = " ".join(str(x) for x in (c.get("addr3"), c.get("addr4"), c.get("addr5")) if x)
-            names.append(f"{c.get('display_name') or '단지'}({where}, {c.get('n_tx', 0)}건)" if where
-                         else f"{c.get('display_name') or '단지'}({c.get('n_tx', 0)}건)")
+            # 후보에는 건수가 없다(키 상태 응답은 숫자를 내보내지 않음) — 이름·동만
+            names.append(f"{c.get('display_name') or '단지'}({where})" if where else f"{c.get('display_name') or '단지'}")
         parts.append("후보: " + ", ".join(names) + ".")
     missing = env.facts.get("missing")
     if missing:
