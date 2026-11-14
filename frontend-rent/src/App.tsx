@@ -20,6 +20,7 @@ import { Ai2HeaderSlot, singleScreenRegion } from "@ch2/ai2-entry/Ai2Entry";
 import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import RentKeySplitGuard from "./components/RentKeySplitGuard";
+import { CandidateSwitchStatus, switchToCandidate, type CandidateSwitchState } from "./components/candidateSwitch";
 import RentAnalysisGuide from "./components/RentAnalysisGuide";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
@@ -121,6 +122,7 @@ export default function App() {
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [selected, setSelected] = useState<RentBuildingRow | null>(null);
+  const [candSwitch, setCandSwitch] = useState<CandidateSwitchState>({ status: "idle" });
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const [showSangkwon, setShowSangkwon] = useState(false);
   const [sangkwonOn, setSangkwonOn] = useState(false);
@@ -661,12 +663,29 @@ export default function App() {
           buildingKey={selected.building_key}
           displayName={selected.display_name}
           onOpenKey={(key, cand) => {
-            // C-2 분리된 단지: 지금 목록에 있으면 그 행으로, 없으면 이름만 바꿔 같은 화면으로 연다(상세는 키로 다시 조회)
-            const hit = items.find((r) => r.building_key === key);
-            setSelected(hit ?? { ...selected, building_key: key, display_name: cand.display_name || selected.display_name });
+            // C-2 분리된 단지: 기존 행을 복사하지 않고 후보 키의 실제 목록 행을 다시 조회한 뒤 연다(로딩·실패 안내)
+            const sel = selected;
+            void switchToCandidate<RentBuildingRow>(key, cand, {
+              label: cand.display_name || sel.display_name || "분리된 단지",
+              fetchRows: async (f) =>
+                (
+                  await fetchRentBuildings({
+                    addr1: scope.addr1,
+                    addr2: scope.addr2,
+                    addr3List: f.addr3List.length ? f.addr3List : undefined,
+                    addr4List: f.addr4List.length ? f.addr4List : undefined,
+                    assetTypes: [sel.asset_type as RentAssetType],
+                    windowYears: scope.windowYears,
+                    sort: "count",
+                  })
+                ).items,
+              setSelected,
+              setState: setCandSwitch,
+            });
           }}
         >
         <BuildingDetailModal
+          key={selected.building_key}
           row={selected}
           windowYears={scope.windowYears}
           peers={items.filter((r) => r.asset_type === selected.asset_type)}
@@ -680,6 +699,7 @@ export default function App() {
         />
         </RentKeySplitGuard>
       )}
+      <CandidateSwitchStatus state={candSwitch} onDismiss={() => setCandSwitch({ status: "idle" })} />
       {showSangkwon && addr2 && (
         <SangkwonAnalysisModal
           scope={{ addr1, addr2, sangkwonGuList }}

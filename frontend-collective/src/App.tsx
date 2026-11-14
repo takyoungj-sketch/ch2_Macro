@@ -18,6 +18,7 @@ import BuildingStatsTable, { buildingMatchesQuery } from "./components/BuildingS
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import BuildingKeySplitGuard from "./components/BuildingKeySplitGuard";
+import { CandidateSwitchStatus, switchToCandidate, type CandidateSwitchState } from "./components/candidateSwitch";
 import RegionalRegressionModal from "./components/RegionalRegressionModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
@@ -154,6 +155,7 @@ export default function App() {
   }, [narrow]);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
+  const [candSwitch, setCandSwitch] = useState<CandidateSwitchState>({ status: "idle" });
   const [regionalOpen, setRegionalOpen] = useState(false);
   const [aiHint, setAiHint] = useState<string | null>(null);
   const [buildingSearch, setBuildingSearch] = useState("");
@@ -864,12 +866,28 @@ export default function App() {
           displayName={selected.display_name}
           onClose={() => setSelected(null)}
           onOpenKey={(key, cand) => {
-            // C-2 분리된 단지: 지금 목록에 있으면 그 행으로, 없으면 이름만 바꿔 같은 화면으로 연다(상세는 키로 다시 조회)
-            const hit = (buildingsQ.data?.items ?? []).find((r) => r.building_key === key);
-            setSelected(hit ?? { ...selected, building_key: key, display_name: cand.display_name || selected.display_name });
+            // C-2 분리된 단지: 기존 행을 복사하지 않고 후보 키의 실제 목록 행을 다시 조회한 뒤 연다(로딩·실패 안내)
+            const sel = selected;
+            void switchToCandidate<BuildingStatsRow>(key, cand, {
+              label: cand.display_name || sel.display_name || "분리된 단지",
+              fetchRows: async (f) =>
+                (
+                  await fetchAllBuildings({
+                    asset_type: sel.asset_type as AssetSelectorType,
+                    addr1: scope.addr1,
+                    addr2: scope.addr2,
+                    addr3_list: f.addr3List,
+                    addr4_list: f.addr4List,
+                    window_years: scope.windowYears,
+                  })
+                ).items,
+              setSelected,
+              setState: setCandSwitch,
+            });
           }}
         >
         <BuildingDetailModal
+          key={selected.building_key}
           row={selected}
           assetType={scope.assetType}
           windowYears={scope.windowYears}
@@ -884,6 +902,7 @@ export default function App() {
         />
         </BuildingKeySplitGuard>
       )}
+      <CandidateSwitchStatus state={candSwitch} onDismiss={() => setCandSwitch({ status: "idle" })} />
     </div>
     </ActiveAiViewProvider>
   );

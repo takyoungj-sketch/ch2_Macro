@@ -143,17 +143,28 @@ export async function fetchRbDistribution() {
   return data;
 }
 
-/** 집합 2단계 — 임대 단지 키 상태. C-2 옛 키면 key_split_c2(가장 큰 그룹으로 열림). 실패·409 는 null(화면을 막지 않음). */
-export async function fetchRentKeyStatus(
-  buildingKey: string,
-): Promise<{ key_status: "ok"; building_key: string; key_split_c2?: KeySplitC2Note } | null> {
+export type RentKeyStatus =
+  | { key_status: "ok"; building_key: string; key_split_c2?: KeySplitC2Note }
+  /** C-01 분할 옛 키(409) — 임대 화면은 지금처럼 그대로 연다 */
+  | { key_status: "split"; building_key: string }
+  /** 조회 실패(401·403·5xx·연결) — 「정상」이 아니라 「확인 불가」 */
+  | { key_status: "unknown"; building_key: string; reason: string };
+
+export function rentKeyStatusFromError(e: unknown, buildingKey: string): RentKeyStatus {
+  const status = (e as { response?: { status?: number } }).response?.status;
+  if (status === 409) return { key_status: "split", building_key: buildingKey };
+  return { key_status: "unknown", building_key: buildingKey, reason: status ? `HTTP ${status}` : "연결 실패" };
+}
+
+/** 집합 2단계 — 임대 단지 키 상태. C-2 옛 키면 key_split_c2(가장 큰 그룹으로 열림). 실패는 확인 불가(화면은 막지 않음). */
+export async function fetchRentKeyStatus(buildingKey: string): Promise<RentKeyStatus> {
   try {
     const { data } = await api.get<{ key_status: "ok"; building_key: string; key_split_c2?: KeySplitC2Note }>(
       `/buildings/${encodeURIComponent(buildingKey)}/key-status`,
     );
     return data;
-  } catch {
-    return null;
+  } catch (e) {
+    return rentKeyStatusFromError(e, buildingKey);
   }
 }
 

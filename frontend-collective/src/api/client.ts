@@ -600,7 +600,17 @@ export type BuildingKeyCandidate = {
 };
 export type BuildingKeyStatus =
   | { key_status: "ok"; building_key: string; key_split_c2?: KeySplitC2Note }
-  | { key_status: "split"; old_key: string; message: string; candidates: BuildingKeyCandidate[] };
+  | { key_status: "split"; old_key: string; message: string; candidates: BuildingKeyCandidate[] }
+  /** 조회 실패(401·403·5xx·네트워크) — 「정상」이 아니라 「확인 불가」 */
+  | { key_status: "unknown"; building_key: string; reason: string };
+
+/** key-status 오류 → 409 분할이면 후보, 그 밖(401·403 포함)은 확인 불가. */
+export function keyStatusFromError(e: unknown, buildingKey: string): BuildingKeyStatus {
+  const resp = (e as { response?: { status?: number; data?: unknown } }).response;
+  const body = resp?.data as (BuildingKeyStatus & { detail?: string }) | undefined;
+  if (resp?.status === 409 && body && body.key_status === "split") return body;
+  return { key_status: "unknown", building_key: buildingKey, reason: resp?.status ? `HTTP ${resp.status}` : "연결 실패" };
+}
 
 export async function fetchBuildingKeyStatus(buildingKey: string): Promise<BuildingKeyStatus> {
   try {
@@ -609,10 +619,7 @@ export async function fetchBuildingKeyStatus(buildingKey: string): Promise<Build
     );
     return data;
   } catch (e: unknown) {
-    const resp = (e as { response?: { status?: number; data?: unknown } }).response;
-    const body = resp?.data as (BuildingKeyStatus & { detail?: string }) | undefined;
-    if (resp?.status === 409 && body && body.key_status === "split") return body;
-    // 키 확인 실패는 화면을 막지 않는다 — 원래 키로 진행
-    return { key_status: "ok", building_key: buildingKey };
+    // 키 확인 실패는 화면을 막지 않되 「정상」으로 보지 않는다 — 확인 불가 안내와 함께 원래 키로 진행
+    return keyStatusFromError(e, buildingKey);
   }
 }

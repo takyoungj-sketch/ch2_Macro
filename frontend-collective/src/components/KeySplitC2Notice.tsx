@@ -33,6 +33,21 @@ export function hasC2Siblings(note: KeySplitC2Note | null | undefined): note is 
   return !!note && note.status === "has_split_siblings" && note.candidates.length > 0;
 }
 
+export const KEY_STATUS_UNKNOWN_TEXT = "단지 분리 여부를 확인할 수 없습니다.";
+
+/** key-status 조회 실패(401·403·5xx·연결) — 정상으로 보지 않고 「확인 불가」로 알린다. */
+export function KeyStatusUnknownNotice({ reason }: { reason?: string }) {
+  return (
+    <div
+      className="fixed left-1/2 top-3 z-[60] w-[min(92vw,30rem)] -translate-x-1/2 rounded-lg border border-slate-300 bg-slate-50 p-2 text-xs text-slate-700 shadow dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+      role="status"
+      data-testid="key-status-unknown"
+    >
+      {KEY_STATUS_UNKNOWN_TEXT} 같은 이름의 다른 단지가 섞여 있을 수 있습니다.{reason ? ` (${reason})` : ""}
+    </div>
+  );
+}
+
 export default function KeySplitC2Notice({
   note,
   displayName,

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { fetchBuildingKeyStatus, type BuildingKeyStatus } from "../api/client";
-import KeySplitC2Notice, { hasC2Siblings, type KeySplitC2Candidate } from "./KeySplitC2Notice";
+import KeySplitC2Notice, { KeyStatusUnknownNotice, hasC2Siblings, type KeySplitC2Candidate } from "./KeySplitC2Notice";
 
 /**
  * 집합 2단계 — 분할된 옛 단지 키로 상세를 열면 후보를 보여 준다.
@@ -9,8 +9,9 @@ import KeySplitC2Notice, { hasC2Siblings, type KeySplitC2Candidate } from "./Key
  * C-2(같은 동 동명 다른 건물) 옛 키 = 가장 큰 그룹으로 열림 → 상세를 보여 주고 위에 분리 안내(KeySplitC2Notice).
  */
 /** 어떤 화면을 그릴지(테스트용으로 분리): C-01 분할 → split 대화상자 / C-2 → 상세 + 분리 안내 / 그 밖 → 상세만 */
-export function guardMode(status: BuildingKeyStatus | null): "split" | "c2" | "children" {
+export function guardMode(status: BuildingKeyStatus | null): "split" | "c2" | "unknown" | "children" {
   if (status?.key_status === "split") return "split";
+  if (status?.key_status === "unknown") return "unknown";
   if (status?.key_status === "ok" && hasC2Siblings(status.key_split_c2)) return "c2";
   return "children";
 }
@@ -42,6 +43,14 @@ export default function BuildingKeySplitGuard({
   }, [buildingKey]);
 
   const mode = guardMode(status);
+  if (mode === "unknown" && status?.key_status === "unknown") {
+    return (
+      <>
+        <KeyStatusUnknownNotice reason={status.reason} />
+        {children}
+      </>
+    );
+  }
   if (mode === "c2" && status?.key_status === "ok" && status.key_split_c2) {
     return (
       <>
