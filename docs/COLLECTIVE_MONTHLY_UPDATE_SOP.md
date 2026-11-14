@@ -76,6 +76,7 @@ py scripts\monthly\compare_collective_count_snapshots.py --before ... --after ..
 - [ ] asset_type별 건수·시도별 diff
 - [ ] `GET /api/collective/buildings?addr1=...&addr2=...` smoke
 - [ ] `backups/collective_stats_pre_promote_202607.dump` 보관
+- [ ] **자동 등록 C-2 조각 검토(T):** 월간 integrity(`integrity_p2`)의 「C-2 월간 적재 자동 등록 조각 N개(source=auto_ingest) — 판정 검토 대상」 경고가 있으면, 판정 표 `collective_building_key_c2_units` 의 `source='auto_ingest'` 행을 T 가 검토한다(같은 단지면 `part` 를 기존 조각으로 고치거나 행 삭제 후 재적재 판단). 집합 2단계 런북 [`docs/ops/COLLECTIVE_P2_RUNBOOK.md`](ops/COLLECTIVE_P2_RUNBOOK.md) 5.1 C-2 메모
 - [ ] **분양권:** 정규화 코드로 적재됐는지 · 대표 분열 단지(IPARK/공백)가 한 키인지 ([`COLLECTIVE_PRESALE_BUILDING_KEY.md`](COLLECTIVE_PRESALE_BUILDING_KEY.md))
 
 ### 4.1 분양권 building_key (매 cycle)
