@@ -137,7 +137,7 @@ def test_session_history_purged_by_current_features(monkeypatch):
         with session_owner("user:1"), ai_feature_scope(_req(), None):
             s = get_or_create(sid)
             s.add_turn(SessionTurn(role="assistant", message="일반 안내"))
-        assert s.analysis_history[0]["_features"] == ["land_ledger_link", "land_regression"]
+        assert s.analysis_history[0]["_features"] == {"v": 1, "used": ["land_ledger_link", "land_regression"]}
         assert len(s.turns) == 2  # 관리자 요청에서는 지우지 않는다
 
         _as_role(monkeypatch, "member")
@@ -226,20 +226,165 @@ def test_rent_floor_question_gets_collective_guidance(monkeypatch):
 
 # ── 저장된 AI 결과 ─────────────────────────────────────────────
 
-def test_stored_result_filtered_by_current_features():
-    from app.ai.feature_filter import stored_result_visible
+def _tag(*used):
+    return {"v": 1, "used": list(used)}
 
-    land_reg = {"answer": "표본 123건", "answer_context": {"app": "land", "panel": "LandRegressionTab"}}
-    rent_reg = {"answer": "x", "answer_context": {"app": "rent", "panel": "RentBuildingDetail", "화면": "regression"}}
-    ledger = {"answer": "x", "answer_context": {"app": "land", "panel": "TrendCard"}, "feature_tags": ["land_ledger_link"]}
-    plain = {"answer": "x", "answer_context": {"app": "land", "panel": "TrendCard"}, "feature_tags": []}
-    none = frozenset()
-    assert not stored_result_visible(land_reg, none)
-    assert not stored_result_visible(rent_reg, none)
-    assert not stored_result_visible(ledger, none)
-    assert stored_result_visible(plain, none)
-    for payload in (land_reg, rent_reg, ledger, plain):
-        assert stored_result_visible(payload, frozenset(FEATURES))
+
+def test_stored_result_filtered_by_current_features(monkeypatch):
+    from app.ai.feature_filter import ai_feature_scope, stored_result_visible
+
+    land_reg = {"answer": "표본 123건", "answer_context": {"app": "land", "panel": "LandRegressionTab"}, "feature_tags": _tag()}
+    rent_reg = {"answer": "x", "answer_context": {"app": "rent", "panel": "RentBuildingDetail", "화면": "regression"}, "feature_tags": _tag()}
+    ledger = {"answer": "x", "answer_context": {"app": "land", "panel": "TrendCard"}, "feature_tags": _tag("land_ledger_link")}
+    plain = {"answer": "x", "answer_context": {"app": "land", "panel": "TrendCard"}, "feature_tags": _tag()}
+    _as_role(monkeypatch, "member")
+    with ai_feature_scope(_req()):
+        assert not stored_result_visible(land_reg)
+        assert not stored_result_visible(rent_reg)
+        assert not stored_result_visible(ledger)
+        assert stored_result_visible(plain)
+    _as_role(monkeypatch, "admin")
+    with ai_feature_scope(_req()):
+        for payload in (land_reg, rent_reg, ledger, plain):
+            assert stored_result_visible(payload)
+
+
+# ── Codex 3차: 재생 허용 목록·표지 전파 ─────────────────────────────
+
+def test_untagged_past_answer_refused_for_users(monkeypatch):
+    """표지 없는(또는 옛 형식·비어 있는) 과거 답·근거는 비관리자에게 재생하지 않는다."""
+    from app.ai.feature_filter import ai_feature_scope, replay_allowed, stored_result_visible
+    from app.ai.sessions import MemorySessionStore, SessionTurn, get_or_create, session_owner, set_session_store
+
+    untagged = {"answer": "표본 123건", "answer_context": {"app": "land", "panel": "TrendCard"}}
+    old_list = {**untagged, "feature_tags": []}
+    empty = {**untagged, "feature_tags": {}}
+    _as_role(monkeypatch, "member")
+    with ai_feature_scope(_req()):
+        for payload in (untagged, old_list, empty):
+            assert not stored_result_visible(payload)
+        assert not replay_allowed(None)
+        assert replay_allowed(None, has_evidence=False)
+        assert replay_allowed(_tag())
+    _as_role(monkeypatch, "admin")
+    with ai_feature_scope(_req()):
+        assert stored_result_visible(untagged)
+
+    set_session_store(MemorySessionStore())
+    try:
+        with session_owner("user:9"):
+            s = get_or_create(None)
+            sid = s.session_id
+        # 표지 없이 들어간 옛 항목(예: 배포 전 세션)
+        s.turns.append(SessionTurn(role="assistant", message="표본 123건"))
+        s.analysis_history.append({"id": "old", "n": 123, "scope": {}})
+        _as_role(monkeypatch, "member")
+        with session_owner("user:9"), ai_feature_scope(_req()):
+            s = get_or_create(sid)
+        assert s.turns == [] and s.analysis_history == []
+    finally:
+        set_session_store(MemorySessionStore())
+
+
+class _FakeQuota:
+    """allowances 모듈 대역: 같은 요청 키면 저장된 결과를 재생한다."""
+
+    def __init__(self):
+        self.stored: dict[str, dict] = {}
+
+    def install(self, monkeypatch, role="member"):
+        from contextlib import contextmanager
+        from types import SimpleNamespace
+
+        from app.ai import allowances as quota
+
+        user = SimpleNamespace(id=7, role=role)
+        monkeypatch.setattr(quota, "request_user", lambda _r: user)
+        monkeypatch.setattr(quota, "grant_for_user", lambda _u: (object(), object()))
+        monkeypatch.setattr(quota, "snapshot", lambda _e, _g: {})
+
+        def reserve(engine, grant, feature, units, key, digest):
+            return quota.Ticket(engine=engine, grant=grant, id=key or "t", feature=feature, units=units,
+                                replay=self.stored.get(key))
+
+        def finish(ticket, payload=None, *, error=None):
+            if payload is not None:
+                self.stored[ticket.id] = payload
+
+        @contextmanager
+        def tracking(_ticket):
+            yield
+
+        monkeypatch.setattr(quota, "reserve", reserve)
+        monkeypatch.setattr(quota, "finish", finish)
+        monkeypatch.setattr(quota, "tracking", tracking)
+
+
+def _screen_model(monkeypatch):
+    def draft(*, user, system, json_response, timeout=45):
+        payload = json.loads(user)
+        if "passages" in payload:
+            return json.dumps({"general_indices": []})
+        for source in ("current", "previous"):
+            facts = payload["sources"].get(source, {}).get("facts", {})
+            if facts:
+                return json.dumps({"kind": "screen", "answer": "{{" + next(iter(facts)) + "}}입니다."}, ensure_ascii=False)
+        return json.dumps({"kind": "knowledge", "answer": "알려 주세요."}, ensure_ascii=False)
+
+    monkeypatch.setattr("app.ai.dialogue.llm._openai_chat", draft)
+
+
+def _quota_client(monkeypatch):
+    from app.config import settings
+
+    _open_gates(monkeypatch)
+    monkeypatch.setattr(settings, "ai_subscription_quota_enabled", True)
+    fake = _FakeQuota()
+    fake.install(monkeypatch)
+    _screen_model(monkeypatch)
+    _as_role(monkeypatch, "member")
+    monkeypatch.setenv("FEATURE_LAND_REGRESSION", "public")
+    return fake, _client_with_probes()
+
+
+def test_retry_with_same_key_does_not_replay_hidden_answer(monkeypatch):
+    """Codex 재현 1: 공개였을 때 저장된 회귀 답을, 비공개로 바뀐 뒤 같은 요청 키로 재시도해도 받지 못한다."""
+    fake, c = _quota_client(monkeypatch)
+    body = {"request_id": "req-1", "message": "표본은 몇 건이야?", "context": _land_regression_ctx()}
+    first = c.post("/api/ai/chat", json=body)
+    assert first.status_code == 200, first.text
+    assert "123" in first.json()["answer"]
+    assert fake.stored["req-1"]["feature_tags"] == _tag("land_regression")
+
+    monkeypatch.setenv("FEATURE_LAND_REGRESSION", "admin")
+    retry = c.post("/api/ai/chat", json=body)
+    assert retry.status_code == 404
+    assert "123" not in retry.text and "0.456" not in retry.text
+
+
+def test_empty_screen_followup_carries_previous_tags(monkeypatch):
+    """Codex 재현 2: 화면이 빈 상태의 재질문(previous 근거로 답)은 표지를 빈 목록이 아니라
+    이전 근거의 기능으로 저장한다(대화 턴과 저장 결과 모두)."""
+    from app.ai.feature_filter import ai_feature_scope, stored_result_visible
+    from app.ai.sessions import get_or_create, session_owner
+
+    fake, c = _quota_client(monkeypatch)
+    first = c.post("/api/ai/chat", json={"request_id": "a", "message": "표본?", "context": _land_regression_ctx()})
+    sid = first.json()["session_id"]
+    empty = {"app": "land", "panel": "TrendCard", "facts": {}}
+    second = c.post("/api/ai/chat", json={
+        "request_id": "b", "message": "아까 회귀 결과 다시 알려줘", "session_id": sid, "context": empty,
+    })
+    assert second.status_code == 200, second.text
+    assert "123" in second.json()["answer"]  # 공개 상태에서는 previous 로 답한다
+    assert fake.stored["b"]["feature_tags"] == _tag("land_regression")
+    with session_owner("user:7"):
+        turns = get_or_create(sid).turns
+    assert turns[-1].features == _tag("land_regression")
+
+    monkeypatch.setenv("FEATURE_LAND_REGRESSION", "admin")
+    with ai_feature_scope(_req()):
+        assert not stored_result_visible(fake.stored["b"])
 
 
 # ── 2. QA 토큰은 기능 경로의 구독 검사도 통과 ───────────────────────────

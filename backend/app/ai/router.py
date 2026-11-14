@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Query, Request, Response
 import secrets
 from app.ai.sessions import session_owner
-from app.ai.feature_filter import ai_feature_scope, current_used, filter_ai_body, stored_result_visible
+from app.ai.feature_filter import ai_feature_scope, filter_ai_body, make_tag, stored_result_visible
 from app.platform.jwt_util import COOKIE_NAME, decode_access_token
 
 from app.ai.bundles.registry import BUNDLE_REGISTRY, suggested_questions
@@ -91,6 +91,9 @@ def _run_with_allowance(body, request, response, handler):
         body.request_id or request.headers.get("Idempotency-Key", ""),
         quota.fingerprint(body.model_dump(exclude={"request_id"})))
     if ticket.replay is not None:
+        # D-085: 재시도 재생도 같은 관문(표지 기반 허용 목록). 거절이면 없는 작업처럼 답한다.
+        if not stored_result_visible(ticket.replay):
+            raise HTTPException(404, "작업을 찾을 수 없습니다.")
         result = AiChatResponse.model_validate(ticket.replay)
         result.quota = {**quota.snapshot(engine, grant), "request_id": ticket.id}
         return result
@@ -104,7 +107,7 @@ def _run_with_allowance(body, request, response, handler):
         if success:
             stored = result.model_dump(mode="json")
             # D-085: 이 결과가 쓴 비공개 기능. 결과 조회 때 현재 요청자 기준으로 거른다.
-            stored["feature_tags"] = sorted(current_used())
+            stored["feature_tags"] = make_tag()  # 현재 요청 ∪ 이전 근거(답을 만든 뒤 시점)
         quota.finish(ticket, stored,
                      error=result.error_code or (None if success else "not_chargeable"))
         result.quota = {**quota.snapshot(engine, grant), "request_id": ticket.id}
@@ -149,10 +152,10 @@ def ai_request_result(request_id: str, request: Request):
     import json
     result = json.loads(payload) if payload else None
     if result is not None:
-        from app.feature_gates import enabled_features
-
-        # D-085: 저장된 결과도 현재 요청자의 기능 상태로 거른다(꺼진 기능 화면의 결과는 주지 않음).
-        if not stored_result_visible(result, frozenset(enabled_features(request))):
+        # D-085: 저장된 결과도 재생 관문(표지 기반 허용 목록, 표지 없으면 비관리자 거절)을 거친다.
+        with ai_feature_scope(request):
+            visible = stored_result_visible(result)
+        if not visible:
             result = None
         else:
             result.pop("feature_tags", None)

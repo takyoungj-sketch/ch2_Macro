@@ -27,8 +27,9 @@ class SessionTurn:
     route: Optional[str] = None
     bundle_id: Optional[str] = None
     scope_label: Optional[str] = None
-    #: D-085 이 턴의 요청이 실제로 쓴 비공개 기능(재생할 때 현재 요청자 기준으로 거른다).
-    features: frozenset = field(default_factory=frozenset)
+    #: D-085 기능 표지 {"v":1,"used":[...]} — 이 턴의 답이 쓴 비공개 기능(현재 요청 ∪ 이전 근거).
+    #: 재생할 때 feature_filter.replay_allowed 로 거른다. 표지가 없으면 비관리자에게 재생하지 않는다.
+    features: Optional[dict] = None
 
 
 @dataclass
@@ -41,16 +42,16 @@ class AiSession:
     context_snapshots: list[dict[str, Any]] = field(default_factory=list)
     analysis_history: list[dict[str, Any]] = field(default_factory=list)
     dialogue_evidence: ScreenEvidence | None = None
-    #: D-085 dialogue_evidence 를 만든 요청이 쓴 비공개 기능.
-    dialogue_evidence_features: frozenset = field(default_factory=frozenset)
+    #: D-085 dialogue_evidence 의 기능 표지(만든 요청 ∪ 이어 쓴 이전 근거).
+    dialogue_evidence_features: Optional[dict] = None
     dialogue_product_app: str | None = None
 
     def touch(self) -> None:
         self.updated_at = time.time()
 
     def add_turn(self, turn: SessionTurn) -> None:
-        if not turn.features:
-            turn.features = _current_used()
+        if turn.features is None:
+            turn.features = _make_tag()
         self.turns.append(turn)
         self.turns = self.turns[-40:]
         self.touch()
@@ -73,35 +74,38 @@ class AiSession:
 FEATURE_TAG = "_features"
 
 
-def _current_used() -> frozenset:
-    from app.ai.feature_filter import current_used
+def _make_tag() -> dict:
+    from app.ai.feature_filter import make_tag
 
-    return current_used()
+    return make_tag()
 
 
 def _tag(item: dict[str, Any]) -> None:
-    used = _current_used()
-    if used and isinstance(item, dict):
-        item[FEATURE_TAG] = sorted(set(item.get(FEATURE_TAG) or ()) | used)
+    """표지는 항상 남긴다(쓴 기능이 없으면 used=[]). 표지 없는 항목은 비관리자에게 재생되지 않는다."""
+    if isinstance(item, dict):
+        from app.ai.feature_filter import make_tag, tag_used
+
+        prior = tag_used(item.get(FEATURE_TAG)) or frozenset()
+        item[FEATURE_TAG] = make_tag(prior | set(make_tag()["used"]))
 
 
 def purge_hidden(session: AiSession) -> None:
     """D-085: 현재 요청자에게 꺼진 기능을 쓴 세션 항목을 지운다(재생·previous 근거·History).
     기능 상태가 묶이지 않은 호출(내부)에서는 건드리지 않는다."""
-    from app.ai.feature_filter import scope_bound, tags_visible
+    from app.ai.feature_filter import replay_allowed, scope_bound
 
     if not scope_bound():
         return
-    session.turns = [t for t in session.turns if tags_visible(t.features)]
+    session.turns = [t for t in session.turns if replay_allowed(t.features)]
     session.context_snapshots = [
-        s for s in session.context_snapshots if not isinstance(s, dict) or tags_visible(s.get(FEATURE_TAG))
+        s for s in session.context_snapshots if isinstance(s, dict) and replay_allowed(s.get(FEATURE_TAG))
     ]
     session.analysis_history = [
-        s for s in session.analysis_history if not isinstance(s, dict) or tags_visible(s.get(FEATURE_TAG))
+        s for s in session.analysis_history if isinstance(s, dict) and replay_allowed(s.get(FEATURE_TAG))
     ]
-    if session.dialogue_evidence is not None and not tags_visible(session.dialogue_evidence_features):
+    if session.dialogue_evidence is not None and not replay_allowed(session.dialogue_evidence_features):
         session.dialogue_evidence = None
-        session.dialogue_evidence_features = frozenset()
+        session.dialogue_evidence_features = None
 
 
 class SessionStore(Protocol):

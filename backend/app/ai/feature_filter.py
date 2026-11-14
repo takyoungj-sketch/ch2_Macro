@@ -64,6 +64,7 @@ ALL = frozenset(FEATURES)
 
 _enabled: ContextVar[frozenset | None] = ContextVar("ch2_ai_features_enabled", default=None)
 _used: ContextVar[frozenset] = ContextVar("ch2_ai_features_used", default=frozenset())
+_admin: ContextVar[bool] = ContextVar("ch2_ai_features_admin", default=False)
 
 
 # ── facts 고치기 ───────────────────────────────────────────────
@@ -160,20 +161,68 @@ def current_used() -> frozenset:
     return _used.get()
 
 
-def tags_visible(tags: Iterable[str] | None) -> bool:
-    return set(tags or ()) <= current_enabled()
+def add_used(tag: Any) -> None:
+    """이 요청의 답이 이전 근거를 쓸 수 있게 되면, 그 근거의 표지를 이 요청 표지에 합친다
+    (답 표지 = 현재 요청에서 쓴 것 ∪ 이전 근거에서 쓴 것)."""
+    used = tag_used(tag)
+    if used:
+        _used.set(_used.get() | used)
+
+
+def is_admin_now() -> bool:
+    return bool(_admin.get())
+
+
+# ── 기능 표지와 재생 허용(허용 목록 방식) ─────────────────────────────
+
+TAG_VERSION = 1
+
+
+def make_tag(used: Iterable[str] | None = None) -> dict:
+    """저장·세션 항목에 붙이는 표지. 쓴 비공개 기능이 없어도 표지는 항상 남긴다."""
+    return {"v": TAG_VERSION, "used": sorted(set(current_used() if used is None else used))}
+
+
+def tag_used(tag: Any) -> frozenset | None:
+    """표지에서 쓴 기능 집합. 표지가 아니면(없음·비어 있음·옛 형식) None."""
+    if isinstance(tag, dict) and tag.get("v") == TAG_VERSION and isinstance(tag.get("used"), list):
+        return frozenset(str(x) for x in tag["used"])
+    return None
+
+
+def replay_allowed(tag: Any, *, has_evidence: bool = True) -> bool:
+    """저장된 AI 답·근거를 지금 요청자에게 재생해도 되는가 — 모든 재생 경로의 단일 관문.
+
+    대상: 재시도 `ticket.replay`, 결과 조회 `/api/ai/requests/{id}`, 세션 History·스냅샷·대화 턴,
+    previous 근거(`dialogue_evidence`).
+    - 관리자: 그대로 허용.
+    - 비관리자: 표지가 있고, 표지의 기능 중 지금 꺼진 것이 하나도 없을 때만 허용.
+      표지가 없거나 비어 있는데(옛 형식 포함) 근거가 있으면 거절.
+    """
+    if is_admin_now():
+        return True
+    if not has_evidence:
+        return True
+    used = tag_used(tag)
+    if used is None:
+        return False
+    return used <= current_enabled()
 
 
 @contextmanager
 def ai_feature_scope(request: Request, context=None):
     """요청자 기능 상태와, 이 요청(필터 뒤)이 쓴 비공개 기능을 묶는다."""
+    from app.feature_gates import is_admin
+
     enabled = frozenset(enabled_features(request))
     used = features_used(context) & enabled if context is not None else frozenset()
     t1 = _enabled.set(enabled)
     t2 = _used.set(used)
+    t3 = _admin.set(is_admin(request))
     try:
         yield enabled
     finally:
+        _admin.reset(t3)
         _used.reset(t2)
         _enabled.reset(t1)
 
@@ -213,20 +262,23 @@ def product_view(text: str, enabled: frozenset | None = None) -> str:
 
 # ── 저장된 AI 결과 ───────────────────────────────────────────────
 
-def stored_result_visible(payload: Any, enabled: frozenset) -> bool:
-    """저장된 AiChatResponse(JSON)를 지금 요청자에게 돌려줘도 되는지."""
-    if not isinstance(payload, dict):
+def stored_result_visible(payload: Any) -> bool:
+    """저장된 AiChatResponse(JSON)를 지금 요청자에게 돌려줘도 되는지(재시도·결과 조회).
+    표지 판정은 replay_allowed 하나로 한다. 화면 위치 검사는 그 위의 이중 방어다."""
+    if payload is None:
         return True
+    if is_admin_now():
+        return True
+    enabled = current_enabled()
+    if not isinstance(payload, dict):
+        return False
     ctx = payload.get("answer_context") or {}
     if not isinstance(ctx, dict):
-        return True
+        ctx = {}
     app, panel = str(ctx.get("app") or ""), str(ctx.get("panel") or "")
     if app == "land" and panel in LAND_REGRESSION_PANELS and LAND_REGRESSION not in enabled:
         return False
     if app == "rent" and (ctx.get("화면") == "regression" or ctx.get("detail_tab") == "regression") \
             and RENT_REGRESSION not in enabled:
         return False
-    tags = payload.get("feature_tags")
-    if isinstance(tags, list) and not set(tags) <= enabled:
-        return False
-    return True
+    return replay_allowed(payload.get("feature_tags"), has_evidence=True)
