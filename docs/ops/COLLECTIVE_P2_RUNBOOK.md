@@ -1,4 +1,4 @@
-# 집합 2단계 운영 런북 (초안 v5 — Codex 재검토 반영)
+# 집합 2단계 운영 런북 (초안 v6 — Codex 3차 검토 반영)
 
 > **상태:** 초안 v4 (2026-11-14, Claude Code — Codex P2 검토 8+4 항목 반영). **실행하지 않았다.** C-2 칸은 Cursor 확인(16일 이후)·T 결정 뒤 채운다.
 > **실행 절차:** Codex 검토 → T 승인 → Codex 실행(로컬 반영 → promote) → Opus 운영 확인.
@@ -201,6 +201,9 @@ py scripts/ops/collective_p2_verify/prod_sync_check.py compare logs/collective_p
 ```
 
 - **결과는 셋:** 통과(종료 코드 0) / 차이(1) / 검증 못 함(2). 결과는 내기 전에 `ops_guards.validate_result` 를 거친다.
+  - **측정 시각:** 스냅샷마다 `measured_at` 을 기록한다. 비교 결과 파일의 시각(`created_at`)은 입력 스냅샷 중 **가장 오래된 `measured_at`** 이다. 48시간 검사는 이 값으로 한다(비교한 시각은 `compared_at`).
+    - 그래서 오래된 스냅샷을 지금 다시 compare 해도 통과가 되지 않는다.
+    - 측정 시각이 없는 스냅샷은 「검증 못 함」이다.
   - 스냅샷 쿼리 실패, 빈 스냅샷, 서로 다른 DB 비교는 「검증 못 함」이다(예전 거짓 성공).
   - 큰 표를 건너뛰었거나(`--allow-heavy` 없이 200만 행 초과 표) 쿼리가 시간 초과면 「검증 못 함」이다.
   - 필수 표가 양쪽 모두 없어도 「검증 못 함」이다.
@@ -324,8 +327,9 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 - 쓰기는 네 조건을 모두 만족해야 한다(하나라도 빠지면 쓰기 전에 멈춤). 판정은 공통 가드 `scripts/ops/collective_p2_verify/ops_guards.py`.
   1. `--real-apply` 플래그
   2. 대상 DB 이름을 `--confirm-db` 로 **다시 입력**(대상마다 한 번, 목록이 정확히 같아야 함)
-  3. 접속 대상이 **로컬 루프백**(`ops_guards.assert_local_target`).
-     - libpq 최종 접속 인자로 판정한다: URL 쿼리의 host·hostaddr 와 `PGHOST`·`PGHOSTADDR` 환경변수 포함. hostaddr 가 host 보다 먼저 쓰인다.
+  3. 접속 대상이 **로컬 루프백**(`ops_guards.assert_local_target`, 허용 목록 방식).
+     - URL 쿼리는 `sslmode`·`connect_timeout`·`application_name` 만 허용한다. 그 밖(`dsn`·`service`·`host`·`hostaddr`·`options` …)은 모두 거부한다.
+     - 판정은 psycopg2 에 실제로 넘어갈 DSN 을 `psycopg2.extensions.parse_dsn` 으로 푼 값으로 한다. `PGHOST`·`PGHOSTADDR` 환경변수를 포함하고, hostaddr 가 host 보다 먼저 쓰인다.
      - `service`·`PGSERVICE`·`PGSERVICEFILE` 은 거부한다.
   4. 대상 DB 마다 3절 동기화 확인 결과 파일(`--sync-result`)이 `ops_guards.validate_result` 로 **통과**.
      - 필수 필드·형식을 갖춰야 한다.
@@ -352,6 +356,8 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
   - 연결표 `collective_building_key_map` 에 `reason` 에 `c2` 가 들어간 행(예 `c2_split`)으로 「옛 키 → 새 조각 키」를 남긴다.
   - 키 재매핑 미들웨어는 C-2 옛 키를 409 로 막지 않고 그 키로 연다.
   - `/key-status` 는 숫자를 돌려주지 않으므로 `product_gate` 에서 무료 집합 화면을 볼 수 있는 사용자(비로그인 포함)에게 연다. 임대 `/key-status` 는 임대 화면과 같은 규칙이다.
+    - C-01 409 본문·안내문과 C-2 후보 목록 모두 **키·이름·동만** 담는다. `n_tx`·`n_tx_window`·조각 번호 같은 수치는 넣지 않는다(미들웨어가 상세 함수의 다른 칸도 버림).
+    - 비로그인 응답에 숫자 값이 없는지 테스트로 확인한다. 화면에도 후보 건수를 표시하지 않는다.
   - 화면(집합·임대):
     - 조회에 실패하면(401·403·5xx·연결) 「정상」이 아니라 「단지 분리 여부를 확인할 수 없습니다」로 알린다.
     - 분리된 단지 링크를 누르면 기존 행을 복사하지 않는다. 후보 키의 실제 목록 행을 다시 조회한 뒤 상세를 연다. 조회하는 동안 로딩을 보이고, 실패하면 안내한다. 응답 헤더 `X-CH2-Key-C2-Split` 와 JSON 객체 응답의 `key_split_c2`(「분리된 단지 있음」·새 키 목록)를 붙인다.
@@ -522,7 +528,9 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 - 대상 표는 이번 반영이 바꾸는 표다. 원장·통계·속성·연결표·보존 표가 들어간다(스크립트 `TARGETS`).
 - 큰 표는 `building_key` 첫 글자 16조각, 또는 id 범위 16조각으로 나눠 조각마다 시간 제한(기본 600초)을 둔다.
 - 기대값은 **다른 표·조각 0** 이다. promote 는 같은 덤프라 id 까지 같다.
-- 결과는 셋: 통과(0) / 차이(1) / 검증 못 함(2). 조각 쿼리 실패(시간 초과)나 필수 표가 양쪽 모두 없으면 「검증 못 함」이다.
+- 결과는 셋: 통과(0) / 차이(1) / 검증 못 함(2).
+  - 조각 쿼리가 실패(시간 초과)하면 「검증 못 함」이다.
+  - **필수 표가 한쪽이라도 없으면** 「검증 못 함」이다. 비교는 결과 JSON 의 키가 아니라 필수 표 목록(DB 기본 대상 + 두 스냅샷이 요청한 표)을 순회한다.
 - 기본 대상에는 보존 표(`*_p2_before`, 이름 꼴로 자동 포함)와 C-2 판정 표(`collective_building_key_c2_units`)가 들어 있다.
 - 예상 소요는 collective 25~50분 · rent 30~65분 · built 1~2분이다(로컬 c8 해시 실측 기반, 운영 최대 2배).
 

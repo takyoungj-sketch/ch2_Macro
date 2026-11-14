@@ -22,6 +22,15 @@
 - 런북 반영: 운영 롤백 소요의 대부분은 mart 복원(특히 임대 rolling 2시간 23분)이다. 롤백 대신 「빌더 재실행」이 더 빠른 표가 있으면 Phase D 에서 표별로 고른다. 비교 기준은 원본 DB 가 덤프 시점과 같다는 전제 — 운영에서는 덤프 직후 해시를 저장해 두고 비교한다.
 - 디스크: 끝난 뒤 D 30%·C 38% 여유.
 
+## Codex 3차 검토 반영 (2026-11-14, C-2 리허설 전 필수 4건 — 코드·문서만)
+
+| # | 항목 | 반영 |
+|---|---|---|
+| 1 | 접속 가드 허용 목록 | `ops_guards.assert_local_target`: URL 쿼리는 sslmode·connect_timeout·application_name 만(그 밖 dsn·service·host·options·대소문자 바꾼 키 거부). 판정은 psycopg2 최종 DSN(`make_dsn` → `parse_dsn`) + PGHOST/PGHOSTADDR. Codex 재현 `?dsn=host%3D192.0.2.1` 거부 테스트 |
+| 2 | 필수 표 기준 비교 | `prod_hash_compare.evaluate` 가 결과 JSON 키가 아니라 필수 표(TARGETS[DB] + 스냅샷 `requested`)를 순회. 한쪽이라도 없으면 검증 못 함(2). `built_scope_stats` 누락 재현 테스트(키 삭제·요청 목록 조작 모두) |
+| 3 | 측정 시각 물려받기 | 스냅샷에 `measured_at`. 결과 `created_at` = 입력 중 가장 오래된 `measured_at`(비교 시각은 `compared_at`), 측정 시각 없는 스냅샷은 검증 못 함. 72시간 된 스냅샷 재비교 재현 → 2(동기화·해시 모두) |
+| 4 | key-status 숫자 제거 | C-01 409 본문·안내문, C-2 후보, `resolve_key`(AI) 후보 모두 키·이름·동만(`n_tx`·`n_tx_window`·조각 번호 없음, 상세 함수가 다른 칸을 줘도 버림). AI 안내문·화면(집합·임대 안내, C-01 대화상자, 회귀 별도 창)에서도 건수 제거. 실제 앱으로 비로그인 호출 → 응답에 숫자 값 0 테스트 |
+
 ## Codex 재검토 반영 (2026-11-14, 코드·문서만 — 운영 접근·실행 없음)
 
 | # | 항목 | 반영 |
