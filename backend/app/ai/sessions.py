@@ -27,6 +27,9 @@ class SessionTurn:
     route: Optional[str] = None
     bundle_id: Optional[str] = None
     scope_label: Optional[str] = None
+    #: D-085 기능 표지 {"v":1,"used":[...]} — 이 턴의 답이 쓴 비공개 기능(현재 요청 ∪ 이전 근거).
+    #: 재생할 때 feature_filter.replay_allowed 로 거른다. 표지가 없으면 비관리자에게 재생하지 않는다.
+    features: Optional[dict] = None
 
 
 @dataclass
@@ -39,27 +42,75 @@ class AiSession:
     context_snapshots: list[dict[str, Any]] = field(default_factory=list)
     analysis_history: list[dict[str, Any]] = field(default_factory=list)
     dialogue_evidence: ScreenEvidence | None = None
+    #: D-085 dialogue_evidence 의 기능 표지(만든 요청 ∪ 이어 쓴 이전 근거).
+    dialogue_evidence_features: Optional[dict] = None
     dialogue_product_app: str | None = None
 
     def touch(self) -> None:
         self.updated_at = time.time()
 
     def add_turn(self, turn: SessionTurn) -> None:
+        if turn.features is None:
+            turn.features = _make_tag()
         self.turns.append(turn)
         self.turns = self.turns[-40:]
         self.touch()
 
     def push_context(self, snapshot: dict[str, Any]) -> None:
+        _tag(snapshot)
         self.context_snapshots.append(snapshot)
         if len(self.context_snapshots) > 20:
             self.context_snapshots = self.context_snapshots[-20:]
         self.touch()
 
     def push_analysis(self, slot: dict[str, Any], *, max_slots: int = 12) -> None:
+        _tag(slot)
         self.analysis_history.append(slot)
         if len(self.analysis_history) > max_slots:
             self.analysis_history = self.analysis_history[-max_slots:]
         self.touch()
+
+
+FEATURE_TAG = "_features"
+
+
+def _make_tag() -> dict:
+    from app.ai.feature_filter import make_tag
+
+    return make_tag()
+
+
+def _tag(item: dict[str, Any]) -> None:
+    """표지는 항상 남긴다(쓴 기능이 없으면 used=[]). 표지 없는 항목은 비관리자에게 재생되지 않는다."""
+    if isinstance(item, dict):
+        from app.ai.feature_filter import make_tag, tag_unknown, tag_used
+
+        had = FEATURE_TAG in item
+        prior_tag = item.get(FEATURE_TAG)
+        prior = tag_used(prior_tag)
+        now = make_tag()
+        # 이미 있던 표지가 깨졌거나 출처 불명이면 그 표시를 잇는다.
+        unknown = bool(now.get("unknown")) or (had and (prior is None or tag_unknown(prior_tag)))
+        item[FEATURE_TAG] = make_tag((prior or frozenset()) | set(now["used"]), unknown=unknown)
+
+
+def purge_hidden(session: AiSession) -> None:
+    """D-085: 현재 요청자에게 꺼진 기능을 쓴 세션 항목을 지운다(재생·previous 근거·History).
+    기능 상태가 묶이지 않은 호출(내부)에서는 건드리지 않는다."""
+    from app.ai.feature_filter import replay_allowed, scope_bound
+
+    if not scope_bound():
+        return
+    session.turns = [t for t in session.turns if replay_allowed(t.features)]
+    session.context_snapshots = [
+        s for s in session.context_snapshots if isinstance(s, dict) and replay_allowed(s.get(FEATURE_TAG))
+    ]
+    session.analysis_history = [
+        s for s in session.analysis_history if isinstance(s, dict) and replay_allowed(s.get(FEATURE_TAG))
+    ]
+    if session.dialogue_evidence is not None and not replay_allowed(session.dialogue_evidence_features):
+        session.dialogue_evidence = None
+        session.dialogue_evidence_features = None
 
 
 class SessionStore(Protocol):
@@ -114,6 +165,7 @@ def get_or_create(session_id: Optional[str]) -> AiSession:
     owner = _owner.get()
     existing = _backend.get(session_id) if session_id else None
     if existing is not None and existing.owner == owner:
+        purge_hidden(existing)
         return existing
     # HTTP clients cannot select a session id or acquire another owner's session.
     sid = (session_id if owner is None and existing is None else None) or str(uuid.uuid4())

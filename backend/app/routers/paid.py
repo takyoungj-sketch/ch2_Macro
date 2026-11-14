@@ -40,6 +40,14 @@ def _paid_execute(db: Session, sql: str, params: dict):
     return execute_expanding(db, sql, params)
 
 from app.analysis_base_cache import has_valid_analysis_base_cache
+from app.feature_gates import (
+    LAND_LEDGER_LINK,
+    LAND_REGRESSION,
+    ensure_feature,
+    feature_enabled,
+    gate_profile,
+    require_feature,
+)
 from app.routers.upper_stats import _region_name
 from app.matrix_rolling_buckets import (
     chart_bucket_labels_old_first_for_ref_month,
@@ -93,16 +101,22 @@ CACHE_TTL_HOURS = 24
 
 
 def _make_cache_key(
-    req: PaidAnalysisRequest, *, as_of: date | None, published_at: datetime | None = None,
+    req: PaidAnalysisRequest,
+    *,
+    as_of: date | None,
+    published_at: datetime | None = None,
+    gate: str = "",
 ) -> str:
-    payload = json.dumps(
-        {
-            "request": _request_stable_payload(req.model_dump(mode="json")),
-            "as_of_month": as_of.isoformat() if as_of else None,
-            "published_at": published_at.isoformat() if published_at else None,
-        },
-        sort_keys=True,
-    )
+    """`gate` = 켜진 기능 스위치(D-085). 권한별 응답이 섞이지 않게 키를 나눈다.
+    빈 값(사용자 기본)은 예전 키와 같게 둬 기존 캐시를 버리지 않는다."""
+    body = {
+        "request": _request_stable_payload(req.model_dump(mode="json")),
+        "as_of_month": as_of.isoformat() if as_of else None,
+        "published_at": published_at.isoformat() if published_at else None,
+    }
+    if gate:
+        body["feature_gate"] = gate
+    payload = json.dumps(body, sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
@@ -1186,7 +1200,9 @@ def analyze(
     as_of, published_at = _paid_v2_snapshot(db)
     ref = stats_ui_reference_date(as_of) if as_of else None
 
-    cache_key = _make_cache_key(req_for_cache, as_of=as_of, published_at=published_at)
+    cache_key = _make_cache_key(
+        req_for_cache, as_of=as_of, published_at=published_at, gate=gate_profile(request)
+    )
     cached = _get_cache(cache_key, db)
     if cached is not None:
         try:
@@ -1845,6 +1861,16 @@ def matrix_cell_histogram(
     )
 
 
+def _ledger_request_allowed(request: Request, wants_ledger: bool) -> bool:
+    """D-085 `land_ledger_link`. 대장 값(공시지가 표시·CSV 열·회귀 변수)을 요청했는데 꺼져 있으면 403.
+    요청하지 않았으면 통과하고, 응답에 대장 칸을 둘지(True/False)를 돌려준다.
+    C-05 경고 모드(api_param_warn)와는 별개다 — 이쪽은 거절한다."""
+    if wants_ledger:
+        ensure_feature(request, LAND_LEDGER_LINK)
+        return True
+    return feature_enabled(request, LAND_LEDGER_LINK)
+
+
 def _fetch_matrix_cell_filtered_transactions(
     body: MatrixYearlyRequest, db: Session, *, trait_enrich: bool = False
 ) -> list[dict]:
@@ -2043,7 +2069,7 @@ def _matrix_cell_export_filename(body: MatrixYearlyRequest) -> str:
     summary="매트릭스 칸 원거래 목록(페이지)",
 )
 def matrix_cell_transactions(
-    body: MatrixCellTransactionsRequest, db: Session = Depends(get_db)
+    body: MatrixCellTransactionsRequest, request: Request, db: Session = Depends(get_db)
 ):
     """
     matrix-yearly 와 동일 필터·이상치 정책을 적용한 뒤, 남은 행을 최신 계약 순으로 정렬해
@@ -2051,7 +2077,8 @@ def matrix_cell_transactions(
     """
     from app.land_trait_link import TRAIT_ITEM_KEYS, table_ready
 
-    applied = bool(body.trait_enrich and table_ready(db))
+    ledger_ok = _ledger_request_allowed(request, body.trait_enrich)
+    applied = bool(body.trait_enrich and ledger_ok and table_ready(db))
     filtered = _fetch_matrix_cell_filtered_transactions(body, db, trait_enrich=applied)
     total = len(filtered)
     off = int(body.offset)
@@ -2080,7 +2107,7 @@ def matrix_cell_transactions(
         for c in page
     ]
 
-    return MatrixCellTransactionsResponse(
+    resp = MatrixCellTransactionsResponse(
         zone_type=body.zone_type.strip(),
         land_category=body.land_category.strip(),
         total=total,
@@ -2091,6 +2118,14 @@ def matrix_cell_transactions(
         trait_enrich_applied=applied,
         items=items,
     )
+    if ledger_ok:
+        return resp
+    # D-085: 대장 연결 칸(8칸)은 비관리자 응답에 키 자체를 두지 않는다.
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(
+        resp.model_dump(mode="json", exclude={"items": {"__all__": set(TRAIT_ITEM_KEYS)}})
+    )
 
 
 @router.post(
@@ -2098,12 +2133,13 @@ def matrix_cell_transactions(
     summary="매트릭스 칸 원거래 목록 CSV 내보내기",
 )
 def matrix_cell_transactions_export(
-    body: MatrixCellTransactionsExportRequest, db: Session = Depends(get_db)
+    body: MatrixCellTransactionsExportRequest, request: Request, db: Session = Depends(get_db)
 ):
     """목록 API와 동일 필터·이상치 정책으로 전체 행을 CSV(UTF-8 BOM)로 반환한다."""
     from app.land_trait_link import table_ready
 
-    applied = bool(body.trait_enrich and table_ready(db))
+    ledger_ok = _ledger_request_allowed(request, body.trait_enrich)
+    applied = bool(body.trait_enrich and ledger_ok and table_ready(db))
     filtered = _fetch_matrix_cell_filtered_transactions(body, db, trait_enrich=applied)
     if len(filtered) > MAX_MATRIX_CELL_TX_EXPORT:
         raise HTTPException(
@@ -2133,9 +2169,10 @@ def matrix_cell_transactions_export(
     "/matrix-cell-transactions/regression",
     response_model=LandRegressionResponse,
     summary="매트릭스 칸 토지 단가 헤도닉 OLS 회귀",
+    dependencies=[Depends(require_feature(LAND_REGRESSION))],
 )
 def matrix_cell_regression(
-    body: LandRegressionRequest, db: Session = Depends(get_db)
+    body: LandRegressionRequest, request: Request, db: Session = Depends(get_db)
 ):
     """
     해당 용도×지목 칸의 원거래를 표본으로 단가(만원/㎡) 헤도닉 OLS 회귀 분석.
@@ -2146,6 +2183,7 @@ def matrix_cell_regression(
     from app.land_trait_link import table_ready
 
     want_price = bool(body.variables.assessed_land_price)
+    _ledger_request_allowed(request, want_price)
     filtered = _fetch_matrix_cell_filtered_transactions(
         body, db, trait_enrich=want_price and table_ready(db)
     )
@@ -2156,6 +2194,7 @@ def matrix_cell_regression(
     "/matrix-cell-transactions/regression/suggest",
     response_model=LandRegressionSuggestResponse,
     summary="토지 회귀 후보모형 추천·비교",
+    dependencies=[Depends(require_feature(LAND_REGRESSION))],
 )
 def matrix_cell_regression_suggest(
     body: LandRegressionRequest, db: Session = Depends(get_db)
@@ -2170,9 +2209,10 @@ def matrix_cell_regression_suggest(
     "/matrix-cell-transactions/regression/predict",
     response_model=LandRegressionPredictResponse,
     summary="매트릭스 칸 토지 단가 OLS 예측 (ŷ · 95% PI/CI)",
+    dependencies=[Depends(require_feature(LAND_REGRESSION))],
 )
 def matrix_cell_regression_predict(
-    body: LandRegressionPredictRequest, db: Session = Depends(get_db)
+    body: LandRegressionPredictRequest, request: Request, db: Session = Depends(get_db)
 ):
     """
     동일 필터·변수 설정으로 OLS를 재적합 후 한 점 예측.
@@ -2182,6 +2222,7 @@ def matrix_cell_regression_predict(
     from app.land_trait_link import table_ready
 
     want_price = bool(body.variables.assessed_land_price)
+    _ledger_request_allowed(request, want_price)
     filtered = _fetch_matrix_cell_filtered_transactions(
         body, db, trait_enrich=want_price and table_ready(db)
     )

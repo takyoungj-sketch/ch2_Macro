@@ -24,3 +24,11 @@ export {
   type RegionDeepLinkLevel,
 } from "./regionDeepLink";
 export { clampMapMenuPos } from "./clampMapMenuPos";
+export {
+  PrivateFeatureBadge,
+  refreshFeatures,
+  useFeature,
+  useFeatureWatch,
+  useFeatures,
+  type FeatureName,
+} from "./features";

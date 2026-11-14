@@ -24,6 +24,7 @@ from app.rent.query_guard import (
     QueryDeadline, request_query_deadline, heavy_query,
     REGRESSION_TIMEOUT_MESSAGE, TRANSACTIONS_TIMEOUT_MESSAGE,
 )
+from app.feature_gates import RENT_REGRESSION, require_feature
 from app.rent.db import get_rent_db
 from app.rent.conversion_query import list_conversion_compare
 from app.rent.query import (
@@ -421,7 +422,12 @@ def _run_rent_regression(df, body, asset_type, keys, names):
     return resp
 
 
-@router.post("/buildings/{building_key}/regression/run", response_model=CollectiveRegressionResponse)
+# D-085: 관리자 전용. 데코레이터 의존성은 DB 세션·90초 마감보다 먼저 풀린다.
+@router.post(
+    "/buildings/{building_key}/regression/run",
+    response_model=CollectiveRegressionResponse,
+    dependencies=[Depends(require_feature(RENT_REGRESSION))],
+)
 def rent_building_regression(
     building_key: str,
     body: CollectiveRegressionRequest,
@@ -451,7 +457,11 @@ def rent_building_regression(
         return _run_rent_regression(df, body, asset_type, keys, {building_key: name})
 
 
-@router.post("/regression/run", response_model=CollectiveRegressionResponse)
+@router.post(
+    "/regression/run",
+    response_model=CollectiveRegressionResponse,
+    dependencies=[Depends(require_feature(RENT_REGRESSION))],
+)
 def rent_cohort_regression(
     body: CollectiveRegressionRequest,
     deadline: QueryDeadline = Depends(request_query_deadline),

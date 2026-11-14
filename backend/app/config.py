@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     api_token: str = ""
     #: 명시적인 로컬 개발 접근. 운영 기본값은 비활성입니다.
     local_dev_access: bool = Field(default=False, validation_alias="CH2_LOCAL_DEV_ACCESS")
+    #: D-085 관리자 전용 기능 스위치(public|admin|off). 비우면 feature_gates 기본값(admin).
+    #: backend/.env 로도 줄 수 있다(운영 서비스는 pydantic 이 .env 를 읽는다). 프로세스 환경변수가 우선.
+    feature_rent_regression: str = Field(default="", validation_alias="FEATURE_RENT_REGRESSION")
+    feature_land_regression: str = Field(default="", validation_alias="FEATURE_LAND_REGRESSION")
+    feature_land_ledger_link: str = Field(default="", validation_alias="FEATURE_LAND_LEDGER_LINK")
     #: 관리자 API(`/api/admin/*`, `/api/lab/*`)의 대체 인증 토큰.
     #: 관리자 세션이 없을 때 `X-Qa-Audit-Token` 이 이 값과 같아야 한다. 비어 있으면 토큰 경로는 거부.
     qa_audit_token: str = Field(default="", validation_alias="QA_AUDIT_TOKEN")
