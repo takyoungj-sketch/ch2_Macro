@@ -56,6 +56,8 @@ def test_read_units_normalizes_and_summarizes(tmp_path):
     (HEAD + f"{A},presale,1150010300,1,,0,split,x,,1\n{A},presale,1150010300,2,,1,split,x,,1\n", "분양권 split"),
     (HEAD + f"{A},rowhouse,1150010300,1,,0,split,x,,1\n{A},rowhouse,1150010300,01,,1,split,x,,1\n", "중복"),
     (HEAD + f"{A},rowhouse,1150010300,,,,keep,x,,1\n{A},apartment,1168010100,,,,keep,x,,1\n", "유형 여럿"),
+    (HEAD + f"{A},rowhouse,1150010300,1,,0,split,x,,1\n{A},rowhouse,1150010300,2,,1,split,x,,1\n"
+            f"{A},rowhouse,1150010400,5,,0,split,x,,1\n{A},rowhouse,1150010400,6,,1,split,x,,1\n", "두 법정동에서 같이"),
 ])
 def test_read_units_rejects_bad_rows(tmp_path, body, needle):
     with pytest.raises(lc.LoadError) as ei:

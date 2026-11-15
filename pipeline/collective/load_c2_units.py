@@ -101,6 +101,11 @@ def validate(df: pd.DataFrame) -> list[str]:
         no0 = g.apply(lambda s: 0 not in set(s))
         if int(no0.sum()):
             errs.append(f"본 조각(0) 없는 (키·법정동) {int(no0.sum())}")
+        nz = df[sp & (df["part"].map(lambda x: x is not None and x != 0))]
+        reuse = nz.groupby(["base_key", "part"])["beopjungri_code"].nunique()
+        if int((reuse > 1).sum()):
+            # 조각 키 = 원문 + 조각 번호 → 법정동이 달라도 번호가 같으면 한 키로 합쳐진다
+            errs.append(f"0 이 아닌 조각 번호를 두 법정동에서 같이 쓰는 키 {int((reuse > 1).sum())}")
         one = g.apply(lambda s: len(set(s)) < 2)
         if int(one.sum()):
             errs.append(f"조각이 하나뿐인 split (키·법정동) {int(one.sum())}")

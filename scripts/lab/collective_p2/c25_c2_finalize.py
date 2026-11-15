@@ -62,6 +62,29 @@ def kapt_by_exact_lot():
     return out
 
 
+def renumber_parts_per_key(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """split 행의 0 이 아닌 조각 번호를 base_key 안에서 겹치지 않게 다시 매긴다(법정동 코드 순, 첫 법정동은 그대로).
+    본 조각 0 은 모든 법정동에서 옛 키 그대로. 월간 적재의 새 조각 번호(키 전체 최대 + 1)와 같은 규칙."""
+    if df.empty:
+        return df, 0
+    df = df.copy()
+    sp = df["decision"] == "split"
+    renum = 0
+    for _bk, g in df[sp].groupby("base_key"):
+        if g["beopjungri_code"].nunique() < 2:
+            continue
+        top = 0
+        changed = False
+        for _bjd, gg in g.sort_values("beopjungri_code").groupby("beopjungri_code", sort=True):
+            nz = sorted({int(p) for p in gg["part"] if int(p) != 0})
+            mp = {p: top + i + 1 for i, p in enumerate(nz)}
+            changed |= any(a != b for a, b in mp.items())
+            df.loc[gg.index, "part"] = [0 if int(p) == 0 else mp[int(p)] for p in gg["part"]]
+            top += len(nz)
+        renum += int(changed)
+    return df, renum
+
+
 def apt_phase_rule_v1(gi_a: dict, gi_b: dict, ka: set[str], kb: set[str]) -> tuple[str, str]:
     """(이전 판, 비교용) 코드 공유 → 유지 / 그 밖은 승인일 차이 1년 기준."""
     gap = min_gap_days(gi_a["apr"], gi_b["apr"])
@@ -239,8 +262,10 @@ def main() -> int:
             moved = 0
         summ.append({"src": src, "type": c21.KO[r["asset_type"]], "split": split, "new_parts": len(set(parts.values())) - 1 if split else 0,
                      "moved": moved, "tx": int(r["tx"])})
-    out = pd.DataFrame(rows)
+    out, renum = renumber_parts_per_key(pd.DataFrame(rows))
     out.to_csv(OUT / "c2_units_final.csv", index=False, encoding="utf-8-sig")
+    print(f"- 조각 번호 다시 매김(키 하나가 두 법정동 이상에서 분할): 키 {renum} — 0 이 아닌 조각 번호는 키 안에서 겹치지 않게"
+          "(조각 키 = 원문 + 번호라 법정동이 달라도 번호가 같으면 한 키가 된다)\n")
     s = pd.DataFrame(summ)
 
     print("## 아파트 차수 규칙 수정으로 바뀐 쌍(이전 → 지금)\n")
