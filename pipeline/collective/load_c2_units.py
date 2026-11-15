@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""집합 2단계 P3 — C-2 판정 파일(c25 확정, `logs/collective_p2/c2_units_final.csv`)을 리허설 DB 의
+`collective_building_key_c2_units` 에 적재한다.
+
+- 쓰기는 리허설 DB(…_p2r)만: 이름 확인(check_write_targets) + 접속 뒤 current_database() 확인(assert_rehearsal_db).
+  실제 DB 는 이 도구로 쓰지 않는다(운영·로컬 실제 DB 는 promote 로 따라간다 — 런북 12절).
+- 드라이런 기본(읽기 전용 접속, 검사·건수만). --apply 로 한 트랜잭션에 적재.
+- 멱등: 같은 (base_key, 법정동, 본번) 행이 이미 같은 값이면 건너뛴다. 값이 다른 행이 있으면 아무것도 쓰지 않고 멈춘다.
+  표에만 있는 행(자동 등록 등)은 건드리지 않고 건수만 낸다.
+- 출력은 건수만(지번·키 원문을 내지 않는다).
+
+  python pipeline/collective/load_c2_units.py --collective-db collective_stats_p2r            # 드라이런
+  python pipeline/collective/load_c2_units.py --collective-db collective_stats_p2r --apply
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
+import pandas as pd
+from sqlalchemy import text
+from sqlalchemy.engine import Connection, Engine
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "pipeline"))
+sys.path.insert(0, str(REPO / "pipeline" / "collective"))
+
+from collective.building_keys import C2_DDL, C2_TABLE, main_lot_of  # noqa: E402
+from collective.migrate_p2_keys import (  # noqa: E402
+    GuardError,
+    _exec_script,
+    assert_rehearsal_db,
+    check_write_targets,
+    engine_for,
+)
+
+DEFAULT_CSV = REPO / "logs" / "collective_p2" / "c2_units_final.csv"
+COLS = ["base_key", "asset_type", "beopjungri_code", "main_lot", "building_year", "part", "decision", "source", "note"]
+PK = ["base_key", "beopjungri_code", "main_lot"]
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+_BJD = re.compile(r"^[0-9]{10}$")
+ASSETS = {"apartment", "rowhouse", "officetel", "presale"}
+
+
+class LoadError(RuntimeError):
+    pass
+
+
+def _int_or_none(v) -> int | None:
+    if v is None or (isinstance(v, float) and v != v) or str(v).strip() == "":
+        return None
+    return int(float(v))
+
+
+def read_units(path: Path) -> pd.DataFrame:
+    """CSV → 정규화된 판정 행(COLS). 형식이 틀리면 LoadError(어느 검사인지와 건수만)."""
+    if not Path(path).is_file():
+        raise LoadError(f"판정 파일 없음: {Path(path).name}")
+    df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+    miss = [c for c in COLS if c not in df.columns and c != "note"]
+    if miss:
+        raise LoadError(f"판정 파일 열 없음: {miss}")
+    if "note" not in df.columns:
+        df["note"] = ""
+    df = df[COLS].copy()
+    for c in ("base_key", "asset_type", "beopjungri_code", "decision", "source", "note"):
+        df[c] = df[c].astype(str).str.strip()
+    df["main_lot"] = df["main_lot"].map(main_lot_of)
+    for c in ("building_year", "part"):                     # 정수 또는 None(object) — float·NaN 으로 바뀌지 않게
+        df[c] = pd.Series([_int_or_none(v) for v in df[c]], index=df.index, dtype="object")
+    errs = validate(df)
+    if errs:
+        raise LoadError("판정 파일 검사 실패: " + "; ".join(errs))
+    return df
+
+
+def validate(df: pd.DataFrame) -> list[str]:
+    errs: list[str] = []
+
+    def bad(name: str, mask) -> None:
+        n = int(mask.sum())
+        if n:
+            errs.append(f"{name} {n}행")
+
+    bad("base_key 형식(sha256 16진 64자) 아님", ~df["base_key"].str.match(_HEX64))
+    bad("법정동 코드 10자리 아님", ~df["beopjungri_code"].str.match(_BJD))
+    bad("유형 모름", ~df["asset_type"].isin(ASSETS))
+    bad("decision 이 split·keep 아님", ~df["decision"].isin({"split", "keep"}))
+    sp = df["decision"] == "split"
+    bad("split 인데 조각 번호 없음", sp & df["part"].isna())
+    bad("split 인데 본번 없음", sp & (df["main_lot"] == ""))
+    bad("조각 번호 음수", df["part"].map(lambda x: x is not None and x < 0))
+    bad("분양권 split", sp & (df["asset_type"] == "presale"))
+    bad("(키·법정동·본번) 중복", df.duplicated(PK, keep=False))
+    if sp.any():
+        g = df[sp].groupby(["base_key", "beopjungri_code"])["part"]
+        no0 = g.apply(lambda s: 0 not in set(s))
+        if int(no0.sum()):
+            errs.append(f"본 조각(0) 없는 (키·법정동) {int(no0.sum())}")
+        one = g.apply(lambda s: len(set(s)) < 2)
+        if int(one.sum()):
+            errs.append(f"조각이 하나뿐인 split (키·법정동) {int(one.sum())}")
+    t = df.groupby("base_key")["asset_type"].nunique()
+    if int((t > 1).sum()):
+        errs.append(f"키 하나에 유형 여럿 {int((t > 1).sum())}")
+    return errs
+
+
+def _table_rows(conn: Connection) -> pd.DataFrame:
+    if not conn.execute(text("SELECT to_regclass(:t) IS NOT NULL"), {"t": f"public.{C2_TABLE}"}).scalar():
+        return pd.DataFrame(columns=COLS)
+    return pd.read_sql(text(f"SELECT {', '.join(COLS)} FROM {C2_TABLE}"), conn)
+
+
+def _norm_cmp(v):
+    if v is None or (isinstance(v, float) and v != v):
+        return None
+    if isinstance(v, float) and v.is_integer():
+        return int(v)
+    return v
+
+
+def compare(df: pd.DataFrame, cur: pd.DataFrame) -> dict:
+    """파일 행 ↔ 표 행: 새로 넣을 행·이미 같은 행·값이 다른 행·표에만 있는 행."""
+    cmp_cols = ["asset_type", "building_year", "part", "decision"]
+    cur_map = {tuple(r[c] for c in PK): tuple(_norm_cmp(r[c]) for c in cmp_cols)
+               for r in cur.to_dict("records")}
+    new, same, diff = [], 0, 0
+    keys = set()
+    for r in df.to_dict("records"):
+        k = tuple(r[c] for c in PK)
+        keys.add(k)
+        if k not in cur_map:
+            new.append(r)
+        elif cur_map[k] == tuple(_norm_cmp(r[c]) for c in cmp_cols):
+            same += 1
+        else:
+            diff += 1
+    only_table = sum(1 for k in cur_map if k not in keys)
+    return {"new": new, "same": same, "diff": diff, "only_table": only_table}
+
+
+def summary(df: pd.DataFrame) -> dict:
+    sp = df[df["decision"] == "split"]
+    units = sp.groupby(["base_key", "beopjungri_code"])["part"].nunique()
+    return {"rows": len(df), "split_rows": len(sp), "keep_rows": int((df["decision"] == "keep").sum()),
+            "split_units": int(len(units)), "added_keys": int((units - 1).sum()),
+            "by_asset": {a: int(n) for a, n in sp.drop_duplicates(["base_key", "beopjungri_code"])["asset_type"]
+                         .value_counts().sort_index().items()}}
+
+
+def load(eng: Engine, dbname: str, df: pd.DataFrame, *, apply: bool) -> dict:
+    """apply=False 면 읽기만. True 면 한 트랜잭션에서 표를 만들고 새 행만 넣는다(값이 다른 행이 있으면 멈춤)."""
+    ctx = eng.begin() if apply else eng.connect()
+    with ctx as conn:
+        if apply:
+            assert_rehearsal_db(conn, dbname)
+        cur = _table_rows(conn)
+        cmpr = compare(df, cur)
+        out = {"db": dbname, **summary(df), "table_rows_before": len(cur), "insert": len(cmpr["new"]),
+               "already_same": cmpr["same"], "value_differs": cmpr["diff"], "table_only_rows": cmpr["only_table"]}
+        if cmpr["diff"]:
+            raise LoadError(f"표에 값이 다른 행 {cmpr['diff']}개 — 쓰지 않음(판정 파일·표 확인)")
+        if not apply:
+            return out
+        _exec_script(conn, C2_DDL)
+        rows = [{c: (None if (isinstance(v, float) and v != v) else v) for c, v in r.items()} for r in cmpr["new"]]
+        for i in range(0, len(rows), 2000):
+            conn.execute(text(f"""INSERT INTO {C2_TABLE} ({', '.join(COLS)})
+                                  VALUES ({', '.join(':' + c for c in COLS)})"""), rows[i:i + 2000])
+        after = compare(df, _table_rows(conn))
+        if after["new"] or after["diff"]:
+            raise LoadError("적재 뒤 표와 파일이 다름 — 되돌림")
+        out["table_rows_after"] = int(conn.execute(text(f"SELECT count(*) FROM {C2_TABLE}")).scalar() or 0)
+        conn.execute(text("CREATE TABLE IF NOT EXISTS p2_migration_log (id serial PRIMARY KEY, "
+                          "run_at timestamptz NOT NULL DEFAULT now(), step text NOT NULL, detail jsonb)"))
+        conn.execute(text("INSERT INTO p2_migration_log (step, detail) VALUES ('load_c2_units', CAST(:d AS jsonb))"),
+                     {"d": json.dumps(out, ensure_ascii=False)})
+        return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--collective-db", required=True)
+    p.add_argument("--csv", default=str(DEFAULT_CSV), help="판정 파일(기본 logs/collective_p2/c2_units_final.csv)")
+    p.add_argument("--apply", action="store_true")
+    p.add_argument("--base-url", default="", help="DB 서버 URL(기본 backend/.env)")
+    a = p.parse_args(argv)
+    base = a.base_url or None
+    if a.apply:
+        # 실제 적용 모드는 두지 않는다 — 이름은 리허설 패턴만
+        check_write_targets([a.collective_db], SimpleNamespace(real_apply=False), base_url=base)
+    df = read_units(Path(a.csv))
+    eng = engine_for(a.collective_db, read_only=not a.apply, base_url=base)
+    try:
+        out = load(eng, a.collective_db, df, apply=a.apply)
+    finally:
+        eng.dispose()
+    print(json.dumps(out, ensure_ascii=False, indent=1))
+    if not a.apply:
+        print("드라이런 — 쓰지 않았다. 쓰려면 --apply (리허설 DB 만).")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (GuardError, LoadError) as ex:
+        print(f"중단: {ex}", file=sys.stderr)
+        raise SystemExit(2)
