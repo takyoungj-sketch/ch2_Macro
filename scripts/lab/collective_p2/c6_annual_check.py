@@ -2,6 +2,7 @@
 
 - 2019~2020 남은 묵은 행: 유형·연도·시도·출처(장기 ingest / 원장 빌더)·원장 근거 여부
 - 2010~2018 행 수 전후(삭제 0 확인)
+- C-2 분할 키 2019~2020 범위 교체 검증(c2_annual_replace_p2.verify): 대상 행 통계 = 원장 재계산, 원장 근거 없는 대상 행 0
 - 표본 10곳(시드 20261112): 호남 병합 키 3 · 인천 3 · 그 밖 시도 4. 2020 이전 count·median 이 하나라도 바뀌면 실패.
   호남 표본은 「후」 새 키 기준이고, 「전」은 같은 새 키 행(2019~2020 은 개편 재적재 때 만든 새 이름 행)이다.
 """
@@ -15,6 +16,7 @@ from sqlalchemy import text
 from _db import OUT, ROOT, engine, engine_db, md_table
 
 sys.path.insert(0, str(ROOT / "pipeline"))
+from collective import c2_annual_replace_p2 as c2a  # noqa: E402
 from collective.mart_replace import stale_annual_report  # noqa: E402
 
 T = "collective_building_annual_stats"
@@ -45,7 +47,15 @@ def main():
             WHERE reason LIKE '%split%')""")).one()
         L.append(f"- 그중 분할 옛 키 행: {int(split_old[0]):,}행 / {int(split_old[1]):,}건(새 조각 행과 겹침 → 이중 집계 후보, 삭제 안 함)")
         L.append("")
-        # 표본 10곳
+        # C-2 분할 키 2019~2020 범위 교체(Codex 검토)
+        c2rows = c2a.verify(ca)
+        c2fail = sum(1 for r in c2rows if not r[3])
+        L.append("## C-2 분할 키 2019~2020 annual(원장 재계산과 일치)")
+        L.append(md_table([(n, e, g, "OK" if ok else "FAIL") for n, e, g, ok in c2rows], ["지표", "기대", "실제", "판정"]))
+        L.append(f"\n- C-2 항목 실패 {c2fail} / {len(c2rows)}")
+        L.append("")
+        c2keys = set(c2a.targets(ca)["building_key"])
+        # 표본 10곳(C-2 대상 키는 2019~2020 이 바뀌는 것이 정상이라 뺀다)
         pick = {
             "호남 병합": """SELECT DISTINCT m.new_key FROM collective_building_key_map m JOIN collective_building_annual_stats a
                          ON a.building_key=m.new_key AND a.contract_year<=2018 WHERE m.reason='honam_sido'""",
@@ -57,7 +67,7 @@ def main():
         quota = {"호남 병합": 3, "인천": 3, "그 밖": 4}
         sample = []
         for k, sql in pick.items():
-            keys = sorted(r[0] for r in ca.execute(text(sql)))
+            keys = sorted(r[0] for r in ca.execute(text(sql)) if r[0] not in c2keys)
             s = pd.Series(keys).sample(n=min(quota[k], len(keys)), random_state=20261112).tolist() if keys else []
             sample += [(k, x) for x in s]
         q = f"SELECT contract_year, count, median FROM {T} WHERE building_key=:k ORDER BY 1"

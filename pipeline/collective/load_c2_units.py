@@ -149,6 +149,29 @@ def compare(df: pd.DataFrame, cur: pd.DataFrame) -> dict:
     return {"new": new, "same": same, "diff": diff, "only_table": only_table}
 
 
+def final_state_errors(df: pd.DataFrame, cur: pd.DataFrame) -> list[str]:
+    """적재 뒤 최종 상태(표에 이미 있는 행 + 파일의 새 행) 검사.
+    조각 키 = 원문 + 조각 번호라서, 0 이 아닌 (키, 조각 번호)가 서로 다른 법정동에 쓰이면 다른 건물이 한 키로 합쳐진다.
+    같은 법정동 안의 여러 본번이 한 조각인 것은 정상이다. 각 (키·법정동) split 묶음에는 본 조각 0 이 있어야 한다."""
+    k = set(map(tuple, df[PK].itertuples(index=False, name=None)))
+    old = cur[[tuple(r) not in k for r in cur[PK].itertuples(index=False, name=None)]] if len(cur) else cur
+    fin = pd.concat([df[COLS], old[COLS]], ignore_index=True) if len(old) else df[COLS].copy()
+    fin["part"] = fin["part"].map(_norm_cmp)
+    sp = fin[fin["decision"] == "split"]
+    errs: list[str] = []
+    nz = sp[sp["part"].map(lambda x: x is not None and x != 0)]
+    reuse = nz.groupby(["base_key", "part"])["beopjungri_code"].nunique()
+    if int((reuse > 1).sum()):
+        errs.append(f"최종 상태에서 0 이 아닌 (키, 조각 번호)가 두 법정동 이상에 쓰임 {int((reuse > 1).sum())}")
+    no0 = sp.groupby(["base_key", "beopjungri_code"])["part"].apply(lambda s_: 0 not in set(s_))
+    if int(no0.sum()):
+        errs.append(f"최종 상태에서 본 조각(0) 없는 (키·법정동) {int(no0.sum())}")
+    t = fin.groupby("base_key")["asset_type"].nunique()
+    if int((t > 1).sum()):
+        errs.append(f"최종 상태에서 키 하나에 유형 여럿 {int((t > 1).sum())}")
+    return errs
+
+
 def summary(df: pd.DataFrame) -> dict:
     sp = df[df["decision"] == "split"]
     units = sp.groupby(["base_key", "beopjungri_code"])["part"].nunique()
@@ -170,6 +193,9 @@ def load(eng: Engine, dbname: str, df: pd.DataFrame, *, apply: bool) -> dict:
                "already_same": cmpr["same"], "value_differs": cmpr["diff"], "table_only_rows": cmpr["only_table"]}
         if cmpr["diff"]:
             raise LoadError(f"표에 값이 다른 행 {cmpr['diff']}개 — 쓰지 않음(판정 파일·표 확인)")
+        fe = final_state_errors(df, cur)
+        if fe:
+            raise LoadError("최종 상태 검사 실패 — 쓰지 않음: " + "; ".join(fe))
         if not apply:
             return out
         _exec_script(conn, C2_DDL)

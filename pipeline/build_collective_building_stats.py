@@ -303,6 +303,34 @@ def build_rolling(
     return total
 
 
+def annual_record_from_row(row, batch_id: str) -> dict | None:
+    """ANNUAL_SQL 한 행 → annual 레코드(가격 없으면 None). 집합 2단계 C-2 연간 교체(c2_annual_replace_p2)도 같은 함수."""
+    prices = [float(x) for x in (row["prices"] or []) if x is not None]
+    if not prices:
+        return None
+    st = compute_stats(prices)
+    return {
+        "building_key": row["building_key"],
+        "asset_type": row["asset_type"],
+        "contract_year": int(row["contract_year"]),
+        "display_name": row["display_name"] or "",
+        "addr1": row.get("addr1"),
+        "addr2": row.get("addr2"),
+        "addr3": row.get("addr3"),
+        "addr4": row.get("addr4"),
+        "beopjungri_code": row.get("beopjungri_code"),
+        "count": st["count"],
+        "mean": st["mean"],
+        "std": st["std"],
+        "ci_lower": st["ci_lower"],
+        "ci_upper": st["ci_upper"],
+        "p25": st["p25"],
+        "median": st["median"],
+        "p75": st["p75"],
+        "batch_id": batch_id,
+    }
+
+
 def build_annual(
     engine,
     *,
@@ -326,34 +354,7 @@ def build_annual(
             params["asset_type"] = asset_type
         with engine.connect() as conn:
             rows = conn.execute(text(sql), params).mappings().all()
-        records: list[dict] = []
-        for row in rows:
-            prices = [float(x) for x in (row["prices"] or []) if x is not None]
-            if not prices:
-                continue
-            st = compute_stats(prices)
-            records.append(
-                {
-                    "building_key": row["building_key"],
-                    "asset_type": row["asset_type"],
-                    "contract_year": int(row["contract_year"]),
-                    "display_name": row["display_name"] or "",
-                    "addr1": row.get("addr1"),
-                    "addr2": row.get("addr2"),
-                    "addr3": row.get("addr3"),
-                    "addr4": row.get("addr4"),
-                    "beopjungri_code": row.get("beopjungri_code"),
-                    "count": st["count"],
-                    "mean": st["mean"],
-                    "std": st["std"],
-                    "ci_lower": st["ci_lower"],
-                    "ci_upper": st["ci_upper"],
-                    "p25": st["p25"],
-                    "median": st["median"],
-                    "p75": st["p75"],
-                    "batch_id": batch_id,
-                }
-            )
+        records = [r for r in (annual_record_from_row(row, batch_id) for row in rows) if r is not None]
         upsert_annual_stats(records, engine)
         total += len(records)
         del rows, records

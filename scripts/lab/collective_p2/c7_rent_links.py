@@ -10,7 +10,12 @@ from __future__ import annotations
 import pandas as pd
 from sqlalchemy import text
 
-from _db import OUT, engine_db, md_table
+import sys
+
+from _db import OUT, ROOT, engine_db, md_table
+
+sys.path.insert(0, str(ROOT / "pipeline"))
+from rent.build_sale_building_map import c2_hold_keys, exact_links  # noqa: E402
 
 
 def mode_addr(conn, table: str, keys: list[str]) -> pd.DataFrame:
@@ -24,10 +29,22 @@ def mode_addr(conn, table: str, keys: list[str]) -> pd.DataFrame:
 def main():
     c_eng, r_eng = engine_db("collective_stats_p2r"), engine_db("rent_stats_p2r")
     with c_eng.connect() as c:
-        km = pd.read_sql(text("SELECT old_key, new_key, asset_type FROM collective_building_key_map WHERE reason LIKE '%split%'"), c)
+        # C-01 분할만(본 조각이 옛 키를 쓰는 C-2 행은 아래 C-2 보류에서 따로 센다)
+        km = pd.read_sql(text("""SELECT old_key, new_key, asset_type FROM collective_building_key_map
+                                 WHERE reason LIKE '%split%' AND reason NOT IN ('c2_split', 'c2_chain')"""), c)
+        hold = c2_hold_keys(c)
+        sale_keys = {(str(a), str(k).strip()) for k, a in c.execute(text(
+            "SELECT DISTINCT building_key, asset_type FROM collective_transactions WHERE is_valid "
+            "AND asset_type IN ('apartment', 'rowhouse', 'officetel')"))}
     with r_eng.connect() as r:
         before = pd.read_sql(text("SELECT sale_building_key, rent_building_key, asset_type FROM rent_sale_building_map_p2_before"), r)
         after = pd.read_sql(text("SELECT sale_building_key, rent_building_key, asset_type FROM rent_sale_building_map"), r)
+        rent_keys = {(str(a), str(k).strip()) for k, a in r.execute(text(
+            "SELECT DISTINCT building_key, asset_type FROM rent_transactions WHERE is_valid "
+            "AND asset_type IN ('apartment', 'rowhouse', 'officetel')"))}
+    _, held = exact_links(sale_keys, rent_keys, hold)
+    held_by = pd.Series([a for a, _ in held]).value_counts().to_dict() if held else {}
+    leaked = int(after["sale_building_key"].str.strip().isin(hold).sum())
     olds = set(km["old_key"])
     b_split = before[before["sale_building_key"].isin(olds)]
     pieces = km.groupby("old_key")["new_key"].apply(set).to_dict()
@@ -72,6 +89,8 @@ def main():
              ("분할 아닌 연결 중 사라진 것", f"{lost_other:,}"),
              ("조각 연결 법정동8 불일치", f"{int((~m['emd_ok']).sum()):,}"),
              ("조각 연결 대표 지번 불일치", f"{int((~m['lot_ok']).sum()):,}"),
+             ("C-2 보류 연결(판정 키·조각 키, 매매·임대 키 둘 다 있음)", f"{len(held):,} " + str(held_by)),
+             ("C-2 보류 대상인데 연결된 것(0 이어야 함)", f"{leaked:,}"),
          ], ["항목", "값"]),
          "", "- 불일치 표본(최대 20, 지번 포함): logs/collective_p2/c7_mismatch_sample.csv"]
     (OUT / "c7_rent_links.md").write_text("\n".join(L), encoding="utf-8")

@@ -12,7 +12,8 @@
   2b. C-2(같은 법정동 동명 다른 건물): 집합 DB 판정 표(collective_building_key_c2_units, P3 로 적재)의 split 키는
      2단계 키(호남·C-01 반영) 위에 본번·건축년도로 조각을 배정한다(building_keys.apply_building_key_split_c2 — 월간 적재와 같은 규칙).
      본 조각(p0)은 옛 키 유지, 나머지는 c2_key(원문, p<n>). 판정 표에 없는 3건+ 본번은 새 조각으로 표에 등록(source=p2_migrate).
-     임대 원장은 C-2 를 하지 않는다(임대 적재도 C-2 를 하지 않음 — 매매·임대 연결이 이어 준다).
+     임대 원장은 C-2 를 하지 않는다(임대 적재도 C-2 를 하지 않음). 그래서 매매·임대 연결(rent/build_sale_building_map)은
+     C-2 판정 키·조각 키의 exact 연결을 보류한다(화면은 「연결되지 않음」 안내).
   4. 연결표: collective_building_key_map · collective_cluster_key_map · rent_building_key_map (old_key, new_key, reason, split_part)
      C-2: 옛 키 → 조각 키(reason 에 c2_split). 옛 키가 호남·C-01 로 먼저 바뀐 경우는 2단계 키 → 조각 키 연결(c2_chain)과
      옛 키 → 2단계 키 연결(n_tx 0, 원래 reason)을 함께 남긴다 — 옛 주소가 2단계 키로 옮겨진 뒤 C-2 안내를 받게.

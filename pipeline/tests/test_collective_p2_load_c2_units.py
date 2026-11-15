@@ -132,3 +132,31 @@ def test_real_decision_file_passes_checks_if_present():
         pytest.skip("확정 판정 파일 없음(로컬 전용)")
     s = lc.summary(lc.read_units(lc.DEFAULT_CSV))
     assert s["rows"] == 4311 and s["split_units"] == 1610 and s["added_keys"] == 2045
+
+
+def test_final_state_rejects_fragment_number_reused_in_other_dong(eng, tmp_path):
+    """Codex 재현: 표에 이미 있는 자동 등록 조각(다른 법정동, 조각 1)과 파일의 조각 1 이 같은 키 → 거절, 아무것도 쓰지 않음."""
+    import pandas as pd
+
+    e = eng["eng"]
+    df = lc.read_units(_csv(tmp_path, GOOD))
+    cur = pd.DataFrame([{"base_key": A, "asset_type": "rowhouse", "beopjungri_code": "1150010400", "main_lot": "77",
+                         "building_year": 2020, "part": 1, "decision": "split", "source": "auto_ingest", "note": ""},
+                        {"base_key": A, "asset_type": "rowhouse", "beopjungri_code": "1150010400", "main_lot": "70",
+                         "building_year": 2019, "part": 0, "decision": "split", "source": "auto_ingest", "note": ""}])
+    assert any("두 법정동" in x for x in lc.final_state_errors(df, cur))
+    # 같은 법정동 안 다른 본번이 같은 조각이면 정상
+    ok = cur.assign(beopjungri_code="1150010300", main_lot=["377", "378"], part=[1, 0])
+    assert lc.final_state_errors(df, ok) == []
+    # 본 조각 0 이 없는 묶음이 최종 상태에 생기면 거절
+    assert any("본 조각(0)" in x for x in lc.final_state_errors(df, cur.iloc[[0]]))
+    # DB 에서도: 표에 다른 법정동 조각 1 을 넣어 두면 적재가 멈추고 표는 그대로
+    with e.begin() as c:
+        c.execute(text(f"DELETE FROM {bk.C2_TABLE}"))
+        c.execute(text(f"""INSERT INTO {bk.C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part,
+            decision, source) VALUES (:a, 'rowhouse', '1150010400', '77', 2020, 1, 'split', 'auto_ingest'),
+            (:a, 'rowhouse', '1150010400', '70', 2019, 0, 'split', 'auto_ingest')"""), {"a": A})
+    with pytest.raises(lc.LoadError, match="최종 상태"):
+        lc.load(e, DB, df, apply=True)
+    with e.connect() as c:
+        assert c.execute(text(f"SELECT count(*) FROM {bk.C2_TABLE}")).scalar() == 2
