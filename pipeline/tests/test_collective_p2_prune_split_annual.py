@@ -36,13 +36,15 @@ def eng():
         c.execute(text("""CREATE TABLE collective_building_annual_stats (id bigserial PRIMARY KEY, building_key text,
             asset_type text, contract_year smallint, addr1 text, count int, batch_id text)"""))
         c.execute(text("""INSERT INTO collective_building_key_map VALUES
-            ('O','N1','apartment','split'), ('O','N2','apartment','split'), ('H','HN','apartment','honam')"""))
+            ('O','N1','apartment','split'), ('O','N2','apartment','split'), ('H','HN','apartment','honam'),
+            ('C','C1','apartment','c2_split'), ('CS','C1','apartment','c2_chain')"""))
         c.execute(text("""INSERT INTO collective_building_annual_stats (building_key, asset_type, contract_year, addr1, count, batch_id) VALUES
             ('O','apartment',2019,'충청북도',5,'OLD'), ('N1','apartment',2019,'충청북도',3,'NOW'), ('N2','apartment',2019,'충청북도',2,'NOW'),
             ('O','apartment',2020,'충청북도',4,'OLD'), ('N1','apartment',2020,'충청북도',1,'NOW'),
             ('O','apartment',2021,'충청북도',9,'OLD'),
             ('H','apartment',2019,'광주광역시',7,'OLD'),
-            ('X','apartment',2019,'충청북도',1,'OLD')"""))
+            ('X','apartment',2019,'충청북도',1,'OLD'),
+            ('C','apartment',2019,'서울특별시',3,'NOW'), ('C1','apartment',2019,'서울특별시',3,'NOW')"""))
     yield e
     e.dispose()
     with admin.connect() as c:
@@ -67,6 +69,7 @@ def test_plan_apply_rollback(eng):
     assert ("O", 2019, 5) not in after                       # 일치 → 삭제
     assert ("O", 2020, 4) in after                           # 불일치 → 남김
     assert ("O", 2021, 9) in after and ("H", 2019, 7) in after and ("X", 2019, 1) in after   # 다른 연도·호남·분할 아닌 키
+    assert ("C", 2019, 3) in after                           # C-2 본 조각 옛 키(합이 같아 보여도) 대상 아님
     with eng.connect() as c:
         assert c.execute(text(f"SELECT count(*) FROM {pr.KEEP}")).scalar() == 1
     assert pr.apply(eng, DB)["deleted"] == 0                 # 다시 돌려도 더 지우지 않음

@@ -316,3 +316,47 @@ def test_key_status_has_no_statistics_for_anonymous(monkeypatch):
     assert _numbers(body) == [], _numbers(body)
     assert all(set(x) <= {"building_key", "display_name", "addr3", "addr4", "addr5"} for x in body["key_split_c2"]["candidates"])
     kr.CACHE.clear()
+
+
+def test_migration_shaped_c2_rows_route_and_chain():
+    """migrate_p2_keys 가 남기는 모양: 옛 키 → 조각(honam_sido+c2_split·split+c2_split, 「c2」) +
+    2단계 키 → 조각(c2_chain) + 옛 키 → 2단계 키(n_tx 0 경로 행). 옛 주소는 2단계 키로 옮겨 열고 C-2 안내를 붙인다."""
+    from app.collective import key_remap as kr
+
+    class _Res(list):
+        def scalar(self):
+            return True
+
+    rows = [(H_OLD, H_C2, 1, 3, "honam_sido+c2_split"), (H_NEW, H_C2, 1, 3, "c2_chain"), (H_OLD, H_NEW, 0, 0, "honam_sido"),
+            (K, K1, 1, 0, "split"), (K, K2, 2, 10, "split"), (K, K1A, 1, 6, "split+c2_split"), (K1, K1A, 1, 6, "c2_chain")]
+
+    class _Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def execute(self, stmt, params=None):
+            return _Res() if "to_regclass" in str(stmt) else _Res(rows)
+
+    class _Eng:
+        def connect(self):
+            return _Conn()
+
+    m = kr._load_from_engine(_Eng(), "collective_building_key_map")
+    app = FastAPI()
+
+    @app.get("/api/collective/buildings/{key}/stats/rolling")
+    def rolling(key: str):
+        return {"key": key}
+
+    app.add_middleware(KeyRemapMiddleware, cache=KeyMapCache(loader=lambda name: {"collective": m}.get(name, {}), ttl=0),
+                       details=lambda a, ks: {})
+    c = TestClient(app)
+    r = c.get(f"/api/collective/buildings/{H_OLD}/stats/rolling")
+    assert r.json()["key"] == H_NEW and r.json()["key_split_c2"]["new_keys"] == [H_C2]
+    r = c.get(f"/api/collective/buildings/{K}/stats/rolling")       # C-01 옛 키: 409 후보는 2단계 키만
+    assert r.status_code == 409 and [x["building_key"] for x in r.json()["candidates"]] == [K1, K2]
+    r = c.get(f"/api/collective/buildings/{K1}/stats/rolling")
+    assert r.json()["key"] == K1 and r.json()["key_split_c2"]["new_keys"] == [K1A]

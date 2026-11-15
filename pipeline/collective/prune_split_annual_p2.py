@@ -2,6 +2,8 @@
 
 대상: `collective_building_annual_stats` 에서 contract_year 2019·2020, building_key 가 연결표
 (`collective_building_key_map`, reason 에 split)로 쪼개진 옛 키인 행.
+C-2 로 본 조각이 옛 키를 그대로 쓰는 키(reason 이 c2_split·c2_chain 뿐)는 대상이 아니다 — 옛 키가 남아
+빌더가 본 조각 값으로 다시 쓰고, 조각 합과 비교하는 조건이 맞지 않는다(호남·C-01 + C-2 옛 키는 대상).
 조건: (옛 키·유형·연도)마다 「옛 행 count = 그 옛 키의 새 조각 키들의 같은 유형·연도 count 합」일 때만 삭제.
       불일치 행은 지우지 않고 목록으로 낸다.
 보존: 지운 행 전체를 `collective_building_annual_split_p2_before` 에 남긴다(되돌리기 `--rollback`).
@@ -39,7 +41,8 @@ YEARS = (2019, 2020)
 
 PLAN_SQL = f"""
 WITH km AS (
-    SELECT old_key, new_key, asset_type FROM collective_building_key_map WHERE reason LIKE '%split%'
+    SELECT old_key, new_key, asset_type FROM collective_building_key_map
+    WHERE reason LIKE '%split%' AND reason NOT IN ('c2_split', 'c2_chain')
 ), old AS (
     SELECT a.id, a.building_key AS old_key, a.asset_type, a.contract_year, a.count AS old_n
     FROM {T} a

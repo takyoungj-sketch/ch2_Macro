@@ -9,10 +9,18 @@
   2. building_key 재계산: 호남 표준화 키 → 분할 목록(pipeline/collective/data/p2_split_units.csv) 키는 동 단위 새 키
      임대 원장(rent_transactions)도 같은 분할(Phase A 결정 3)
   3. 비주거 cluster_key 재계산·commercial_clusters 병합(거래 cluster_id 이동)
+  2b. C-2(같은 법정동 동명 다른 건물): 집합 DB 판정 표(collective_building_key_c2_units, P3 로 적재)의 split 키는
+     2단계 키(호남·C-01 반영) 위에 본번·건축년도로 조각을 배정한다(building_keys.apply_building_key_split_c2 — 월간 적재와 같은 규칙).
+     본 조각(p0)은 옛 키 유지, 나머지는 c2_key(원문, p<n>). 판정 표에 없는 3건+ 본번은 새 조각으로 표에 등록(source=p2_migrate).
+     임대 원장은 C-2 를 하지 않는다(임대 적재도 C-2 를 하지 않음 — 매매·임대 연결이 이어 준다).
   4. 연결표: collective_building_key_map · collective_cluster_key_map · rent_building_key_map (old_key, new_key, reason, split_part)
+     C-2: 옛 키 → 조각 키(reason 에 c2_split). 옛 키가 호남·C-01 로 먼저 바뀐 경우는 2단계 키 → 조각 키 연결(c2_chain)과
+     옛 키 → 2단계 키 연결(n_tx 0, 원래 reason)을 함께 남긴다 — 옛 주소가 2단계 키로 옮겨진 뒤 C-2 안내를 받게.
   5. 보존: 원장은 *_p2_before(id, 바뀌기 전 값), 부속 표는 행 전체 사본(*_p2_before) — 원장 행 삭제 0
   6. 부속 표: 단지 속성·공시지가·지오코드·실험 표의 영향 키 행은 보존 후 재키(1:1) 또는 제거(재생성 대상)
      rent_sale_building_map 은 전체 사본만 남긴다(Phase C에서 빌더로 재생성)
+     C-2 분할 키(본 조각 옛 키 포함)의 collective_building_geocodes 행은 지운다(P2 — 동 안 다른 건물 좌표가 섞였을 수 있음,
+     지도에서 다시 잡힘). 속성·공시지가는 본 조각이 옛 키 그대로 가진다(C-2 는 부속 표 행동에서 뺀다).
 mart(building_stats·rolling·annual·presale·market·cluster)는 건드리지 않는다 → 이전 뒤 빌더로 재생성.
 
 멱등: 두 번 돌려도 같은 상태(이미 바뀐 행은 다시 선택되지 않고, 보존·연결표는 ON CONFLICT DO NOTHING).
@@ -46,9 +54,15 @@ sys.path.insert(0, str(REPO / "pipeline" / "collective"))
 
 from admin_names import LEGACY_SIDO_TO_CURRENT  # noqa: E402
 from collective.building_keys import (  # noqa: E402
+    C2_TABLE,
     SPLIT_UNITS_PATH,
+    _key_raw_for,
+    apply_building_key_split_c2,
     building_key_raw_series,
+    c2_key,
     load_split_units,
+    load_split_units_c2,
+    register_c2_parts,
     resolve_split_unit,
     split_key_from_raw,
 )
@@ -202,11 +216,17 @@ class Plan:
     built_ids: list[int] = field(default_factory=list)
     rent: pd.DataFrame = field(default_factory=pd.DataFrame)
     rentmap: pd.DataFrame = field(default_factory=pd.DataFrame)
+    keymap_pre: pd.DataFrame = field(default_factory=pd.DataFrame)      # C-2 전 단계(호남·C-01) 옛 키 → 키 — 부속 표 행동용
+    c2_bases: list[str] = field(default_factory=list)                   # C-2 판정 split 키(본 조각 옛 키) — 좌표 폐기 대상
+    c2_new_parts: list[dict] = field(default_factory=list)              # 이전 중 생긴 새 조각(판정 표에 등록)
     counts: dict = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
 
 
 LEDGER_COLS = "id, asset_type, building_key, addr1, addr2, addr3, addr4, building_name, lot_number, road_name, beopjungri_code"
+COLLECTIVE_LEDGER_COLS = LEDGER_COLS + ", building_year"
+C2_MIGRATE_SOURCE = "p2_migrate"
+C2_REASON, C2_CHAIN = "c2_split", "c2_chain"
 
 
 def _split_part_lookup(path: Path = SPLIT_UNITS_PATH) -> dict[tuple[str, str], int]:
@@ -232,6 +252,7 @@ def compute_new_keys(df: pd.DataFrame, units: dict, parts: dict) -> pd.DataFrame
         std = sub.assign(addr1=sub["new_addr1"])
         raw_std = building_key_raw_series(std, asset)
         key_std = raw_std.map(_sha)
+        out.loc[idx, "std_key"] = key_std.values
         new, reason, part = [], [], []
         for r, ks, ko, a_old, a_new, code in zip(raw_std, key_std, sub["building_key"], sub["addr1"], sub["new_addr1"],
                                                 sub["beopjungri_code"]):
@@ -255,32 +276,121 @@ def compute_new_keys(df: pd.DataFrame, units: dict, parts: dict) -> pd.DataFrame
     return out
 
 
-def plan_collective(conn: Connection, units: dict, parts: dict, plan: Plan) -> None:
+def _c2_part_of(raw_std: str, base: str, new_key: str, c01: dict, parts: set[int]) -> int:
+    raw = _key_raw_for(raw_std, base, c01)
+    if raw is None:
+        return 0
+    for n in sorted(parts):
+        if c2_key(raw, f"p{n}") == new_key:
+            return n
+    return 0
+
+
+def apply_c2_to_plan(df: pd.DataFrame, c2: dict, c01: dict) -> tuple[pd.DataFrame, list[dict]]:
+    """compute_new_keys 결과(new_key = 호남·C-01 반영 키) 위에 C-2 조각 배정(월간 적재와 같은 규칙).
+
+    - 대상: 원문 재현이 된 행(ok) 중 new_key 가 판정 표 split 키인 행. 3건 판단은 이번 선택 행(그 키의 원장 전체)으로 한다.
+    - 열 추가: pre_c2_key·pre_reason·pre_split_part(C-2 전 값). 옮겨진 행은 new_key = 조각 키, reason 에 +c2_split,
+      split_part = C-2 조각 번호.
+    반환: (df, 새 조각 등록 행)."""
+    df = df.copy()
+    df["pre_c2_key"] = df["new_key"]
+    df["pre_reason"] = df["reason"]
+    df["pre_split_part"] = df["split_part"]
+    if not c2 or df.empty:
+        return df, []
+    tgt = df["ok"].astype(bool) & df["new_key"].isin(set(c2))
+    new_parts: list[dict] = []
+    for asset, idx in df[tgt].groupby("asset_type").groups.items():
+        sub = df.loc[idx]
+        view = sub.assign(building_key=sub["new_key"], addr1=sub["new_addr1"])
+        out = apply_building_key_split_c2(view, asset, units=c2, c01_units=c01)
+        np_ = list(out.attrs.get("c2_new_parts") or [])
+        new_parts += np_
+        moved = out["building_key"] != sub["new_key"]
+        if not moved.any():
+            continue
+        mi = moved[moved].index
+        raw_std = building_key_raw_series(view.loc[mi], asset)
+        pset: dict[str, set[int]] = {}
+        for b in set(view.loc[mi, "building_key"]):
+            pset[b] = {f[2] for fr in c2[b].values() for f in fr} | {r["part"] for r in np_ if r["base_key"] == b}
+        df.loc[mi, "split_part"] = [_c2_part_of(r, b, nk, c01, pset[b]) for r, b, nk in
+                                    zip(raw_std, view.loc[mi, "building_key"], out.loc[mi, "building_key"])]
+        df.loc[mi, "reason"] = [f"{x}+{C2_REASON}" if x else C2_REASON for x in df.loc[mi, "reason"]]
+        df.loc[mi, "new_key"] = out.loc[mi, "building_key"].values
+    return df, new_parts
+
+
+KEYMAP_COLS = ["old_key", "new_key", "asset_type", "reason", "split_part", "n"]
+
+
+def build_keymap(ch: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """(연결표, C-2 전 단계 연결표). 연결표 = 옛 키 → 최종 키(행 수 n) + C-2 보조 행:
+    c2_chain(2단계 키 → 조각 키, 옛 키가 먼저 바뀐 경우) · 경로 행(옛 키 → 2단계 키, n 0 — 그 쌍에 남은 거래가 없을 때)."""
+    if not len(ch):
+        e = pd.DataFrame(columns=KEYMAP_COLS)
+        return e, e.copy()
+    if "pre_c2_key" not in ch.columns:
+        ch = ch.assign(pre_c2_key=ch["new_key"], pre_reason=ch["reason"], pre_split_part=ch["split_part"])
+    mv = ch[ch["new_key"] != ch["building_key"]]
+    km = (mv.groupby(["building_key", "new_key", "asset_type"], as_index=False)
+          .agg(reason=("reason", "first"), split_part=("split_part", "max"), n=("id", "count"))
+          .rename(columns={"building_key": "old_key"}))
+    pre = (ch[ch["pre_c2_key"] != ch["building_key"]]
+           .groupby(["building_key", "pre_c2_key", "asset_type"], as_index=False)
+           .agg(reason=("pre_reason", "first"), split_part=("pre_split_part", "max"), n=("id", "count"))
+           .rename(columns={"building_key": "old_key", "pre_c2_key": "new_key"}))
+    c2m = mv[mv["reason"].str.contains(C2_REASON) & (mv["pre_c2_key"] != mv["building_key"])]
+    have = set(zip(km["old_key"], km["new_key"]))
+    extra = []
+    if len(c2m):
+        chain = (c2m.groupby(["pre_c2_key", "new_key", "asset_type"], as_index=False)
+                 .agg(split_part=("split_part", "max"), n=("id", "count"))
+                 .rename(columns={"pre_c2_key": "old_key"}))
+        chain["reason"] = C2_CHAIN
+        extra.append(chain[[(o, nk) not in have for o, nk in zip(chain["old_key"], chain["new_key"])]])
+        route = pre[pre["old_key"].isin(set(c2m["building_key"]))].copy()
+        route = route[[(o, nk) not in have for o, nk in zip(route["old_key"], route["new_key"])]]
+        route["n"] = 0
+        extra.append(route)
+    km = pd.concat([km] + [e[KEYMAP_COLS] for e in extra], ignore_index=True) if extra else km
+    return km[KEYMAP_COLS].reset_index(drop=True), pre[KEYMAP_COLS].reset_index(drop=True)
+
+
+def plan_collective(conn: Connection, units: dict, parts: dict, plan: Plan, c2: dict | None = None) -> None:
     base = list(units)
+    c2 = c2 or {}
     df = pd.read_sql(
-        text(f"SELECT {LEDGER_COLS} FROM collective_transactions WHERE addr1 = ANY(:leg) OR building_key = ANY(:base)"),
-        conn, params={"leg": LEGACY, "base": base})
-    # 호남 표준화 후 분할 목록에 드는 키(옛 이름 원 키)도 위 OR 의 addr1 조건으로 이미 포함된다
-    df = compute_new_keys(df, units, parts) if len(df) else df.assign(new_addr1=None, ok=True, new_key=None, reason="", split_part=0)
+        text(f"SELECT {COLLECTIVE_LEDGER_COLS} FROM collective_transactions "
+             "WHERE addr1 = ANY(:leg) OR building_key = ANY(:base) OR building_key = ANY(:c2)"),
+        conn, params={"leg": LEGACY, "base": base, "c2": sorted(c2)})
+    # 호남 표준화 후 분할 목록에 드는 키(옛 이름 원 키)도 위 OR 의 addr1 조건으로 이미 포함된다.
+    # C-2 판정 키가 2단계 키(호남·C-01 뒤)인 행도 옛 이름(addr1)·C-01 원 키 조건으로 포함된다.
+    df = compute_new_keys(df, units, parts) if len(df) else df.assign(new_addr1=None, ok=True, new_key=None, reason="",
+                                                                       split_part=0, std_key=None)
     bad = df[~df["ok"]] if len(df) else df
     if len(bad):
         plan.problems.append(f"collective_transactions 원문 재현 불일치 {len(bad)}행 — 그 행은 키 유지(addr1만 표준화)")
         df.loc[~df["ok"], "new_key"] = df.loc[~df["ok"], "building_key"]
+    df, new_parts = apply_c2_to_plan(df, c2, units)
+    plan.c2_new_parts = new_parts
+    plan.c2_bases = sorted(c2)
     ch = df[(df["new_key"] != df["building_key"]) | (df["new_addr1"] != df["addr1"])].copy() if len(df) else df
     plan.ledger = ch
-    km = (ch[ch["new_key"] != ch["building_key"]]
-          .groupby(["building_key", "new_key", "asset_type"], as_index=False)
-          .agg(reason=("reason", "first"), split_part=("split_part", "max"), n=("id", "count"))
-          .rename(columns={"building_key": "old_key"})) if len(ch) else pd.DataFrame(
-        columns=["old_key", "new_key", "asset_type", "reason", "split_part", "n"])
-    plan.keymap = km
+    km, pre = build_keymap(ch)
+    plan.keymap, plan.keymap_pre = km, pre
+    direct = km[(km["n"] > 0) & (km["reason"] != C2_CHAIN)]
     # 충돌: 분할로 생기는 새 키가 이전 전에 이미 다른 행의 키로 있으면 안 된다
-    split_new = sorted(set(km.loc[km["reason"].str.contains("split"), "new_key"]))
+    split_new = sorted(set(direct.loc[direct["reason"].str.contains("split"), "new_key"]))
     coll = 0
     if split_new:
         coll = int(conn.execute(text(
             "SELECT count(*) FROM collective_transactions WHERE building_key = ANY(:k)"), {"k": split_new}).scalar() or 0)
-    dup_new = int(km[km["reason"].str.contains("split")].groupby("new_key")["old_key"].nunique().gt(1).sum()) if len(km) else 0
+    # 여러 옛 키가 같은 분할 새 키: 호남 표준화로 합쳐지는 같은 단지(표준화 키가 같음)는 정상, 그 밖은 충돌
+    mv = ch[(ch["new_key"] != ch["building_key"]) & ch["reason"].str.contains("split")] if len(ch) else ch
+    dup_new = int(mv.groupby("new_key")["std_key"].nunique().gt(1).sum()) if len(mv) else 0
+    c2_rows = ch[ch["reason"].str.contains(C2_REASON)] if len(ch) else ch
     honam_new = sorted(set(km.loc[km["reason"] == "honam_sido", "new_key"]))
     merged = 0
     if honam_new:
@@ -294,6 +404,11 @@ def plan_collective(conn: Connection, units: dict, parts: dict, plan: Plan) -> N
         keymap_rows=len(km), honam_old_keys=int(km.loc[km.reason == "honam_sido", "old_key"].nunique()) if len(km) else 0,
         honam_merged_into_existing=merged, split_base_keys=int(km.loc[km.reason.str.contains("split"), "old_key"].nunique()) if len(km) else 0,
         split_new_keys=len(split_new), new_key_collision=coll, split_new_key_shared=dup_new,
+        c2_base_keys=len(c2), c2_rows_moved=len(c2_rows),
+        c2_moved_base_keys=int(c2_rows["pre_c2_key"].nunique()) if len(c2_rows) else 0,
+        c2_new_keys=int(c2_rows["new_key"].nunique()) if len(c2_rows) else 0,
+        c2_new_parts_registered=len(new_parts), c2_chain_rows=int((km["reason"] == C2_CHAIN).sum()) if len(km) else 0,
+        c2_route_rows=int((km["n"] == 0).sum()) if len(km) else 0,
     )
     if coll or dup_new:
         plan.problems.append(f"새 키 충돌: 기존 키와 {coll}행, 여러 옛 키가 같은 새 키 {dup_new}")
@@ -398,14 +513,22 @@ SIDE_TABLES_COLLECTIVE = [
 SIDE_TABLES_RENT = [
     ("rent_building_geocodes", ("building_key",), "building_key", False),
 ]
+C2_DISCARD_TABLES = {"collective_building_geocodes"}   # P2: C-2 분할 키(본 조각 옛 키 포함) 좌표 폐기
+
+
+DISCARD = "c2_discard"
 
 
 def side_actions(conn: Connection, table: str, pk: tuple[str, ...], keycol: str, allow_rekey: bool,
-                 keymap: pd.DataFrame) -> pd.DataFrame:
-    """영향 키 행별 행동: honam 1:1 이고 새 키 행이 없으면 rekey, 그 밖(새 키 이미 있음·분할)은 delete."""
+                 keymap: pd.DataFrame, discard_keys=()) -> pd.DataFrame:
+    """영향 키 행별 행동: honam 1:1 이고 새 키 행이 없으면 rekey, 그 밖(새 키 이미 있음·분할)은 delete.
+    discard_keys(C-2 분할 키): 그 키의 행과, 재키하면 그 키가 되는 행은 c2_discard(지움 — 보존 표에 원래 행)."""
+    discard = set(discard_keys or ())
     if keymap is None or keymap.empty:
-        return pd.DataFrame(columns=["pk", "action", "new_key"])
-    olds = sorted(set(keymap["old_key"]))
+        if not discard:
+            return pd.DataFrame(columns=["pk", "action", "new_key"])
+        keymap = pd.DataFrame(columns=["old_key", "new_key"])
+    olds = sorted(set(keymap["old_key"]) | discard)
     rows = pd.read_sql(text(f"SELECT {', '.join(dict.fromkeys(pk + (keycol, 'asset_type')))} FROM {table} WHERE {keycol} = ANY(:k)")
                        if "asset_type" in _cols(conn, table) else
                        text(f"SELECT {', '.join(dict.fromkeys(pk + (keycol,)))} FROM {table} WHERE {keycol} = ANY(:k)"),
@@ -421,7 +544,9 @@ def side_actions(conn: Connection, table: str, pk: tuple[str, ...], keycol: str,
     out = []
     for r in rows.to_dict("records"):
         ok_ = r[keycol]
-        if allow_rekey and one.get(ok_, 0) == 1 and one_new[ok_] not in have:
+        if ok_ in discard or (one.get(ok_, 0) == 1 and one_new[ok_] in discard):
+            out.append((json.dumps([r[c] for c in pk], default=str), DISCARD, None))
+        elif allow_rekey and one.get(ok_, 0) == 1 and one_new[ok_] not in have:
             out.append((json.dumps([r[c] for c in pk], default=str), "rekey", one_new[ok_]))
         else:
             out.append((json.dumps([r[c] for c in pk], default=str), "delete", None))
@@ -521,12 +646,12 @@ def _baseline(conn: Connection, step: str, tables: list[str]) -> None:
 
 def _apply_side(conn: Connection, table: str, pk: tuple[str, ...], keycol: str, acts: pd.DataFrame) -> dict:
     if acts.empty or not _table_exists(conn, table):
-        return {"rekey": 0, "delete": 0}
+        return {"rekey": 0, "delete": 0, DISCARD: 0}
     b = _ensure_side_before(conn, table)
     cols = _cols(conn, table)
     collist = ", ".join(cols)
     where = " AND ".join(f"t.{c}::text = (CAST(:pk AS jsonb) ->> {i})" for i, c in enumerate(pk))
-    n = {"rekey": 0, "delete": 0}
+    n = {"rekey": 0, "delete": 0, DISCARD: 0}
     for a in acts.to_dict("records"):
         prm = {"pk": a["pk"], "nk": a["new_key"], "act": a["action"]}
         conn.execute(text(f"""INSERT INTO {b} ({collist}, p2_action, p2_new_key)
@@ -547,8 +672,18 @@ def apply_collective(eng: Engine, dbname: str, plan: Plan) -> dict:
         _baseline(conn, "baseline_collective", ["collective_transactions", "collective_commercial_transactions",
                                                  "commercial_clusters"])
         # 부속 표 행동은 원장 바꾸기 전에 계산(새 키 존재 여부를 이전 전 상태로 판단)
-        side = {t: side_actions(conn, t, pk, kc, rk, plan.keymap) for t, pk, kc, rk in SIDE_TABLES_COLLECTIVE
-                if _table_exists(conn, t)}
+        # C-2 는 부속 표 행동에서 뺀다(본 조각이 옛 키 그대로) — C-2 전 단계 연결표만 쓴다. 좌표는 C-2 키를 지운다(P2).
+        km_side = plan.keymap_pre if plan.keymap_pre is not None and len(plan.keymap_pre.columns) else plan.keymap
+        side = {t: side_actions(conn, t, pk, kc, rk, km_side,
+                                discard_keys=plan.c2_bases if t in C2_DISCARD_TABLES else ())
+                for t, pk, kc, rk in SIDE_TABLES_COLLECTIVE if _table_exists(conn, t)}
+        if plan.c2_new_parts:
+            if not _table_exists(conn, C2_TABLE):
+                raise RuntimeError(f"C-2 새 조각을 등록할 판정 표({C2_TABLE})가 없음 — 중단")
+            reg = register_c2_parts(conn, [{**r, "source": C2_MIGRATE_SOURCE} for r in plan.c2_new_parts])
+            if any(not r["registered"] for r in reg):
+                raise RuntimeError("C-2 새 조각 등록 충돌(판정 표가 계획 뒤 바뀜) — 중단, 계획을 다시 만든다")
+            res["c2_parts_registered"] = len(reg)
         ch = plan.ledger
         if len(ch):
             rows = [{"id": int(i), "a": a, "k": k} for i, a, k in zip(ch["id"], ch["addr1"], ch["building_key"])]
@@ -705,6 +840,9 @@ def rollback_collective(eng: Engine, dbname: str) -> dict:
             conn.execute(text(f"DROP TABLE {t}"))
         conn.execute(text("DELETE FROM collective_building_key_map"))
         conn.execute(text("DELETE FROM collective_cluster_key_map"))
+        if _table_exists(conn, C2_TABLE):
+            r = conn.execute(text(f"DELETE FROM {C2_TABLE} WHERE source = :s"), {"s": C2_MIGRATE_SOURCE})
+            res["c2_parts_unregistered"] = int(r.rowcount or 0)
         _log(conn, "rollback_collective", res)
     return res
 
@@ -746,6 +884,35 @@ def rollback_rent(eng: Engine, dbname: str) -> dict:
 # 검증(읽기)
 # --------------------------------------------------------------------------------------------
 
+_MAIN_LOT_SQL = ("CASE WHEN split_part(btrim(t.lot_number), '-', 1) ~ '^[0-9]+$' "
+                 "THEN (split_part(btrim(t.lot_number), '-', 1)::bigint)::text ELSE split_part(btrim(t.lot_number), '-', 1) END")
+
+
+def verify_c2(c: Connection) -> list[tuple[str, object, object, bool]]:
+    """C-2 항목(판정 표에 조각 ≠ 0 인 split 행이 있을 때만). 지번은 내지 않고 건수만."""
+    out: list[tuple[str, object, object, bool]] = []
+    if not _table_exists(c, C2_TABLE):
+        return out
+    nsplit = int(c.execute(text(f"SELECT count(*) FROM {C2_TABLE} WHERE decision = 'split' AND part <> 0")).scalar() or 0)
+    if not nsplit:
+        return out
+    left = int(c.execute(text(f"""
+        SELECT count(*) FROM collective_transactions t JOIN {C2_TABLE} u
+          ON u.base_key = t.building_key AND u.decision = 'split' AND u.part <> 0
+         AND u.beopjungri_code = left(t.beopjungri_code, 10) AND u.main_lot = {_MAIN_LOT_SQL}""")).scalar() or 0)
+    out.append(("C-2 조각(본 조각 밖) 본번 거래가 옛 키에 남은 행", 0, left, left == 0))
+    km = int(c.execute(text("SELECT count(*) FROM collective_building_key_map WHERE reason LIKE '%c2%'")).scalar() or 0)
+    out.append(("C-2 연결표 행(c2_split·c2_chain) 있음", "> 0", km, km > 0))
+    geo = 0
+    if _table_exists(c, "collective_building_geocodes"):
+        geo = int(c.execute(text(f"""SELECT count(*) FROM collective_building_geocodes g
+            WHERE g.building_key IN (SELECT DISTINCT base_key FROM {C2_TABLE} WHERE decision = 'split')""")).scalar() or 0)
+    out.append(("C-2 분할 키 좌표 남은 행(P2 폐기)", 0, geo, geo == 0))
+    nk = int(c.execute(text("""SELECT count(*) FROM (SELECT new_key FROM collective_building_key_map
+        WHERE reason LIKE '%c2_split%' GROUP BY 1 HAVING count(DISTINCT asset_type) > 1) x""")).scalar() or 0)
+    out.append(("C-2 조각 키 하나에 유형 여럿", 0, nk, nk == 0))
+    return out
+
 def verify(ceng: Engine, beng: Engine | None, reng: Engine | None, units: dict) -> list[tuple[str, object, object, bool]]:
     """(지표, 기대, 실제, 통과)."""
     out: list[tuple[str, object, object, bool]] = []
@@ -781,11 +948,13 @@ def verify(ceng: Engine, beng: Engine | None, reng: Engine | None, units: dict) 
             LEFT JOIN collective_transactions_p2_before p ON p.id = t.id
             WHERE p.id IS NULL""")).scalar() or 0)
         out.append(("새 키 충돌(분할 새 키에 외부 행)", 0, coll, coll == 0))
-        nm = int(c.execute(text("SELECT count(*) FROM collective_building_key_map")).scalar() or 0)
+        nm = int(c.execute(text("SELECT count(*) FROM collective_building_key_map WHERE reason <> :ch AND coalesce(n_tx, 0) > 0"),
+                           {"ch": C2_CHAIN}).scalar() or 0)
         nchg = int(c.execute(text("""SELECT count(*) FROM (SELECT DISTINCT p.building_key, t.building_key
                                      FROM collective_transactions_p2_before p JOIN collective_transactions t ON t.id=p.id
                                      WHERE p.building_key <> t.building_key) x""")).scalar() or 0)
-        out.append(("연결표 행 수 = 바뀐 (옛,새) 키 쌍 수", nchg, nm, nchg == nm))
+        out.append(("연결표 행 수(C-2 보조 행 제외) = 바뀐 (옛,새) 키 쌍 수", nchg, nm, nchg == nm))
+        out += verify_c2(c)
         orphan = int(c.execute(text("""SELECT count(*) FROM collective_commercial_transactions t
                                        LEFT JOIN commercial_clusters c ON c.id = t.cluster_id WHERE c.id IS NULL""")).scalar() or 0)
         out.append(("비주거 거래 cluster_id 고아", 0, orphan, orphan == 0))
@@ -818,7 +987,7 @@ def build_plan(ceng: Engine, beng: Engine | None, reng: Engine | None, units: di
     parts = _split_part_lookup(split_path or SPLIT_UNITS_PATH)
     plan = Plan()
     with ceng.connect() as c:
-        plan_collective(c, units, parts, plan)
+        plan_collective(c, units, parts, plan, load_split_units_c2(c))
         plan_commercial(c, plan)
     if beng is not None:
         with beng.connect() as c:
