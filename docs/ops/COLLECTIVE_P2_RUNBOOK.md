@@ -621,16 +621,59 @@ while :; do rem=$((deadline - SECONDS)); (( rem > 0 )) || break
   - 월간 속성 단계를 만들 때 이 스크립트를 키 목록·추가 전용 방식으로 바꾸거나 폐기할지 같이 정한다.
 - `vps_promote_collective_pg18.sh`(반영 전 덤프 없음)·`vps_promote_7y_marts.sh`(속성 TRUNCATE)의 정리 여부.
 
-## 12. 16일 이후 순서 (지금 하지 않음)
+## 12. C-2 확정 뒤 전체 리허설 재실행 (T 승인 뒤 실행 — 순서·예상 시간만)
 
-1. Cursor 가 불확실 상위 100건을 확인한다(`logs/collective_p2/c2_uncertain_for_cursor.csv`). T 는 「다른 단지」 판정만 검토한다.
-2. 판정을 반영해 C-2 판정 파일(`p2_split_units_c2.csv`)을 확정한다. 「확인 불가」와 나머지 171건은 분할하지 않는다(`decision=keep` 으로 기록).
-3. `migrate_p2_keys` 에 C-2 판정 표를 연결한다(원장 키 바꾸기·연결표 `c2_split` 행, 5.1 메모). 6.1 운영 전용 표 합치기 스크립트도 만든다.
-4. 리허설 DB 를 덤프에서 다시 만들고 키 이전부터 전체 리허설을 다시 돌린다. 속성·공시지가는 새 분할 키 목록(C-01 + C-2)으로 채운다.
-5. c5~c10 과 c8(해시)을 다시 검증한다. Insight 재계산 값을 고정한다(`c22_insight_recompute.py run --side before/after` → `compare`).
-6. 이 런북의 「C-2 확정 후 채움」 칸을 채운다.
-7. 5.0 표제부 DB 를 만든다(실제 반영 전).
-8. Codex 검토 → T 승인 → 1회차(낮, 로컬 적용·검증) → T 확인 → 2회차(새벽, promote) → Opus 운영 확인.
+C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c2_units` 형식, 지번 포함·로컬, `c25_c2_finalize.py`)로 확정했다. 리허설 DB 에도 아직 쓰지 않았다.
+
+### 12.1 리허설 전에 만들 코드 (Claude Code 브랜치 → Codex 검토)
+
+| # | 할 일 | 비고 |
+|---|---|---|
+| P1 | `migrate_p2_keys` 에 C-2 연결 | 판정 표를 읽어 원장 키를 바꾸고(본 조각 = 옛 키 유지, 나머지 = `c2_key(원문, p<n>)`), 연결표에 `reason='c2_split'` 행을 남긴다. 3건 미만 본번은 `apply_building_key_split_c2` 규칙. `--verify` 에 C-2 항목 추가 |
+| P2 | **C-2 옛 키 좌표 버리기**(지난 보완) | C-2 분할 키(본 조각 옛 키 포함)의 `collective_building_geocodes`·`rent_building_geocodes` 행을 지운다. 동 안 다른 건물 좌표가 섞여 있을 수 있어서다. 지도에서 다시 잡힌다. 이전 전 행은 `_p2_before` 에 보존 |
+| P3 | 판정 표 적재 도구 | `c2_units_final.csv` → 리허설 DB `collective_building_key_c2_units`(리허설 가드). 운영은 promote 로 따라 올라간다 |
+| P4 | 분할 아파트 표시 이름(12.3) | 표시만, 키는 그대로 |
+| P5 | Insight 14 생성기 | `git show wip/ai-revision-20261109:backend/app/collective/apt_officetel_same_building_lab.py` → logs, `c22 --gen14` |
+
+### 12.2 실행 순서·예상 시간 (로컬, Phase C 실측 기반 — 「추정」은 미실측)
+
+| # | 단계 | 예상 |
+|---|---|---|
+| 1 | 리허설 DB 다시 만들기: `*_p2r` 3개를 지우고 Phase C 덤프(`logs/collective_p2/dumps/*.dir`)에서 `pg_restore -j 4`. `parcel_master_p2r` 는 그대로 둔다 | 추정 1~2시간 |
+| 2 | 판정 표 적재(P3) | 1분 |
+| 3 | 키 이전 C-01 + C-2(`migrate_p2_keys --apply`, P1) → `--verify` | 23분 + C-2 추정 10분 · 4분 |
+| 4 | C-2 옛 키 좌표 버리기(P2) | 1분 |
+| 5 | 거래유형 보정 · 2019~2020 분할 옛 키 annual 정리 | 5분 · 1분 |
+| 6 | 15단계(통계표 재생성: building_stats·rolling·presale·market·commercial·rent 등) | 2시간 41분 |
+| 7 | 속성·공시지가 — 새 분할 키 목록(C-01 3,447 + C-2 약 2,028) | 추정 20분(Phase C 3,447키 12분) |
+| 8 | 매매·임대 연결 · 복합 scope · integrity_p2 --deep(C-2형 판정 밖 0) | 4분 · 1분 · 수 분 |
+| 9 | 검증 c5(39항목 + C-2 항목) · c6 · c7 · c9 · c10 | 추정 1~1.5시간 |
+| 10 | c8 롤백·행 해시(덤프 복원 방식) | 5시간 30분(Phase C 실측) |
+| 11 | Insight 14·08·03·12 재계산(`c22 run --side before/after` → `compare`) | 추정 30~60분 |
+| 12 | **백엔드 전체 테스트 다시**(지난 보완) + pipeline 전체 테스트 | 3분 + 30초 |
+| | 합(c8 포함) | 약 12~14시간 |
+
+- 2~8 은 하루 안에 이어서 한다(약 4시간 30분). 9~12 는 다음 날 해도 된다(리허설 DB 는 그대로).
+- 멈춤 조건은 Phase C 와 같다:
+  - 지표가 예측과 다름(규칙·설계 문제)
+  - 쓰기 대상이 `*_p2r` 밖
+  - 디스크 20% 미만
+  - 같은 단계가 두 번 연속 실패
+
+### 12.3 분할 아파트 표시 이름 「단지명 (YYYY년 준공)」 — 표시만, 키는 그대로
+
+| 위치 | 파일 | 할 일 |
+|---|---|---|
+| 목록 API 행 | `backend/app/collective/building_stats_query.py`(행 → `display_name`, 60·92행) | C-2 분할 아파트 조각(연결표 `c2_split` 의 옛 키·새 키)이면 `display_label = f"{display_name} ({building_year}년 준공)"` 을 더한다. `display_name` 은 그대로(검색·정렬·키 계산에 씀) |
+| 상세 메타 | `backend/app/collective/router.py` `_get_building_meta`(674행)·상세 응답 | 같은 `display_label` |
+| 지도 라벨 | `POST /api/collective/buildings/map-points` 의 `label` | 프런트가 `display_label` 을 넘기게 |
+| 목록 표 | `frontend-collective/src/components/BuildingStatsTable.tsx`(「건물명」 칸, 109행) | `row.display_label ?? row.display_name` |
+| 상세 모달 제목 | `frontend-collective/src/components/BuildingDetailModal.tsx` | 같음 |
+| 모바일 목록 | `frontend-collective/src/MobileCollectiveApp.tsx`(15행 `name()`) | 같음 |
+| AI 문맥 | `frontend-collective/src/api/aiContext.ts` | 이름 칸에 `display_label` |
+| 분리 안내 후보 | `KeySplitC2Notice`(집합·임대) | 키 상태 응답은 숫자를 내지 않으므로 준공 연도도 넣지 않는다. 후보는 이름·동만. 목록 행에서 보이는 구분은 `display_label` |
+
+- 대상: C-2 로 나뉜 아파트 조각(이번 확정 33 (키·법정동), 늘어나는 키 37). 연립·오피스텔은 이번 지시 범위 밖이다(필요하면 같은 방식).
 
 ## 13. 실행 전 확인 사항 (T·Codex)
 

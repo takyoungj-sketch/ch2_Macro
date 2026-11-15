@@ -258,6 +258,11 @@ def main(argv=None) -> int:
                            f" · 부속지번 {len(info[(w['b0'], g['lot'])]['links'])}" if (w['b0'], g['lot']) in info else "")
                         for g in w["gs"])})
     df = pd.DataFrame(out)
+    # 다음 단계(c25 확정 판정)가 쓰는 상태 — 지번 포함, logs/ 에만
+    import pickle
+
+    with (OUT / "c24_state.pkl").open("wb") as fh:
+        pickle.dump({"work": [{k: v for k, v in w.items()} for w in work], "info": info, "out": out}, fh)
     df[df["단위"] == "불확실"].to_csv(OUT / "c2_uncertain_by_register.csv", index=False, encoding="utf-8-sig")
     df[df["단위"] == "확실 유지 재점검"].to_csv(OUT / "c2_keep_recheck.csv", index=False, encoding="utf-8-sig")
     df[df["단위"] == "대조군"].to_csv(OUT / "c2_control_register.csv", index=False, encoding="utf-8-sig")
