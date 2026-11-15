@@ -625,55 +625,62 @@ while :; do rem=$((deadline - SECONDS)); (( rem > 0 )) || break
 
 C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c2_units` 형식, 지번 포함·로컬, `c25_c2_finalize.py`)로 확정했다. 리허설 DB 에도 아직 쓰지 않았다.
 
-### 12.1 리허설 전에 만들 코드 (Claude Code 브랜치 → Codex 검토)
+### 12.1 리허설 전에 만든 코드 (2026-11-16 완료 · `data/collective-p2` · Codex 검토 대상)
 
-| # | 할 일 | 비고 |
+| # | 할 일 | 한 것 |
 |---|---|---|
-| P1 | `migrate_p2_keys` 에 C-2 연결 | 판정 표를 읽어 원장 키를 바꾸고(본 조각 = 옛 키 유지, 나머지 = `c2_key(원문, p<n>)`), 연결표에 `reason='c2_split'` 행을 남긴다. 3건 미만 본번은 `apply_building_key_split_c2` 규칙. `--verify` 에 C-2 항목 추가 |
-| P2 | **C-2 옛 키 좌표 버리기**(지난 보완) | C-2 분할 키(본 조각 옛 키 포함)의 `collective_building_geocodes`·`rent_building_geocodes` 행을 지운다. 동 안 다른 건물 좌표가 섞여 있을 수 있어서다. 지도에서 다시 잡힌다. 이전 전 행은 `_p2_before` 에 보존 |
-| P3 | 판정 표 적재 도구 | `c2_units_final.csv` → 리허설 DB `collective_building_key_c2_units`(리허설 가드). 운영은 promote 로 따라 올라간다 |
-| P4 | 분할 아파트 표시 이름(12.3) | 표시만, 키는 그대로 |
-| P5 | Insight 14 생성기 | `git show wip/ai-revision-20261109:backend/app/collective/apt_officetel_same_building_lab.py` → logs, `c22 --gen14` |
+| P1 | `migrate_p2_keys` 에 C-2 연결 | 판정 표(`collective_building_key_c2_units`)를 읽어 2단계 키(호남·C-01 뒤) 위에 `apply_building_key_split_c2`. 본 조각 = 옛 키, 나머지 = `c2_key(원문, p<n>)`. 3건 미만 본번은 같은 규칙(같은 건축년도 조각 → 가까운 본번). 표에 없는 3건+ 본번은 새 조각으로 표에 등록(`source=p2_migrate`, `--rollback` 때 지움). 연결표: 옛 키 → 조각(`c2_split`, 앞 단계가 있으면 `honam_sido+c2_split`·`split+c2_split`), 2단계 키 → 조각(`c2_chain`), 옛 키 → 2단계 키(n_tx 0 경로 행, 필요할 때만). 부속 표(속성·공시지가)는 C-2 전 단계 연결표로 처리 → 본 조각이 그대로 가진다. `--verify` C-2 4항목(조각 본번이 옛 키에 남은 행 0 · c2 연결표 행 있음 · C-2 키 좌표 남은 행 0 · 조각 키 하나에 유형 여럿 0). `prune_split_annual` 은 본 조각이 남는 C-2 키(`c2_split`·`c2_chain` 만)를 대상에서 뺀다 |
+| P2 | C-2 옛 키 좌표 버리기 | `--apply` 안에서 같이: C-2 분할 키(본 조각 옛 키 포함)와, 재키하면 그 키가 되는 행의 `collective_building_geocodes` → `c2_discard`(원래 행은 `_p2_before`, 되돌리기 복원). 임대 키는 C-2 로 나누지 않으므로(임대 적재도 C-2 안 함) `rent_building_geocodes` 는 건드리지 않는다 |
+| P3 | 판정 표 적재 | `pipeline/collective/load_c2_units.py`: 이름 가드(…_p2r) + 접속 DB 이름 확인, 형식 검사(키·법정동·조각 0 존재·조각 번호 법정동 간 중복 금지 등), 멱등, 값이 다른 행이 있으면 멈춤, 출력은 건수만. 실제 DB 쓰기 모드 없음(운영은 promote) |
+| P4 | 분할 아파트 표시 이름 | 12.3 |
+| P5 | Insight 14 비교 | `scripts/lab/collective_p2/c27_insight14_compare.py`: wip 생성기를 main 에 가져오지 않고 `wip/ai-revision-20261109`(ed56f0d) detached worktree 를 읽기 전용으로 실행(PGOPTIONS 읽기 전용, 출력 logs/, 실행 전후 worktree 무변경 확인, as_of 2026-10-01 고정) → 공개값(main `insight14.ts` SNAP + 고정 커밋 JSON)과 비교 |
+
+- 미리 보기(읽기 전용, `c26_c2_plan_dryrun.py`, 판정 파일을 DB 에 넣지 않고 계획만): 충돌 0 · 문제 0 · C-2 키 1,609(법정동 단위 1,610) · 늘어나는 키 **2,045**(아파트 54 · 연립 1,859 · 오피스텔 132) · 옮겨지는 거래 **14,288**(c25 의 3건+ 본번 14,002 + 3건 미만 본번 286) · 자동 등록 새 조각 0 · c2_chain 231 · 경로 행 0.
+- 이 미리 보기에서 오피스텔 키 1개가 두 법정동에서 같은 조각 번호(1)를 써 한 키로 합쳐지는 것을 찾아 고쳤다(c25 가 키 안에서 번호를 다시 매김, 적재 도구가 거부).
 
 ### 12.2 실행 순서·예상 시간 (로컬, Phase C 실측 기반 — 「추정」은 미실측)
 
 | # | 단계 | 예상 |
 |---|---|---|
 | 1 | 리허설 DB 다시 만들기: `*_p2r` 3개를 지우고 Phase C 덤프(`logs/collective_p2/dumps/*.dir`)에서 `pg_restore -j 4`. `parcel_master_p2r` 는 그대로 둔다 | 추정 1~2시간 |
-| 2 | 판정 표 적재(P3) | 1분 |
-| 3 | 키 이전 C-01 + C-2(`migrate_p2_keys --apply`, P1) → `--verify` | 23분 + C-2 추정 10분 · 4분 |
-| 4 | C-2 옛 키 좌표 버리기(P2) | 1분 |
-| 5 | 거래유형 보정 · 2019~2020 분할 옛 키 annual 정리 | 5분 · 1분 |
-| 6 | 15단계(통계표 재생성: building_stats·rolling·presale·market·commercial·rent 등) | 2시간 41분 |
-| 7 | 속성·공시지가 — 새 분할 키 목록(C-01 3,447 + C-2 2,045) | 추정 20분(Phase C 3,447키 12분) |
-| 8 | 매매·임대 연결 · 복합 scope · integrity_p2 --deep(C-2형 판정 밖 0) | 4분 · 1분 · 수 분 |
-| 9 | 검증 c5(39항목 + C-2 항목) · c6 · c7 · c9 · c10 | 추정 1~1.5시간 |
-| 10 | c8 롤백·행 해시(덤프 복원 방식) | 5시간 30분(Phase C 실측) |
-| 11 | Insight 14·08·03·12 재계산(`c22 run --side before/after` → `compare`) | 추정 30~60분 |
-| 12 | **백엔드 전체 테스트 다시**(지난 보완) + pipeline 전체 테스트 | 3분 + 30초 |
+| 2 | 판정 표 적재 `load_c2_units.py --collective-db collective_stats_p2r --apply`(P3) | 1분 |
+| 3 | 키 이전 C-01 + C-2 + 좌표 폐기(`migrate_p2_keys --apply`, P1·P2) → `--verify`(20항목) | 23분 + C-2 추정 5분 · 4분 |
+| 4 | 거래유형 보정 · 2019~2020 분할 옛 키 annual 정리 | 5분 · 1분 |
+| 5 | 15단계(통계표 재생성: building_stats·rolling·presale·market·commercial·rent 등) | 2시간 41분 |
+| 6 | 속성·공시지가 — 새 분할 키 목록(C-01 3,447 + C-2 2,045) | 추정 20분(Phase C 3,447키 12분) |
+| 7 | 매매·임대 연결 · 복합 scope · integrity_p2 --deep(C-2형 판정 밖 0) | 4분 · 1분 · 수 분 |
+| 8 | 검증 c5(39항목 + C-2 항목) · c6 · c7 · c9 · c10 | 추정 1~1.5시간 |
+| 9 | c8 롤백·행 해시(덤프 복원 방식) | 5시간 30분(Phase C 실측) |
+| 10 | Insight 08·03·12 재계산(`c22 run --side before/after` → `compare`) · Insight 14(`c27 prepare → run --side after → compare → cleanup`) | 추정 30~60분 · 추정 10~20분 |
+| 11 | 백엔드 전체 테스트 + pipeline 전체 테스트 + 집합 컴포넌트 테스트·tsc | 3분 + 30초 + 1분 |
 | | 합(c8 포함) | 약 12~14시간 |
 
-- 2~8 은 하루 안에 이어서 한다(약 4시간 30분). 9~12 는 다음 날 해도 된다(리허설 DB 는 그대로).
+- 2~7 은 하루 안에 이어서 한다(약 4시간 20분). 8~11 은 다음 날 해도 된다(리허설 DB 는 그대로).
 - 멈춤 조건은 Phase C 와 같다:
-  - 지표가 예측과 다름(규칙·설계 문제)
+  - 지표가 예측과 다름(규칙·설계 문제) — 3단계 기준: 미리 보기 숫자(키 +2,045 · 옮겨지는 거래 14,288 · 충돌 0 · 자동 등록 0)
   - 쓰기 대상이 `*_p2r` 밖
   - 디스크 20% 미만
   - 같은 단계가 두 번 연속 실패
 
-### 12.3 분할 아파트 표시 이름 「단지명 (YYYY년 준공)」 — 표시만, 키는 그대로
+### 12.3 분할 아파트 표시 이름 「단지명 (YYYY년 준공)」 — 표시만, 키는 그대로 (P4 완료)
 
-| 위치 | 파일 | 할 일 |
+| 위치 | 파일 | 한 것 |
 |---|---|---|
-| 목록 API 행 | `backend/app/collective/building_stats_query.py`(행 → `display_name`, 60·92행) | C-2 분할 아파트 조각(연결표 `c2_split` 의 옛 키·새 키)이면 `display_label = f"{display_name} ({building_year}년 준공)"` 을 더한다. `display_name` 은 그대로(검색·정렬·키 계산에 씀) |
-| 상세 메타 | `backend/app/collective/router.py` `_get_building_meta`(674행)·상세 응답 | 같은 `display_label` |
-| 지도 라벨 | `POST /api/collective/buildings/map-points` 의 `label` | 프런트가 `display_label` 을 넘기게 |
-| 목록 표 | `frontend-collective/src/components/BuildingStatsTable.tsx`(「건물명」 칸, 109행) | `row.display_label ?? row.display_name` |
-| 상세 모달 제목 | `frontend-collective/src/components/BuildingDetailModal.tsx` | 같음 |
-| 모바일 목록 | `frontend-collective/src/MobileCollectiveApp.tsx`(15행 `name()`) | 같음 |
-| AI 문맥 | `frontend-collective/src/api/aiContext.ts` | 이름 칸에 `display_label` |
-| 분리 안내 후보 | `KeySplitC2Notice`(집합·임대) | 키 상태 응답은 숫자를 내지 않으므로 준공 연도도 넣지 않는다. 후보는 이름·동만. 목록 행에서 보이는 구분은 `display_label` |
+| 목록 API 행 | `backend/app/collective/building_stats_query.py` · `display_label.py` | 연결표에서 reason 에 c2 가 든 옛 키(본 조각)·새 키 중 아파트면 `display_label = "단지명 (YYYY년 준공)"`(연도 = 행의 building_year). `display_name` 그대로. 연결표는 key_remap 캐시 공유 |
+| 목록 표 | `BuildingStatsTable.tsx` | 이름 칸·툴팁 `display_label` 우선. 검색은 두 이름 모두 |
+| 상세 모달 | `BuildingDetailModal.tsx` | 제목·「원래 단지」·인근 후보·유형 카드 |
+| 모바일 목록 | `MobileCollectiveApp.tsx` | 같음 |
+| 지도 라벨 | `App.tsx` → map-points `label` | 선택·후보 모두 |
+| AI 문맥 | `api/aiContext.ts` 목록 문맥(visible_rows·first_row) | 같음 |
+| CSV | `cohort_router.py` 코호트 거래 내보내기 「단지」 칸(원장 최빈 준공연도) | 단건 내보내기는 단지 칸이 없어 그대로 |
+| 그대로 둔 곳 | 상세 하위 API 응답의 `display_name`(롤링·연도별·회귀 등), 분리 안내 후보(`KeySplitC2Notice`, 숫자 없음 원칙) | 화면 제목은 목록 행에서 오므로 보이는 이름은 바뀐다 |
 
 - 대상: C-2 로 나뉜 아파트 조각(이번 확정 47 (키·법정동), 늘어나는 키 54). 연립·오피스텔은 이번 지시 범위 밖이다(필요하면 같은 방식).
+
+### 12.4 남은 확인 (Codex·T)
+
+- 2019~2020 annual: C-2 본 조각 키는 정리 대상에서 뺐다. 그 키의 2019~2020 행 중 빌더가 다시 쓰지 않는 해(본 조각 거래가 없는 해)는 합친 값이 남을 수 있다 → 리허설 8단계 `stale_annual_report` 로 건수를 보고 처리 방식을 정한다.
+- 연결표 `split_part` 는 C-2 조각 행이면 C-2 조각 번호다(C-01 조각 번호는 같은 옛 키의 경로 행·C-01 행에 남는다).
 
 ## 13. 실행 전 확인 사항 (T·Codex)
 
