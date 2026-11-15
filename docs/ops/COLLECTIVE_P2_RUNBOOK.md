@@ -645,11 +645,11 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 | 1 | 리허설 DB 다시 만들기: `*_p2r` 3개를 지우고 Phase C 덤프(`logs/collective_p2/dumps/*.dir`)에서 `pg_restore -j 4`. `parcel_master_p2r` 는 그대로 둔다 | 추정 1~2시간 |
 | 2 | 판정 표 적재 `load_c2_units.py --collective-db collective_stats_p2r --apply`(P3) | 1분 |
 | 3 | 키 이전 C-01 + C-2 + 좌표 폐기(`migrate_p2_keys --apply`, P1·P2) → `--verify`(20항목) | 23분 + C-2 추정 5분 · 4분 |
-| 4 | 거래유형 보정 · 2019~2020 분할 옛 키 annual 정리 | 5분 · 1분 |
+| 4 | 거래유형 보정 · 2019~2020 분할 옛 키 annual 정리 · **C-2 키 2019~2020 annual 범위 교체**(`python -m collective.c2_annual_replace_p2 --collective-db collective_stats_p2r --apply`, 먼저 드라이런) | 5분 · 1분 · 추정 2분 |
 | 5 | 15단계(통계표 재생성: building_stats·rolling·presale·market·commercial·rent 등) | 2시간 41분 |
 | 6 | 속성·공시지가 — 새 분할 키 목록(C-01 3,447 + C-2 2,045) | 추정 20분(Phase C 3,447키 12분) |
-| 7 | 매매·임대 연결 · 복합 scope · integrity_p2 --deep(C-2형 판정 밖 0) | 4분 · 1분 · 수 분 |
-| 8 | 검증 c5(39항목 + C-2 항목) · c6 · c7 · c9 · c10 | 추정 1~1.5시간 |
+| 7 | 매매·임대 연결(C-2 판정 키·조각 키는 exact 보류, `c2_held` 출력) · 복합 scope · integrity_p2 --deep(C-2형 판정 밖 0) | 4분 · 1분 · 수 분 |
+| 8 | 검증 c5(39항목 + C-2 항목) · c6(+ C-2 annual: 통계 = 원장 재계산, 근거 없는 행 0) · c7(+ C-2 보류 연결 수, 보류 대상 누출 0) · c9 · c10 | 추정 1~1.5시간 |
 | 9 | c8 롤백·행 해시(덤프 복원 방식) | 5시간 30분(Phase C 실측) |
 | 10 | Insight 08·03·12 재계산(`c22 run --side before/after` → `compare`) · Insight 14(`c27 prepare → run --side after → compare → cleanup`) | 추정 30~60분 · 추정 10~20분 |
 | 11 | 백엔드 전체 테스트 + pipeline 전체 테스트 + 집합 컴포넌트 테스트·tsc | 3분 + 30초 + 1분 |
@@ -677,10 +677,17 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 
 - 대상: C-2 로 나뉜 아파트 조각(이번 확정 47 (키·법정동), 늘어나는 키 54). 연립·오피스텔은 이번 지시 범위 밖이다(필요하면 같은 방식).
 
-### 12.4 남은 확인 (Codex·T)
+### 12.4 Codex 검토 반영 (2026-11-16)
 
-- 2019~2020 annual: C-2 본 조각 키는 정리 대상에서 뺐다. 그 키의 2019~2020 행 중 빌더가 다시 쓰지 않는 해(본 조각 거래가 없는 해)는 합친 값이 남을 수 있다 → 리허설 8단계 `stale_annual_report` 로 건수를 보고 처리 방식을 정한다.
+| # | 반영 | 위치 |
+|---|---|---|
+| 1 | C-2 키 2019~2020 annual 범위 교체: 판정 표 본 키 + C-2 조각 키 × 2019·2020 을 annual 빌더와 같은 SQL·레코드 함수(`annual_record_from_row`)로 재계산 → 교체·삽입, 유효 0건이면 삭제. 2010~2018 그대로. 원래 행은 `collective_building_annual_c2_p2_before`, `--rollback` | `pipeline/collective/c2_annual_replace_p2.py` · 리허설 4단계 · c6 |
+| 2 | 임대 연결: C-2 판정 키(본 조각)·조각 키는 exact 연결을 만들지 않는다(임대는 C-2 로 나누지 않아 여러 건물이 합쳐진 키). 화면은 기존 「연결되지 않음」 | `pipeline/rent/build_sale_building_map.py` · c7 |
+| 3 | 판정 표 적재: 표 기존 행 + 파일 새 행의 최종 상태에서 0 이 아닌 (키, 조각 번호)가 두 법정동 이상에 쓰이면 거절(본 조각 0 없음·유형 여럿도) | `load_c2_units.final_state_errors` |
+| 4 | AI 이름: AI 대상 이름(App), 회귀 문맥(단지 하나일 때), 코호트 추이 문맥 | `App.tsx` · `BuildingRegressionPanel.tsx` · `aiContext.ts` |
+
 - 연결표 `split_part` 는 C-2 조각 행이면 C-2 조각 번호다(C-01 조각 번호는 같은 옛 키의 경로 행·C-01 행에 남는다).
+- 임대 C-2 규모(읽기 전용, `c28_rent_c2_scale.py`)는 결정 전 자료로 보고서에 둔다.
 
 ## 13. 실행 전 확인 사항 (T·Codex)
 
