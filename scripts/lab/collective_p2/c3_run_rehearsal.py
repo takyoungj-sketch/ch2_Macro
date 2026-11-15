@@ -61,6 +61,8 @@ def step_list():
     dbargs = ["--collective-db", DBS["collective"], "--built-db", DBS["built"], "--rent-db", DBS["rent"]]
     w = ["--as-of", AS_OF, "--windows", "3,5,7"]
     return [
+        # 런북 12.2 단계 2: C-2 판정 표 적재(P3) — 키 이전보다 먼저
+        ("c2_units_load", P(pipe / "collective" / "load_c2_units.py", "--collective-db", DBS["collective"], "--apply")),
         ("migrate_apply", P(m, *dbargs, "--apply")),
         ("migrate_verify", P(m, *dbargs, "--verify")),
         ("dealtype_apply", P(pipe / "collective" / "fix_p2_deal_types.py", "--collective-db", DBS["collective"],
@@ -69,6 +71,9 @@ def step_list():
         # T 조건부 승인(2026-11-13): 2019~2020 annual 분할 옛 키 행 — 옛 count = 새 조각 합일 때만 삭제(보존 표)
         ("split_annual_prune", P(pipe / "collective" / "prune_split_annual_p2.py", "--collective-db", DBS["collective"],
                                  "--apply", "--mismatch-csv", OUT / "c13_split_annual_mismatch.csv")),
+        # Codex 검토: C-2 키 2019~2020 annual 범위 교체(빌더가 annual 을 다시 쓴 뒤 — 최종 상태 기준)
+        ("c2_annual_replace", P("-m", "collective.c2_annual_replace_p2", "--collective-db", DBS["collective"], "--apply")),
+        ("c2_annual_verify", P("-m", "collective.c2_annual_replace_p2", "--collective-db", DBS["collective"], "--verify")),
         ("building_rolling", P(pipe / "build_collective_building_rolling_stats.py", *w, "--replace-as-of")),
         ("presale_lifetime", P(pipe / "build_collective_presale_lifetime_stats.py", "--as-of", AS_OF, "--replace")),
         ("market_stats", P(pipe / "build_collective_market_stats.py", *w)),
@@ -91,6 +96,7 @@ def step_list():
         ("built_scope_stats", P(pipe / "built" / "build_scope_stats.py", "--as-of", AS_OF, "--windows", "3,5,7")),
         # 복합 scope mart 는 addr1 칸으로 UPSERT → 이번 as_of 의 옛 시도명 행은 남는다 → 그 as_of 만 지운다(과거 as_of 유지)
         ("built_scope_legacy_cleanup", P(Path(__file__).with_name("c3_built_scope_cleanup.py"), AS_OF)),
+        ("integrity_p2_deep", P("-m", "collective.integrity_p2", "--deep")),
     ]
 
 

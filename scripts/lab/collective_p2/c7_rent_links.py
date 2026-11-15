@@ -18,6 +18,16 @@ sys.path.insert(0, str(ROOT / "pipeline"))
 from rent.build_sale_building_map import c2_hold_keys, exact_links  # noqa: E402
 
 
+def is_c01_split(reason: str | None) -> bool:
+    """연결표 reason 이 C-01(동 단위) 분할인가. '+' 로 이은 복합 reason 에 c2 가 하나라도 들면 C-01 집계에서 뺀다."""
+    parts = [p.strip() for p in str(reason or "").split("+") if p.strip()]
+    return "split" in parts and not any(p.startswith("c2") for p in parts)
+
+
+def c01_split_rows(km: pd.DataFrame) -> pd.DataFrame:
+    return km[km["reason"].map(is_c01_split)].drop(columns="reason").reset_index(drop=True)
+
+
 def mode_addr(conn, table: str, keys: list[str]) -> pd.DataFrame:
     return pd.read_sql(text(f"""
         SELECT DISTINCT ON (building_key) building_key, left(beopjungri_code, 8) AS emd8, lot_number, n
@@ -29,9 +39,10 @@ def mode_addr(conn, table: str, keys: list[str]) -> pd.DataFrame:
 def main():
     c_eng, r_eng = engine_db("collective_stats_p2r"), engine_db("rent_stats_p2r")
     with c_eng.connect() as c:
-        # C-01 분할만(본 조각이 옛 키를 쓰는 C-2 행은 아래 C-2 보류에서 따로 센다)
-        km = pd.read_sql(text("""SELECT old_key, new_key, asset_type FROM collective_building_key_map
-                                 WHERE reason LIKE '%split%' AND reason NOT IN ('c2_split', 'c2_chain')"""), c)
+        # C-01 분할만 — c2 가 든 reason(c2_split·c2_chain·split+c2_split·honam_sido+c2_split …)은 모두 뺀다.
+        # C-2 로 옮겨진 쌍은 아래 「C-2 보류」에서 따로 센다.
+        km = c01_split_rows(pd.read_sql(text("""SELECT old_key, new_key, asset_type, reason FROM collective_building_key_map
+                                                 WHERE reason LIKE '%split%'"""), c))
         hold = c2_hold_keys(c)
         sale_keys = {(str(a), str(k).strip()) for k, a in c.execute(text(
             "SELECT DISTINCT building_key, asset_type FROM collective_transactions WHERE is_valid "
