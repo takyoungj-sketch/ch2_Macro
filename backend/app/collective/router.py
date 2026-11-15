@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
+from app.collective.display_label import c2_labels_for_keys
 from app.collective.address import legal_dong
 from app.collective.analysis_explain import (
     build_residential_floor_index_explain,
@@ -820,6 +821,7 @@ def building_stats_rolling(
         return RollingStatsResponse(
             building_key=building_key,
             display_name=display_name,
+            display_label=c2_labels_for_keys(conn, [building_key]).get(building_key),
             window_years=window_years,
             as_of_month=as_of_month.isoformat() if as_of_month else None,
             points=[RollingStatPoint(**p) for p in points],
@@ -834,6 +836,7 @@ def building_stats_rolling(
         return RollingStatsResponse(
             building_key=building_key,
             display_name=display_name,
+            display_label=c2_labels_for_keys(conn, [building_key]).get(building_key),
             window_years=window_years,
             as_of_month=as_of_month.isoformat() if as_of_month else None,
             points=[RollingStatPoint(**p) for p in points],

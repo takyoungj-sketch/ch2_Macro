@@ -1,4 +1,6 @@
 import TargetPicker from "../../../shared/regression-ui/TargetPicker";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { buildCollectiveCohortRollingTrendContext } from "../api/aiContext";
 import { buildingDisplayName } from "../utils/buildingName";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
@@ -806,6 +808,18 @@ export default function BuildingDetailModal({
     "선택 연도 구간 거래건수가 부족하여 통계 분석을 제공하지 않습니다.";
 
   const trendCohortActive = cohortRunForPanel("trend") > 0;
+  // 코호트 추이 AI 문맥 — 시리즈 이름은 표시 이름(C-2 분할 아파트 조각은 rolling 응답의 display_label)
+  const cohortTrendAiContext = useMemo(
+    () =>
+      trendCohortActive && cohortRollingQ.data
+        ? buildCollectiveCohortRollingTrendContext(cohortRollingQ.data, {
+            regionLabel: buildingDisplayName(row),
+            assetType: effectiveAssetType,
+            labels: { [row.building_key]: row.display_label },
+          })
+        : null,
+    [trendCohortActive, cohortRollingQ.data, row, effectiveAssetType],
+  );
   const longTermCohortActive = cohortRunForPanel("long_term") > 0;
   const histCohortActive = cohortRunForPanel("histogram") > 0;
   const txCohortActive = cohortRunForPanel("transactions") > 0;
@@ -1040,6 +1054,7 @@ export default function BuildingDetailModal({
                   )}
                 </p>
               )}
+              {cohortTrendAiContext ? <PublishAiContext context={cohortTrendAiContext} /> : null}
               {trendCohortActive && cohortRollingQ.data && (
                 <CohortTrendPanel
                   series={cohortRollingQ.data.map(rollingToTrendSeries)}

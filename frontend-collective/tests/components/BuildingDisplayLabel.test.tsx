@@ -71,3 +71,10 @@ test("AI 회귀 문맥 이름: 단지 하나면 표시 이름, 코호트·라벨
   assert.equal(regressionAiName("주공 (1986년 준공)", "주공 외 2", true), "주공 외 2");
   assert.equal(regressionAiName(null, "래미안", false), "래미안");
 });
+
+test("코호트 추이 범례: rolling 응답의 display_label", async () => {
+  const { rollingToTrendSeries } = await import("../../src/utils/cohortTrendSeries");
+  const pts = [{ bucket_index: 0, label: "2024", count: 1, mean: 1 }];
+  assert.equal(rollingToTrendSeries({ building_key: "f".repeat(64), display_name: "주공", display_label: "주공 (1986년 준공)", window_years: 5, points: pts } as never).label, "주공 (1986년 준공)");
+  assert.equal(rollingToTrendSeries({ building_key: "x".repeat(64), display_name: "래미안", window_years: 5, points: pts } as never).label, "래미안");
+});

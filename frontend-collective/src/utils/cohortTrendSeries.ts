@@ -1,9 +1,10 @@
 import type { RollingStatsResponse, YearlyStatPoint, YearlyStatsResponse, CommercialRollingStatsResponse, CommercialYearlyStatsResponse, CommercialCohortYearlySeries } from "../types";
 import type { TrendSeries } from "../components/MultiBuildingTrendChart";
+import { buildingDisplayName } from "./buildingName";
 
 export function rollingToTrendSeries(data: RollingStatsResponse): TrendSeries {
   return {
-    label: data.display_name,
+    label: buildingDisplayName(data),
     points: [...data.points]
       .sort((a, b) => a.bucket_index - b.bucket_index)
       .map((p) => ({

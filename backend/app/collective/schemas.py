@@ -244,6 +244,8 @@ class RollingStatPoint(BaseModel):
 class RollingStatsResponse(BaseModel):
     building_key: str
     display_name: str
+    # C-2 분할 아파트 조각만 「단지명 (YYYY년 준공)」(코호트 추이 범례·AI 문맥용). 그 밖은 None
+    display_label: Optional[str] = None
     window_years: int
     as_of_month: Optional[str] = None
     points: list[RollingStatPoint]

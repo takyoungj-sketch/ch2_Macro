@@ -76,3 +76,19 @@ def test_labels_for_keys_queries_only_fragment_keys():
     assert dl.c2_labels_for_keys(_Conn(), [OTHER], keys=ks) == {} and calls == []      # 조각 키가 없으면 조회하지 않음
     assert dl.c2_labels_for_keys(_Conn(), [FRAG, OTHER], keys=ks) == {FRAG: "주공 (1986년 준공)"}
     assert calls == [{"k": [FRAG]}]
+
+
+def test_rolling_response_carries_display_label(monkeypatch):
+    """코호트 추이: rolling 응답에 display_label(조각 아파트만)."""
+    from app.collective import router as r
+
+    class _Db:
+        def connection(self):
+            return object()
+
+    monkeypatch.setattr(r, "latest_mart_snapshot", lambda conn: (None, None))
+    monkeypatch.setattr(r, "building_rolling_from_mart", lambda conn, k, **kw: ("주공", [], "mart"))
+    monkeypatch.setattr(r, "c2_labels_for_keys", lambda conn, keys: {FRAG: "주공 (1986년 준공)"})
+    assert r.building_stats_rolling(FRAG, db=_Db(), window_years=5).display_label == "주공 (1986년 준공)"
+    out = r.building_stats_rolling(OTHER, db=_Db(), window_years=5)
+    assert out.display_label is None and out.display_name == "주공"
