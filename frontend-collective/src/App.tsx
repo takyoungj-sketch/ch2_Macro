@@ -491,7 +491,7 @@ export default function App() {
                 gu: guList,
                 sigungu: formatScopeAddr2(addr2, addr1),
               })}
-              screenTarget={selected?.display_name?.trim() ?? ""}
+              screenTarget={selected ? buildingDisplayName(selected) : ""}
             >
               <AiAssistantPanel />
             </Ai2HeaderSlot>

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import BuildingStatsTable, { buildingMatchesQuery } from "../../src/components/BuildingStatsTable";
-import { buildingDisplayName } from "../../src/utils/buildingName";
+import { buildingDisplayName, regressionAiName } from "../../src/utils/buildingName";
 import { buildCollectiveListContext } from "../../src/api/aiContext";
 import type { BuildingStatsRow } from "../../src/types";
 
@@ -50,4 +50,24 @@ test("AI 문맥 목록 행 이름도 표시 이름", () => {
   } as never) as { facts: { visible_rows: { name: string }[]; first_row?: { name: string } } };
   assert.deepEqual(ctx.facts.visible_rows.map((r) => r.name), ["주공 (1986년 준공)", "래미안"]);
   assert.equal(ctx.facts.first_row?.name, "주공 (1986년 준공)");
+});
+
+test("AI 코호트 추이 문맥: 시리즈 이름도 표시 이름(labels → display_label → display_name)", async () => {
+  const { buildCollectiveCohortRollingTrendContext } = await import("../../src/api/aiContext");
+  const pt = { label: "2024", count: 1, mean: 1 };
+  const items = [
+    { building_key: FRAG.building_key, display_name: "주공", window_years: 5, points: [pt] },
+    { building_key: OTHER.building_key, display_name: "래미안", display_label: null, window_years: 5, points: [pt] },
+    { building_key: "z".repeat(64), display_name: "한빛", display_label: "한빛 (2001년 준공)", window_years: 5, points: [pt] },
+  ];
+  const ctx = buildCollectiveCohortRollingTrendContext(items as never, {
+    regionLabel: "부천시", assetType: "apartment", labels: { [FRAG.building_key]: "주공 (1986년 준공)" },
+  } as never) as { facts: { series: { label: string }[] } };
+  assert.deepEqual(ctx.facts.series.map((s) => s.label), ["주공 (1986년 준공)", "래미안", "한빛 (2001년 준공)"]);
+});
+
+test("AI 회귀 문맥 이름: 단지 하나면 표시 이름, 코호트·라벨 없음이면 응답 이름", () => {
+  assert.equal(regressionAiName("주공 (1986년 준공)", "주공", false), "주공 (1986년 준공)");
+  assert.equal(regressionAiName("주공 (1986년 준공)", "주공 외 2", true), "주공 외 2");
+  assert.equal(regressionAiName(null, "래미안", false), "래미안");
 });

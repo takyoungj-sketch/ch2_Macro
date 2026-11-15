@@ -1580,6 +1580,7 @@ export default function BuildingDetailModal({
               countTotal={countTotal}
               countRecent={countRecent}
               gateMessages={analysis.messages}
+              displayLabel={row.display_label}
             />
           )}
     </DraggableModalShell>

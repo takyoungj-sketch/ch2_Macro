@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { regressionAiName } from "../utils/buildingName";
 import { contentSignature } from "../../../shared/regression-ui/signature";
 import { reconcileListedInputs } from "../../../shared/regression-ui/inputs";
 import type { RegressionSampleGroup } from "../../../shared/regression-ui/types";
@@ -431,8 +432,11 @@ export default function BuildingRegressionPanel({
   countTotal,
   countRecent,
   gateMessages,
+  displayLabel,
 }: {
   buildingKey: string;
+  /** 집합 2단계 P4: C-2 분할 아파트 조각의 표시 이름(목록 행 display_label). 단지 하나 회귀일 때 AI 문맥 이름에 쓴다. */
+  displayLabel?: string | null;
   cohortKeys?: string[];
   assetType: AssetType;
   yearFrom?: number;
@@ -519,14 +523,14 @@ export default function BuildingRegressionPanel({
   const aiRegressionContext = useMemo(() => {
     if (!regM.data) return null;
     const context = buildCollectiveRegressionContext(regM.data, {
-      regionLabel: regM.data.display_name,
+      regionLabel: regressionAiName(displayLabel, regM.data.display_name, useCohort),
       assetType,
       cohort: useCohort,
     });
     context.facts = { ...context.facts, conditions_changed: conditionsChanged,
       result_state: conditionsChanged ? "previous_conditions" : "current" };
     return context;
-  }, [regM.data, assetType, useCohort, conditionsChanged]);
+  }, [regM.data, assetType, useCohort, conditionsChanged, displayLabel]);
 
   const publishedAiContext = useMemo(
     () =>

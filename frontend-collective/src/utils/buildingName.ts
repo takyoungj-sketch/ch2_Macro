@@ -4,3 +4,8 @@
 export function buildingDisplayName(row: { display_name?: string | null; display_label?: string | null }): string {
   return (row.display_label || row.display_name || "").trim();
 }
+
+/** 회귀 AI 문맥의 이름: 단지 하나 회귀면 목록 행의 표시 이름(display_label), 코호트·라벨 없음이면 응답 이름. */
+export function regressionAiName(displayLabel: string | null | undefined, responseName: string, cohort: boolean): string {
+  return (!cohort && displayLabel?.trim()) || responseName;
+}

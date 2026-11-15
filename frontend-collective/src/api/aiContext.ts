@@ -315,6 +315,8 @@ export function buildCollectiveCohortRollingTrendContext(
     regionLabel: string;
     assetType: AssetType;
     purpose?: AiPurpose;
+    /** building_key → 표시 이름(C-2 분할 아파트 조각 「단지명 (YYYY년 준공)」). 없으면 응답의 display_label·display_name */
+    labels?: Record<string, string | null | undefined>;
   },
 ): AiContextPayload {
   return {
@@ -327,7 +329,7 @@ export function buildCollectiveCohortRollingTrendContext(
     },
     facts: {
       series: items.map((item) => ({
-        label: item.display_name,
+        label: opts.labels?.[item.building_key] || buildingDisplayName(item),
         points: item.points.map((p) => ({
           year: p.label,
           count: p.count,

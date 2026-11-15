@@ -472,6 +472,8 @@ export interface RollingStatPoint {
 export interface RollingStatsResponse {
   building_key: string;
   display_name: string;
+  /** C-2 분할 아파트 조각 표시 이름(있을 때만) */
+  display_label?: string | null;
   window_years: number;
   as_of_month?: string | null;
   stats_as_of_label?: string | null;
