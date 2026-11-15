@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { buildingDisplayName } from "./utils/buildingName";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -739,7 +740,7 @@ export default function App() {
                   ? [
                       {
                         buildingKey: selected.building_key,
-                        label: selected.display_name,
+                        label: buildingDisplayName(selected),
                         jibunAddress: selected.jibun_address || selected.address || null,
                         roadAddress: selected.road_address || null,
                         addr1: scope.addr1,
@@ -752,7 +753,7 @@ export default function App() {
                 scope && buildingsQ.data
                   ? buildingsQ.data.items.slice(0, 100).map((row) => ({
                       buildingKey: row.building_key,
-                      label: row.display_name,
+                      label: buildingDisplayName(row),
                       jibunAddress: row.jibun_address || row.address || null,
                       roadAddress: row.road_address || null,
                       addr1: scope.addr1,

@@ -68,6 +68,8 @@ class TypeSibling(BaseModel):
 class BuildingStatsRow(BaseModel):
     building_key: str
     display_name: str
+    # C-2 로 나뉜 아파트 조각만 「단지명 (YYYY년 준공)」(표시 전용 — display_name·키는 그대로). 그 밖은 None
+    display_label: Optional[str] = None
     address: str = ""
     jibun_address: str = ""
     road_address: str = ""

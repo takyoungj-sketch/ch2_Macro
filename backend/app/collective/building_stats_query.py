@@ -16,6 +16,7 @@ from app.collective.asset_scope import (
 from app.collective.address import legal_dong, split_building_addresses
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.filters import apply_region_filters
+from app.collective.display_label import c2_label
 from app.collective.schemas import AnalysisFeatures, BuildingStatsRow
 from app.collective.area_rolling import RESIDENTIAL_AREA_RULE, build_area_series, residential_area_type
 from app.stats_utils import attach_rolling_percentiles, compute_stats
@@ -58,6 +59,7 @@ def _stats_row_from_parts(
     return BuildingStatsRow(
         building_key=r["building_key"],
         display_name=r["display_name"] or "",
+        display_label=c2_label(r["building_key"], r["display_name"], r["asset_type"] or asset_type, r.get("building_year")),
         address=legacy,
         jibun_address=jibun,
         road_address=road,
@@ -90,6 +92,7 @@ def _stats_row_from_live(
     return BuildingStatsRow(
         building_key=r["building_key"],
         display_name=r["display_name"] or "",
+        display_label=c2_label(r["building_key"], r["display_name"], r["asset_type"] or asset_type, r.get("building_year")),
         address=legacy,
         jibun_address=jibun,
         road_address=road,

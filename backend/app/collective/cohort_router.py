@@ -16,6 +16,7 @@ from app.collective.analysis_explain import (
     build_residential_regression_explain,
 )
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
+from app.collective.display_label import c2_labels_for_keys
 from app.collective.db import get_collective_db
 from app.collective.filters import apply_period_filters, apply_year_filters
 from app.collective.floor_index_regression import compute_residential_floor_index_regression
@@ -319,7 +320,8 @@ def cohort_transactions_export(body: CohortAnalysisRequest, db: Session = Depend
         params,
     ).mappings().all()
     asset = body.asset_type or (str(rows[0]["asset_type"]) if rows else "apartment")
-    payload = transactions_csv_bytes([dict(r) for r in rows], asset_type=asset, include_building=True)
+    labels = c2_labels_for_keys(db.connection(), keys)
+    payload = transactions_csv_bytes([dict(r) for r in rows], asset_type=asset, include_building=True, labels=labels)
     filename = export_filename(display_name="", fallback_key=f"cohort_{len(keys)}", prefix="cohort_transactions")
     return csv_attachment_response(payload, filename)
 

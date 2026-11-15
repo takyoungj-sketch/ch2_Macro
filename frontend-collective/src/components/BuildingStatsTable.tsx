@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { buildingDisplayName } from "../utils/buildingName";
 import clsx from "clsx";
 import {
   FilterStatusBar,
@@ -94,7 +95,7 @@ function landPriceTitle(row: BuildingStatsRow): string | undefined {
 
 export function buildingMatchesQuery(row: BuildingStatsRow, q: string): boolean {
   if (!q) return false;
-  const hay = [row.display_name, row.jibun_address, row.road_address, row.address, row.asset_type, row.builder_label]
+  const hay = [row.display_name, row.display_label, row.jibun_address, row.road_address, row.address, row.asset_type, row.builder_label]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
@@ -106,7 +107,7 @@ function textValue(row: BuildingStatsRow, key: ColKey): string {
     case "asset_type":
       return assetTypeLabel(row.asset_type);
     case "display_name":
-      return row.display_name || "—";
+      return buildingDisplayName(row) || "—";
     case "builder":
       return row.builder_label?.trim() || "—";
     case "jibun":
@@ -167,12 +168,12 @@ function BuildingTableRow({
         highlighted && "!bg-yellow-200 dark:!bg-yellow-700/50",
       )}
       onClick={() => onSelect(row)}
-      title={row.display_name}
+      title={buildingDisplayName(row)}
       data-building-highlight={highlighted ? "1" : undefined}
     >
       <td className="text-[10px] whitespace-nowrap text-center">{assetTypeLabel(row.asset_type)}</td>
       <td className="name">
-        {row.display_name}
+        {buildingDisplayName(row)}
         {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
         {row.asset_type !== "presale" &&
           (() => {

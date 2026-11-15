@@ -6,13 +6,14 @@ import { fetchAllBuildings, fetchBuildingRollingStats, fetchBuildingAreaRolling,
 import { fetchAllCommercialClusters, fetchCommercialRollingStats, fetchCommercialAreaRolling } from "./api/commercialClient";
 import type { AssetSelectorType, CommercialAssetSelectorType, CommercialClusterRow, RollingStatsResponse, CommercialRollingStatsResponse } from "./types";
 import RollingTrendChart from "./components/RollingTrendChart";
+import { buildingDisplayName } from "./utils/buildingName";
 import AreaRollingView, { RollingScopeToggle, type RollingScope } from "./components/AreaRollingView";
 import { encodeResidentialAssetKinds, toggleResidentialAssetKind, type ResidentialAssetKind } from "./utils/residentialAssetTypes";
 import { encodeCommercialAssetKinds, toggleCommercialAssetKind, type CommercialAssetKind } from "./utils/commercialAssetTypes";
 
 const price = (value: number | null | undefined) => value == null ? "—" : value.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
 type Row = BuildingStatsRow | CommercialClusterRow;
-const name = (row: Row) => "building_key" in row ? row.display_name : row.road_name || row.display_label;
+const name = (row: Row) => "building_key" in row ? buildingDisplayName(row) : row.road_name || row.display_label;
 const key = (row: Row) => "building_key" in row ? row.building_key : row.cluster_key;
 
 export default function MobileCollectiveApp({ commercial = false }: { commercial?: boolean }) {

@@ -1,4 +1,5 @@
 import TargetPicker from "../../../shared/regression-ui/TargetPicker";
+import { buildingDisplayName } from "../utils/buildingName";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { setApiScreen } from "@ch2/macro-shell/apiScreen";
@@ -105,7 +106,7 @@ function TypeSiblingStrip({
   const cards: { assetType: string; name: string; count: number; median: number | null | undefined; current: boolean; open?: () => void }[] = [
     {
       assetType: row.asset_type,
-      name: row.display_name,
+      name: buildingDisplayName(row),
       count: row.count,
       median: row.median,
       current: true,
@@ -873,7 +874,7 @@ export default function BuildingDetailModal({
       onClose={onClose}
       initialFullscreen={narrow}
       titleId="building-detail-modal-title"
-      title={row.display_name}
+      title={buildingDisplayName(row)}
       subtitle={
         <>
           {assetTypeLabel(effectiveAssetType)} · n={(row.count ?? 0).toLocaleString("ko-KR")} · 평균 {fmtPrice(row.mean)}{" "}
@@ -971,13 +972,14 @@ export default function BuildingDetailModal({
                 <details className="mt-1">
                   <summary className="cursor-pointer text-indigo-950 dark:text-indigo-100">선택 내역 보기</summary>
                   <div className="mt-1 space-y-1">
-                    <p>원래 단지: {row.display_name}. 목록의 n은 조회 거래수이며, 회귀 적합 수는 실행 결과에서 확인하세요.</p>
+                    <p>원래 단지: {buildingDisplayName(row)}. 목록의 n은 조회 거래수이며, 회귀 적합 수는 실행 결과에서 확인하세요.</p>
                     {cohortKeys.length >= MAX_COHORT_BUILDINGS && (
                       <p className="text-slate-500">최대 {MAX_COHORT_BUILDINGS}개 단지까지 포함할 수 있습니다.</p>
                     )}
                     <div className="flex flex-wrap gap-1">
                       {cohortExtra.map((k) => {
-                        const label = peerBuildings.find((b) => b.building_key === k)?.display_name ?? k.slice(0, 8);
+                        const peer = peerBuildings.find((b) => b.building_key === k);
+                        const label = peer ? buildingDisplayName(peer) : k.slice(0, 8);
                         return (
                           <button
                             key={k}
@@ -992,12 +994,12 @@ export default function BuildingDetailModal({
                       })}
                     </div>
                     {peerOptions.length > 0 && <TargetPicker label="+ 인근단지 추가"
-                      options={peerOptions.map(b => ({ key: b.building_key, label: b.display_name, address: b.jibun_address || b.road_address || b.address, count: b.count }))} onChoose={addToCohort}
+                      options={peerOptions.map(b => ({ key: b.building_key, label: buildingDisplayName(b), address: b.jibun_address || b.road_address || b.address, count: b.count }))} onChoose={addToCohort}
                       disabled={cohortKeys.length >= MAX_COHORT_BUILDINGS} />}
                   </div>
                 </details>
               ) : (
-              <p className="mt-1 text-slate-700 dark:text-slate-200">원래 단지: {row.display_name}. 목록의 n은 조회 거래수이며, 회귀 적합 수는 실행 결과에서 확인하세요.</p>
+              <p className="mt-1 text-slate-700 dark:text-slate-200">원래 단지: {buildingDisplayName(row)}. 목록의 n은 조회 거래수이며, 회귀 적합 수는 실행 결과에서 확인하세요.</p>
               )}
               {cohortStale && panel !== "regression" && (
                 <p className="mt-1 text-amber-700">코호트가 변경되었습니다. 「통합분석」을 다시 실행하세요.</p>
@@ -1006,7 +1008,7 @@ export default function BuildingDetailModal({
                 <p className="mt-1 text-slate-500">최대 {MAX_COHORT_BUILDINGS}개 단지까지 포함할 수 있습니다.</p>
               )}
               {cohortExtra.length === 0 && peerOptions.length > 0 && <TargetPicker label="+ 인근단지 추가"
-                options={peerOptions.map(b => ({ key: b.building_key, label: b.display_name, address: b.jibun_address || b.road_address || b.address, count: b.count }))} onChoose={addToCohort}
+                options={peerOptions.map(b => ({ key: b.building_key, label: buildingDisplayName(b), address: b.jibun_address || b.road_address || b.address, count: b.count }))} onChoose={addToCohort}
                 disabled={cohortKeys.length >= MAX_COHORT_BUILDINGS} />}
             </div>
           )}

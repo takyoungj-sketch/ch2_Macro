@@ -51,6 +51,8 @@ export interface TypeSibling {
 export interface BuildingStatsRow {
   building_key: string;
   display_name: string;
+  /** C-2 로 나뉜 아파트 조각만 「단지명 (YYYY년 준공)」 — 표시 전용(검색·정렬·키는 display_name). */
+  display_label?: string | null;
   /** @deprecated 목록은 jibun_address / road_address 사용 */
   address: string;
   jibun_address?: string;

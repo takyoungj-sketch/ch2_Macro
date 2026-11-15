@@ -152,7 +152,10 @@ def transactions_csv_bytes(
     *,
     asset_type: str,
     include_building: bool = False,
+    labels: dict[str, str] | None = None,
 ) -> bytes:
+    """labels: building_key → 표시 이름(C-2 분할 아파트 조각 「단지명 (YYYY년 준공)」). 없으면 display_name."""
+    labels = labels or {}
     buf = io.StringIO()
     buf.write("\ufeff")
     writer = csv.writer(buf, lineterminator="\n")
@@ -171,7 +174,7 @@ def transactions_csv_bytes(
     writer.writerow(header)
     for r in rows:
         line = [
-            *( [r.get("display_name") or ""] if include_building else [] ),
+            *( [labels.get(str(r.get("building_key") or "")) or r.get("display_name") or ""] if include_building else [] ),
             format_contract_date_csv(r),
             dong_cell(r, asset_type),
             "" if r.get("floor") is None else r["floor"],

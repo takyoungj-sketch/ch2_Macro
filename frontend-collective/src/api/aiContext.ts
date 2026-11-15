@@ -1,4 +1,5 @@
 import type { AiContextPayload, AiPurpose } from "@ch2/ai-assistant/aiClient";
+import { buildingDisplayName } from "../utils/buildingName";
 import type {
   AssetType,
   BuildingStatsRow,
@@ -67,7 +68,7 @@ export function buildCollectiveListContext(opts: {
       region_label: opts.regionLabel,
       list_sort: opts.sort ?? "count",
       visible_rows: (opts.items ?? []).slice(0, 40).map((row) => ({
-        name: row.display_name,
+        name: buildingDisplayName(row),
         asset_label: assetTypeLabel(row.asset_type),
         count: row.count,
         median: row.median,
@@ -77,7 +78,7 @@ export function buildCollectiveListContext(opts: {
       })),
       first_row: first
         ? {
-            name: first.display_name,
+            name: buildingDisplayName(first),
             asset_label: assetTypeLabel(first.asset_type),
             count: first.count,
             median: first.median,
