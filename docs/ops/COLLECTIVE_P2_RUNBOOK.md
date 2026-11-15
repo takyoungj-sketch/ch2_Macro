@@ -645,7 +645,7 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 | 4 | C-2 옛 키 좌표 버리기(P2) | 1분 |
 | 5 | 거래유형 보정 · 2019~2020 분할 옛 키 annual 정리 | 5분 · 1분 |
 | 6 | 15단계(통계표 재생성: building_stats·rolling·presale·market·commercial·rent 등) | 2시간 41분 |
-| 7 | 속성·공시지가 — 새 분할 키 목록(C-01 3,447 + C-2 약 2,028) | 추정 20분(Phase C 3,447키 12분) |
+| 7 | 속성·공시지가 — 새 분할 키 목록(C-01 3,447 + C-2 2,045) | 추정 20분(Phase C 3,447키 12분) |
 | 8 | 매매·임대 연결 · 복합 scope · integrity_p2 --deep(C-2형 판정 밖 0) | 4분 · 1분 · 수 분 |
 | 9 | 검증 c5(39항목 + C-2 항목) · c6 · c7 · c9 · c10 | 추정 1~1.5시간 |
 | 10 | c8 롤백·행 해시(덤프 복원 방식) | 5시간 30분(Phase C 실측) |
@@ -673,7 +673,7 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 | AI 문맥 | `frontend-collective/src/api/aiContext.ts` | 이름 칸에 `display_label` |
 | 분리 안내 후보 | `KeySplitC2Notice`(집합·임대) | 키 상태 응답은 숫자를 내지 않으므로 준공 연도도 넣지 않는다. 후보는 이름·동만. 목록 행에서 보이는 구분은 `display_label` |
 
-- 대상: C-2 로 나뉜 아파트 조각(이번 확정 33 (키·법정동), 늘어나는 키 37). 연립·오피스텔은 이번 지시 범위 밖이다(필요하면 같은 방식).
+- 대상: C-2 로 나뉜 아파트 조각(이번 확정 47 (키·법정동), 늘어나는 키 54). 연립·오피스텔은 이번 지시 범위 밖이다(필요하면 같은 방식).
 
 ## 13. 실행 전 확인 사항 (T·Codex)
 

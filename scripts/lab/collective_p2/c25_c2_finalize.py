@@ -3,9 +3,12 @@
 입력: c21(3칸, T=10) 재계산 + c24_state.pkl(대장 판정: 표제부 2026-07 + 건축HUB API 캐시)
 규칙(T 2026-11-15):
   - 불확실 271쌍: 대장 판정(같은 단지 → 유지 · 다른 단지 → 분할 · 불확실 → 분할 안 함)
-  - 아파트 차수별 단지(대장이 따로 있고 승인일이 다른 아파트 쌍)는 K-apt 로 정한다:
-      두 지번이 K-apt 코드 하나로 묶임 → 유지 / 코드가 다르거나 없고 승인일 차이 ≥ 1년 → 분할 / 1년 미만 → 유지
+  - 아파트 차수별 단지(대장이 따로 있고 승인일이 다른 아파트 쌍) — T 수정(2026-11-15 2차):
+      같은 K-apt 코드 · 총괄표제부·부속지번으로 연결 → 유지(연결은 c24.api_pair 가 이미 「같은 단지」)
+      양쪽 모두 K-apt 없음 → 분할(연립 규칙과 같음) · 양쪽 K-apt 가 서로 다른 코드 → 분할
+      한쪽만 K-apt → 승인일 차이 1년 미만 유지, 1년 이상 분할
     (건물명·차수가 다른 쌍은 이 규칙 밖 — 그대로 분할)
+  - c21 「확실 분할」 아파트는 정확한 지번 K-apt 코드를 공유하는지 확인 — 공유하면 그 묶음은 합친다(유지)
   - 「확실 유지」 재점검 7쌍(아파트): 위 규칙 적용
   - c21 확실 분할 → 분할(c21 의 묶음 그대로), 확실 유지·분양권 → 유지
 출력(지번 포함, logs/ 에만): logs/collective_p2/c2_units_final.csv — collective_building_key_c2_units 열 + 참고 열
@@ -59,17 +62,31 @@ def kapt_by_exact_lot():
     return out
 
 
-def apt_phase_rule(gi_a: dict, gi_b: dict, ka: set[str], kb: set[str]) -> tuple[str, str]:
-    """아파트 차수별 단지 규칙. (분할|유지, 근거)."""
+def apt_phase_rule_v1(gi_a: dict, gi_b: dict, ka: set[str], kb: set[str]) -> tuple[str, str]:
+    """(이전 판, 비교용) 코드 공유 → 유지 / 그 밖은 승인일 차이 1년 기준."""
     gap = min_gap_days(gi_a["apr"], gi_b["apr"])
     if ka and kb and (ka & kb):
-        return "유지", f"K-apt 코드 하나({','.join(sorted(ka & kb))})"
-    code = f"K-apt {','.join(sorted(ka)) or '없음'} / {','.join(sorted(kb)) or '없음'}"
+        return "유지", "K-apt 코드 하나"
     if gap is None:
-        return "유지", f"{code} · 승인일 없음"
+        return "유지", "승인일 없음"
+    return ("분할", f"승인일 차이 {gap}일(≥1년)") if gap >= YEAR_DAYS else ("유지", f"승인일 차이 {gap}일(<1년)")
+
+
+def apt_phase_rule(gi_a: dict, gi_b: dict, ka: set[str], kb: set[str]) -> tuple[str, str]:
+    """아파트 차수별 단지 규칙(T 수정판). (분할|유지, 근거)."""
+    gap = min_gap_days(gi_a["apr"], gi_b["apr"])
+    code = f"K-apt {','.join(sorted(ka)) or '없음'} / {','.join(sorted(kb)) or '없음'}"
+    if ka and kb and (ka & kb):
+        return "유지", f"K-apt 코드 하나({','.join(sorted(ka & kb))})"
+    if not ka and not kb:
+        return "분할", f"{code} · 양쪽 K-apt 없음(연립 규칙과 같음)"
+    if ka and kb:
+        return "분할", f"{code} · 서로 다른 K-apt 단지"
+    if gap is None:
+        return "유지", f"{code} · 한쪽만 K-apt · 승인일 없음"
     if gap >= YEAR_DAYS:
-        return "분할", f"{code} · 승인일 차이 {gap}일(≥1년)"
-    return "유지", f"{code} · 승인일 차이 {gap}일(<1년)"
+        return "분할", f"{code} · 한쪽만 K-apt · 승인일 차이 {gap}일(≥1년)"
+    return "유지", f"{code} · 한쪽만 K-apt · 승인일 차이 {gap}일(<1년)"
 
 
 def main() -> int:
@@ -90,6 +107,7 @@ def main() -> int:
     # 대장 판정 쌍: (키·법정동) → 묶음 나누기(union-find, 「다르지 않음」 쌍을 묶음)
     reg_parts: dict[tuple, dict] = {}
     recheck_rows = []
+    changed: list[tuple] = []
     for w in work:
         r = w["row"]
         k = (r["key2"], r["asset_type"], str(r["beopjungri_code"]))
@@ -114,6 +132,13 @@ def main() -> int:
                         ka = lot_kapt(w["b0"], gs[i]["lot"], gs[i]["jis"])
                         kb = lot_kapt(w["b0"], gs[j]["lot"], gs[j]["jis"])
                         verdict, why2 = apt_phase_rule(gi[i], gi[j], ka, kb)
+                        old_v, _ = apt_phase_rule_v1(gi[i], gi[j], ka, kb)
+                        if old_v != verdict:
+                            changed.append((w["name"], f"{w['sigungu']} {w['dong']}", w["label"],
+                                            f"{gs[i]['lot']}-{'·'.join(sorted(gs[i]['jis']))}: {','.join(sorted(gi[i]['apr'])) or '-'}",
+                                            f"{gs[j]['lot']}-{'·'.join(sorted(gs[j]['jis']))}: {','.join(sorted(gi[j]['apr'])) or '-'}",
+                                            f"{','.join(sorted(ka)) or '없음'} / {','.join(sorted(kb)) or '없음'}",
+                                            f"{old_v} → {verdict}", why2))
                         why = f"{why} → {why2}"
                     if w["label"] == "확실 유지 재점검" and w["local"] == "유지 그대로":
                         verdict, why = "유지", w["local_why"]
@@ -143,6 +168,47 @@ def main() -> int:
                                      f"{','.join(sorted(lot_kapt(w['b0'], b_, gs[ib]['jis']))) or '없음'}",
                                      v, why))
 
+    # c21 「확실 분할」 아파트 — 정확한 지번이 K-apt 코드를 공유하는지
+    from sqlalchemy import text
+
+    from _db import engine_db
+
+    cert_apt = new[(new["cls"] == c21.CERT) & (new["decision"] == "분리") & (new["asset_type"] == "apartment")]
+    names = sorted({str(groups[(r["key2"], r["asset_type"], str(r["beopjungri_code"]))]["name"].iloc[0])
+                    for _, r in cert_apt.iterrows()})
+    with engine_db("collective_stats_p2r", timeout_ms=600_000).connect() as c:
+        lt = pd.read_sql(text("""SELECT left(beopjungri_code, 10) AS bjd, display_name AS name, btrim(lot_number) AS lot
+                                 FROM collective_transactions WHERE is_valid AND display_name = ANY(:nm)
+                                   AND coalesce(btrim(lot_number), '') <> '' GROUP BY 1, 2, 3"""), c, params={"nm": names})
+    subl: dict = {}
+    for b, nm, lot in zip(lt["bjd"].astype(str), lt["name"].astype(str), lt["lot"]):
+        mn, _, sj = lot.partition("-")
+        mn = str(int(mn)) if mn.isdigit() else mn
+        subl.setdefault((b, nm, mn), set()).add(str(int(sj)) if sj.isdigit() else "0")
+    cert_override: dict[tuple, dict] = {}
+    cert_rows = []
+    for _, r in cert_apt.iterrows():
+        k = (r["key2"], r["asset_type"], str(r["beopjungri_code"]))
+        g = groups[k]
+        big = g[g["n"] >= 3].reset_index(drop=True)
+        nm = str(g["name"].iloc[0])
+        codes = [lot_kapt(k[2], str(m), subl.get((k[2], nm, str(m)), set())) for m in big["main_lot"]]
+        comp = [int(x) for x in r["comp"]]
+        merged = False
+        for i in range(len(big)):
+            for j in range(i + 1, len(big)):
+                if comp[i] != comp[j] and codes[i] and codes[j] and (codes[i] & codes[j]):
+                    lo, hi = sorted((comp[i], comp[j]))
+                    comp = [lo if c == hi else c for c in comp]
+                    merged = True
+        cert_rows.append((nm, g["dong"].iloc[0], int(r["tx"]),
+                          " / ".join(f"{m}-{'·'.join(sorted(subl.get((k[2], nm, str(m)), set()))) or '?'}: {','.join(sorted(cs)) or '없음'}"
+                                     for m, cs in zip(big["main_lot"], codes)),
+                          "공유 → 합침(유지)" if merged else "공유 없음 → 분할 그대로"))
+        if merged:
+            uniq = {c: i for i, c in enumerate(sorted(set(comp), key=lambda c: -sum(n for cc, n in zip(comp, big["n"]) if cc == c)))}
+            cert_override[k] = {str(m): uniq[c] for m, c in zip(big["main_lot"], comp)}
+
     rows, summ = [], []
     for _, r in new.iterrows():
         k = (r["key2"], r["asset_type"], str(r["beopjungri_code"]))
@@ -153,7 +219,7 @@ def main() -> int:
             parts = reg_parts[k]["parts"]
         elif r["cls"] == c21.CERT and r["decision"] == "분리":
             src = "C-2 재측정 확실 분할"
-            parts = {str(m): int(c) for m, c in zip(big["main_lot"], r["comp"])}
+            parts = cert_override.get(k) or {str(m): int(c) for m, c in zip(big["main_lot"], r["comp"])}
         else:
             src = "C-2 재측정 확실 유지" if r["cls"] == c21.KEEP else "C-2 재측정 불확실(기타)"
             parts = {}
@@ -177,6 +243,11 @@ def main() -> int:
     out.to_csv(OUT / "c2_units_final.csv", index=False, encoding="utf-8-sig")
     s = pd.DataFrame(summ)
 
+    print("## 아파트 차수 규칙 수정으로 바뀐 쌍(이전 → 지금)\n")
+    print(md_table(changed or [("—",) * 8], ["단지", "위치", "단위", "지번 A: 승인일", "지번 B: 승인일", "K-apt A / B", "판정", "근거"]))
+    print(f"\n## C-2 재측정 「확실 분할」 아파트 {len(cert_rows)}쌍 — 정확한 지번 K-apt 공유\n")
+    print(md_table(cert_rows, ["단지", "동", "거래", "지번: K-apt", "결과"]))
+    print()
     print("## 「확실 유지」 재점검 7쌍 — 아파트 차수별 단지 규칙(K-apt·승인일)\n")
     print(md_table(recheck_rows, ["단지", "위치", "거래", "지번 A: 승인일", "지번 B: 승인일", "K-apt A / B", "판정", "근거"]))
     print("\n## 확정 판정 — 출처별 (키·법정동) 수 · 분할 · 늘어나는 키 · 옮겨지는 거래\n")
