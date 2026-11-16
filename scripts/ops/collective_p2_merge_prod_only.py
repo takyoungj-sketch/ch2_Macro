@@ -11,7 +11,12 @@
        - C-01 분할 옛 키(reason 에 split, c2 아닌 것 · 새 키 여럿) → 버림(동이 갈려 좌표가 맞지 않음)
        - C-2 옛 키(reason 에 c2 · 대상 DB 판정 표의 split base_key) → 버림(키 이전이 로컬 좌표도 버린 것과 같게)
     2. 재키 뒤 같은 키가 둘이면 updated_at 이 늦은 쪽 하나(나머지는 「재키 겹침」으로 셈)
-    3. 대상에 이미 있는 키는 로컬 값을 유지하고, 없는 행만 `INSERT … ON CONFLICT DO NOTHING`
+    3. 대상에 없는 키는 `INSERT … ON CONFLICT DO NOTHING`
+    4. 대상에 이미 있는 키(같은 키):
+       - 시각 열(updated_at·geocoded_at)을 뺀 값이 같으면 그대로(identical · same_value_other_time)
+       - 값이 다르면(충돌) 규칙(T 결정 2026-11-16, 표 공통):
+         한쪽만 status ok → ok 쪽 · 둘 다 ok → geocoded_at 이 더 최근인 쪽(같거나 없으면 로컬) · 둘 다 실패 → 로컬 유지.
+         운영 쪽이 이기면 그 행 값으로 UPDATE(값은 고치지 않고 그대로 옮김). 규칙별 건수를 보고서에 적는다.
   QA 기록 qa_audit_run(collective_stats)
     0. 넣기 전에 대상 시퀀스를 max(대상 max(id), 원본 max(id)) + 1 로 올린다(새 id 가 어느 쪽 id 와도 겹치지 않게)
     1. 원본 id 가 대상에 없으면 그 id 로 추가
@@ -122,11 +127,36 @@ def _differs(a: dict, b: dict, cols) -> bool:
     return any(a.get(c) != b.get(c) for c in cols if c in a and c in b)
 
 
-def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys) -> tuple[list[dict], dict]:
-    """원본 행 → 넣을 행과 단계별 건수.
-    local_keys 가 {키: 로컬 행} 이면 같은 키에 값이 다른 경우(충돌)를 센다 — 처리 규칙은 「로컬 값 유지」(넣지 않음).
-      conflict_kept_local = 시각 열(updated_at·geocoded_at)을 뺀 값이 하나라도 다름 · conflict_coords = 좌표가 다름."""
+CONFLICT_RULES = ("only_prod_ok", "only_local_ok", "both_ok_prod_newer", "both_ok_local_newer_or_same", "both_failed")
+
+
+def _ok(r: dict) -> bool:
+    return str(r.get("status") or "").strip().lower() == "ok"
+
+
+def resolve_conflict(prod: dict, local: dict) -> tuple[str, str]:
+    """같은 키에 값이 다를 때 어느 쪽을 쓸지 → ("prod"|"local", 규칙 이름).
+    한쪽만 ok → ok 쪽 · 둘 다 ok → geocoded_at 더 최근(같거나 운영 쪽이 없으면 로컬) · 둘 다 실패(ok 아님) → 로컬."""
+    po, lo = _ok(prod), _ok(local)
+    if po and not lo:
+        return "prod", "only_prod_ok"
+    if lo and not po:
+        return "local", "only_local_ok"
+    if po and lo:
+        gp, gl = prod.get("geocoded_at"), local.get("geocoded_at")
+        if gp is not None and (gl is None or gp > gl):
+            return "prod", "both_ok_prod_newer"
+        return "local", "both_ok_local_newer_or_same"
+    return "local", "both_failed"
+
+
+def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys) -> tuple[list[dict], list[dict], dict]:
+    """원본 행 → (넣을 행, 운영 값으로 바꿀 행, 단계별 건수).
+    local_keys 가 {키: 로컬 행} 이면 같은 키에 값이 다른 경우(충돌)를 resolve_conflict 규칙으로 처리한다.
+      conflict = 시각 열(updated_at·geocoded_at)을 뺀 값이 하나라도 다름 · conflict_coords = 좌표가 다름 ·
+      rule_<규칙> = 규칙별 건수 · update = 운영 쪽이 이겨 바꿀 행 · kept_local = 로컬이 이겨 그대로 둔 충돌."""
     cnt = Counter(src=len(src_rows))
+    updates: list[dict] = []
     picked: dict[str, dict] = {}
     for r in src_rows:
         k = str(r[keycol]).strip()
@@ -155,7 +185,11 @@ def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys) ->
                 continue
             vcols = [c for c in r if c != keycol and c not in TS_COLS]
             if _differs(r, loc, vcols):
-                cnt["conflict_kept_local"] += 1
+                cnt["conflict"] += 1
+                win, rule = resolve_conflict(r, loc)
+                cnt[f"rule_{rule}"] += 1
+                if win == "prod":
+                    updates.append(r)
             elif any(r.get(c) != loc.get(c) for c in TS_COLS if c in r and c in loc):
                 cnt["same_value_other_time"] += 1
             else:
@@ -163,9 +197,12 @@ def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys) ->
             if _differs(r, loc, COORD_COLS):
                 cnt["conflict_coords"] += 1
     cnt["insert"] = len(ins)
+    cnt["update"] = len(updates)
+    cnt["kept_local"] = cnt["conflict"] - len(updates)
     keys = ("src", "unchanged", "rekeyed", DROP_C01, DROP_C2, "rekey_overlap", "exists_local", "identical",
-            "same_value_other_time", "conflict_kept_local", "conflict_coords", "insert")
-    return ins, {k: int(cnt.get(k, 0)) for k in keys}
+            "same_value_other_time", "conflict", "conflict_coords", *(f"rule_{r}" for r in CONFLICT_RULES),
+            "update", "kept_local", "insert")
+    return ins, updates, {k: int(cnt.get(k, 0)) for k in keys}
 
 
 def _c2_bases(c: Connection) -> set[str]:
@@ -190,7 +227,7 @@ def merge_geocode(src: Connection, dst: Connection, table: str, keycol: str, map
     rules = key_rules(maps, _c2_bases(dst) if use_c2 else set())
     local = {str(r[keycol]).strip(): r for r in (dict(x._mapping) for x in
                                                  dst.execute(text(f"SELECT {', '.join(cols)} FROM {table}")))}
-    ins, cnt = plan_geocodes(src_rows, keycol, rules, local)
+    ins, upd, cnt = plan_geocodes(src_rows, keycol, rules, local)
     led_t, led_c = LEDGER.get(table, (None, None))
     if led_t and _exists(dst, led_t) and ins:
         led = {str(r[0]).strip() for r in dst.execute(text(f"SELECT DISTINCT {led_c} FROM {led_t} WHERE {led_c} IS NOT NULL"))}
@@ -198,7 +235,14 @@ def merge_geocode(src: Connection, dst: Connection, table: str, keycol: str, map
     else:
         cnt["insert_not_in_ledger"] = 0
     out = {"table": table, **cnt, "dst_before": len(local),
-           "rule": "키 이전 적용(1:1 재키 · C-01 분할 옛 키·C-2 옛 키 버림) → 로컬에 없는 키만 추가, 같은 키는 로컬 값 유지(값은 고치지 않음)"}
+           "rule": "키 이전 적용(1:1 재키 · C-01 분할 옛 키·C-2 옛 키 버림) → 로컬에 없는 키 추가 · 같은 키 값 다름은 "
+                   "한쪽만 ok→ok 쪽 / 둘 다 ok→geocoded_at 최근(같으면 로컬) / 둘 다 실패→로컬 (운영 쪽이면 값 그대로 UPDATE)"}
+    if apply and upd:
+        set_cols = [c for c in cols if c != keycol]
+        sql = text(f"UPDATE {table} SET {', '.join(f'{c} = :{c}' for c in set_cols)} WHERE {keycol} = :{keycol}")
+        done = sum(dst.execute(sql, r).rowcount or 0 for r in upd)
+        if done != len(upd):
+            raise MergeError(f"{table}: 바꾼 행 {done} ≠ 계획 {len(upd)} — 되돌림")
     if apply and ins:
         sql = text(f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({', '.join(':' + c for c in cols)}) "
                    f"ON CONFLICT ({keycol}) DO NOTHING")

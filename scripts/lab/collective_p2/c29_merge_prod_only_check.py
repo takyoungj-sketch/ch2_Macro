@@ -134,8 +134,14 @@ def check(report: dict | None = None) -> tuple[str, list[str]]:
                 merged_orphan = int(t.get("insert_not_in_ledger", 0))
                 rows += [("병합 보고서: 넣은 행 / 그중 원장에 없는 키(병합이 만든 고아, 0 이어야 함)", "— / 0",
                           f"{int(t.get('insert', 0)):,} / {merged_orphan:,}"),
-                         ("병합 보고서: 같은 키 값 다름(로컬 유지) / 그중 좌표 다름", "기록",
-                          f"{int(t.get('conflict_kept_local', 0)):,} / {int(t.get('conflict_coords', 0)):,}"),
+                         ("병합 보고서: 같은 키 값 다름 / 그중 좌표 다름", "기록",
+                          f"{int(t.get('conflict', 0)):,} / {int(t.get('conflict_coords', 0)):,}"),
+                         ("  규칙별: 운영만 ok · 로컬만 ok · 둘 다 ok 운영 최근 · 둘 다 ok 로컬 최근·같음 · 둘 다 실패", "기록",
+                          " · ".join(f"{int(t.get('rule_' + r, 0)):,}" for r in
+                                     ("only_prod_ok", "only_local_ok", "both_ok_prod_newer",
+                                      "both_ok_local_newer_or_same", "both_failed"))),
+                         ("  처리: 운영 값으로 바꿈 / 로컬 유지", "기록",
+                          f"{int(t.get('update', 0)):,} / {int(t.get('kept_local', 0)):,}"),
                          ("병합 전부터 있던 고아(원장에 없는 키 − 병합 고아)", "기록", f"{len(orphan) - merged_orphan:,}")]
                 if merged_orphan:
                     fails.append(f"{table}: 병합이 넣은 고아 {merged_orphan}")

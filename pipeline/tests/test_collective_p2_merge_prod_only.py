@@ -52,16 +52,18 @@ def test_key_rules_classify_map_reasons():
 def test_plan_geocodes_counts():
     rules = {"o1": (mpo.REKEY, "n1"), "o2": (mpo.DROP_C01, None), "o3": (mpo.DROP_C2, None), "o9": (mpo.REKEY, "z")}
     rows = [{"k": "o1"}, {"k": "o2"}, {"k": "o3"}, {"k": "x"}, {"k": "y"}, {"k": "o9", "updated_at": 2}, {"k": "z", "updated_at": 1}]
-    ins, cnt = mpo.plan_geocodes(rows, "k", rules, local_keys={"y"})
+    ins, upd, cnt = mpo.plan_geocodes(rows, "k", rules, local_keys={"y"})
+    assert upd == []
     assert cnt == {"src": 7, "unchanged": 3, "rekeyed": 2, "drop_c01": 1, "drop_c2": 1, "rekey_overlap": 1,
-                   "exists_local": 1, "identical": 0, "same_value_other_time": 0, "conflict_kept_local": 0,
-                   "conflict_coords": 0, "insert": 3}
+                   "exists_local": 1, "identical": 0, "same_value_other_time": 0, "conflict": 0,
+                   "conflict_coords": 0, **{f"rule_{r}": 0 for r in mpo.CONFLICT_RULES},
+                   "update": 0, "kept_local": 0, "insert": 3}
     assert sorted(r["k"] for r in ins) == ["n1", "x", "z"]
     assert next(r for r in ins if r["k"] == "z")["updated_at"] == 2          # 겹치면 늦은 쪽
 
 
 def test_plan_geocodes_counts_same_key_conflicts_and_keeps_local():
-    """같은 키에 값이 다르면 충돌로 세고 로컬 값을 유지(넣지 않음). 시각 열만 다르면 충돌 아님."""
+    """같은 키에 값이 다르면 충돌로 센다(status 없음 = 둘 다 실패 → 로컬 유지). 시각 열만 다르면 충돌 아님."""
     src = [{"k": "a", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5},
            {"k": "b", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5},
            {"k": "c", "longitude": 1.0, "latitude": 2.0, "label": "y", "updated_at": 5},
@@ -71,10 +73,42 @@ def test_plan_geocodes_counts_same_key_conflicts_and_keeps_local():
              "b": {"k": "b", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 9},     # 시각만 다름
              "c": {"k": "c", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5},     # 이름 다름
              "d": {"k": "d", "longitude": 1.5, "latitude": 2.0, "label": "x", "updated_at": 5}}     # 좌표 다름
-    ins, cnt = mpo.plan_geocodes(src, "k", {}, local)
-    assert [r["k"] for r in ins] == ["e"]
-    assert (cnt["exists_local"], cnt["identical"], cnt["same_value_other_time"], cnt["conflict_kept_local"],
-            cnt["conflict_coords"]) == (4, 1, 1, 2, 1)
+    ins, upd, cnt = mpo.plan_geocodes(src, "k", {}, local)
+    assert [r["k"] for r in ins] == ["e"] and upd == []
+    assert (cnt["exists_local"], cnt["identical"], cnt["same_value_other_time"], cnt["conflict"],
+            cnt["conflict_coords"], cnt["rule_both_failed"], cnt["kept_local"]) == (4, 1, 1, 2, 1, 2, 2)
+
+
+# --- 충돌 규칙(T 결정 2026-11-16): 한쪽만 ok → ok 쪽 · 둘 다 ok → geocoded_at 최근(같으면 로컬) · 둘 다 실패 → 로컬 ---------
+
+def _g(status, at, lon=127.0):
+    return {"k": "a", "status": status, "geocoded_at": at, "longitude": None if status != "ok" else lon, "latitude": 37.0}
+
+
+@pytest.mark.parametrize("prod,local,win,rule", [
+    (_g("ok", 5), _g("not_found", None), "prod", "only_prod_ok"),                    # 한쪽만 ok — 운영
+    (_g("not_found", None), _g("ok", 5), "local", "only_local_ok"),                  # 한쪽만 ok — 로컬(이번 리허설 1건)
+    (_g("ok", 9, 127.1), _g("ok", 5), "prod", "both_ok_prod_newer"),                 # 둘 다 ok — 운영이 최근
+    (_g("ok", 5, 127.1), _g("ok", 9), "local", "both_ok_local_newer_or_same"),       # 둘 다 ok — 로컬이 최근
+    (_g("ok", 5, 127.1), _g("ok", 5), "local", "both_ok_local_newer_or_same"),       # 둘 다 ok — 같으면 로컬
+    (_g("ok", None, 127.1), _g("ok", 5), "local", "both_ok_local_newer_or_same"),    # 운영 시각 없음 — 로컬
+    (_g("not_found", None), _g("error", None), "local", "both_failed"),             # 둘 다 실패 — 로컬
+    (_g("pending", None), _g("not_found", None), "local", "both_failed"),
+])
+def test_resolve_conflict_rules(prod, local, win, rule):
+    assert mpo.resolve_conflict(prod, local) == (win, rule)
+
+
+def test_plan_geocodes_applies_rule_and_counts_per_rule():
+    src = [{**_g("ok", 5), "k": "p1"}, {**_g("not_found", None), "k": "l1"}, {**_g("ok", 9, 127.2), "k": "p2"},
+           {**_g("error", None), "k": "f1"}]
+    local = {"p1": {**_g("not_found", None), "k": "p1"}, "l1": {**_g("ok", 3), "k": "l1"},
+             "p2": {**_g("ok", 4), "k": "p2"}, "f1": {**_g("not_found", None), "k": "f1", "label": "x"}}
+    src[3]["label"] = "y"
+    ins, upd, cnt = mpo.plan_geocodes(src, "k", {}, local)
+    assert ins == [] and sorted(r["k"] for r in upd) == ["p1", "p2"]
+    assert (cnt["conflict"], cnt["rule_only_prod_ok"], cnt["rule_only_local_ok"], cnt["rule_both_ok_prod_newer"],
+            cnt["rule_both_failed"], cnt["update"], cnt["kept_local"]) == (4, 1, 1, 1, 1, 2, 2)
 
 
 @pytest.fixture(scope="module")
@@ -245,3 +279,31 @@ def test_real_apply_requires_manifest_and_freeze_time():
         mpo.main(base + ["--real-apply", "--confirm-db", "collective_stats"])
     with pytest.raises(mig.GuardError, match="같이"):
         mpo.main(base + ["--manifest", "m.json"])
+
+
+def test_merge_updates_row_when_prod_wins_and_is_idempotent(dbs):
+    """DB: 운영 쪽이 이기면(로컬 실패 · 운영 ok) 그 행 값으로 UPDATE, 다시 돌리면 identical. 로컬 ok 는 그대로."""
+    _seed_fresh = """DROP TABLE IF EXISTS {t}; CREATE TABLE {t} (building_key text PRIMARY KEY, label text,
+        longitude double precision, latitude double precision, status text, geocoded_at timestamp, updated_at timestamp)"""
+    kp, kl = K["a"], K["b"]
+    for e in (dbs[SRC], dbs[DST]):
+        with e.begin() as c:
+            for stmt in _seed_fresh.format(t="geo_rule_t").split(";"):
+                c.execute(text(stmt))
+    with dbs[DST].begin() as c:
+        c.execute(text("CREATE TABLE IF NOT EXISTS geo_rule_map (old_key text, new_key text, reason text)"))
+        c.execute(text("""INSERT INTO geo_rule_t VALUES (:p, 'x', NULL, NULL, 'not_found', NULL, '2026-10-01'),
+                          (:l, 'x', 127.0, 37.0, 'ok', '2026-11-05', '2026-11-05')"""), dict(p=kp, l=kl))
+    with dbs[SRC].begin() as c:
+        c.execute(text("""INSERT INTO geo_rule_t VALUES (:p, 'x', 127.5, 37.5, 'ok', '2026-11-10', '2026-11-10'),
+                          (:l, 'x', NULL, NULL, 'not_found', NULL, '2026-10-24')"""), dict(p=kp, l=kl))
+    with dbs[SRC].connect() as s, dbs[DST].begin() as d:
+        out = mpo.merge_geocode(s, d, "geo_rule_t", "building_key", "geo_rule_map", False, apply=True)
+    assert (out["conflict"], out["rule_only_prod_ok"], out["rule_only_local_ok"], out["update"], out["kept_local"],
+            out["insert"], out["dst_after"]) == (2, 1, 1, 1, 1, 0, 2)
+    with dbs[DST].connect() as c:
+        rows = {r[0]: (r[1], r[2]) for r in c.execute(text("SELECT building_key, longitude, status FROM geo_rule_t"))}
+    assert rows[kp] == (127.5, "ok") and rows[kl] == (127.0, "ok")
+    with dbs[SRC].connect() as s, dbs[DST].begin() as d:
+        again = mpo.merge_geocode(s, d, "geo_rule_t", "building_key", "geo_rule_map", False, apply=True)
+    assert (again["update"], again["identical"], again["rule_only_local_ok"]) == (0, 1, 1)

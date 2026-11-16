@@ -475,7 +475,7 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 | g | 다시 한 번 병합 적용 → 넣은 행 0(멱등) | Opus | 모든 표 insert 0 |
 | h | 5.4 가벼운 지표·해시 스냅샷 다시 뜨기 → promote 용 덤프(2.2) → 6.2 promote | Codex | — |
 
-   - 리허설 실측(2026-11-16 덤프, `*_p2r`): 좌표 5,413행 → 넣음 517 · C-2 옛 키 버림 34 · C-01 분할 옛 키 버림 24 · 같은 키 값 다름 1(운영 쪽 좌표 없음 `not_found`, 로컬 `ok` 가 12일 늦음 → 로컬 유지) · 비주거 695행 → 넣음 92(값 그대로) · 임대 975행 → 넣음 0 · QA 1행 같음 · 고아 0(임대 28행은 P2 전부터 있던 것) · 두 번째 실행 넣음 0, 4표 해시 같음.
+   - 리허설 실측(2026-11-16 덤프, `*_p2r`): 좌표 5,413행 → 넣음 517 · C-2 옛 키 버림 34 · C-01 분할 옛 키 버림 24 · 같은 키 값 다름 1(운영 `not_found` · 로컬 `ok` → 규칙 「한쪽만 ok」로 로컬 유지, 새 규칙으로 다시 돌려도 바꾼 행 0) · 비주거 695행 → 넣음 92(값 그대로) · 임대 975행 → 넣음 0 · QA 1행 같음 · 고아 0(임대 28행은 P2 전부터 있던 것) · 두 번째 실행 넣음 0, 4표 해시 같음.
 
 ```bash
 # 운영(읽기) — 표만 데이터로
@@ -486,7 +486,8 @@ sudo -u postgres /usr/lib/postgresql/16/bin/pg_dump -Fc --data-only -d rent_stat
 
    - 로컬로 가져와 **임시 DB**(예 `prod_only_tmp`)에 복원한다.
    - 그다음 로컬 반영본에 합친다.
-     - geocode 3표: `building_key`(비주거는 `cluster_key`)에 키 이전을 적용한다. 연결표로 1:1 은 새 키, 분할 옛 키 좌표는 버린다(동이 갈려 좌표가 맞지 않음). 그 뒤 `INSERT … ON CONFLICT (키) DO NOTHING` 한다. 로컬에 이미 있는 키는 로컬 값을 유지한다.
+     - geocode 3표: `building_key`(비주거는 `cluster_key`)에 키 이전을 적용한다. 연결표로 1:1 은 새 키, 분할 옛 키 좌표는 버린다(동이 갈려 좌표가 맞지 않음). 로컬에 없는 키는 `INSERT … ON CONFLICT (키) DO NOTHING` 한다.
+     - **같은 키 충돌(시각 열 밖 값이 다름) 규칙 — 3표 공통(T 결정 2026-11-16):** 한쪽만 `status=ok` → ok 쪽 · 둘 다 ok → `geocoded_at` 이 더 최근인 쪽(같거나 운영 쪽이 없으면 로컬) · 둘 다 실패 → 로컬 유지. 운영 쪽이 이기면 그 행 값을 그대로 UPDATE 한다(값은 고치지 않음). 시각 열만 다르면 충돌이 아니라 그대로 둔다. 보고서에 규칙별 건수(`rule_*`)·바꾼 행(`update`)·로컬 유지(`kept_local`).
      - `qa_audit_run`(관리자 QA 기록) — **시퀀스를 먼저 맞춘 뒤 id 충돌을 비교해 합친다:**
        0. **운영 행을 넣기 전에** 로컬 시퀀스를 `max(로컬 max(id), 운영 max(id))` 보다 크게 맞춘다. 새로 받는 id 가 운영에만 있는 id 와 겹치지 않게 하기 위해서다.
           `SELECT setval(pg_get_serial_sequence('qa_audit_run','id'), GREATEST((SELECT coalesce(max(id),0) FROM qa_audit_run), <운영 max(id)>) + 1, false);`
@@ -528,6 +529,9 @@ sudo -u postgres /usr/lib/postgresql/16/bin/pg_dump -Fc --no-owner --no-acl -f /
 | 1:1 옛 키(`honam_sido`) | **200** + 새 키 응답 | 실패(R5) |
 
   - C-2 확인은 `key_split_c2` 가 본문에 실제로 있어야 통과다(헤더만 있고 본문이 JSON 객체인데 없으면 실패).
+  - **스크립트:** `scripts/ops/collective_p2_r5_smoke.py --base-url <기준 URL> --collective-db <표본 DB>`(기본 `http://127.0.0.1:8000` · `collective_stats_p2r`). 위 세 가지(C-01 옛 키 409 · C-2 옛 키 200 + `key_split_c2` · 일반 키 200·안내 없음)를 검사해 하나라도 다르면 종료 코드 1. 표본 키는 DB 에서 읽기 전용으로 고르고 키 앞 8자만 출력한다(번지 없음).
+    - **로컬 주소(localhost·127.0.0.1·::1)만 받는다.** 운영 URL 이면 아무것도 하지 않고 종료 코드 2. 운영 반영 뒤 실행은 Codex/Opus 가 운영 서버 안에서(`http://127.0.0.1:8000`, 표본 DB = 운영 `collective_stats`) 한다.
+    - 리허설 실측(2026-11-16, 리허설 DB 에 붙인 로컬 백엔드 :8017): 3/3 통과(409 · 200+안내 · 200).
 
 ## 7. 운영 확인 (Opus, 읽기 전용)
 
@@ -595,7 +599,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 | R2 | 7.1 `--expect` 비교 | 결과 「차이」(종료 코드 1). 「검증 못 함」(2)은 무거운 검사를 다시 돌려 통과·차이로 확정 |
 | R3 | 7.2 해시 비교 | 결과 「차이」. 「검증 못 함」은 시간 제한을 늘려 다시 돌려 확정 |
 | R4 | promote 스크립트 | `psql ON_ERROR_STOP` 실패 · `/health` 가 60초 안에 응답 없음(스크립트 종료 코드 1) |
-| R5 | 스모크(6.3) | 집합·임대 상세가 5곳 이상 비거나 500 · **C-01 분할 옛 키가 409 가 아님** · **C-2 옛 키가 200 + `key_split_c2` 분리 안내가 아님**(409·404·500·안내 없는 200) · 1:1 옛 키가 200 이 아님 |
+| R5 | 스모크(6.3, `collective_p2_r5_smoke.py` 종료 코드 1) | 집합·임대 상세가 5곳 이상 비거나 500 · **C-01 분할 옛 키가 409 가 아님** · **C-2 옛 키가 200 + `key_split_c2` 분리 안내가 아님**(409·404·500·안내 없는 200) · 일반 키가 200 이 아니거나 안내가 붙음 · 1:1 옛 키가 200 이 아님 |
 | R6 | 시간 | 한 DB 복원이 지난 promote 기록(2.3)의 2배를 넘고 원인이 불명 |
 
 **되돌리기(DB 마다, 운영):**
