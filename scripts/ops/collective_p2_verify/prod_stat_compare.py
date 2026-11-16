@@ -35,7 +35,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from _common import Timed, db_name, db_url, now_iso, read_json, ro_conn, stamp_local, write_json  # noqa: E402
+from _common import (  # noqa: E402
+    StampError, Timed, _parse_utc, db_name, db_url, now_iso, read_json, ro_conn, stamp_local, write_json,
+)
 
 KIND = "stat_compare"
 REQUIRED_DBS = ("collective_stats", "rent_stats", "built_stats")
@@ -174,7 +176,23 @@ def take(db_envs: list[str], env_file: Path | None, *, deadline_s: float, clock=
     out["elapsed_s"] = round(clock() - t0, 2)
     if out["elapsed_s"] > deadline_s:
         out["timed_out"] = True
+    _attach_file_server_now(out)
     return _finish_clock(out, order_clock)
+
+
+def _attach_file_server_now(out: dict) -> None:
+    """파일 단위 server_now = 이번 읽기 중 가장 이른 DB now(). 하나라도 없으면 비워 둔다(stamp-local 이 거절)."""
+    stamps = []
+    for v in (out.get("dbs") or {}).values():
+        if not isinstance(v, dict) or v.get("server_now_source") != "server" or not v.get("server_now"):
+            return
+        if _parse_utc(v.get("server_now")) is None:
+            return
+        stamps.append(str(v["server_now"]))
+    if not stamps:
+        return
+    out["server_now"] = min(stamps, key=_parse_utc)
+    out["server_now_source"] = "server"
 
 
 def compare_snaps(day: dict, night: dict) -> tuple[str, list[list[str]]]:
@@ -243,7 +261,11 @@ def main(argv=None) -> int:
     st.add_argument("--field", action="append", required=True)
     a = p.parse_args(argv)
     if a.cmd == "stamp-local":
-        write_json(a.file, stamp_local(read_json(a.file), *a.field))
+        try:
+            write_json(a.file, stamp_local(read_json(a.file), *a.field))
+        except (OSError, ValueError, StampError) as ex:
+            print(f"중단: {ex}", file=sys.stderr)
+            return 2
         print(f"local 시각 기록: {', '.join(a.field)} → {a.file}")
         return 0
     snap = take(a.db_env, a.env_file, deadline_s=a.deadline, order_clock=a.order_clock)
@@ -266,6 +288,7 @@ def main(argv=None) -> int:
            "baseline_measured_at_source": (day or {}).get("measured_at_source"),
            "night_measured_at": snap.get("measured_at"),
            "night_measured_at_source": snap.get("measured_at_source"),
+           "server_now": snap.get("server_now"), "server_now_source": snap.get("server_now_source"),
            "elapsed_s": snap.get("elapsed_s"), "dbs": sorted(snap.get("dbs") or {}), "problems": prob,
            "excluded": {k: sorted(v) for k, v in EXCLUDE.items()}}
     if a.result_out:

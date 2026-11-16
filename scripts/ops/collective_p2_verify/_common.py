@@ -122,12 +122,43 @@ def now_iso() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
 
 
-def stamp_local(obj: dict, *fields: str) -> dict:
-    """로컬 PC 시계(UTC)로 순서 판정 시각을 찍고 출처를 local 로 둔다. server_now 는 건드리지 않는다."""
-    now = now_iso()
+STAMP_MAX_SKEW_S = 600
+
+
+class StampError(RuntimeError):
+    pass
+
+
+def _parse_utc(s):
+    import datetime as _dt
+
+    try:
+        d = _dt.datetime.fromisoformat(str(s))
+    except (TypeError, ValueError):
+        return None
+    return d if d.tzinfo else None
+
+
+def stamp_local(obj: dict, *fields: str, now=None) -> dict:
+    """로컬 PC 시계(UTC)로 순서 판정 시각을 찍고 출처를 local 로 둔다.
+
+    server_now(출처 server)가 없거나, 찍는 시각과 10분을 넘기면 StampError.
+    오래된 파일을 나중에 가져와 오늘 시각이 찍히는 것을 막는다. server_now 값은 바꾸지 않고, 순서 판정도 쓰지 않는다.
+    """
+    import datetime as _dt
+
+    if not isinstance(obj, dict) or obj.get("server_now_source") != "server" or not obj.get("server_now"):
+        raise StampError("server_now 가 없거나 출처가 server 가 아님")
+    server = _parse_utc(obj.get("server_now"))
+    if server is None:
+        raise StampError("server_now 시각을 읽을 수 없음")
+    stamped = now or _dt.datetime.now(_dt.timezone.utc)
+    if abs((stamped - server).total_seconds()) > STAMP_MAX_SKEW_S:
+        raise StampError("server_now 와 로컬 시각 차이가 10분을 넘음")
     out = dict(obj)
+    iso = stamped.isoformat()
     for f in fields:
-        out[f] = now
+        out[f] = iso
         out[f + "_source"] = "local"
     return out
 

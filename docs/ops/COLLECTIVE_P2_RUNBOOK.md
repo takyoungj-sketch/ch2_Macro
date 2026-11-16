@@ -268,12 +268,12 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 
 - 운영 서버 예약 작업 없음 확인(읽기 전용): `crontab -l; sudo crontab -l; systemctl list-timers --all | grep -i ch2`. 무엇이 나오면 멈추고 보고한다.
 - **낮 순서:** 동결 시작 → (1·2) 무거운 동기화·운영 카운터 기록 → 5절 로컬 적용 → 5.4 검증·(3) 로컬 카운터 기록(①) → 로컬 전체 해시(②) → T 확인 → built 덤프·업로드(S 실측)·built QA 행 수 기록 → 밤 6.1.
-- **순서 판정 시계:** ①~⑤ 에 쓰는 시각은 모두 로컬 PC 시계의 UTC 이고, 각 명령이 끝난 뒤에 찍는다. 출처는 `local`. DB `now()` 는 산출물의 `server_now`(출처 `server`)로만 남기고 순서 판정에 쓰지 않는다. 로컬에서 끝나는 명령은 스크립트가 끝날 때 찍는다. 운영 서버에서 실행한 산출물은 `--order-clock defer` 로 비워 두고, 파일을 로컬로 가져온 뒤 `stamp-local` 로 찍는다(서버 시계로 순서를 재지 않는다).
+- **순서 판정 시계:** ①~⑤ 에 쓰는 시각은 모두 로컬 PC 시계의 UTC 이고, 각 명령이 끝난 뒤에 찍는다. 출처는 `local`. DB `now()` 는 산출물의 `server_now`(출처 `server`)로만 남기고 순서 판정에 쓰지 않는다. 로컬에서 끝나는 명령은 스크립트가 끝날 때 찍는다. 운영 서버에서 실행한 산출물은 `--order-clock defer` 로 비워 두고, **생성 직후 바로 로컬로 가져와** `stamp-local` 로 찍는다. `server_now` 가 없거나 출처가 `server` 가 아니면 거절한다. 찍는 시각(로컬 UTC)과 `server_now` 의 차이가 10분을 넘어도 거절한다(종료 2, 파일은 고치지 않음). 서버에서 만든 오래된 파일을 늦게 가져와 오늘 시각이 찍히는 것을 막는다.
 - **낮(동결 시작 직후, 로컬 적용 전, Codex) — 무거운 동기화와 카운터 기록을 같이:**
   1. 3절 `prod_sync_check snapshot --allow-heavy`(세 DB) → 아직 적용 전인 로컬과 compare(다름 0) → 결과 파일(`--result-out`, 48시간 유효 — 5절 로컬 적용·밤 병합 `--real-apply` 가 쓴다). 예상 collective 3~6 · rent 5~10 · built 1분(운영 최대 2배).
   2. **같은 시간대에** 운영의 가벼운 비교 기준을 기록한다(읽기 전용, 몇 초):
      `cd /opt/ch2_Macro && backend/.venv/bin/python scripts/ops/collective_p2_verify/prod_stat_compare.py snapshot --order-clock defer --db-env COLLECTIVE_DATABASE_URL --db-env RENT_DATABASE_URL --db-env BUILT_DATABASE_URL --env-file backend/.env --out /var/backups/ch2/p2/stat_day_prod.json`
-     — 세 DB 모든 표의 `pg_stat_user_tables(n_tup_ins, n_tup_upd, n_tup_del)` 와 `pg_stat_database.stats_reset`, `track_counts`. 한 DB 를 10초 간격으로 두 번 읽어 값이 같을 때만 남긴다. 종료 0 이어야 한다(시간 초과·DB 누락·`track_counts` 가 on 이 아님·두 번 읽기가 다름은 1). 이 파일의 순서 시각은 서버에서 찍지 않는다.
+     — 세 DB 모든 표의 `pg_stat_user_tables(n_tup_ins, n_tup_upd, n_tup_del)` 와 `pg_stat_database.stats_reset`, `track_counts`. 한 DB 를 10초 간격으로 두 번 읽어 값이 같을 때만 남긴다. 종료 0 이어야 한다(시간 초과·DB 누락·`track_counts` 가 on 이 아님·두 번 읽기가 다름은 1). 이 파일의 순서 시각은 서버에서 찍지 않는다. 생성이 끝나면 바로 로컬로 가져와 `stamp-local --field measured_at` 한다. `server_now` 와 10분을 넘기면 종료 2 로 거절되므로 나중에 찍지 않는다.
   3. 로컬 카운터 기준(①)은 5.4 전체 해시(②)보다 **먼저** 기록한다: `py scripts\ops\collective_p2_verify\prod_stat_compare.py snapshot --db-env … --env-file backend\.env --out logs\collective_p2\stat_day_local.json`. 명령이 끝난 시각이 `measured_at`(출처 `local`)이다.
   - 이 뒤로 밤까지 F1~F6 을 하지 않는다. 밤에는 무거운 동기화를 다시 하지 않고 **가벼운 비교**(6.1 3)로 「낮 이후 운영 전용 표 밖 쓰기 없음」만 본다.
 - **운영 쓰기 차단 = nginx 점검 모드(안 A):** 운영 서버가 직접 쓰는 표(2.5 — 좌표 캐시 3표·QA 기록)는 API 요청으로만 바뀐다. 밤 점검 창(6.1) 동안 **nginx 가 API 전체에 503** 을 돌려주게 해서, 운영 전용 4표 덤프부터 promote 끝까지 운영에 새 쓰기가 생기지 않게 한다.

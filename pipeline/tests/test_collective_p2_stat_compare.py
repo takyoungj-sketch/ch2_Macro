@@ -298,9 +298,49 @@ def test_overlay_rejects_server_clock_used_as_order_time():
         _overlay(base, patch)
 
 
-def test_stamp_local_keeps_server_now(tmp_path):
+def _stamp_file(tmp_path, server_now, source="server"):
     path = tmp_path / "a.json"
-    path.write_text(json.dumps({"measured_at": None, "server_now": "srv", "server_now_source": "server"}), encoding="utf-8")
-    assert hc.main(["stamp-local", "--file", str(path), "--field", "measured_at"]) == 0
+    path.write_text(json.dumps({"measured_at": None, "server_now": server_now, "server_now_source": source}),
+                    encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize("mod", [hc, sc])
+def test_stamp_local_rejects_yesterdays_server_now(tmp_path, mod):
+    import datetime as dt
+
+    path = _stamp_file(tmp_path, (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)).isoformat())
+    before = path.read_text(encoding="utf-8")
+    assert mod.main(["stamp-local", "--file", str(path), "--field", "measured_at"]) == 2
+    assert path.read_text(encoding="utf-8") == before
+
+
+@pytest.mark.parametrize("mod", [hc, sc])
+def test_stamp_local_accepts_a_few_seconds_and_keeps_server_now(tmp_path, mod):
+    import datetime as dt
+
+    fresh = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(seconds=3)).isoformat()
+    path = _stamp_file(tmp_path, fresh)
+    assert mod.main(["stamp-local", "--file", str(path), "--field", "measured_at"]) == 0
     obj = json.loads(path.read_text(encoding="utf-8"))
-    assert obj["measured_at_source"] == "local" and obj["measured_at"] and obj["server_now"] == "srv"
+    assert obj["measured_at_source"] == "local" and obj["server_now"] == fresh
+    stamped = dt.datetime.fromisoformat(obj["measured_at"])
+    assert abs((dt.datetime.now(dt.timezone.utc) - stamped).total_seconds()) < 30
+
+
+def test_stamp_local_rejects_missing_or_non_server_source(tmp_path):
+    import datetime as dt
+
+    fresh = dt.datetime.now(dt.timezone.utc).isoformat()
+    path = _stamp_file(tmp_path, fresh, "local")
+    before = path.read_text(encoding="utf-8")
+    assert hc.main(["stamp-local", "--file", str(path), "--field", "measured_at"]) == 2
+    assert path.read_text(encoding="utf-8") == before
+    for key in ("server_now", "server_now_source"):
+        path = _stamp_file(tmp_path, fresh)
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        obj.pop(key)
+        path.write_text(json.dumps(obj), encoding="utf-8")
+        before = path.read_text(encoding="utf-8")
+        assert hc.main(["stamp-local", "--file", str(path), "--field", "measured_at"]) == 2
+        assert path.read_text(encoding="utf-8") == before

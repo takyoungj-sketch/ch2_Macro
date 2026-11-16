@@ -39,7 +39,8 @@ sys.path.insert(0, str(HERE))
 
 from _common import (  # noqa: E402
     EXIT, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn,
-    table_columns, finalize_result, make_result, now_iso, snapshot_failures, stamp_local, table_exists, write_json,
+    table_columns, finalize_result, make_result, now_iso, snapshot_failures, StampError, stamp_local, table_exists,
+    write_json,
 )
 
 # 이번 반영이 바꾸는 표(원장·부속·통계·연결표·보존 표). 보존 표(_p2_before)는 promote 로 같이 올라가므로 함께 비교한다.
@@ -403,7 +404,11 @@ def main(argv=None) -> int:
     c.add_argument("--result-out", type=Path, default=None)
     a = p.parse_args(argv)
     if a.cmd == "stamp-local":
-        write_json(a.file, stamp_local(read_json(a.file), *a.field))
+        try:
+            write_json(a.file, stamp_local(read_json(a.file), *a.field))
+        except (OSError, ValueError, StampError) as ex:
+            print(f"중단: {ex}", file=sys.stderr)
+            return EXIT[UNVERIFIED]
         print(f"local 시각 기록: {', '.join(a.field)} → {a.file}")
         return EXIT[PASS]
     if a.cmd == "overlay":
