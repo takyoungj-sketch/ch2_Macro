@@ -8,12 +8,13 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 
 from _db import OUT, ROOT, engine, engine_db, md_table
 
 sys.path.insert(0, str(ROOT / "pipeline"))
 from collective.building_keys import load_split_units  # noqa: E402
+from collective.building_keys import load_split_units_c2, main_lot_of, resolve_c2_part  # noqa: E402
 from collective.integrity_p2 import MULTI_LEAF_SQL, SYNTH_SQL, judged_keys  # noqa: E402
 
 AS_OF = "2026-10-01"
@@ -71,6 +72,60 @@ def rent_synth_sql(tx: str = "rent_transactions", mart: str = "rent_building_sta
         group by 1"""
 
 
+C2_EXP = {"new_keys": 2045, "moved_tx": 14288, "map_rows": 2281}   # c26 미리 보기 · 리허설 3단계
+C01_SPLIT = "reason in ('split', 'honam_sido+split')"            # C-01 분할(옛 키 사라짐) — c2 가 든 reason 제외
+
+
+def c2_unlisted_lots(c) -> tuple[list[tuple], dict]:
+    """integrity WARN 「C-2 분할 키의 판정 표에 없는 본번」 — 거래 수·배정 결과(건수만, 지번·키 없음).
+
+    본 키 + 그 조각 키(연결표 c2_split·c2_chain 의 old_key = 본 키)의 원장을 (본 키·법정동·본번·건축년도)로 묶고,
+    판정 표에 없는 본번이 어느 조각에 갔는지·월간 적재 규칙(resolve_c2_part)의 어느 경우인지 센다."""
+    units = load_split_units_c2(c)
+    frag = {r[0]: (r[1], int(r[2] or 0)) for r in c.execute(text(
+        "select new_key, old_key, split_part from collective_building_key_map where reason in ('c2_split', 'c2_chain')"))}
+    keys = sorted(set(units) | set(frag))
+    got = []
+    for i in range(0, len(keys), 2000):
+        got += c.execute(text("""select building_key, left(beopjungri_code, 10), split_part(btrim(lot_number), '-', 1),
+                building_year, count(*) from collective_transactions
+            where building_key in :k and coalesce(btrim(lot_number), '') <> '' group by 1, 2, 3, 4""").bindparams(
+            bindparam("k", expanding=True)), {"k": keys[i:i + 2000]}).all()
+    lot_n: dict = {}
+    recs = []
+    for k, b10, ml, yr, n in got:
+        base, part = (k, 0) if k in units else frag.get(k, (None, None))
+        frs = units.get(base, {}).get(str(b10)) if base else None
+        if frs is None:
+            continue
+        ml = main_lot_of(ml)
+        if ml in {f[0] for f in frs}:
+            continue
+        g = (base, str(b10), ml)
+        lot_n[g] = lot_n.get(g, 0) + int(n)
+        recs.append((g, part, int(yr) if yr is not None else None, int(n), frs))
+    on_base = {g for g, part, *_x in recs if part == 0}
+    out = {"lots_on_base": len(on_base), "places_on_base": len({g[:2] for g in on_base}),
+           "lots": len(lot_n), "places": len({g[:2] for g in lot_n}), "tx": sum(lot_n.values()),
+           "tx_base": 0, "tx_other": 0, "rule": {}, "mismatch_tx": 0, "lots_3plus": sum(v >= 3 for v in lot_n.values())}
+    for g, part, yr, n, frs in recs:
+        out["tx_base" if part == 0 else "tx_other"] += n
+        label, review = resolve_c2_part(frs, g[2], yr, lot_n[g])
+        rule = ("같은 건축년도 조각" if any(yr is not None and f[1] == yr for f in frs)
+                else "가까운 본번(확인 필요)" if review else "새 조각(3건+)")
+        out["rule"][rule] = out["rule"].get(rule, 0) + n
+        if label.startswith("p") and int(label[1:]) != part:
+            out["mismatch_tx"] += n
+    rows_ = [("본 키에 남은 판정 표 밖 본번(= integrity WARN)", f"{out['lots_on_base']:,}개 ({out['places_on_base']:,}곳)"),
+             ("본 키 + 조각 키 전체 판정 표 밖 본번", f"{out['lots']:,}개 ({out['places']:,}곳)"),
+             ("해당 거래", f"{out['tx']:,}"), ("→ 본 조각(옛 키)에 배정", f"{out['tx_base']:,}"),
+             ("→ 다른 조각 키에 배정", f"{out['tx_other']:,}"),
+             *[(f"규칙: {k}", f"{v:,}") for k, v in sorted(out["rule"].items())],
+             ("본번 거래 3건 이상(새 조각 후보)", f"{out['lots_3plus']:,}개"),
+             ("배정 ≠ 월간 적재 규칙 재현", f"{out['mismatch_tx']:,}건")]
+    return rows_, out
+
+
 def add(name, before, after, ok, note=""):
     rows.append(("OK" if ok else "NG", name, before, after, note))
 
@@ -102,12 +157,27 @@ def main():
         # count(DISTINCT) 는 정렬만 써서 원본에서 20분 제한을 넘겼다 → GROUP BY(해시 집계)로 같은 값
         qk = NAMED_KEY_COUNT_SQL
         kb, ka = one(cb, qk), one(ca, qk)
-        exp = kb - 3967 + 168 - len(units) + 3447
-        add("이름 키 수", kb, ka, ka == exp, f"예측 {exp:,} = 전 − 호남 옛 3,967 + 새 이름 168 − 분할 {len(units):,} + 조각 3,447")
+        exp = kb - 3967 + 168 - len(units) + 3447 + C2_EXP["new_keys"]
+        add("이름 키 수", kb, ka, ka == exp, f"예측 {exp:,} = 전 − 호남 옛 3,967 + 새 이름 168 − 분할 {len(units):,} + 조각 3,447 "
+            f"+ C-2 조각 {C2_EXP['new_keys']:,}(본 조각은 옛 키 유지)")
         km = one(ca, "select count(*) from collective_building_key_map")
-        add("연결표 행 수", "—", km, km == 7414, "예측 7,414(호남 3,967 + 분할 3,447)")
-        sp = one(ca, "select count(distinct old_key) from collective_building_key_map where reason like '%split%'")
-        add("분할 옛 키 수", "—", sp, sp == len(units))
+        add("연결표 행 수", "—", km, km == 7414 + C2_EXP["map_rows"],
+            f"예측 {7414 + C2_EXP['map_rows']:,}(호남 3,967 + 분할 3,447 + C-2 {C2_EXP['map_rows']:,})")
+        sp = one(ca, f"select count(distinct old_key) from collective_building_key_map where {C01_SPLIT}")
+        add("C-01 분할 옛 키 수", "—", sp, sp == len(units))
+        # C-2 (판정 표 · 연결표 reason 에 c2)
+        c2n = one(ca, "select count(distinct new_key) from collective_building_key_map where reason like '%c2_split%'")
+        add("C-2 조각 키 수", "—", c2n, c2n == C2_EXP["new_keys"], f"예측 {C2_EXP['new_keys']:,}(c26 미리 보기)")
+        c2t = one(ca, "select coalesce(sum(n_tx), 0) from collective_building_key_map where reason in ('c2_split', 'c2_chain', "
+                      "'honam_sido+c2_split')")
+        add("C-2 조각으로 옮겨진 거래", "—", c2t, c2t == C2_EXP["moved_tx"], f"예측 {C2_EXP['moved_tx']:,}")
+        c2l = one(ca, """select count(*) from collective_transactions t join collective_building_key_c2_units u
+            on u.base_key = t.building_key and u.decision = 'split' and u.part <> 0
+            and u.beopjungri_code = left(t.beopjungri_code, 10) and u.main_lot = ltrim(split_part(btrim(t.lot_number), '-', 1), '0')""")
+        add("C-2 조각(본 조각 밖) 본번 거래가 본 키에 남은 행", "—", c2l, c2l == 0)
+        c2rows, c2info = c2_unlisted_lots(ca)
+        add("C-2 판정 표 밖 본번 배정 ≠ 규칙 재현", "—", c2info["mismatch_tx"], c2info["mismatch_tx"] == 0,
+            f"본번 {c2info['lots']:,}개·거래 {c2info['tx']:,} → 아래 표")
         rem = one(ca, "select count(*) from collective_transactions where building_key = any(:k)", k=list(units))
         add("분할 대상 옛 키 남은 행", "—", rem, rem == 0)
         # 4 7년 building_stats
@@ -145,8 +215,8 @@ def main():
         hon = [r for r in ann if r[0] in (N, *LEG)]
         add("annual 2019~2020 전남광주 합 = 원장 합", "—", "; ".join(f"{r[0]} {r[1]}: {int(r[2]):,}/{int(r[3]):,}" for r in hon),
             all(int(r[2]) == int(r[3]) for r in hon) and not any(r[0] in LEG for r in hon))
-        add("annual 2019~2020 시도 합 ≠ 원장 합(전국)", "—", f"{len(bad)}건 / {len(ann)}", True,
-            "조건 2② 로 호남 밖 묵은 행은 남김 → c6 보고")
+        add("annual 2019~2020 시도 합 ≠ 원장 합(전국)", "—", f"{len(bad)}건 / {len(ann)}", len(bad) == 0,
+            "고정 연도 원장 근거 없는 행 정리(T 결정 2026-11-16) 뒤 0 → c6")
         # 7 market_stats 7년 코드 12 ≥ 5년
         q = """select market_domain, window_years, sum(count) from market_stats where as_of_month=:a and region_level='sido'
                and region_code='12' and window_years in (5,7) group by 1,2"""
@@ -210,7 +280,9 @@ def main():
         add("임대 mart 합성 주소 행 3/5/7", "2,836/4,037/4,714(A-3)", str(syn), all(v == 0 for v in syn.values()))
         x, y = one(cb, "select count(*) from rent_sale_building_map"), one(ca, "select count(*) from rent_sale_building_map")
         add("rent_sale_building_map 행", x, y, True, "c7 에서 연결 실측")
-    out = ["# C-5 검증 지표 (전 = 로컬 원본, 후 = *_p2r)", "", md_table(rows, ["판정", "지표", "전", "후", "비고"])]
+    out = ["# C-5 검증 지표 (전 = 로컬 원본, 후 = *_p2r)", "", md_table(rows, ["판정", "지표", "전", "후", "비고"]), "",
+           "## C-2 판정 표 밖 본번(integrity 경고) — 거래 수·배정 결과", "", md_table(c2rows, ["항목", "값"]), "",
+           "- 규칙: 월간 적재와 같은 resolve_c2_part — 같은 건축년도 조각 → 그 조각, 아니면 3건+ 새 조각, 아니면 가장 가까운 본번 조각(확인 필요)."]
     (OUT / "c5_verify.md").write_text("\n".join(out), encoding="utf-8")
     print("\n".join(out))
     return 1 if any(r[0] == "NG" for r in rows) else 0

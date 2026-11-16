@@ -36,7 +36,9 @@ MARTS = {
     "built_stats": ["built_scope_stats"],
     "rent_stats": ["rent_building_stats", "rent_building_rolling_stats"],
 }
-P2_TABLES = {"collective_building_key_map", "collective_cluster_key_map", "rent_building_key_map", "p2_migration_log"}
+# C-2 판정 표: 판정 적재(load_c2_units)가 만든다. 키 이전 롤백은 자동 등록(p2_migrate) 행만 지운다 — 운영 롤백은 덤프 복원
+P2_TABLES = {"collective_building_key_map", "collective_cluster_key_map", "rent_building_key_map", "p2_migration_log",
+             "collective_building_key_c2_units"}
 
 
 # 리허설이 만든 표의 이름 꼴: 이전 전 보존(*_p2_before), 조인 변경 전 결과 보존(*_p2_oldjoin, C-10)

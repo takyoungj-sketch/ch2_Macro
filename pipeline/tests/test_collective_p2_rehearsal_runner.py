@@ -123,6 +123,8 @@ def test_rollback_compare_classifies_rehearsal_tables():
     assert c8.classify("collective_building_stats_p2_oldjoin", None, same).startswith("이전이 만든 표")
     assert c8.classify("collective_transactions_p2_before", None, same).startswith("이전이 만든 표")
     assert c8.classify("collective_building_key_map", None, same).startswith("이전이 만든 표")
+    assert c8.classify("collective_building_key_c2_units", None, same).startswith("이전이 만든 표")      # C-2 판정 표
+    assert c8.classify("collective_building_annual_orphan_p2_before", None, same).startswith("이전이 만든 표")
     assert c8.classify("new_table", None, same) == "원본에 없음"
     assert c8.classify("t", same, None) == "리허설에 없음"
 

@@ -2,6 +2,7 @@
 
 - 2019~2020 남은 묵은 행: 유형·연도·시도·출처(장기 ingest / 원장 빌더)·원장 근거 여부
 - 2010~2018 행 수 전후(삭제 0 확인)
+- 고정 연도(2019~2020) annual 합 = 원장 합(전 지역)·원장 근거 없는 행 0(prune_fixed_annual_orphans_p2.verify, T 결정 2026-11-16)
 - C-2 분할 키 2019~2020 범위 교체 검증(c2_annual_replace_p2.verify): 대상 행 통계 = 원장 재계산, 원장 근거 없는 대상 행 0
 - 표본 10곳(시드 20261112): 호남 병합 키 3 · 인천 3 · 그 밖 시도 4. 2020 이전 count·median 이 하나라도 바뀌면 실패.
   호남 표본은 「후」 새 키 기준이고, 「전」은 같은 새 키 행(2019~2020 은 개편 재적재 때 만든 새 이름 행)이다.
@@ -17,6 +18,7 @@ from _db import OUT, ROOT, engine, engine_db, md_table
 
 sys.path.insert(0, str(ROOT / "pipeline"))
 from collective import c2_annual_replace_p2 as c2a  # noqa: E402
+from collective import prune_fixed_annual_orphans_p2 as pfo  # noqa: E402
 from collective.mart_replace import stale_annual_report  # noqa: E402
 
 T = "collective_building_annual_stats"
@@ -46,6 +48,19 @@ def main():
             WHERE a.contract_year IN (2019,2020) AND a.building_key IN (SELECT DISTINCT old_key FROM collective_building_key_map
             WHERE reason LIKE '%split%')""")).one()
         L.append(f"- 그중 분할 옛 키 행: {int(split_old[0]):,}행 / {int(split_old[1]):,}건(새 조각 행과 겹침 → 이중 집계 후보, 삭제 안 함)")
+        L.append("")
+        # 고정 연도 annual 합 = 원장 합(전 지역) — 원장 근거 없는 행 정리 뒤
+        forows = pfo.verify(ca)
+        L.append("## 고정 연도(2019~2020) annual 합 = 원장 합(전 지역)")
+        L.append(md_table([(n, e, g, "OK" if ok else "FAIL") for n, e, g, ok in forows], ["지표", "기대", "실제", "판정"]))
+        bad = ca.execute(text(pfo.FIXED_SUM_SQL)).all()
+        if bad:
+            L.append(md_table([(r[0], r[1], r[2], int(r[3]), int(r[4])) for r in bad[:20]],
+                              ["시도", "연도", "유형", "annual", "원장"]))
+        has_keep = ca.execute(text("SELECT to_regclass(:t)"), {"t": pfo.KEEP}).scalar()
+        kept = ca.execute(text(f"SELECT count(*), coalesce(sum(count), 0) FROM {pfo.KEEP}")).one() if has_keep else (0, 0)
+        L.append(f"\n- 정리로 지운 행(보존 표): {int(kept[0]):,}행 / {int(kept[1]):,}건 · 항목 실패 "
+                 f"{sum(1 for r in forows if not r[3])} / {len(forows)}")
         L.append("")
         # C-2 분할 키 2019~2020 범위 교체(Codex 검토)
         c2rows = c2a.verify(ca)
