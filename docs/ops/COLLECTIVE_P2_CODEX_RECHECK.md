@@ -10,7 +10,8 @@
 | `cd1992f` | Phase D 지적 6건(Insight 출력 분리·순서, C-2 판정 표 실제 적재 대조, 운영 전용 표 병합 스크립트, c6 예외 범위, R5 스모크) |
 | `14a24ec` | 병합: 같은 키 충돌 건수 + 병합 리허설 검증 `c29` |
 | `5e0bef9` | 병합 사전 확인(manifest SHA-256·덤프 시각 ≥ 동결 시각·행 수) · 병합 고아 건수 · c29 게이트·운영 DB 인자 · 런북 6.1 동결 직후 단계 · 이 체크리스트 |
-| (이번 커밋) | 병합 충돌 규칙(status·geocoded_at, 운영 쪽이 이기면 UPDATE, 규칙별 건수) · R5 스모크 스크립트 · 체크리스트 확정 사항 |
+| `e4a3d7a` | 병합 충돌 규칙(status·geocoded_at, 운영 쪽이 이기면 UPDATE, 규칙별 건수) · R5 스모크 스크립트 · 체크리스트 확정 사항 |
+| (이번 커밋) | **재검수 2차**: 점검 창(nginx 점검 모드, 안 A) 런북 3.2·6 · manifest 엄격 검사 · c29 엄격 판정·멱등 판정 · R5 서버용(pipeline 없이) · backend 전체 로그 |
 
 ## 2. Phase D 지적별 확인
 
@@ -19,9 +20,20 @@
 | 1 | Insight 출력 분리(03 부속 CSV·표제부 캐시 → `logs/collective_p2/insight/<label>/`, 실행 전후 추적 파일 변경 0) | ✅ | `cd1992f` | `scripts/lab/collective_p2/c22_insight_recompute.py` RUNNERS["03"]·`assert_clean` · `c27_insight14_compare.py` `check_repo_clean` | `test_collective_p2_insight14_compare.py`: `test_c22_runner03_redirects_attach_csv_and_title_cache` · `test_c22_tracked_change_guard` · `test_run_refuses_when_main_repo_tracked_files_change` |
 | 2 | Insight 를 c8 앞으로(운영 before = 적용 직전, after = 적용 직후, `--gen14` → c27 통일) | ✅ | `cd1992f` | 런북 5절 머리·5.4·7.3·12.2(9 Insight → 10 c8) · `--label ops_before/ops_after` | (문서·인자) |
 | 3 | C-2 표 로더 해시·행 수 검사(실제 DB 모드) + 키 이전 시작 전 대조 | ✅ | `cd1992f` | `pipeline/collective/load_c2_units.py` `check_approved_file`·`approved_table_state` · `migrate_p2_keys.py` `assert_c2_units_approved`·`--c2-approved-*` · 런북 5.1 0a·0b·2 | `test_collective_p2_load_c2_units.py`: 빈 표·다른 해시·정상(+행 수·적재 뒤 변경) · `test_migrate_cli_real_apply_requires_c2_approval_args` · `test_collective_p2_real_apply.py` 갱신 |
-| 4 | 운영 전용 데이터 병합 | ✅ | `cd1992f`·`14a24ec`·`5e0bef9`·이번 | `scripts/ops/collective_p2_merge_prod_only.py`(`resolve_conflict`) · `scripts/lab/collective_p2/c29_merge_prod_only_check.py` · 런북 6.1 2(a~h) | `test_collective_p2_merge_prod_only.py` 23개(키 규칙·충돌 규칙·fixture DB 병합·UPDATE·멱등·가드·사전 확인) |
+| 4 | 운영 전용 데이터 병합 | ✅ | `cd1992f`·`14a24ec`·`5e0bef9`·이번 | `scripts/ops/collective_p2_merge_prod_only.py`(`resolve_conflict`) · `scripts/lab/collective_p2/c29_merge_prod_only_check.py` · 런북 6.1 4~9 | `test_collective_p2_merge_prod_only.py` 38개(키 규칙·충돌 규칙·fixture DB 병합·UPDATE·멱등·가드·사전 확인·manifest 엄격 검사) · `test_collective_p2_c29_check.py` 30개 |
 | 5 | c6 예외를 (키·유형·연도) 단위로 축소 | ✅ | `cd1992f` | `scripts/lab/collective_p2/c6_annual_check.py` `orphan_cells`·`compare_sample_key` | `test_collective_p2_rehearsal_runner.py::test_c6_sample_excludes_only_orphan_key_type_year_cells` |
-| 6 | R5 스모크(C-01 분할 옛 키 409 · C-2 옛 키 200 + `key_split_c2` · 일반 키 200, 그 밖 실패) | ✅ | `cd1992f` · 이번 | 런북 8절 R5 · 6.3 · `scripts/ops/collective_p2_r5_smoke.py` | `test_collective_p2_r5_smoke.py` 18개(로컬 전용 가드·운영 URL 거부(종료 2, DB·HTTP 안 감)·세 판정·불일치 종료 1) · 리허설 백엔드 실측 3/3 |
+| 6 | R5 스모크(C-01 분할 옛 키 409 · C-2 옛 키 200 + `key_split_c2` · 일반 키 200, 그 밖 실패) | ✅ | `cd1992f` · 이번 | 런북 8절 R5 · 6.3 · `scripts/ops/collective_p2_r5_smoke.py` | `test_collective_p2_r5_smoke.py` 19개(로컬 전용 가드·운영 URL 거부(종료 2, DB·HTTP 안 감)·세 판정·불일치 종료 1·pipeline 없이 env 파일로 접속) · 리허설 백엔드 실측 3/3 |
+
+## 2a. Codex 재검수 2차(반드시 3 + 권장 2) — T 결정: 동결은 안 A(nginx 점검 모드)
+
+| # | 지적 | 완료 | 확인할 곳 | 테스트·실측 |
+|---|---|---|---|---|
+| R1 | 쓰기 차단 절차 — 낮(키 이전·로컬 적용·T 확인) / 새벽 한 묶음(점검 모드 ON → 진행 중 요청 0 → 4표 덤프 → manifest → 병합 → c29 → 재실행 변경 0 → 세 DB promote → 서버 localhost R5 → OFF → Opus 확인) | ✅ | 런북 3.2 · **6.0**(nginx 조각·켜기/끄기 명령·503 확인·진행 중 요청 0 확인 ①백엔드 연결 `ss` ②접속 로그 ③`pg_stat_activity`) · **6.1**(14단계·예상 시간) · **6.2**(멈춘 단계별 처리, 점검 모드 유지) · 8절 점검 모드 줄 · 0절·4절 #3·#7·#9 · 13절 C-11. promote 가 백엔드를 재시작해도 nginx 점검 모드가 유지됨을 3.2·6.0 에 명시 | 예상 중단(API 503) **약 73~90분** = 고정 59~67분 + 로컬 promote 덤프 6분 21초(리허설 DB 실측: collective 2분 27초·2.0GB · rent 3분 54초·3.0GB) + scp 5.0GB(미실측, 8~17분 추정). 서버 nginx 파일 수정은 Codex 몫 |
+| R2 | manifest 엄격 검사 — DB 2개·표 4개 정확한 집합 고정, 누락·중복·모르는 DB/표·행 수 누락 → 쓰기 전 거절(종료 2) | ✅ | `collective_p2_merge_prod_only.py` `REQUIRED_ARCHIVES`·`validate_manifest_shape`·`cli()` · `--real-apply` 는 임대 쪽 필수 | DB 누락·중복·모르는 DB·빈 목록·표 누락·모르는 표·행 수 None/문자열/음수·archive_rows 없음·sha256·bytes·file 없음 13경우 + 원본 쪽 인자 없음 + CLI 종료 2(병합 함수 안 부름) |
+| R3 | c29 엄격 판정 — 네 표 보고서·필수 카운터·`applied`·원본/대상 DB 이름 일치, 하나라도 없으면 실패 | ✅ | `c29_merge_prod_only_check.py` `validate_report`(check 의 `--report` 필수) · 병합 보고서 `applied` 칸(모든 트랜잭션 커밋 뒤에만 true) | 19경우: 보고서 없음 · `{"sides":{}}`(Codex 재현) · `applied` 없음/false · 쪽 누락 · 표 누락 · 카운터 누락·None·문자열 · DB 이름 다름 · 「원본에 표 없음」 · 모르는 표·쪽. 실측: 옛 run3 보고서(applied 없음)·드라이런 보고서 → 실패(종료 1) |
+| R4 | 멱등 = insert 0·update 0·QA 새 id 0·네 표 해시 같음, 시퀀스 스냅샷 `is_called` 포함 · 운영 R5 명령(서버 localhost + `--collective-db collective_stats`) · 서버 모듈 확인 | ✅ | c29 `idempotent` · `snapshot`(시퀀스 `last_value`+`is_called`) · R5 스크립트는 `pipeline/` import 없이 backend venv(sqlalchemy·psycopg2)+`backend/.env` 만 — 런북 6.3 운영 명령 · 4절 #9 배포 전 확인 | 멱등 판정 8경우(insert·update·QA 새 id·같은 id 추가·해시 다름·`is_called` 만 다름·applied·옛 스냅샷) · R5 env 파일 접속 테스트 · 리허설 백엔드 R5 3/3 다시 통과 |
+| R5 | backend 전체 테스트 로그 저장 | ✅ | **`logs/collective_p2/backend_tests_20261116.log`**(gitignore, 490줄, `-rfE`) | 1,327 passed · 12 failed · 1 error — 기준선과 같은 목록 |
+| R6 | 리허설 DB 로 병합·c29 재실행 | ✅ | `logs/collective_p2/merge_rehearsal/run4·run5·run6.json` · `check_run4.txt` · `snap_r4a·r4b·r4c·r6.json` | run4: c29 게이트 통과(엄격 판정 포함) · run5: `idempotent` 통과(insert·update·QA 새 id 0, 4표·시퀀스 같음) · 소요 실측 드라이런 1.4초 · 적용 1.3초 · c29 4.4초 · 스냅샷 0.6초 · 멱등 0.4초 · 임시 원본 복원 4.6초 |
 
 ## 3. 병합 리허설 결과(2026-11-16 덤프 `…_180626`, `*_p2r` 만, 운영 접속 없음)
 
@@ -49,8 +61,8 @@
 
 | 묶음 | 결과 | 기준선 대비 |
 |---|---|---|
-| pipeline | 325 passed(제외 2개는 따로 7 + 4 passed) | 새 실패 0(+새 테스트). 저장소 루트에서 모아 돌릴 때만 로딩 실패하는 2개는 `--ignore`(아래) |
-| backend | 1,327 passed · 12 failed · 1 error | 기준선과 같은 목록(built 지역 4 · insight 번들 6 · region_sido 1 · yield 1 · `test_profile_national_rank` 수집 오류) |
+| pipeline | 371 passed(제외 2개는 따로 7 + 4 passed) | 새 실패 0(+새 테스트). 저장소 루트에서 모아 돌릴 때만 로딩 실패하는 2개는 `--ignore`(아래) |
+| backend | 1,327 passed · 12 failed · 1 error — 전체 로그 `logs/collective_p2/backend_tests_20261116.log` | 기준선과 같은 목록(built 추천 1 · built 지역 3 · insight 번들 6 · region_sido 1 · yield 1 · `test_profile_national_rank` 수집 오류) |
 | 집합 컴포넌트 | 14/14 | 같음 |
 | tsc(frontend-collective) | 0 오류 | 같음 |
 
@@ -74,6 +86,8 @@
 
 - [ ] 판정 표 「내용 해시」는 (키·법정동·본번·유형·연도·조각·판정)만 본다(source·note·decided_at 제외). 이 범위가 충분한지.
 - [ ] c6 (키·유형·연도) 축소는 단위 테스트만 — 리허설 DB 가 덤프 상태가 아니라(키 이전 + 병합 뒤) 실제 데이터 재실행은 다음 전체 리허설 때.
-- [ ] R5 스모크를 운영 서버에서 돌리려면 서버에 `pipeline/`·DB 접속(표본 고르기)이 있어야 한다. 없으면 표본 키를 미리 골라 넘기는 방식이 필요 — 반영 전에 Codex 가 확인.
+- [x] R5 스모크 서버 실행: `pipeline/` 없이 backend venv + `backend/.env` 만으로 돈다(재검수 2차 R4). 배포 전 `--help`·import 확인은 런북 4절 #9(Codex).
+- [ ] nginx 점검 모드 조각(6.0)은 저장소 템플릿에 넣지 않았다(서버 파일 수정은 Codex). 실제 location 목록이 템플릿과 같은지 서버에서 확인.
+- [ ] 점검 창 예상의 scp 시간은 미실측(5.0GB). 낮의 built 업로드로 속도를 재서 6.1 10 을 확정.
 - [x] Insight 03 출력 분리는 실제 로컬 DB(읽기 전용)로 한 번 돌려 확인: 결과 숫자 이전 실행과 같음(scanned 153,108 · eligible 1,097 · known 985 · yes 406 · no 579), 추적 파일 변경 0, 커밋된 캐시 파일 그대로. raw 정션은 쓰고 `rmdir` 해제(4,176파일).
 - [x] 리허설 DB 현재 상태: 키 이전 + 병합 적용 뒤(덤프 상태 아님). 다음 전체 리허설은 12.2 1번(덤프에서 다시 만들기)부터.

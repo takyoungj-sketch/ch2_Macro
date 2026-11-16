@@ -231,17 +231,27 @@ def test_merge_refuses_non_rehearsal_target_and_same_db(tmp_path):
                   "--base-url", "postgresql://u@127.0.0.1/x"])
 
 
-# --- 동결 뒤 새 덤프 사전 확인(런북 6.1) -----------------------------------------------
+# --- 동결 뒤 새 덤프 사전 확인(런북 6.1) · manifest 엄격 검사(Codex 재검수 2) ------------------------
 
-def _manifest(tmp_path, created="20261117_031000", ro=True, rows=None, tamper=False):
+GOOD_ROWS = {"collective_stats": {"collective_building_geocodes": 3, "collective_commercial_map_geocodes": 2, "qa_audit_run": 1},
+             "rent_stats": {"rent_building_geocodes": 4}}
+GOOD_COUNTS = {"collective": GOOD_ROWS["collective_stats"], "rent": GOOD_ROWS["rent_stats"]}
+
+
+def _manifest(tmp_path, created="20261117_031000", ro=True, tamper=False, edit=None):
+    """두 DB 덤프(가짜 바이트)와 manifest. edit(archives) 로 구조를 바꿔 거절 경우를 만든다."""
     import hashlib
 
-    dump = tmp_path / "prod_only_collective_stats_x.dump"
-    dump.write_bytes(b"PGDMP-fixture")
-    sha = hashlib.sha256(dump.read_bytes()).hexdigest()
-    m = {"production_read_only": ro, "created_kst": created, "archives": [
-        {"db": "collective_stats", "file": "C:\other\machine\\" + dump.name, "bytes": dump.stat().st_size,
-         "sha256": ("0" * 64) if tamper else sha, "archive_rows": rows or {"collective_building_geocodes": 3, "qa_audit_run": 1}}]}
+    arcs = []
+    for db, rows in GOOD_ROWS.items():
+        dump = tmp_path / f"prod_only_{db}_x.dump"
+        dump.write_bytes(b"PGDMP-fixture-" + db.encode())
+        sha = hashlib.sha256(dump.read_bytes()).hexdigest()
+        arcs.append({"db": db, "file": "C:\other\machine\\" + dump.name, "bytes": dump.stat().st_size,
+                     "sha256": ("0" * 64) if tamper and db == "collective_stats" else sha, "archive_rows": dict(rows)})
+    if edit:
+        arcs = edit(arcs)
+    m = {"production_read_only": ro, "created_kst": created, "archives": arcs}
     f = tmp_path / "manifest.json"
     f.write_text(json.dumps(m), encoding="utf-8")
     return f
@@ -249,8 +259,9 @@ def _manifest(tmp_path, created="20261117_031000", ro=True, rows=None, tamper=Fa
 
 def test_preflight_accepts_fresh_matching_dump(tmp_path):
     f = _manifest(tmp_path)
-    out = mpo.preflight(f, "2026-11-17T03:00", {"collective": {"collective_building_geocodes": 3, "qa_audit_run": 1}})
-    assert out["archives"][0]["sha256_ok"] and out["created_kst"] == "2026-11-17 03:10:00"
+    out = mpo.preflight(f, "2026-11-17T03:00", GOOD_COUNTS)
+    assert [a["db"] for a in out["archives"]] == ["collective_stats", "rent_stats"]
+    assert all(a["sha256_ok"] for a in out["archives"]) and out["created_kst"] == "2026-11-17 03:10:00"
     mpo.preflight(f, "20261117_031000")                                     # 동결 시각과 같으면 통과
 
 
@@ -258,7 +269,9 @@ def test_preflight_accepts_fresh_matching_dump(tmp_path):
     ({}, "2026-11-17T03:20", None, "동결 시각보다 오래됨"),
     ({"tamper": True}, "2026-11-17T03:00", None, "SHA-256"),
     ({"ro": False}, "2026-11-17T03:00", None, "읽기 전용"),
-    ({}, "2026-11-17T03:00", {"collective": {"collective_building_geocodes": 2, "qa_audit_run": 1}}, "행 수가 manifest 와 다름"),
+    ({}, "2026-11-17T03:00", {**GOOD_COUNTS, "collective": {**GOOD_ROWS["collective_stats"], "qa_audit_run": 2}},
+     "행 수가 manifest 와 다름"),
+    ({}, "2026-11-17T03:00", {"collective": GOOD_COUNTS["collective"]}, "원본 임시 DB 가 실행 인자에 없음"),
     ({}, "어제", None, "시각 형식"),
 ])
 def test_preflight_refuses(tmp_path, kw, freeze, counts, needle):
@@ -266,19 +279,81 @@ def test_preflight_refuses(tmp_path, kw, freeze, counts, needle):
         mpo.preflight(_manifest(tmp_path, **kw), freeze, counts)
 
 
+def _drop_table(db, t):
+    def f(arcs):
+        for a in arcs:
+            if a["db"] == db:
+                a["archive_rows"].pop(t)
+        return arcs
+    return f
+
+
+def _set(db, key, val):
+    def f(arcs):
+        for a in arcs:
+            if a["db"] == db:
+                a[key] = val
+        return arcs
+    return f
+
+
+def _set_rows(db, t, val):
+    def f(arcs):
+        for a in arcs:
+            if a["db"] == db:
+                a["archive_rows"][t] = val
+        return arcs
+    return f
+
+
+@pytest.mark.parametrize("edit,needle", [
+    (lambda arcs: [a for a in arcs if a["db"] != "rent_stats"], "필요한 DB 가 없음"),                    # DB 누락
+    (lambda arcs: arcs + [dict(arcs[0])], "같은 DB 가 두 번"),                                             # DB 중복
+    (lambda arcs: arcs + [{**arcs[1], "db": "built_stats"}], "알 수 없는 DB"),                             # 모르는 DB
+    (lambda arcs: [], "덤프 항목"),                                                                        # 빈 목록
+    (_drop_table("collective_stats", "qa_audit_run"), "필요한 표가 없음"),                                # 표 누락
+    (_set_rows("rent_stats", "rent_transactions", 5), "알 수 없는 표"),                                   # 모르는 표
+    (_set_rows("collective_stats", "collective_building_geocodes", None), "행 수가 없거나"),             # 행 수 누락
+    (_set_rows("collective_stats", "collective_building_geocodes", "3"), "행 수가 없거나"),              # 행 수 문자열
+    (_set_rows("rent_stats", "rent_building_geocodes", -1), "행 수가 없거나"),
+    (_set("rent_stats", "archive_rows", None), "archive_rows"),                                           # 행 수 묶음 없음
+    (_set("collective_stats", "sha256", ""), "sha256"),
+    (_set("collective_stats", "bytes", None), "bytes"),
+    (_set("collective_stats", "file", ""), "file"),
+])
+def test_manifest_shape_refused_before_files(tmp_path, edit, needle):
+    with pytest.raises(mpo.MergeError, match=needle):
+        mpo.preflight(_manifest(tmp_path, edit=edit), "2026-11-17T03:00", GOOD_COUNTS)
+
+
+def test_manifest_refusal_exits_2_before_any_db(tmp_path, monkeypatch):
+    """CLI: manifest 가 틀리면 종료 코드 2 — 대상 DB 에 쓰지 않는다(드라이런 경로에서도 병합 전에 멈춤)."""
+    f = _manifest(tmp_path, edit=lambda arcs: [a for a in arcs if a["db"] != "rent_stats"])
+    monkeypatch.setattr(mpo, "source_counts", lambda eng, side: GOOD_COUNTS[side])
+    monkeypatch.setattr(mpo, "engine_for", lambda *a, **k: type("E", (), {"dispose": lambda self: None})())
+    touched = []
+    monkeypatch.setattr(mpo, "merge_side", lambda *a, **k: touched.append(1) or [])
+    rc = mpo.cli(["--src-collective", SRC, "--dst-collective", DST, "--src-rent", SRC_R, "--dst-rent", DST_R,
+                  "--manifest", str(f), "--freeze-at", "2026-11-17T03:00", "--report-out", str(tmp_path / "r.json")])
+    assert rc == 2 and touched == []
+
+
 def test_preflight_refuses_missing_dump_file(tmp_path):
     f = _manifest(tmp_path)
-    next(tmp_path.glob("*.dump")).unlink()
+    next(tmp_path.glob("prod_only_rent_stats_*.dump")).unlink()
     with pytest.raises(mpo.MergeError, match="덤프 파일 없음"):
         mpo.preflight(f, "2026-11-17T03:00")
 
 
-def test_real_apply_requires_manifest_and_freeze_time():
+def test_real_apply_requires_manifest_freeze_time_and_rent_side():
     base = ["--src-collective", SRC, "--dst-collective", "collective_stats", "--base-url", "postgresql://u@127.0.0.1/x"]
     with pytest.raises(mig.GuardError, match="manifest"):
         mpo.main(base + ["--real-apply", "--confirm-db", "collective_stats"])
+    with pytest.raises(mig.GuardError, match="네 표"):
+        mpo.main(base + ["--real-apply", "--confirm-db", "collective_stats", "--manifest", "m.json", "--freeze-at", "2026-11-17T03:00"])
     with pytest.raises(mig.GuardError, match="같이"):
         mpo.main(base + ["--manifest", "m.json"])
+    assert mpo.cli(base + ["--manifest", "m.json"]) == 2
 
 
 def test_merge_updates_row_when_prod_wins_and_is_idempotent(dbs):

@@ -82,8 +82,23 @@ def test_main_exit_1_on_mismatch(monkeypatch, tmp_path):
         def dispose(self):
             pass
 
-    monkeypatch.setattr("collective.migrate_p2_keys.engine_for", lambda *a, **k: _E())
+    monkeypatch.setattr(r5, "read_only_engine", lambda *a, **k: _E())
     monkeypatch.setattr(r5, "fetch", _fake({"c01_old": (200, {}), "c2_old": (200, {"key_split_c2": 1}), "normal": (200, {})}))
     assert r5.main(["--out", str(tmp_path / "o.json")]) == 1
     monkeypatch.setattr(r5, "fetch", _fake({"c01_old": (409, {}), "c2_old": (200, {"key_split_c2": 1}), "normal": (200, {})}))
     assert r5.main(["--out", str(tmp_path / "o.json")]) == 0
+
+
+def test_script_does_not_need_pipeline_and_reads_env_file(tmp_path, monkeypatch):
+    """운영 서버에 pipeline/ 이 없어도 돈다 — 백엔드 venv(sqlalchemy·psycopg2)만. DB 서버는 env 파일에서."""
+    src = (ROOT / "scripts" / "ops" / "collective_p2_r5_smoke.py").read_text(encoding="utf-8")
+    assert "from collective" not in src and "import collective" not in src and 'REPO / "pipeline"' not in src
+    env = tmp_path / ".env"
+    env.write_text('# c\nCOLLECTIVE_DATABASE_URL="postgresql://u:p@127.0.0.1:5432/collective_stats"\n', encoding="utf-8")
+    monkeypatch.delenv("COLLECTIVE_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)          # 다른 테스트가 남긴 환경변수(대체 키)도 지운다
+    e = r5.read_only_engine("collective_stats_p2r", env)
+    assert e.url.database == "collective_stats_p2r" and e.url.drivername == "postgresql+psycopg2"
+    e.dispose()
+    with pytest.raises(r5.SmokeError, match="COLLECTIVE_DATABASE_URL"):
+        r5.read_only_engine("x", tmp_path / "none.env")

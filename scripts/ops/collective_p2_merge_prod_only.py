@@ -43,6 +43,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -345,6 +346,52 @@ def merge_qa(src: Connection, dst: Connection, *, apply: bool, remap_out: Path |
 
 MANIFEST_TS = "%Y%m%d_%H%M%S"
 ARCHIVE_SIDE = {"collective_stats": "collective", "rent_stats": "rent"}
+# manifest 에 있어야 하는 정확한 집합(Codex 재검수 2): DB 2개 · 표 4개. 누락·중복·모르는 DB/표·행 수 누락은 거절
+REQUIRED_ARCHIVES: dict[str, frozenset[str]] = {
+    "collective_stats": frozenset({"collective_building_geocodes", "collective_commercial_map_geocodes", "qa_audit_run"}),
+    "rent_stats": frozenset({"rent_building_geocodes"}),
+}
+
+
+def validate_manifest_shape(m: dict) -> list[dict]:
+    """manifest 구조 검사(파일을 읽기 전). 통과하면 archives 를 DB 이름 순으로 돌려준다. 어긋나면 MergeError."""
+    if not isinstance(m, dict):
+        raise MergeError("manifest 가 JSON 객체가 아님")
+    arcs = m.get("archives")
+    if not isinstance(arcs, list) or not arcs:
+        raise MergeError("manifest 에 덤프 항목(archives)이 없음")
+    seen: dict[str, dict] = {}
+    for a in arcs:
+        if not isinstance(a, dict):
+            raise MergeError("manifest archives 항목이 객체가 아님")
+        db = a.get("db")
+        if db not in REQUIRED_ARCHIVES:
+            raise MergeError(f"manifest 에 알 수 없는 DB: {db!r} (허용 {sorted(REQUIRED_ARCHIVES)})")
+        if db in seen:
+            raise MergeError(f"manifest 에 같은 DB 가 두 번: {db}")
+        seen[db] = a
+    missing = sorted(set(REQUIRED_ARCHIVES) - set(seen))
+    if missing:
+        raise MergeError(f"manifest 에 필요한 DB 가 없음: {missing}")
+    for db, a in seen.items():
+        rows = a.get("archive_rows")
+        if not isinstance(rows, dict):
+            raise MergeError(f"{db}: archive_rows(표별 행 수)가 없음")
+        want = REQUIRED_ARCHIVES[db]
+        if sorted(set(want) - set(rows)):
+            raise MergeError(f"{db}: 필요한 표가 없음 {sorted(set(want) - set(rows))}")
+        if sorted(set(rows) - set(want)):
+            raise MergeError(f"{db}: 알 수 없는 표 {sorted(set(rows) - set(want))}")
+        for t, n in rows.items():
+            if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+                raise MergeError(f"{db}.{t}: 행 수가 없거나 정수가 아님({n!r})")
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", str(a.get("sha256") or "")):
+            raise MergeError(f"{db}: sha256 이 없거나 형식이 아님")
+        if isinstance(a.get("bytes"), bool) or not isinstance(a.get("bytes"), int) or a["bytes"] < 0:
+            raise MergeError(f"{db}: bytes(파일 크기)가 없거나 정수가 아님")
+        if not str(a.get("file") or "").strip():
+            raise MergeError(f"{db}: file(덤프 파일 이름)이 없음")
+    return [seen[db] for db in sorted(seen)]
 
 
 def parse_kst(s: str):
@@ -374,7 +421,11 @@ def preflight(manifest: Path, freeze_at: str, src_counts: dict[str, dict[str, in
     manifest = Path(manifest)
     if not manifest.is_file():
         raise MergeError(f"manifest 없음: {manifest.name}")
-    m = json.loads(manifest.read_text(encoding="utf-8"))
+    try:
+        m = json.loads(manifest.read_text(encoding="utf-8"))
+    except ValueError as ex:
+        raise MergeError("manifest 를 JSON 으로 읽을 수 없음") from ex
+    archives = validate_manifest_shape(m)
     if m.get("production_read_only") is not True:
         raise MergeError("manifest 가 운영 읽기 전용 덤프로 표시되지 않음(production_read_only)")
     created, freeze = parse_kst(str(m.get("created_kst", ""))), parse_kst(freeze_at)
@@ -382,7 +433,7 @@ def preflight(manifest: Path, freeze_at: str, src_counts: dict[str, dict[str, in
         raise MergeError(f"덤프가 동결 시각보다 오래됨(덤프 {created:%Y-%m-%d %H:%M:%S} < 동결 {freeze:%Y-%m-%d %H:%M:%S} KST) — 새 덤프 필요")
     out = {"manifest": manifest.name, "created_kst": f"{created:%Y-%m-%d %H:%M:%S}", "freeze_at": f"{freeze:%Y-%m-%d %H:%M:%S}",
            "archives": []}
-    for a in m.get("archives") or []:
+    for a in archives:
         f = manifest.parent / Path(str(a.get("file", "")).replace("\\", "/")).name
         if not f.is_file():
             raise MergeError(f"덤프 파일 없음: {f.name}")
@@ -393,15 +444,15 @@ def preflight(manifest: Path, freeze_at: str, src_counts: dict[str, dict[str, in
             raise MergeError(f"덤프 크기가 manifest 와 다름: {f.name}")
         side = ARCHIVE_SIDE.get(a.get("db"))
         rows = {k: int(v) for k, v in (a.get("archive_rows") or {}).items()}
-        if src_counts is not None and side in src_counts:
+        if src_counts is not None:
+            if side not in src_counts:
+                raise MergeError(f"{a.get('db')}: 이 덤프를 복원한 원본 임시 DB 가 실행 인자에 없음(--src-{side})")
             got = src_counts[side]
             bad = {t: (n, got.get(t)) for t, n in rows.items() if got.get(t) != n}
             if bad:
                 raise MergeError(f"원본 임시 DB 행 수가 manifest 와 다름({a.get('db')}): " +
                                  ", ".join(f"{t} {g} ≠ {n}" for t, (n, g) in bad.items()))
         out["archives"].append({"db": a.get("db"), "file": f.name, "sha256_ok": True, "rows": rows})
-    if not out["archives"]:
-        raise MergeError("manifest 에 덤프 항목이 없음")
     return out
 
 
@@ -447,6 +498,8 @@ def main(argv: list[str] | None = None) -> int:
         raise GuardError("--manifest 와 --freeze-at 은 같이 준다")
     if bool(a.src_rent) != bool(a.dst_rent):
         raise GuardError("--src-rent 와 --dst-rent 는 같이 준다")
+    if a.real_apply and not a.dst_rent:
+        raise GuardError("--real-apply 는 네 표(집합 3 + 임대 1)를 한 번에 합친다 — --src-rent · --dst-rent 필요")
     for s_, d_ in ((a.src_collective, a.dst_collective), (a.src_rent, a.dst_rent)):
         if s_ and s_ == d_:
             raise GuardError(f"원본과 대상이 같은 DB: {s_}")
@@ -454,7 +507,7 @@ def main(argv: list[str] | None = None) -> int:
     dsts = [x for x in (a.dst_collective, a.dst_rent) if x]
     if a.apply:
         check_write_targets(dsts, a, base_url=base)
-    report = {"apply": bool(a.apply), "real_apply": bool(a.real_apply), "sides": {}}
+    report = {"apply": bool(a.apply), "real_apply": bool(a.real_apply), "applied": False, "sides": {}}
     if a.manifest:
         counts = {}
         for side, src in (("collective", a.src_collective), ("rent", a.src_rent)):
@@ -477,6 +530,7 @@ def main(argv: list[str] | None = None) -> int:
         finally:
             se.dispose()
             de.dispose()
+    report["applied"] = bool(a.apply)          # 여기까지 오면 모든 쪽 트랜잭션이 커밋됨(드라이런은 False)
     txt = json.dumps(report, ensure_ascii=False, indent=1, default=str)
     Path(a.report_out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.report_out).write_text(txt, encoding="utf-8")
@@ -486,9 +540,14 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
+def cli(argv: list[str] | None = None) -> int:
+    """종료 코드: 0 성공 · 2 가드·사전 확인·병합 검사 실패(쓰기 전 거절 또는 되돌림)."""
     try:
-        raise SystemExit(main())
+        return main(argv)
     except (GuardError, MergeError) as ex:
         print(f"중단: {ex}", file=sys.stderr)
-        raise SystemExit(2)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(cli())
