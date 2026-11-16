@@ -54,9 +54,27 @@ def test_plan_geocodes_counts():
     rows = [{"k": "o1"}, {"k": "o2"}, {"k": "o3"}, {"k": "x"}, {"k": "y"}, {"k": "o9", "updated_at": 2}, {"k": "z", "updated_at": 1}]
     ins, cnt = mpo.plan_geocodes(rows, "k", rules, local_keys={"y"})
     assert cnt == {"src": 7, "unchanged": 3, "rekeyed": 2, "drop_c01": 1, "drop_c2": 1, "rekey_overlap": 1,
-                   "exists_local": 1, "insert": 3}
+                   "exists_local": 1, "identical": 0, "same_value_other_time": 0, "conflict_kept_local": 0,
+                   "conflict_coords": 0, "insert": 3}
     assert sorted(r["k"] for r in ins) == ["n1", "x", "z"]
     assert next(r for r in ins if r["k"] == "z")["updated_at"] == 2          # 겹치면 늦은 쪽
+
+
+def test_plan_geocodes_counts_same_key_conflicts_and_keeps_local():
+    """같은 키에 값이 다르면 충돌로 세고 로컬 값을 유지(넣지 않음). 시각 열만 다르면 충돌 아님."""
+    src = [{"k": "a", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5},
+           {"k": "b", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5},
+           {"k": "c", "longitude": 1.0, "latitude": 2.0, "label": "y", "updated_at": 5},
+           {"k": "d", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5},
+           {"k": "e", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5}]
+    local = {"a": {"k": "a", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5},     # 같음
+             "b": {"k": "b", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 9},     # 시각만 다름
+             "c": {"k": "c", "longitude": 1.0, "latitude": 2.0, "label": "x", "updated_at": 5},     # 이름 다름
+             "d": {"k": "d", "longitude": 1.5, "latitude": 2.0, "label": "x", "updated_at": 5}}     # 좌표 다름
+    ins, cnt = mpo.plan_geocodes(src, "k", {}, local)
+    assert [r["k"] for r in ins] == ["e"]
+    assert (cnt["exists_local"], cnt["identical"], cnt["same_value_other_time"], cnt["conflict_kept_local"],
+            cnt["conflict_coords"]) == (4, 1, 1, 2, 1)
 
 
 @pytest.fixture(scope="module")
