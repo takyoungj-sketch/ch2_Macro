@@ -113,16 +113,23 @@ def test_take_records_reader_errors_as_failure():
     assert snap["errors"] and sc.compare_snaps(_snap(), snap)[0] == "fail"
 
 
+_QUIET = "2020-01-01T00:00:00+00:00"
+
+
+def _compare_argv(baseline, *extra):
+    return ["compare", "--confirmed-at", _QUIET, "--baseline", str(baseline), "--db-env", "X", *extra]
+
+
 def test_cli_compare_unreadable_baseline_exits_1(tmp_path, monkeypatch):
     monkeypatch.setattr(sc, "take", lambda *a, **k: _snap())
     out = tmp_path / "res.json"
-    assert sc.main(["compare", "--baseline", str(tmp_path / "none.json"), "--db-env", "X", "--result-out", str(out)]) == 1
+    assert sc.main(_compare_argv(tmp_path / "none.json", "--result-out", str(out))) == 1
     assert json.loads(out.read_text(encoding="utf-8"))["status"] == "fail"
     base = tmp_path / "day.json"
     base.write_text(json.dumps(_snap()), encoding="utf-8")
-    assert sc.main(["compare", "--baseline", str(base), "--db-env", "X", "--result-out", str(out)]) == 0
+    assert sc.main(_compare_argv(base, "--result-out", str(out))) == 0
     monkeypatch.setattr(sc, "take", lambda *a, **k: _snap(timed_out=True))
-    assert sc.main(["compare", "--baseline", str(base), "--db-env", "X"]) == 1
+    assert sc.main(_compare_argv(base)) == 1
 
 
 def test_track_counts_off_fails():
@@ -178,7 +185,41 @@ def test_take_deadline_cuts_a_hung_connect():
 
 def _snapshot_exit(tmp_path, monkeypatch, snap) -> int:
     monkeypatch.setattr(sc, "take", lambda *a, **k: snap)
-    return sc.main(["snapshot", "--db-env", "X", "--out", str(tmp_path / "d.json")])
+    return sc.main(["snapshot", "--confirmed-at", _QUIET, "--db-env", "X", "--out", str(tmp_path / "d.json")])
+
+
+def test_confirmed_at_89s_exits_1_and_90s_passes(tmp_path, monkeypatch):
+    """기준 기록(snapshot)·카운터 비교(compare) 모두, 확인 시각부터 89초는 1, 90초는 통과."""
+    from datetime import datetime, timedelta, timezone
+
+    fixed = datetime(2026, 11, 17, 2, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(sc, "utc_now", lambda: fixed)
+    called = {"n": 0}
+
+    def take(*_a, **_k):
+        called["n"] += 1
+        return _snap()
+
+    monkeypatch.setattr(sc, "take", take)
+    base = tmp_path / "day.json"
+    base.write_text(json.dumps(_snap()), encoding="utf-8")
+
+    def at(seconds: int) -> str:
+        return (fixed - timedelta(seconds=seconds)).isoformat()
+
+    out = tmp_path / "d.json"
+    assert sc.main(["snapshot", "--confirmed-at", at(89), "--db-env", "X", "--out", str(out)]) == 1
+    assert called["n"] == 0 and not out.exists()
+    assert sc.main(["snapshot", "--confirmed-at", at(90), "--db-env", "X", "--out", str(out)]) == 0
+    assert called["n"] == 1 and out.exists()
+
+    res = tmp_path / "res.json"
+    assert sc.main(["compare", "--confirmed-at", at(89), "--baseline", str(base), "--db-env", "X",
+                    "--result-out", str(res)]) == 1
+    assert called["n"] == 1 and not res.exists()
+    assert sc.main(["compare", "--confirmed-at", at(90), "--baseline", str(base), "--db-env", "X",
+                    "--result-out", str(res)]) == 0
+    assert called["n"] == 2 and res.exists()
 
 
 def test_cli_snapshot_incomplete_exits_1(tmp_path, monkeypatch):

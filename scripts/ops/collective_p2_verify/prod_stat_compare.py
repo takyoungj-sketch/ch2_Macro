@@ -4,10 +4,12 @@
 「낮 이후 운영 전용 표 밖에서 쓰기가 있었는가」를 본다. 행을 읽지 않고 통계 뷰만 읽으므로 몇 초면 끝난다.
 
   snapshot : DB 마다 pg_stat_user_tables(n_tup_ins·n_tup_upd·n_tup_del) 전 표 + pg_stat_database.stats_reset → JSON.
+             --confirmed-at(동결을 확인한 시각, 이 명령을 실행하는 기계의 UTC)부터 90초가 안 됐으면 DB 를 읽지 않고 종료 1.
              읽기마다 트랜잭션을 새로 열고 pg_stat_clear_snapshot() 을 친 뒤 10초 간격으로 두 번 읽는다.
-             종료 코드 1: 시간 초과·DB 누락뿐 아니라 track_counts 가 on 이 아님, 두 번 읽기가 다름(stable 아님),
+             종료 코드 1: 90초 미만, 시간 초과·DB 누락, track_counts 가 on 이 아님, 두 번 읽기가 다름(stable 아님),
              카운터 조회 실패·누락(tables 가 비거나 stats_reset 을 못 읽음).
-  compare  : 낮 JSON(--baseline) ↔ 지금 다시 읽은 값. 실패(종료 코드 1) 조건 — 하나라도:
+  compare  : 낮 JSON(--baseline) ↔ 지금 다시 읽은 값. --confirmed-at(요청 0 을 확인한 시각)부터 90초가
+             안 됐으면 DB 를 읽지 않고 종료 1. 그 외 실패(종료 코드 1) 조건 — 하나라도:
              · 운영 전용 표(EXCLUDE: 집합 3 + 임대 1 + 복합 qa_audit_run 1) 밖 표의 세 값 중 하나라도 다름
              · stats_reset 이 바뀜(카운터가 초기화돼 비교할 수 없음)
              · 표가 빠짐(낮에 있던 표가 지금 없음) 또는 새 표가 생김
@@ -20,9 +22,11 @@
              DB now() 는 server_now(출처 server)로만 남기고 순서 판정에 쓰지 않는다.
              서버에서 실행할 때는 --order-clock defer 로 비워 두고, 로컬 PC 에서 stamp-local 로 찍는다.
 
-  python prod_stat_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --db-env RENT_DATABASE_URL --db-env BUILT_DATABASE_URL \\
+  python prod_stat_compare.py snapshot --confirmed-at 2026-11-17T01:00:00+00:00 \\
+      --db-env COLLECTIVE_DATABASE_URL --db-env RENT_DATABASE_URL --db-env BUILT_DATABASE_URL \\
       --env-file /opt/ch2_Macro/backend/.env --out /var/backups/ch2/p2/stat_day.json
-  python prod_stat_compare.py compare --baseline /var/backups/ch2/p2/stat_day.json --db-env … (같은 셋) --env-file … \\
+  python prod_stat_compare.py compare --confirmed-at 2026-11-17T17:10:00+00:00 \\
+      --baseline /var/backups/ch2/p2/stat_day.json --db-env … (같은 셋) --env-file … \\
       --result-out /var/backups/ch2/p2/stat_night_result.json
 
 출력은 표 이름·숫자만(행 값 없음). 접속 정보는 출력하지 않는다. pipeline 을 쓰지 않는다(서버 backend venv 로 실행).
@@ -70,6 +74,7 @@ STAT_SQL = ("SELECT schemaname || '.' || relname, n_tup_ins, n_tup_upd, n_tup_de
 RESET_SQL = "SELECT stats_reset FROM pg_stat_database WHERE datname = current_database()"
 TRACK_SQL = "SHOW track_counts"
 SETTLE_S = 10.0
+QUIET_S = 90.0
 
 
 def _call_with_deadline(fn, timeout_s: float):
@@ -256,6 +261,24 @@ def compare_snaps(day: dict, night: dict) -> tuple[str, list[list[str]]]:
     return ("pass" if not prob else "fail"), prob
 
 
+class QuietError(RuntimeError):
+    pass
+
+
+def utc_now():
+    import datetime as _dt
+
+    return _dt.datetime.now(_dt.timezone.utc)
+
+
+def quiet_gap_s(confirmed_at: str, now) -> float:
+    """확인 시각부터 now 까지 초. 시간대가 없거나 형식이 아니면 QuietError."""
+    stamped = _parse_utc(confirmed_at)
+    if stamped is None:
+        raise QuietError("확인 시각을 UTC(시간대 포함)로 읽지 못함")
+    return (now - stamped).total_seconds()
+
+
 def snapshot_incomplete(snap: dict) -> bool:
     """스냅샷을 기준으로 쓸 수 없으면 True. track_counts off, 두 번 읽기 불일치, 카운터 실패·누락을 포함한다."""
     if snap.get("timed_out") or snap.get("errors"):
@@ -282,6 +305,8 @@ def main(argv=None) -> int:
         s.add_argument("--db-env", action="append", required=True, help="접속 URL 환경변수 이름(DB 마다 한 번, 값은 출력 안 함)")
         s.add_argument("--env-file", type=Path, default=None)
         s.add_argument("--deadline", type=float, default=60.0, help="전체 시간 제한(초, 기본 60). 쿼리 제한과 별도로 접속까지 끊는다")
+        s.add_argument("--confirmed-at", required=True,
+                       help="요청 0 또는 동결을 확인한 시각(이 명령을 실행하는 기계의 UTC, 시간대 포함). 90초 미만이면 종료 1")
         s.add_argument("--order-clock", choices=["local", "defer"], default="local",
                        help="local=끝난 시각을 로컬 PC UTC 로 기록. defer=비워 두고 stamp-local(서버에서 실행할 때)")
         if name == "snapshot":
@@ -302,6 +327,14 @@ def main(argv=None) -> int:
             return 2
         print(f"local 시각 기록: {', '.join(a.field)} → {a.file}")
         return 0
+    try:
+        gap = quiet_gap_s(a.confirmed_at, utc_now())
+    except QuietError as ex:
+        print(f"중단: {ex}", file=sys.stderr)
+        return 1
+    if gap < QUIET_S:
+        print(f"중단: 확인 시각부터 {gap:.1f}초. 90초 미만", file=sys.stderr)
+        return 1
     snap = take(a.db_env, a.env_file, deadline_s=a.deadline, order_clock=a.order_clock)
     if a.cmd == "snapshot":
         write_json(a.out, snap)
