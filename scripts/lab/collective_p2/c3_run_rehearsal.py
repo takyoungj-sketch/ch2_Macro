@@ -74,6 +74,11 @@ def step_list():
         # Codex 검토: C-2 키 2019~2020 annual 범위 교체(빌더가 annual 을 다시 쓴 뒤 — 최종 상태 기준)
         ("c2_annual_replace", P("-m", "collective.c2_annual_replace_p2", "--collective-db", DBS["collective"], "--apply")),
         ("c2_annual_verify", P("-m", "collective.c2_annual_replace_p2", "--collective-db", DBS["collective"], "--verify")),
+        # T 결정(2026-11-16): 고정 연도(2019~2020) annual 중 원장 근거 없는 행 정리(일반 규칙, 보존 표·롤백)
+        ("fixed_annual_orphan_prune", P("-m", "collective.prune_fixed_annual_orphans_p2", "--collective-db",
+                                        DBS["collective"], "--apply")),
+        ("fixed_annual_orphan_verify", P("-m", "collective.prune_fixed_annual_orphans_p2", "--collective-db",
+                                         DBS["collective"], "--verify")),
         ("building_rolling", P(pipe / "build_collective_building_rolling_stats.py", *w, "--replace-as-of")),
         ("presale_lifetime", P(pipe / "build_collective_presale_lifetime_stats.py", "--as-of", AS_OF, "--replace")),
         ("market_stats", P(pipe / "build_collective_market_stats.py", *w)),

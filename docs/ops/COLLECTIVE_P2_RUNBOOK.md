@@ -370,6 +370,8 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 |---|---|---|---|
 | 5 | `build_collective_building_stats.py $W --replace-as-of --prune-annual` | 20분 | 3/5년 거래 합 불변 · 7년 옛 시도명 0 · 합성 주소 0 |
 | 6 | `collective/prune_split_annual_p2.py --collective-db collective_stats --real-apply --confirm-db collective_stats --sync-result logs/collective_p2/sync_result_collective.json --mismatch-csv <logs>/…csv` | 1분 미만 | 2019~2020 분할 옛 키 annual 2,126행 삭제, 불일치 0 |
+| 6a | `python -m collective.c2_annual_replace_p2 --collective-db collective_stats --real-apply --confirm-db collective_stats --sync-result logs/collective_p2/sync_result_collective.json` (먼저 드라이런) → `--verify` 는 c6 | 1분 미만 | 리허설: 대상 키 3,654 · 교체 3,835 · 삭제 558 · 재계산 거래 11,299 |
+| 6b | `python -m collective.prune_fixed_annual_orphans_p2 --collective-db collective_stats --real-apply --confirm-db collective_stats --sync-result logs/collective_p2/sync_result_collective.json` (먼저 드라이런: 지역·유형별, `unexpected_regions`) | 1분 미만 | 리허설: 5,866행(거래 38,830) 삭제, 전부 인천 검단구·서해구·영종구·제물포구 · 고정 연도 annual 합 = 원장 합(전 지역) |
 | 7 | `build_collective_building_rolling_stats.py $W --replace-as-of` | 21분 | |
 | 8 | `build_collective_presale_lifetime_stats.py --as-of $AS_OF --replace` | 14초 | |
 | 9 | `build_collective_market_stats.py $W` | 21분 | 3·5년 행 불변 · 코드 12 7년 ≥ 5년 |
@@ -645,7 +647,7 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 | 1 | 리허설 DB 다시 만들기: `*_p2r` 3개를 지우고 Phase C 덤프(`logs/collective_p2/dumps/*.dir`)에서 `pg_restore -j 4`. `parcel_master_p2r` 는 그대로 둔다 | 추정 1~2시간 |
 | 2 | 판정 표 적재 `load_c2_units.py --collective-db collective_stats_p2r --apply`(P3) | 1분 |
 | 3 | 키 이전 C-01 + C-2 + 좌표 폐기(`migrate_p2_keys --apply`, P1·P2) → `--verify`(20항목) | 23분 + C-2 추정 5분 · 4분 |
-| 4 | 거래유형 보정 · 2019~2020 분할 옛 키 annual 정리 · **C-2 키 2019~2020 annual 범위 교체**(`python -m collective.c2_annual_replace_p2 --collective-db collective_stats_p2r --apply`, 먼저 드라이런) | 5분 · 1분 · 추정 2분 |
+| 4 | 거래유형 보정 · 2019~2020 분할 옛 키 annual 정리 · **C-2 키 2019~2020 annual 범위 교체**(`python -m collective.c2_annual_replace_p2 --collective-db collective_stats_p2r --apply`, 먼저 드라이런) · **고정 연도 annual 원장 근거 없는 행 정리**(`python -m collective.prune_fixed_annual_orphans_p2 … --apply` → `--verify`) | 5분 · 1분 · 17초 · 수 초 |
 | 5 | 15단계(통계표 재생성: building_stats·rolling·presale·market·commercial·rent 등) | 2시간 41분 |
 | 6 | 속성·공시지가 — 새 분할 키 목록(C-01 3,447 + C-2 2,045) | 추정 20분(Phase C 3,447키 12분) |
 | 7 | 매매·임대 연결(C-2 판정 키·조각 키는 exact 보류, `c2_held` 출력) · 복합 scope · integrity_p2 --deep(C-2형 판정 밖 0) | 4분 · 1분 · 수 분 |
@@ -688,6 +690,15 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 
 - 연결표 `split_part` 는 C-2 조각 행이면 C-2 조각 번호다(C-01 조각 번호는 같은 옛 키의 경로 행·C-01 행에 남는다).
 - 임대 C-2 규모(읽기 전용, `c28_rent_c2_scale.py`)는 결정 전 자료로 보고서에 둔다.
+
+### 12.5 고정 연도 annual 원장 근거 없는 행 정리 (T 결정 2026-11-16)
+
+- 발견: 리허설 재실행(2026-11-16) `integrity_p2 --deep` ERR 8건 — 인천 2019~2020 annual 합 > 원장 합. 원인은 덤프에 원래 있던(2026-08-09 batch) 인천 새 구(검단구·서해구·영종구·제물포구) 이름의 2019~2020 annual 행이다. 그 해 원장은 옛 구 이름(옛 키)이라 근거가 없다. 기존 `prune-annual` 은 옛 시도명만 지운다.
+- 규칙(지역 한정 없음): 2019·2020 annual 중 원장(is_valid·unit_price>0)에 같은 (키·유형·연도·시도) 거래가 없는 행을 지운다. annual 은 (키·유형·연도)에 한 행이라 이것이 그 행의 근거다. addr2 비교는 세종(NULL)을 거짓으로 걸어 넣지 않았다.
+- 보존: `collective_building_annual_orphan_p2_before`, `--rollback`. 드라이런은 지역·유형별 삭제 수와 인천 새 구 4곳 밖 지역(`unexpected_regions`)을 보여 준다.
+- 의존: 5~7단계 재집계(rolling·presale·market·commercial·rent·built_scope)는 원장을 읽고 `collective_building_annual_stats` 를 읽지 않는다 → 리허설은 적용 뒤 integrity 만 다시 돌렸다.
+- c6: 「고정 연도 annual 합 = 원장 합(전 지역)」·「원장 근거 없는 행 0」.
+- 파일: `pipeline/collective/prune_fixed_annual_orphans_p2.py` · 테스트 `pipeline/tests/test_collective_p2_fixed_annual_orphans.py` · 실행기 `fixed_annual_orphan_prune`·`fixed_annual_orphan_verify`.
 
 ## 13. 실행 전 확인 사항 (T·Codex)
 
