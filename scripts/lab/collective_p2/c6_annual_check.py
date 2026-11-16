@@ -70,7 +70,10 @@ def main():
         L.append(f"\n- C-2 항목 실패 {c2fail} / {len(c2rows)}")
         L.append("")
         c2keys = set(c2a.targets(ca)["building_key"])
-        # 표본 10곳(C-2 대상 키는 2019~2020 이 바뀌는 것이 정상이라 뺀다)
+        # 고정 연도 정리로 2019~2020 행이 지워진 키도 바뀌는 것이 정상(원장 근거 없음) → 표본에서 뺀다
+        if has_keep:
+            c2keys |= {str(r[0]).strip() for r in ca.execute(text(f"SELECT DISTINCT building_key FROM {pfo.KEEP}"))}
+        # 표본 10곳(C-2 대상 키·고정 연도 정리 키는 2019~2020 이 바뀌는 것이 정상이라 뺀다)
         pick = {
             "호남 병합": """SELECT DISTINCT m.new_key FROM collective_building_key_map m JOIN collective_building_annual_stats a
                          ON a.building_key=m.new_key AND a.contract_year<=2018 WHERE m.reason='honam_sido'""",
