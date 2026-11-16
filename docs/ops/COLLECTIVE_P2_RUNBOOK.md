@@ -278,7 +278,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 | 6 | **접속 대상:** 로컬 `backend/.env` 의 `COLLECTIVE_/RENT_/BUILT_DATABASE_URL`·`DATABASE_URL`·`PARCEL_MASTER_DATABASE_URL` 이 의도한 DB 를 가리킴. 값은 출력하지 않고 `SELECT current_database()` 로 이름만 확인 | — |
 | 7 | **두 번에 나눔(T 결정):**<br>- 낮(운영 무관): 3절 확인 → 로컬 적용(약 3시간 20분) → 5.4 전체 검증 → **T 확인** · built promote 덤프·업로드 미리<br>- 새벽(한 묶음, 6.1): 점검 모드 ON → 진행 중 요청 0 → 운영 전용 4표 덤프·병합·c29·재실행 → collective·rent promote 덤프·scp → 세 DB promote → R5 → OFF → 7절 확인<br>- 그 사이 로컬 동결 유지 | — |
 | 8 | **표제부 DB:** 5.0 으로 진짜 `parcel_master` 를 로컬에 만들어 둠(1회차 전) | 5.0 |
-| 9 | **운영 서버 스크립트(배포 전 확인, Codex):** R5 스모크가 서버에서 돈다 — `/opt/ch2_Macro/scripts/ops/collective_p2_r5_smoke.py` 가 배포돼 있음 · `cd /opt/ch2_Macro && backend/.venv/bin/python scripts/ops/collective_p2_r5_smoke.py --help` 종료 0 · `backend/.venv/bin/python -c "import sqlalchemy, psycopg2"` 종료 0 · `backend/.env` 에 `COLLECTIVE_DATABASE_URL`. 이 스크립트는 `pipeline/` 이 필요 없다(서버에 `pipeline/collective/*` 가 없어도 됨). 운영 확인 스크립트(`scripts/ops/collective_p2_verify/`)도 같은 방식으로 `--help` 확인 | 각 명령 종료 0 |
+| 9 | **운영 서버 스크립트(배포 전 확인, Codex):** R5 스모크가 서버에서 돈다 — `/opt/ch2_Macro/scripts/ops/collective_p2_r5_smoke.py` 가 배포돼 있음 · `cd /opt/ch2_Macro && backend/.venv/bin/python scripts/ops/collective_p2_r5_smoke.py --help` 종료 0 · `backend/.venv/bin/python -c "import sqlalchemy, psycopg2"` 종료 0 · `backend/.env` 에 `COLLECTIVE_DATABASE_URL`. 이 스크립트는 `pipeline/` 이 필요 없다(서버에 `pipeline/collective/*` 가 없어도 됨). 운영 확인 스크립트(`scripts/ops/collective_p2_verify/`)도 같은 방식으로 `--help` 확인. **OFF 뒤 되돌리기(6.2) 대비:** `scripts/ops/collective_p2_merge_prod_only.py --help`·`scripts/lab/collective_p2/c29_merge_prod_only_check.py --help` 가 서버에서 종료 0(이 둘은 `pipeline/collective`(migrate_p2_keys·building_keys)·`pipeline/admin_names`·`pipeline/collective_commercial`·pandas 가 필요하다 — 없으면 배포하거나, 되돌리기 때 로컬에서 서버 DB 로 터널을 쓰는 방식을 Codex 가 정해 둔다) | 각 명령 종료 0 |
 
 ## 5. 실행 순서 — 로컬 실제 DB 에 반영 (Codex)
 
@@ -464,14 +464,50 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 
 **낮(운영 무관):** 5절 키 이전·로컬 적용 → 5.4 검증 → **T 확인**. built_stats 는 운영 전용 표가 없고 병합이 바꾸지 않으므로 promote 덤프·업로드(2.2)를 **낮에 미리** 해 둔다. 3절 동기화 확인 결과 파일(48시간 유효)이 새벽까지 유효한지 본다.
 
+- **built QA 기록(운영 `built_stats.qa_audit_run`) — 낮 built 덤프 시점:** 이 표는 운영 관리자 QA(`POST /api/admin/qa/specified|random`, 복합 도메인 `built_enriched`, `save_db=true`)가 쓴다. built 는 병합 대상이 아니라 promote 가 덮으면 그 사이 생긴 행이 사라진다. 그래서:
+  1. 낮 built promote 덤프를 뜰 때 Codex 가 운영에서 **읽기 전용으로 행 수를 기록**한다(현재 0):
+     `sudo -u postgres psql -d built_stats -v ON_ERROR_STOP=1 -Atc "SET default_transaction_read_only = on; SELECT to_regclass('public.qa_audit_run') IS NOT NULL, (SELECT count(*) FROM qa_audit_run), (SELECT coalesce(max(id), 0) FROM qa_audit_run)"`
+     → 결과(`t|0|0` 형태)와 시각을 `logs/collective_p2/built_qa_count_day.txt` 에 남긴다. 표가 없으면 `to_regclass` 만 `f` 로 확인하고(`SELECT to_regclass('public.qa_audit_run')`) 「없음」으로 기록.
+  2. **그 뒤 밤 점검 창이 끝날 때까지 built QA(관리자 QA 저장) 실행 금지.** 관리자·에이전트에게 알린다(3.2 동결 알림에 함께). 다른 도메인 QA 저장도 이 기간에는 하지 않는다(집합 QA 기록은 병합되지만 늘리지 않는다).
+  3. 밤 6.1 1a 에서 같은 쿼리로 다시 확인한다. **다르면 즉시 중단 → 점검 모드 OFF**(아무것도 바꾸지 않은 상태 — 6.2 첫 줄).
+
 ### 6.0 nginx 점검 모드 — 설치(1회, 점검 창 전날까지) · 켜기 · 끄기 · 확인 (Codex)
 
-API 로 가는 nginx location 은 세 설정 파일에 있다(`deploy/templates` 기준):
-- `nginx-ch2-macro.conf` — macro.ch2data.com(443)·IP(80) 서버의 `/api/`·`/health`·`docs|redoc|openapi.json`
-- `nginx-ch2-lab-api.conf` — 랩 API 3곳
-- `nginx-ch2data-hub.conf` — 허브의 백엔드 proxy 5곳
+**점검 대상 = 백엔드(`127.0.0.1:8000`)로 넘기는 실효 location 17곳**(Codex 운영 확인 2026-11-16). 저장소 템플릿에 있는 16곳 + viewer(템플릿 없음, 서버 설정만). **17곳 모두의 맨 앞**에 같은 조각을 넣는다(서버 파일 수정은 Codex).
 
-**`proxy_pass http://127.0.0.1:8000…` 가 있는 모든 location 의 맨 앞**에 같은 조각을 넣는다(서버 파일 수정은 Codex).
+| # | 서버(server_name) | 설정 파일 | location | ON 시험 URL(→ 503) |
+|---|---|---|---|---|
+| 1 | macro.ch2data.com (HTTPS 443) | `nginx-ch2-macro.conf` | `/api/` | `https://macro.ch2data.com/api/` |
+| 2 | 〃 | 〃 | `= /health` | `https://macro.ch2data.com/health` |
+| 3 | 〃 | 〃 | `~ ^/(docs\|redoc\|openapi\.json)$` | `https://macro.ch2data.com/docs` · `/redoc` · `/openapi.json` |
+| 4 | 〃 | `nginx-ch2-lab-api.conf`(include) | `^~ /api/regional-profile/lab/` | `https://macro.ch2data.com/api/regional-profile/lab/` |
+| 5 | 〃 | 〃 | `^~ /api/admin/` | `https://macro.ch2data.com/api/admin/` |
+| 6 | 〃 | 〃 | `^~ /api/built/lab/` | `https://macro.ch2data.com/api/built/lab/` |
+| 7 | 13.209.203.178 (HTTP 80) | `nginx-ch2-macro.conf` | `/api/` | `http://13.209.203.178/api/` |
+| 8 | 〃 | 〃 | `= /health` | `http://13.209.203.178/health` |
+| 9 | 〃 | `nginx-ch2-lab-api.conf`(include) | `^~ /api/regional-profile/lab/` | `http://13.209.203.178/api/regional-profile/lab/` |
+| 10 | 〃 | 〃 | `^~ /api/admin/` | `http://13.209.203.178/api/admin/` |
+| 11 | 〃 | 〃 | `^~ /api/built/lab/` | `http://13.209.203.178/api/built/lab/` |
+| 12 | ch2data.com (허브) | `nginx-ch2data-hub.conf` | `/api/auth/` | `https://ch2data.com/api/auth/` |
+| 13 | 〃 | 〃 | `/api/billing/` | `https://ch2data.com/api/billing/` |
+| 14 | 〃 | 〃 | `/api/platform/` | `https://ch2data.com/api/platform/` |
+| 15 | 〃 | 〃 | `/api/board/` | `https://ch2data.com/api/board/` |
+| 16 | 〃 | 〃 | `/api/ops/` | `https://ch2data.com/api/ops/` |
+| 17 | viewer.ch2data.com | 서버의 viewer 설정(저장소 템플릿 없음 — Codex 가 경로 기록) | `/api/auth/` | `https://viewer.ch2data.com/api/auth/` |
+
+- 설치 때 `sudo nginx -T | grep -n "proxy_pass http://127.0.0.1:8000"` 로 백엔드 proxy 줄을 다시 센다. `nginx -T` 는 파일을 한 번씩만 출력하므로 **두 서버가 include 하는 랩 API 조각(3줄)은 한 번만 보인다** → 기대 **14줄**(macro 설정 5 · 랩 조각 3 · 허브 5 · viewer 1) = 실효 location 17곳. `sudo nginx -T | grep -c "include /etc/nginx/snippets/ch2-maintenance.conf"` 도 **14**. 수가 다르면 표를 고치고 T 에게 알린다. 실효 17곳은 아래 일괄 확인(19 URL)으로 본다.
+- 17곳 일괄 확인(켜기·끄기 시험 공통, 응답 코드만 출력):
+
+```bash
+for u in https://macro.ch2data.com/api/ https://macro.ch2data.com/health https://macro.ch2data.com/docs https://macro.ch2data.com/redoc \
+         https://macro.ch2data.com/openapi.json https://macro.ch2data.com/api/regional-profile/lab/ https://macro.ch2data.com/api/admin/ \
+         https://macro.ch2data.com/api/built/lab/ http://13.209.203.178/api/ http://13.209.203.178/health \
+         http://13.209.203.178/api/regional-profile/lab/ http://13.209.203.178/api/admin/ http://13.209.203.178/api/built/lab/ \
+         https://ch2data.com/api/auth/ https://ch2data.com/api/billing/ https://ch2data.com/api/platform/ https://ch2data.com/api/board/ \
+         https://ch2data.com/api/ops/ https://viewer.ch2data.com/api/auth/; do
+  printf '%s %s\n' "$(curl -s -o /dev/null -m 5 -w '%{http_code}' "$u")" "$u"; done
+# 켜기: 모든 줄 503 · 끄기: 503 인 줄 0(평소 200·401·404 등)
+```
 
 ```nginx
 # /etc/nginx/snippets/ch2-maintenance.conf — 깃발 파일이 있으면 503(백엔드에 넘기지 않음)
@@ -496,9 +532,9 @@ location /api/ {
 
 | 동작 | 명령(운영 서버) | 확인 |
 |---|---|---|
-| **켜기** | `sudo touch /etc/nginx/ch2_maintenance.on` | `curl -s -o /dev/null -w '%{http_code}\n' https://macro.ch2data.com/api/` → **503** · `curl -s -o /dev/null -w '%{http_code}\n' http://13.209.203.178/api/` → 503 · 허브 API 경로 → 503 · `curl -sf http://127.0.0.1:8000/health` → 200(백엔드 직접, nginx 안 거침) |
+| **켜기** | `sudo touch /etc/nginx/ch2_maintenance.on` | 위 17곳 일괄 확인 → **도메인별 모두 503**: macro.ch2data.com 8 URL(6 location) · 13.209.203.178 5 · ch2data.com 5 · viewer.ch2data.com 1. 그리고 `curl -sf http://127.0.0.1:8000/health` → 200(백엔드 직접, nginx 안 거침) |
 | **진행 중 요청 0** | ① `sudo ss -Htn state established '( dport = :8000 )' \| wc -l` → **0**(nginx→백엔드 연결) ② `sudo tail -n 500 /var/log/nginx/access.log \| grep ' /api/' \| grep -v '" 503 ' \| tail -3` → 보이는 줄의 시각이 모두 켠 시각 **전** ③ `sudo -u postgres psql -Atc "SELECT count(*) FROM pg_stat_activity WHERE datname IN ('collective_stats','rent_stats','built_stats') AND state <> 'idle' AND pid <> pg_backend_pid()"` → **0** | 셋 다 맞을 때까지 기다린다(최대 5분, 넘으면 남은 연결을 보고 결정). 확인한 시각 = `FREEZE_AT` |
-| **끄기** | `sudo rm -f /etc/nginx/ch2_maintenance.on` | 위 `curl` 이 평소 응답(503 아님) · 화면 하나 열어 데이터 확인 |
+| **끄기** | `sudo rm -f /etc/nginx/ch2_maintenance.on` | 17곳 일괄 확인 → **503 인 줄 0**(도메인별) · 화면 하나 열어 데이터 확인 |
 | 상태 보기 | `test -f /etc/nginx/ch2_maintenance.on && echo ON \|\| echo OFF` | — |
 
 - 점검 모드 중에도 서버 안 `http://127.0.0.1:8000` 은 열려 있다. 운영 확인 스크립트·R5 스모크·promote `/health` 는 이 주소로 한다.
@@ -508,22 +544,44 @@ location /api/ {
 
 | # | 할 일 | 누가 | 통과 조건 | 예상 |
 |---|---|---|---|---|
-| 1 | **점검 모드 ON**(6.0 켜기) · 503 확인 | Codex | 세 서버(도메인·IP·허브) API 503, 서버 안 `/health` 200 | 2분 |
+| 1 | **점검 모드 ON**(6.0 켜기) · 17곳 503 확인 | Codex | 도메인별 17곳 모두 503(macro·IP·허브·viewer), 서버 안 `/health` 200 | 3분 |
+| 1a | **built QA 행 수 재확인**(낮과 같은 읽기 전용 쿼리, 6절 머리) | Codex | 낮 기록과 같음. **다르면 즉시 중단 → 점검 모드 OFF**(아직 아무것도 바꾸지 않음) | 1분 |
 | 2 | **진행 중 요청 0**(6.0 ①②③) → `FREEZE_AT` 기록 | Codex | 백엔드 연결 0 · 켠 뒤 503 아닌 API 응답 없음 · 앱 DB 세션 0 | 1~5분 |
-| 3 | 3절 `prod_sync_check` 로 운영만 다시 스냅샷 → 3절 운영 JSON 과 비교, 2.5 의 4표 밖 다름 0 | Codex | 다름 0 | 수 분(3절 실측) |
+| 3 | 3절 `prod_sync_check` 로 운영만 다시 스냅샷(`--allow-heavy`, 세 DB) → 3절 운영 JSON 과 비교, 2.5 의 4표 밖 다름 0 | Codex | 다름 0 | 9~34분(3절 예상: collective 3~6 · rent 5~10 · built 1분, 운영 최대 2배) |
 | 4 | **운영 전용 4표 새 덤프**(데이터만, 아래 명령) + manifest → 로컬 `logs/collective_p2/prod_only/` | Codex | `created_kst ≥ FREEZE_AT` | 1분(덤프 실측 1.6초 · 0.6MB) |
 | 5 | `git check-ignore` 로 커밋 대상 아님 확인 · 임시 원본 DB 2개 복원(표 구조는 로컬 반영본 `pg_dump --schema-only -t <표>` → `pg_restore --data-only`) | Opus | ignore 됨 · 임시 DB 행 수 = manifest | 1분(실측 4.6초) |
 | 6 | 병합 드라이런(`--manifest … --freeze-at $FREEZE_AT`) | Opus | 종료 0. **manifest 엄격 검사**: DB 2개(`collective_stats`·`rent_stats`)·표 4개 정확히 — 누락·중복·모르는 DB/표·행 수 누락이면 쓰기 전에 종료 2 · SHA-256·크기 = 덤프 · 덤프 시각 ≥ `FREEZE_AT` · 임시 DB 행 수 = manifest | 1분(실측 1.4초) |
 | 7 | **병합 적용** `--real-apply …`(아래) | Opus | 종료 0 · 보고서 `applied: true` · DB 마다 한 트랜잭션 · 계획 = 넣은/바꾼 행 = 최종 행 | 1분(실측 1.3초) |
 | 8 | **c29 검사** `check --report <7 보고서>` | Opus | 종료 0. **엄격 판정**: `applied=true` · 두 쪽·네 표 보고서 · 필수 카운터 · 보고서의 원본/대상 DB 이름 = 검사 인자. 게이트: 병합 고아 0 · C-2/C-01 옛 키 좌표 0 · 조각 키 운영 좌표 0. 충돌 건수·규칙별 건수 기록 | 1분(실측 4.4초) |
 | 9 | 스냅샷 A → **병합 재실행** → 스냅샷 B → `idempotent --report <재실행 보고서> --a A --b B` | Opus | 종료 0: insert 0 · update 0 · QA 같은 id 추가·새 id 0 · 네 표 행 수·해시 같음 · QA 시퀀스 `last_value`·`is_called` 같음 | 1분(실측 합 약 3초) |
-| 10 | 5.4 가벼운 지표·해시 스냅샷 다시 뜨기 → **collective·rent promote 덤프**(2.2 — 병합 뒤라 여기서 다시 만든다) → scp → 서버에서 크기·SHA-256 대조 | Opus → Codex | 덤프 종료 0 · 대조 일치 | 로컬 덤프 6분 21초(리허설 DB 실측 2026-11-16: collective 2분 27초·2.0GB, rent 3분 54초·3.0GB, 차례로) + scp 5.0GB(미실측 — 10MB/s 면 약 8분, 5MB/s 면 약 17분. 낮의 built 업로드(0.16GB)로 속도를 재서 확정) |
+| 10 | 5.4 가벼운 지표·해시 스냅샷 다시 뜨기 → **collective·rent promote 덤프**(2.2 — 병합 뒤라 여기서 다시 만든다) → scp → 서버에서 크기·SHA-256 대조 | Opus → Codex | 덤프 종료 0 · 대조 일치 | 로컬 덤프 6분 21초(리허설 DB 실측 2026-11-16: collective 2분 27초·2.0GB, rent 3분 54초·3.0GB, 차례로) + scp 5.0GB(**낮 built 업로드에서 실측 후 확정** — 아래 규칙) |
 | 11 | **세 DB promote**(2.2 `vps_promote_db_sql.sh`, collective → rent → built). DB 마다 `/health` OK 뒤 다음 | Codex | 스크립트 종료 0(R4) | 47분(11/3 실측: built 1분 5초 · collective 15분 7초 · rent 30분 44초, 반영 전 덤프 포함) |
 | 12 | `analysis_cache` 비우기(6.3) · **R5 스모크를 서버 localhost 로**(6.3) · `vps_collective_smoke.sh` | Codex/Opus | R5 종료 0(3/3) · 스모크 통과 | 3분 |
 | 13 | **점검 모드 OFF**(6.0 끄기) · 화면 확인 | Codex | 평소 응답 | 1분 |
 | 14 | 7절 운영 확인(Opus, 읽기 전용) | Opus | R1~R3 | 7절(점검 창 밖) |
 
-- **예상 중단 시간(API 503, 1 ~ 13):** 고정 단계 합 약 **59~67분**(1~9 약 8~16분 · 11 47분 · 12~13 4분) **+ 10 의 로컬 덤프·scp**(약 14~23분). 합계 **약 73~90분(1시간 13분~1시간 30분)**. 백엔드가 실제로 멈추는 구간은 11 안의 약 36분이지만, 사용자에게는 1~13 전체가 점검 중이다.
+- **예상 중단 시간(API 503, 1 ~ 13) — 단계별 합:**
+
+| 단계 | 하한 | 상한 | 근거 |
+|---|---|---|---|
+| 1 점검 모드 ON · 17곳 확인 | 3분 | 3분 | 추정 |
+| 1a built QA 행 수 | 1분 | 1분 | 추정 |
+| 2 진행 중 요청 0 | 1분 | 5분 | 6.0 기다림 상한 |
+| 3 sync 확인(`--allow-heavy`) | 9분 | 34분 | 3절 예상(로컬 추정 합 9~17분, 운영 최대 2배) |
+| 4 4표 덤프·manifest·복사 | 1분 | 1분 | 덤프 실측 1.6초 |
+| 5~9 복원·드라이런·병합·c29·재실행 | 5분 | 5분 | 실측 합 약 15초 + 사람 확인 |
+| 10 로컬 promote 덤프 | 6분 21초 | 6분 21초 | 리허설 DB 실측(collective 2분 27초 · rent 3분 54초) |
+| 10 scp 5.0GB | `S` | `S` | **낮 built 업로드에서 실측 후 확정** |
+| 11 세 DB promote | 47분 | 47분 | 11/3 실측(2.3) |
+| 12 캐시·R5·스모크 | 3분 | 3분 | 추정 |
+| 13 OFF · 17곳 확인 | 2분 | 2분 | 추정 |
+| **합** | **약 79분 + S** | **약 108분 + S** | 백엔드가 실제로 멈추는 구간은 11 안의 약 36분 |
+
+- **scp 실측 규칙과 밤 시작 시각:**
+  1. 낮 built promote 덤프 업로드(2.2, `built_stats_p2_promote.sql.gz`) 시간을 잰다: `Measure-Command { scp … built_stats_p2_promote.sql.gz … }` → 속도 `v = 파일 크기 / 걸린 시간`.
+  2. `S = 5.0GB / v × 1.2`(여유 20%)로 밤 10 의 scp 시간을 정한다. 실측값과 S 를 `logs/collective_p2/window_plan.txt` 에 적는다.
+  3. **밤 시작 시각 = 끝내야 하는 시각 − (108분 + S + 30분 여유)**. 끝내야 하는 시각은 T 가 정한다(정하지 않았으면 06:00 KST). 예: v = 10MB/s 면 S ≈ 10분 → 06:00 − 148분 = **03:32 전에 시작**.
+  4. 밤에 3 이 34분 상한을 넘거나 10 이 S 의 1.5배를 넘으면, 남은 시간으로 11(47분)+12+13 이 끝내야 하는 시각 안에 들어오는지 다시 본다. 안 들어오면 11 전에 멈추고(운영은 반영 전) OFF — 6.2.
 - 6 의 거절(종료 2)·8·9 의 실패(종료 1)는 promote 전이라 운영이 바뀌지 않는다(6.2).
 
 ```bash
@@ -564,6 +622,7 @@ PY scripts\lab\collective_p2\c29_merge_prod_only_check.py --dst-collective colle
 
 | 멈춘 단계 | 운영 | 로컬 | 할 일(점검 모드 ON 유지) | 끝 |
 |---|---|---|---|---|
+| 1a built QA 행 수가 낮 기록과 다름 | 반영 전 | 병합 전 | **즉시 중단.** 아무것도 바꾸지 않은 상태다. 늘어난 행의 출처(누가 QA 를 저장했는지)를 확인하고 T 에게 알린다 | OFF · 다른 새벽에(낮 built 덤프부터 다시) |
 | 1~2 점검 모드가 안 걸림 · 진행 중 요청이 0 이 안 됨 | 반영 전 | 병합 전 | 설정 확인(`nginx -t`, include 누락 location), 남은 연결의 출처 확인. 5분 안에 안 되면 중단 | OFF · 다른 새벽에 다시 |
 | 3 운영이 3절 뒤에 바뀜 | 반영 전 | 병합 전 | 바뀐 표 확인 → 3절 동기화부터 다시(로컬 적용을 다시 해야 할 수 있음) | OFF · 중단 |
 | 4~6 덤프·manifest·사전 확인 거절(종료 2) | 반영 전 | 병합 전 | 4 부터 다시(새 덤프 → 새 manifest). manifest 형식 문제면 Codex 가 고쳐 다시 만든다 | 통과 → 7 · 세 번 실패 → OFF · 중단 |
@@ -572,7 +631,22 @@ PY scripts\lab\collective_p2\c29_merge_prod_only_check.py --dst-collective colle
 | 10 로컬 덤프·scp 실패 | 반영 전 | 병합됨 | 덤프·scp 다시, 크기·SHA-256 대조 | 11 로 · 안 되면 OFF · 중단 |
 | 11 promote 중 실패(R4·R6) | **일부 DB 반영됨** | 병합됨 | 8절 롤백 — **이미 새 상태가 된 DB 모두**를 반영 직전 덤프로 → `prod_sync_check` 로 반영 전 운영 스냅샷과 다름 0 → 옛 상태 확인(옛 키 상세 200) | OFF |
 | 12 R5·스모크 실패 | 반영됨 | 병합됨 | 백엔드 재시작 뒤 R5 한 번 더. 그래도 실패면 8절 롤백(세 DB 모두) → 다름 0 확인 | OFF |
-| 14 OFF 뒤 7절 R1~R3 실패 | 반영됨 · 사용자 접근 중 | — | **점검 모드 다시 ON**(6.0) → 진행 중 요청 0 → 8절 롤백. OFF 뒤 운영에 새로 쌓인 좌표·QA 행은 롤백으로 사라진다(기록해 두고 다음 창의 4 에서 다시 합친다) | OFF |
+| 14 OFF 뒤 7절 R1~R3 실패 | 반영됨 · 사용자 접근 중 · OFF 뒤 새로 쌓인 운영 전용 행 있음 | — | 아래 「OFF 뒤 되돌리기」 순서 | OFF |
+
+**OFF 뒤 되돌리기(6.2 마지막 줄 — OFF 뒤 운영에 쌓인 좌표·QA 행을 잃지 않게):**
+
+| # | 할 일 | 통과 조건 |
+|---|---|---|
+| a | **점검 모드 ON**(6.0) · 17곳 503 · 진행 중 요청 0 → 이 시각 = 새 `FREEZE_AT` | 6.0 |
+| b | **운영 전용 4표 덤프** — 6.1 4 와 같은 명령·같은 manifest 형식(새 키 상태의 운영에서) | manifest 엄격 검사 통과, `created_kst ≥ 새 FREEZE_AT` |
+| c | **8절 되돌리기**(새 상태가 된 DB 모두를 반영 직전 덤프로) → `prod_sync_check` 로 반영 전 스냅샷과 다름 0 | 다름 0 |
+| d | **같은 병합 스크립트로 되돌린 DB 에 병합** — `--direction reverse`(되돌린 옛 DB 에는 연결표가 없어 재키하지 않는다). b 의 덤프를 임시 원본 DB 로, 대상은 되돌린 운영 DB(서버 안 `127.0.0.1` 루프백 — 실제 적용 가드 그대로) | 종료 0 · `applied: true` · **대상 DB 원장에 없는 키(새 키 — C-2 조각·C-01 새 키 등)의 행은 버리고 `drop_not_in_ledger` 로 기록** |
+| e | **c29**(같은 엄격 판정·게이트, `--dst-*` = 되돌린 운영 DB · `--src-*` = 임시 원본) → 재실행 → `idempotent` | 종료 0 · 변경 0 |
+| f | 옛 상태 스모크(옛 키 상세 200) · **점검 모드 OFF** | 17곳 503 아님 |
+
+- 병합은 두 방향 모두 「대상 DB 원장에 없는 키의 행은 버리고 건수 기록」이다. forward 로 옛 DB 에 돌리면 연결표가 없어 거절(종료 2)된다.
+- **리허설(2026-11-16, `*_p2r`):** 새 DB(`collective_stats_p2r` 를 복사하고 반영 뒤 지도에서 본 것처럼 새 키 59개 가짜 좌표 행을 더한 `collective_new_p2r_src`, `rent_stats_p2r`) → 옛 DB(진짜 로컬 = 반영 전 상태에서 4표·원장 키 목록만 복사한 `collective_old_p2r`·`rent_old_p2r`): forward 거절(종료 2) · reverse 적용 — 좌표 5,861행 중 **원장에 없는 키 42행 버림**(C-2 조각 20 · C-01 새 키 20 · 호남 새 키 2) · 넣음 17(호남 새 키 중 2026 개편 재적재로 옛 원장에도 있던 키) · 나머지 5,802 같음 · 비주거 0 버림 · 임대 28 버림(옛 원장에도 없는 P2 전부터의 고아) · c29 게이트 통과 · 재실행 `idempotent` 통과. 테스트 `test_reverse_direction_new_to_old_drops_keys_not_in_old_ledger`.
+- d·e 를 서버에서 돌리려면 서버에 병합 스크립트·c29·`pipeline/collective` 모듈이 있어야 한다 → 4절 #9.
 
 ### 6.3 서비스 처리
 

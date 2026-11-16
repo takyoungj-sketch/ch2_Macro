@@ -84,7 +84,7 @@ def _report_tables(report: dict | None) -> dict:
 # 병합 보고서 엄격 판정(Codex 재검수 3): 네 표 · 필수 카운터 · applied · 원본/대상 DB 이름
 RULE_KEYS = ("rule_only_prod_ok", "rule_only_local_ok", "rule_both_ok_prod_newer", "rule_both_ok_local_newer_or_same",
              "rule_both_failed")
-GEO_COUNTERS = ("src", "unchanged", "rekeyed", "drop_c01", "drop_c2", "exists_local", "identical", "same_value_other_time",
+GEO_COUNTERS = ("src", "unchanged", "rekeyed", "drop_c01", "drop_c2", "drop_not_in_ledger", "exists_local", "identical", "same_value_other_time",
                 "conflict", "conflict_coords", *RULE_KEYS, "update", "kept_local", "insert", "insert_not_in_ledger",
                 "dst_before", "dst_after")
 QA_COUNTERS = ("src", "dst_before", "insert_same_id", "skip_identical", "skip_already_merged", "insert_new_id", "dst_after",
@@ -165,7 +165,8 @@ def check(report: dict | None = None) -> tuple[str, list[str]]:
          f"- 대상 {DST['collective']} · {DST['rent']} / 원본 {SRC['collective']} · {SRC['rent']}", ""]
     for side, table, keycol, map_t, ledger, lkey, use_c2 in GEO:
         with engine_db(DST[side]).connect() as d, engine_db(SRC[side]).connect() as s:
-            maps = [tuple(r) for r in d.execute(text(f"SELECT old_key, new_key, reason FROM {map_t}"))]
+            maps = ([tuple(r) for r in d.execute(text(f"SELECT old_key, new_key, reason FROM {map_t}"))]
+                    if mpo._exists(d, map_t) else [])          # 되돌린 옛 DB(reverse)에는 연결표가 없다
             c2b = mpo._c2_bases(d) if use_c2 else set()
             rules = mpo.key_rules(maps, c2b)
             c2_old = {k for k, (r, _) in rules.items() if r == mpo.DROP_C2}
@@ -216,7 +217,9 @@ def check(report: dict | None = None) -> tuple[str, list[str]]:
             t = rep.get((side, table))
             if t is not None:
                 merged_orphan = int(t.get("insert_not_in_ledger", 0))
-                rows += [("병합 보고서: 넣은 행 / 그중 원장에 없는 키(병합이 만든 고아, 0 이어야 함)", "— / 0",
+                rows += [("병합 보고서: 대상 원장에 없는 키라 버린 행(방향 " + str(t.get("direction", "forward")) + ")", "기록",
+                          f"{int(t.get('drop_not_in_ledger', 0)):,}"),
+                         ("병합 보고서: 넣은 행 / 그중 원장에 없는 키(병합이 만든 고아, 0 이어야 함)", "— / 0",
                           f"{int(t.get('insert', 0)):,} / {merged_orphan:,}"),
                          ("병합 보고서: 같은 키 값 다름 / 그중 좌표 다름", "기록",
                           f"{int(t.get('conflict', 0)):,} / {int(t.get('conflict_coords', 0)):,}"),

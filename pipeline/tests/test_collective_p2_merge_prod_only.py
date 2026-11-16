@@ -54,7 +54,7 @@ def test_plan_geocodes_counts():
     rows = [{"k": "o1"}, {"k": "o2"}, {"k": "o3"}, {"k": "x"}, {"k": "y"}, {"k": "o9", "updated_at": 2}, {"k": "z", "updated_at": 1}]
     ins, upd, cnt = mpo.plan_geocodes(rows, "k", rules, local_keys={"y"})
     assert upd == []
-    assert cnt == {"src": 7, "unchanged": 3, "rekeyed": 2, "drop_c01": 1, "drop_c2": 1, "rekey_overlap": 1,
+    assert cnt == {"src": 7, "unchanged": 3, "rekeyed": 2, "drop_c01": 1, "drop_c2": 1, "drop_not_in_ledger": 0, "rekey_overlap": 1,
                    "exists_local": 1, "identical": 0, "same_value_other_time": 0, "conflict": 0,
                    "conflict_coords": 0, **{f"rule_{r}": 0 for r in mpo.CONFLICT_RULES},
                    "update": 0, "kept_local": 0, "insert": 3}
@@ -167,6 +167,11 @@ def _seed(dbs):
         t.execute(text("""INSERT INTO qa_audit_run (id, domain, verdict, l1_json) VALUES
             (1, 'collective', 'ok', '{"x": 1}'), (2, 'collective', 'fail', '{"x": 2}'), (3, 'land', 'ok', NULL)"""))
         t.execute(text("SELECT setval('qa_audit_run_id_seq', 3)"))
+        # 대상 원장(키 이전 뒤 키) — 원장에 없는 키의 행은 병합이 버린다
+        t.execute(text("CREATE TABLE collective_transactions (building_key text)"))
+        t.execute(text("CREATE TABLE collective_commercial_transactions (cluster_key text)"))
+        t.execute(text("INSERT INTO collective_transactions VALUES (:i), (:e), (:f), (:j)"), dict(i=i, e=e, f=f, j=j))
+        t.execute(text("INSERT INTO collective_commercial_transactions VALUES (:j), (:h)"), dict(j=j, h=h))
     with dbs[SRC_R].begin() as s:
         s.execute(text(GEO.format(t="rent_building_geocodes", k="building_key")))
         s.execute(text("INSERT INTO rent_building_geocodes (building_key, label) VALUES (:a,'1:1'),(:b,'C-01'),(:e,'그대로')"),
@@ -177,6 +182,8 @@ def _seed(dbs):
         t.execute(text("INSERT INTO rent_building_key_map (old_key, new_key, asset_type, reason) VALUES "
                        "(:a,:i,'apartment','honam_sido'),(:b,:j,'rowhouse','split'),(:b,:e,'rowhouse','split')"),
                   dict(a=a, b=b, e=e, i=i, j=j))
+        t.execute(text("CREATE TABLE rent_transactions (building_key text)"))
+        t.execute(text("INSERT INTO rent_transactions VALUES (:i), (:e)"), dict(i=i, e=e))
 
 
 def test_merge_dryrun_then_apply_counts_and_remap(dbs, tmp_path):
@@ -382,3 +389,122 @@ def test_merge_updates_row_when_prod_wins_and_is_idempotent(dbs):
     with dbs[SRC].connect() as s, dbs[DST].begin() as d:
         again = mpo.merge_geocode(s, d, "geo_rule_t", "building_key", "geo_rule_map", False, apply=True)
     assert (again["update"], again["identical"], again["rule_only_local_ok"]) == (0, 1, 1)
+
+
+# --- 되돌리기 방향(런북 6.2 마지막 줄): 반영 뒤 운영(새 키) 행 → 되돌린 옛 DB --------------------------------------
+OLD_C, OLD_R, NEW_C, NEW_R = "ch2mpo_oldc_p2r", "ch2mpo_oldr_p2r", "ch2mpo_newc_p2r", "ch2mpo_newr_p2r"
+
+
+@pytest.fixture
+def rev_dbs():
+    base = mig.server_url_from_env()
+    try:
+        admin = create_engine(make_url(base).set(database="postgres", drivername="postgresql+psycopg2"),
+                              isolation_level="AUTOCOMMIT", connect_args={"connect_timeout": 3})
+        with admin.connect() as c:
+            for d in (OLD_C, OLD_R, NEW_C, NEW_R):
+                c.execute(text(f"DROP DATABASE IF EXISTS {d}"))
+                c.execute(text(f"CREATE DATABASE {d}"))
+    except Exception as ex:  # noqa: BLE001
+        pytest.skip(f"로컬 PostgreSQL 임시 DB 생성 불가: {type(ex).__name__}")
+    engs = {d: mig.engine_for(d, read_only=False, base_url=base) for d in (OLD_C, OLD_R, NEW_C, NEW_R)}
+    yield {"base": base, **engs}
+    for e in engs.values():
+        e.dispose()
+    with admin.connect() as c:
+        for d in (OLD_C, OLD_R, NEW_C, NEW_R):
+            c.execute(text(f"DROP DATABASE IF EXISTS {d} WITH (FORCE)"))
+    admin.dispose()
+
+
+GEO2 = """CREATE TABLE {t} ({k} text PRIMARY KEY, label text, longitude double precision, latitude double precision,
+          status text, geocoded_at timestamp, updated_at timestamp)"""
+
+
+def _c29():
+    import os
+
+    lab = ROOT / "scripts" / "lab" / "collective_p2"
+    if str(lab) not in sys.path:
+        sys.path.insert(0, str(lab))
+    cwd = os.getcwd()
+    try:
+        spec = importlib.util.spec_from_file_location("c29r", lab / "c29_merge_prod_only_check.py")
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+    finally:
+        os.chdir(cwd)
+
+
+def test_reverse_direction_new_to_old_drops_keys_not_in_old_ledger(rev_dbs, tmp_path):
+    """새 DB(반영 뒤 운영) → 옛 DB(되돌린 반영 전 덤프): 옛 DB 에 연결표가 없어 재키 없이, 옛 원장에 없는 새 키(조각·호남 새 키)
+    행은 버리고 drop_not_in_ledger 로 센다. 같은 키는 충돌 규칙. forward 는 연결표가 없어 거절. 다시 돌리면 변경 0."""
+    nk, k2, k3, c1, r1, r2 = K["a"], K["b"], K["c"], K["d"], K["e"], K["f"]
+    with rev_dbs[NEW_C].begin() as c:        # 반영 뒤 운영에서 쌓인 행(새 키 포함)
+        c.execute(text(GEO2.format(t="collective_building_geocodes", k="building_key")))
+        c.execute(text(GEO2.format(t="collective_commercial_map_geocodes", k="cluster_key")))
+        c.execute(text(QA_DDL))
+        c.execute(text("""INSERT INTO collective_building_geocodes VALUES
+            (:nk, 'new fragment', 127.1, 37.1, 'ok', '2026-11-21', '2026-11-21'),
+            (:k2, 'shared', 127.2, 37.2, 'ok', '2026-11-21', '2026-11-21'),
+            (:k3, 'same', 127.3, 37.3, 'ok', '2026-11-01', '2026-11-01')"""), dict(nk=nk, k2=k2, k3=k3))
+        c.execute(text("INSERT INTO collective_commercial_map_geocodes VALUES (:c1, 'road', 127.0, 37.0, 'ok', NULL, NULL)"),
+                  dict(c1=c1))
+        c.execute(text("INSERT INTO qa_audit_run (id, domain, verdict) VALUES (1, 'collective', 'ok')"))
+    with rev_dbs[OLD_C].begin() as c:        # 되돌린 옛 DB — 연결표·판정 표 없음, 원장은 옛 키
+        c.execute(text(GEO2.format(t="collective_building_geocodes", k="building_key")))
+        c.execute(text(GEO2.format(t="collective_commercial_map_geocodes", k="cluster_key")))
+        c.execute(text(QA_DDL))
+        c.execute(text("""INSERT INTO collective_building_geocodes VALUES
+            (:k2, 'shared', NULL, NULL, 'not_found', NULL, '2026-11-10'),
+            (:k3, 'same', 127.3, 37.3, 'ok', '2026-11-01', '2026-11-01')"""), dict(k2=k2, k3=k3))
+        c.execute(text("INSERT INTO qa_audit_run (id, domain, verdict) VALUES (1, 'collective', 'ok')"))
+        c.execute(text("SELECT setval('qa_audit_run_id_seq', 1)"))
+        c.execute(text("CREATE TABLE collective_transactions (building_key text)"))
+        c.execute(text("CREATE TABLE collective_commercial_transactions (cluster_key text)"))
+        c.execute(text("INSERT INTO collective_transactions VALUES (:k2), (:k3)"), dict(k2=k2, k3=k3))
+        c.execute(text("INSERT INTO collective_commercial_transactions VALUES (:c1)"), dict(c1=c1))
+    with rev_dbs[NEW_R].begin() as c:
+        c.execute(text(GEO2.format(t="rent_building_geocodes", k="building_key")))
+        c.execute(text("""INSERT INTO rent_building_geocodes VALUES (:r1, 'new', 1, 1, 'ok', NULL, NULL),
+                          (:r2, 'shared', 2, 2, 'ok', NULL, NULL)"""), dict(r1=r1, r2=r2))
+    with rev_dbs[OLD_R].begin() as c:
+        c.execute(text(GEO2.format(t="rent_building_geocodes", k="building_key")))
+        c.execute(text("CREATE TABLE rent_transactions (building_key text)"))
+        c.execute(text("INSERT INTO rent_transactions VALUES (:r2)"), dict(r2=r2))
+    rep = tmp_path / "rev.json"
+    args = ["--src-collective", NEW_C, "--dst-collective", OLD_C, "--src-rent", NEW_R, "--dst-rent", OLD_R,
+            "--base-url", rev_dbs["base"], "--remap-out", str(tmp_path / "remap.csv"), "--report-out", str(rep)]
+    assert mpo.cli(args + ["--apply"]) == 2                                   # forward: 옛 DB 에 연결표가 없어 거절(쓰기 0)
+    with rev_dbs[OLD_C].connect() as c:
+        assert c.execute(text("SELECT count(*) FROM collective_building_geocodes")).scalar() == 2
+    assert mpo.cli(args + ["--apply", "--direction", "reverse"]) == 0
+    r = json.loads(rep.read_text(encoding="utf-8"))
+    assert r["applied"] is True and r["direction"] == "reverse"
+    t = {x["table"]: x for s_ in r["sides"].values() for x in s_["tables"]}
+    bg = t["collective_building_geocodes"]
+    assert (bg["src"], bg["drop_not_in_ledger"], bg["identical"], bg["rule_only_prod_ok"], bg["update"], bg["insert"],
+            bg["keymap_rows"], bg["dst_after"]) == (3, 1, 1, 1, 1, 0, 0, 2)
+    cg = t["collective_commercial_map_geocodes"]
+    assert (cg["drop_not_in_ledger"], cg["insert"], cg["dst_after"]) == (0, 1, 1)
+    rg = t["rent_building_geocodes"]
+    assert (rg["drop_not_in_ledger"], rg["insert"], rg["dst_after"]) == (1, 1, 1)
+    assert t["qa_audit_run"]["skip_identical"] == 1
+    with rev_dbs[OLD_C].connect() as c:
+        keys = {x[0]: (x[1], x[2]) for x in c.execute(text("SELECT building_key, status, longitude FROM collective_building_geocodes"))}
+    assert nk not in keys and keys[k2] == ("ok", 127.2)                       # 새 키 행 없음 · 공유 키는 「운영만 ok」로 운영 값
+    c29 = _c29()
+    assert c29.validate_report(r, {"collective": OLD_C, "rent": OLD_R}, {"collective": NEW_C, "rent": NEW_R}) == []
+    assert mpo.cli(args + ["--apply", "--direction", "reverse"]) == 0       # 다시 돌리면 변경 0(멱등)
+    r2 = json.loads(rep.read_text(encoding="utf-8"))
+    t2 = {x["table"]: x for s_ in r2["sides"].values() for x in s_["tables"]}
+    assert all(t2[k]["insert"] == 0 and t2[k]["update"] == 0 for k in t2 if k != "qa_audit_run")
+    assert t2["qa_audit_run"]["insert_new_id"] == 0 and t2["qa_audit_run"]["insert_same_id"] == 0
+
+
+def test_forward_drops_rows_whose_key_is_not_in_target_ledger():
+    """forward 도 같은 규칙: 재키 뒤 대상 원장에 없는 키는 버리고 센다(넣지 않음)."""
+    rows = [{"k": "o1"}, {"k": "x"}, {"k": "gone"}]
+    ins, upd, cnt = mpo.plan_geocodes(rows, "k", {"o1": (mpo.REKEY, "n1")}, {}, ledger={"n1", "x"})
+    assert sorted(r["k"] for r in ins) == ["n1", "x"] and cnt["drop_not_in_ledger"] == 1 and cnt["insert"] == 2

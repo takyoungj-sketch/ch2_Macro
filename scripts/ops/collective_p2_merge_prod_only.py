@@ -11,6 +11,8 @@
        - C-01 분할 옛 키(reason 에 split, c2 아닌 것 · 새 키 여럿) → 버림(동이 갈려 좌표가 맞지 않음)
        - C-2 옛 키(reason 에 c2 · 대상 DB 판정 표의 split base_key) → 버림(키 이전이 로컬 좌표도 버린 것과 같게)
     2. 재키 뒤 같은 키가 둘이면 updated_at 이 늦은 쪽 하나(나머지는 「재키 겹침」으로 셈)
+    2a. 대상 DB 원장에 없는 키의 행은 버리고 drop_not_in_ledger 로 센다(두 방향 공통 — 새 DB → 옛 DB 되돌리기에서 새 키 행)
+       --direction reverse(런북 6.2): 되돌린 옛 DB 에는 연결표가 없으니 재키하지 않는다(forward 는 연결표 필수)
     3. 대상에 없는 키는 `INSERT … ON CONFLICT DO NOTHING`
     4. 대상에 이미 있는 키(같은 키):
        - 시각 열(updated_at·geocoded_at)을 뺀 값이 같으면 그대로(identical · same_value_other_time)
@@ -151,7 +153,8 @@ def resolve_conflict(prod: dict, local: dict) -> tuple[str, str]:
     return "local", "both_failed"
 
 
-def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys) -> tuple[list[dict], list[dict], dict]:
+def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys,
+                  ledger: set[str] | None = None) -> tuple[list[dict], list[dict], dict]:
     """원본 행 → (넣을 행, 운영 값으로 바꿀 행, 단계별 건수).
     local_keys 가 {키: 로컬 행} 이면 같은 키에 값이 다른 경우(충돌)를 resolve_conflict 규칙으로 처리한다.
       conflict = 시각 열(updated_at·geocoded_at)을 뺀 값이 하나라도 다름 · conflict_coords = 좌표가 다름 ·
@@ -171,6 +174,9 @@ def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys) ->
             k = new
         else:
             cnt["unchanged"] += 1
+        if ledger is not None and k not in ledger:
+            cnt["drop_not_in_ledger"] += 1        # 대상 DB 원장에 없는 키 — 버린다(새 DB → 옛 DB 되돌리기에서 새 키 행 등)
+            continue
         old = picked.get(k)
         if old is not None:
             cnt["rekey_overlap"] += 1
@@ -200,7 +206,7 @@ def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys) ->
     cnt["insert"] = len(ins)
     cnt["update"] = len(updates)
     cnt["kept_local"] = cnt["conflict"] - len(updates)
-    keys = ("src", "unchanged", "rekeyed", DROP_C01, DROP_C2, "rekey_overlap", "exists_local", "identical",
+    keys = ("src", "unchanged", "rekeyed", DROP_C01, DROP_C2, "drop_not_in_ledger", "rekey_overlap", "exists_local", "identical",
             "same_value_other_time", "conflict", "conflict_coords", *(f"rule_{r}" for r in CONFLICT_RULES),
             "update", "kept_local", "insert")
     return ins, updates, {k: int(cnt.get(k, 0)) for k in keys}
@@ -212,31 +218,40 @@ def _c2_bases(c: Connection) -> set[str]:
     return {str(r[0]).strip() for r in c.execute(text(f"SELECT DISTINCT base_key FROM {C2_TABLE} WHERE decision='split'"))}
 
 
+DIRECTIONS = ("forward", "reverse")
+
+
 def merge_geocode(src: Connection, dst: Connection, table: str, keycol: str, map_table: str, use_c2: bool,
-                  *, apply: bool) -> dict:
+                  *, apply: bool, direction: str = "forward") -> dict:
+    """direction=forward: 옛 키 운영 행 → 키 이전이 끝난 대상(연결표 필수, 재키·C-01/C-2 옛 키 버림).
+    direction=reverse: 새 키 운영 행 → 되돌린 옛 DB(연결표 없음 → 재키 없음). 두 방향 모두
+    **대상 DB 원장에 없는 키의 행은 버리고 drop_not_in_ledger 로 센다**(원장 표가 없으면 멈춤)."""
+    if direction not in DIRECTIONS:
+        raise MergeError(f"direction 은 {DIRECTIONS} 중 하나")
     if not _exists(src, table):
         return {"table": table, "status": "원본에 표 없음"}
     if not _exists(dst, table):
         raise MergeError(f"대상에 {table} 표가 없음")
-    if not _exists(dst, map_table):
-        raise MergeError(f"대상에 연결표 {map_table} 가 없음 — 키 이전 뒤에 합친다")
+    has_map = _exists(dst, map_table)
+    if direction == "forward" and not has_map:
+        raise MergeError(f"대상에 연결표 {map_table} 가 없음 — 키 이전 뒤에 합친다(옛 DB 로 되돌린 뒤면 --direction reverse)")
+    led_t, led_c = LEDGER.get(table, (None, None))
+    if led_t and not _exists(dst, led_t):
+        raise MergeError(f"대상에 원장 {led_t} 가 없음 — 원장에 있는 키인지 판단할 수 없음")
     cols = [c for c, _ in _cols(dst, table)]
     scols = {c for c, _ in _cols(src, table)}
     cols = [c for c in cols if c in scols]
     src_rows = [dict(r._mapping) for r in src.execute(text(f"SELECT {', '.join(cols)} FROM {table}"))]
-    maps = [tuple(r) for r in dst.execute(text(f"SELECT old_key, new_key, reason FROM {map_table}"))]
+    maps = [tuple(r) for r in dst.execute(text(f"SELECT old_key, new_key, reason FROM {map_table}"))] if has_map else []
     rules = key_rules(maps, _c2_bases(dst) if use_c2 else set())
     local = {str(r[keycol]).strip(): r for r in (dict(x._mapping) for x in
                                                  dst.execute(text(f"SELECT {', '.join(cols)} FROM {table}")))}
-    ins, upd, cnt = plan_geocodes(src_rows, keycol, rules, local)
-    led_t, led_c = LEDGER.get(table, (None, None))
-    if led_t and _exists(dst, led_t) and ins:
-        led = {str(r[0]).strip() for r in dst.execute(text(f"SELECT DISTINCT {led_c} FROM {led_t} WHERE {led_c} IS NOT NULL"))}
-        cnt["insert_not_in_ledger"] = sum(1 for r in ins if str(r[keycol]).strip() not in led)
-    else:
-        cnt["insert_not_in_ledger"] = 0
-    out = {"table": table, **cnt, "dst_before": len(local),
-           "rule": "키 이전 적용(1:1 재키 · C-01 분할 옛 키·C-2 옛 키 버림) → 로컬에 없는 키 추가 · 같은 키 값 다름은 "
+    led = ({str(r[0]).strip() for r in dst.execute(text(f"SELECT DISTINCT {led_c} FROM {led_t} WHERE {led_c} IS NOT NULL"))}
+           if led_t else None)
+    ins, upd, cnt = plan_geocodes(src_rows, keycol, rules, local, led)
+    cnt["insert_not_in_ledger"] = sum(1 for r in ins if led is not None and str(r[keycol]).strip() not in led)  # 항상 0
+    out = {"table": table, "direction": direction, "keymap_rows": len(maps), **cnt, "dst_before": len(local),
+           "rule": "키 이전 적용(1:1 재키 · C-01 분할 옛 키·C-2 옛 키 버림) → 대상 원장에 없는 키 버림 → 로컬에 없는 키 추가 · 같은 키 값 다름은 "
                    "한쪽만 ok→ok 쪽 / 둘 다 ok→geocoded_at 최근(같으면 로컬) / 둘 다 실패→로컬 (운영 쪽이면 값 그대로 UPDATE)"}
     if apply and upd:
         set_cols = [c for c in cols if c != keycol]
@@ -465,12 +480,13 @@ def source_counts(eng: Engine, side: str) -> dict[str, int]:
 # --- 실행 -----------------------------------------------------------------------
 
 def merge_side(src_eng: Engine, dst_eng: Engine, dst_name: str, side: str, *, apply: bool,
-               remap_out: Path | None = None) -> list[dict]:
+               remap_out: Path | None = None, direction: str = "forward") -> list[dict]:
     """한 DB 쪽(collective·rent): 원본은 읽기 전용 세션, 대상은 한 트랜잭션(apply) 또는 읽기(드라이런)."""
     with src_eng.connect() as s, (dst_eng.begin() if apply else dst_eng.connect()) as d:
         if apply:
             assert_rehearsal_db(d, dst_name)
-        res = [merge_geocode(s, d, t, k, m, c2, apply=apply) for sd, t, k, m, c2 in GEOCODES if sd == side]
+        res = [merge_geocode(s, d, t, k, m, c2, apply=apply, direction=direction)
+               for sd, t, k, m, c2 in GEOCODES if sd == side]
         if side == "collective":
             res.append(merge_qa(s, d, apply=apply, remap_out=remap_out))
         return res
@@ -488,6 +504,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--report-out", default=str(OUT / "merge_prod_only.json"))
     p.add_argument("--manifest", default="", help="Codex 덤프 manifest(JSON). --real-apply 필수")
     p.add_argument("--freeze-at", default="", help="동결 시각(KST, 'YYYY-MM-DDTHH:MM' 또는 YYYYMMDD_HHMMSS). 덤프가 이보다 오래되면 중단")
+    p.add_argument("--direction", choices=DIRECTIONS, default="forward",
+                   help="forward = 옛 키 운영 행 → 키 이전 끝난 대상(연결표 필수) · reverse = 반영 뒤 운영 행 → 되돌린 옛 DB(런북 6.2)")
     add_real_apply_args(p)
     a = p.parse_args(argv)
     if a.real_apply:
@@ -507,7 +525,8 @@ def main(argv: list[str] | None = None) -> int:
     dsts = [x for x in (a.dst_collective, a.dst_rent) if x]
     if a.apply:
         check_write_targets(dsts, a, base_url=base)
-    report = {"apply": bool(a.apply), "real_apply": bool(a.real_apply), "applied": False, "sides": {}}
+    report = {"apply": bool(a.apply), "real_apply": bool(a.real_apply), "applied": False, "direction": a.direction,
+              "sides": {}}
     if a.manifest:
         counts = {}
         for side, src in (("collective", a.src_collective), ("rent", a.src_rent)):
@@ -525,7 +544,7 @@ def main(argv: list[str] | None = None) -> int:
         de = engine_for(dst, read_only=not a.apply, base_url=base)
         try:
             report["sides"][side] = {"src": src, "dst": dst,
-                                     "tables": merge_side(se, de, dst, side, apply=a.apply,
+                                     "tables": merge_side(se, de, dst, side, apply=a.apply, direction=a.direction,
                                                           remap_out=Path(a.remap_out) if side == "collective" else None)}
         finally:
             se.dispose()

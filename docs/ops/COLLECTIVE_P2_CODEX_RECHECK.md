@@ -11,7 +11,8 @@
 | `14a24ec` | 병합: 같은 키 충돌 건수 + 병합 리허설 검증 `c29` |
 | `5e0bef9` | 병합 사전 확인(manifest SHA-256·덤프 시각 ≥ 동결 시각·행 수) · 병합 고아 건수 · c29 게이트·운영 DB 인자 · 런북 6.1 동결 직후 단계 · 이 체크리스트 |
 | `e4a3d7a` | 병합 충돌 규칙(status·geocoded_at, 운영 쪽이 이기면 UPDATE, 규칙별 건수) · R5 스모크 스크립트 · 체크리스트 확정 사항 |
-| (이번 커밋) | **재검수 2차**: 점검 창(nginx 점검 모드, 안 A) 런북 3.2·6 · manifest 엄격 검사 · c29 엄격 판정·멱등 판정 · R5 서버용(pipeline 없이) · backend 전체 로그 |
+| `cda06bb` | **재검수 2차**: 점검 창(nginx 점검 모드, 안 A) 런북 3.2·6 · manifest 엄격 검사 · c29 엄격 판정·멱등 판정 · R5 서버용(pipeline 없이) · backend 전체 로그 |
+| (이번 커밋) | **재검수 3차**: 점검 대상 17곳·도메인별 503 · OFF 뒤 되돌리기(reverse 병합) · built QA 행 수 확인 · 점검 창 시간 재합산 |
 
 ## 2. Phase D 지적별 확인
 
@@ -34,6 +35,18 @@
 | R4 | 멱등 = insert 0·update 0·QA 새 id 0·네 표 해시 같음, 시퀀스 스냅샷 `is_called` 포함 · 운영 R5 명령(서버 localhost + `--collective-db collective_stats`) · 서버 모듈 확인 | ✅ | c29 `idempotent` · `snapshot`(시퀀스 `last_value`+`is_called`) · R5 스크립트는 `pipeline/` import 없이 backend venv(sqlalchemy·psycopg2)+`backend/.env` 만 — 런북 6.3 운영 명령 · 4절 #9 배포 전 확인 | 멱등 판정 8경우(insert·update·QA 새 id·같은 id 추가·해시 다름·`is_called` 만 다름·applied·옛 스냅샷) · R5 env 파일 접속 테스트 · 리허설 백엔드 R5 3/3 다시 통과 |
 | R5 | backend 전체 테스트 로그 저장 | ✅ | **`logs/collective_p2/backend_tests_20261116.log`**(gitignore, 490줄, `-rfE`) | 1,327 passed · 12 failed · 1 error — 기준선과 같은 목록 |
 | R6 | 리허설 DB 로 병합·c29 재실행 | ✅ | `logs/collective_p2/merge_rehearsal/run4·run5·run6.json` · `check_run4.txt` · `snap_r4a·r4b·r4c·r6.json` | run4: c29 게이트 통과(엄격 판정 포함) · run5: `idempotent` 통과(insert·update·QA 새 id 0, 4표·시퀀스 같음) · 소요 실측 드라이런 1.4초 · 적용 1.3초 · c29 4.4초 · 스냅샷 0.6초 · 멱등 0.4초 · 임시 원본 복원 4.6초 |
+
+## 2b. Codex 재검수 3차(반드시 3 + 권장 1)
+
+| # | 지적 | 완료 | 확인할 곳 | 테스트·실측 |
+|---|---|---|---|---|
+| T1 | 점검 대상에 viewer `/api/auth/` 추가, 실효 location 17곳 설치·검증 표, ON 시험에 도메인별 503 | ✅ | 런북 6.0 표(17행: macro HTTPS 6 · IP HTTP 5 · 허브 5 · viewer 1), 19 URL 일괄 확인 루프(켜기 = 전부 503 · 끄기 = 503 0), `nginx -T` 기대 14줄(랩 조각은 한 번만 출력) | 문서 |
+| T2 | OFF 뒤 되돌리기: 점검 ON → 운영 전용 표 덤프(같은 절차) → 되돌리기 → 같은 병합 스크립트로 되돌린 DB 에 병합 → c29 → OFF. 병합이 「대상 원장에 없는 키 행은 버리고 기록」으로 양방향 | ✅ | 런북 6.2 마지막 줄 + 「OFF 뒤 되돌리기」 a~f · `collective_p2_merge_prod_only.py` `--direction forward|reverse`(reverse = 연결표 없음 허용, forward 는 연결표 없으면 종료 2) · 두 방향 모두 원장에 없는 키 → `drop_not_in_ledger`(원장 표가 없으면 멈춤) · c29 는 연결표 없는 대상 허용·버린 수 표시 · 4절 #9 서버 모듈 확인 | 테스트 `test_reverse_direction_new_to_old_drops_keys_not_in_old_ledger`(forward 거절·reverse 버림·충돌 규칙·c29 판정·멱등) · `test_forward_drops_rows_whose_key_is_not_in_target_ledger`. **리허설(`*_p2r`)**: 새 → 옛, 좌표 5,861행 중 원장에 없는 키 42 버림(C-2 조각 20 · C-01 새 키 20 · 호남 새 키 2) · 17 넣음(2026 개편 재적재로 옛 원장에도 있던 호남 새 키) · 임대 28 버림 · c29 게이트 통과 · 재실행 멱등 통과. 산출물 `logs/collective_p2/merge_reverse/` |
+| T3 | built QA: 낮 built 덤프 때 운영 `built_stats.qa_audit_run` 행 수 기록(현재 0) · 그 뒤 built QA 실행 금지 · 밤 점검 ON 직후 재확인, 다르면 즉시 중단 → OFF | ✅ | 런북 6절 머리(읽기 전용 쿼리 `SET default_transaction_read_only = on; SELECT to_regclass(…), count(*), max(id)` · 기록 파일 · 금지 알림) · 6.1 1a · 6.2 첫 줄 | 문서(쿼리는 Codex 실행) |
+| T4 | 점검 창 예상 시간 단계별 재합산(sync 포함), scp 「낮 built 업로드 실측 후 확정」, 실측값으로 밤 시작 시각 정하는 규칙 | ✅ | 런북 6.1 표 아래 단계별 합(**약 79분 + S ~ 108분 + S**, sync `--allow-heavy` 9~34분 포함) · scp 규칙(`S = 5.0GB / v × 1.2`, 시작 = 끝 시각 − (108분 + S + 30분), 기본 끝 06:00 KST) | 문서 |
+| T5 | 테스트 새 실패 0 | ✅ | pipeline 373 passed(제외 2개 따로 7 + 4) · backend 1,327 passed · 12 failed · 1 error(기준선과 같은 목록, 로그 `logs/collective_p2/backend_tests_20261116_r3.log`) | — |
+
+- 되돌리기 리허설용 DB(리허설 이름, 지우지 않음): `collective_old_p2r`·`rent_old_p2r`(진짜 로컬 = 반영 전 상태에서 4표 + 원장 키 목록만, 읽기 전용으로 복사) · `collective_new_p2r_src`(리허설 DB 3표 + 새 키 가짜 좌표 59행).
 
 ## 3. 병합 리허설 결과(2026-11-16 덤프 `…_180626`, `*_p2r` 만, 운영 접속 없음)
 
@@ -61,8 +74,8 @@
 
 | 묶음 | 결과 | 기준선 대비 |
 |---|---|---|
-| pipeline | 371 passed(제외 2개는 따로 7 + 4 passed) | 새 실패 0(+새 테스트). 저장소 루트에서 모아 돌릴 때만 로딩 실패하는 2개는 `--ignore`(아래) |
-| backend | 1,327 passed · 12 failed · 1 error — 전체 로그 `logs/collective_p2/backend_tests_20261116.log` | 기준선과 같은 목록(built 추천 1 · built 지역 3 · insight 번들 6 · region_sido 1 · yield 1 · `test_profile_national_rank` 수집 오류) |
+| pipeline | 373 passed(제외 2개는 따로 7 + 4 passed) | 새 실패 0(+새 테스트). 저장소 루트에서 모아 돌릴 때만 로딩 실패하는 2개는 `--ignore`(아래) |
+| backend | 1,327 passed · 12 failed · 1 error — 전체 로그 `logs/collective_p2/backend_tests_20261116.log` · 3차 `…_r3.log`(같은 실패 목록) | 기준선과 같은 목록(built 추천 1 · built 지역 3 · insight 번들 6 · region_sido 1 · yield 1 · `test_profile_national_rank` 수집 오류) |
 | 집합 컴포넌트 | 14/14 | 같음 |
 | tsc(frontend-collective) | 0 오류 | 같음 |
 
@@ -88,6 +101,8 @@
 - [ ] c6 (키·유형·연도) 축소는 단위 테스트만 — 리허설 DB 가 덤프 상태가 아니라(키 이전 + 병합 뒤) 실제 데이터 재실행은 다음 전체 리허설 때.
 - [x] R5 스모크 서버 실행: `pipeline/` 없이 backend venv + `backend/.env` 만으로 돈다(재검수 2차 R4). 배포 전 `--help`·import 확인은 런북 4절 #9(Codex).
 - [ ] nginx 점검 모드 조각(6.0)은 저장소 템플릿에 넣지 않았다(서버 파일 수정은 Codex). 실제 location 목록이 템플릿과 같은지 서버에서 확인.
-- [ ] 점검 창 예상의 scp 시간은 미실측(5.0GB). 낮의 built 업로드로 속도를 재서 6.1 10 을 확정.
+- [ ] 점검 창 예상의 scp 시간 `S` 는 낮 built 업로드에서 실측 후 확정(런북 6.1 규칙) — 밤 시작 시각도 그 값으로.
+- [ ] OFF 뒤 되돌리기(6.2) d·e 를 서버에서 돌릴 수 있는지(병합·c29 가 `pipeline/collective`·pandas 필요) — 4절 #9, 안 되면 터널 방식을 Codex 가 정한다.
+- [ ] built QA 행 수(낮 기록 · 밤 1a)는 Codex 실행.
 - [x] Insight 03 출력 분리는 실제 로컬 DB(읽기 전용)로 한 번 돌려 확인: 결과 숫자 이전 실행과 같음(scanned 153,108 · eligible 1,097 · known 985 · yes 406 · no 579), 추적 파일 변경 0, 커밋된 캐시 파일 그대로. raw 정션은 쓰고 `rmdir` 해제(4,176파일).
 - [x] 리허설 DB 현재 상태: 키 이전 + 병합 적용 뒤(덤프 상태 아님). 다음 전체 리허설은 12.2 1번(덤프에서 다시 만들기)부터.
