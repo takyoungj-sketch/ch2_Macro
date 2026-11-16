@@ -5,7 +5,18 @@
 
 ---
 
-## 배포 (사용자가 「배포」「웹 반영」「VPS」 요청 시)
+## 에이전트 작업방식 (2026-11-17 사용자 합의)
+
+당분간 아래 절차를 기본으로 운영하고, 추후 사용자와 조정한다. 상세: [`.cursor/rules/agent-workflow.mdc`](.cursor/rules/agent-workflow.mdc).
+
+- Opus 조사·진단 → GPT 독립 의견 → T(사용자) 수정 방향 승인 → Opus 구현 지시문 → Cursor 독립 판단·구현 → Codex 실제 코드 독립 검수 → Opus 검수 결과 판단 → T 배포 승인 → Cursor main 병합·배포·브랜치 정리.
+- Codex는 실제 변경 코드·테스트·기존 기능 영향을 검증한다. 지시문 검토나 테스트 통과만으로 승인하지 않는다.
+- 통계모형·데이터 정책 변경은 T의 명시적 승인, DB 구조·운영환경 변경은 별도 위험 검토와 T 승인이 필요하다. 오탈자·단순 UI는 사전 승인 범위 안에서 간소화한다.
+- main 병합·운영 배포·작업 브랜치 정리 담당은 Cursor다. 아래 배포 절차의 실행 주체도 Cursor이며, Codex는 검수 결과를 전달한다.
+
+---
+
+## 배포 (Cursor가 사용자 「배포」「웹 반영」「VPS」 승인을 받은 경우)
 
 **추가 확인 없이** [deploy/AGENT_DEPLOY_RUNBOOK.md](deploy/AGENT_DEPLOY_RUNBOOK.md) 전체를 따른다.
 
