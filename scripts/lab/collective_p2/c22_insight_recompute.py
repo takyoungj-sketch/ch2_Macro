@@ -48,6 +48,22 @@ from app.apt_floor_lab import fit as m
 d = Path(r"{out}")
 m.OUT_JSON, m.OUT_CSV, m.OUT_PHASE5 = d / "insight08.json", d / "insight08_buildings.csv", d / "insight08_phase5.json"
 m.latest_as_of_month = lambda conn: datetime.date.fromisoformat("{as_of}")
+# 생성기의 키 필터는 TEMP 표(CREATE/DROP)라 읽기 전용 세션에서 막힌다 → 같은 조건을 expanding IN(나눠 읽기)으로.
+# 기본 키 집합과의 JOIN = IN 필터라 결과 행이 같다(키 중복 제거).
+import pandas as pd
+from sqlalchemy import bindparam, text
+_SQL = '''SELECT t.building_key, t.floor, t.exclusive_area, t.unit_price, t.contract_year, t.contract_month,
+       t.building_year FROM collective_transactions t
+WHERE t.building_key IN :keys AND t.asset_type = 'apartment' AND t.is_valid = TRUE
+  AND t.contract_date >= :p_start AND t.contract_date <= :p_end
+  AND t.unit_price > 0 AND t.exclusive_area > 0 AND t.floor >= 1'''
+def _fetch(conn, keys, p_start, p_end):
+    ks = sorted(set(keys))
+    q = text(_SQL).bindparams(bindparam("keys", expanding=True))
+    parts = [pd.read_sql(q, conn, params={{"keys": ks[i:i + 2000], "p_start": p_start, "p_end": p_end}})
+             for i in range(0, len(ks), 2000)]
+    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+m.fetch_transactions = _fetch
 m.run_phase1()
 """,
     "12": """
