@@ -3,7 +3,10 @@
 낮 무거운 동기화 확인(prod_sync_check --allow-heavy) 때 세 DB 의 쓰기 카운터를 기록해 두고, 밤 점검 모드 ON 뒤 다시 읽어
 「낮 이후 운영 전용 표 밖에서 쓰기가 있었는가」를 본다. 행을 읽지 않고 통계 뷰만 읽으므로 몇 초면 끝난다.
 
-  snapshot : DB 마다 pg_stat_user_tables(n_tup_ins·n_tup_upd·n_tup_del) 전 표 + pg_stat_database.stats_reset → JSON
+  snapshot : DB 마다 pg_stat_user_tables(n_tup_ins·n_tup_upd·n_tup_del) 전 표 + pg_stat_database.stats_reset → JSON.
+             읽기마다 트랜잭션을 새로 열고 pg_stat_clear_snapshot() 을 친 뒤 10초 간격으로 두 번 읽는다.
+             종료 코드 1: 시간 초과·DB 누락뿐 아니라 track_counts 가 on 이 아님, 두 번 읽기가 다름(stable 아님),
+             카운터 조회 실패·누락(tables 가 비거나 stats_reset 을 못 읽음).
   compare  : 낮 JSON(--baseline) ↔ 지금 다시 읽은 값. 실패(종료 코드 1) 조건 — 하나라도:
              · 운영 전용 표(EXCLUDE: 집합 3 + 임대 1 + 복합 qa_audit_run 1) 밖 표의 세 값 중 하나라도 다름
              · stats_reset 이 바뀜(카운터가 초기화돼 비교할 수 없음)
@@ -90,11 +93,23 @@ def _call_with_deadline(fn, timeout_s: float):
     return True, box.get("v")
 
 
-def read_db(conn, t: Timed, timeout_ms: int) -> dict:
-    """한 DB 의 카운터. 쿼리가 실패·시간 초과면 tables/stats_reset 이 None(→ 비교에서 실패).
-    server_now 는 DB now() 참고값이다. 순서 판정에는 쓰지 않는다."""
+def _new_stat_txn(conn) -> None:
+    """통계 뷰는 트랜잭션 안의 첫 조회로 고정된다. 읽기 전에 트랜잭션을 끝내고 스냅샷을 비운다."""
     from sqlalchemy import text
 
+    if conn.in_transaction():
+        conn.commit()
+    conn.execute(text("SELECT pg_stat_clear_snapshot()"))
+    conn.commit()
+
+
+def read_db(conn, t: Timed, timeout_ms: int) -> dict:
+    """한 DB 의 카운터. 쿼리가 실패·시간 초과면 tables/stats_reset 이 None(→ 비교에서 실패).
+    server_now 는 DB now() 참고값이다. 순서 판정에는 쓰지 않는다.
+    호출마다 새 트랜잭션에서 읽고, 그 전에 pg_stat_clear_snapshot() 을 친다."""
+    from sqlalchemy import text
+
+    _new_stat_txn(conn)
     rows = t.run(conn, "pg_stat_user_tables", STAT_SQL, timeout_ms=timeout_ms, fetch="all")
     reset = t.run(conn, "pg_stat_database.stats_reset", RESET_SQL, timeout_ms=timeout_ms, fetch="one")
     track = t.run(conn, "track_counts", TRACK_SQL, timeout_ms=timeout_ms, fetch="scalar")
@@ -121,7 +136,8 @@ def judge_stable(first: dict, second: dict) -> dict:
 
 
 def read_stable(conn, t: Timed, timeout_ms: int, sleeper=time.sleep, settle_s: float = SETTLE_S) -> dict:
-    """요청이 끝난 뒤 settle_s 초 간격으로 한 DB 를 두 번 읽는다. 표마다 반복하지 않는다."""
+    """요청이 끝난 뒤 settle_s 초 간격으로 한 DB 를 두 번 읽는다. 표마다 반복하지 않는다.
+    각 read_db 가 트랜잭션을 새로 열고 pg_stat_clear_snapshot() 을 친다. 같은 트랜잭션에 두면 두 번째도 첫 스냅샷이다."""
     first = read_db(conn, t, timeout_ms)
     sleeper(settle_s)
     second = read_db(conn, t, timeout_ms)
@@ -240,6 +256,24 @@ def compare_snaps(day: dict, night: dict) -> tuple[str, list[list[str]]]:
     return ("pass" if not prob else "fail"), prob
 
 
+def snapshot_incomplete(snap: dict) -> bool:
+    """스냅샷을 기준으로 쓸 수 없으면 True. track_counts off, 두 번 읽기 불일치, 카운터 실패·누락을 포함한다."""
+    if snap.get("timed_out") or snap.get("errors"):
+        return True
+    if set(REQUIRED_DBS) - {role(x) for x in (snap.get("dbs") or {})}:
+        return True
+    for db in (snap.get("dbs") or {}).values():
+        if not isinstance(db, dict):
+            return True
+        if str(db.get("track_counts")).lower() != "on":
+            return True
+        if db.get("stable") is False:
+            return True
+        if db.get("tables") is None or not db.get("stats_reset_ok", True):
+            return True
+    return False
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -271,7 +305,7 @@ def main(argv=None) -> int:
     snap = take(a.db_env, a.env_file, deadline_s=a.deadline, order_clock=a.order_clock)
     if a.cmd == "snapshot":
         write_json(a.out, snap)
-        bad = snap["timed_out"] or snap["errors"] or set(REQUIRED_DBS) - {role(x) for x in snap["dbs"]}
+        bad = snapshot_incomplete(snap)
         print(f"스냅샷: DB {sorted(snap['dbs'])} · {snap['elapsed_s']}초 → {a.out}" + (" · 불완전(종료 코드 1)" if bad else ""))
         return 1 if bad else 0
     try:

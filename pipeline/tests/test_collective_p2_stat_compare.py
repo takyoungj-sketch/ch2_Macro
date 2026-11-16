@@ -176,11 +176,85 @@ def test_take_deadline_cuts_a_hung_connect():
     assert snap["timed_out"] is True and "collective_stats" not in snap["dbs"] and snap["measured_at_source"] is None
 
 
+def _snapshot_exit(tmp_path, monkeypatch, snap) -> int:
+    monkeypatch.setattr(sc, "take", lambda *a, **k: snap)
+    return sc.main(["snapshot", "--db-env", "X", "--out", str(tmp_path / "d.json")])
+
+
 def test_cli_snapshot_incomplete_exits_1(tmp_path, monkeypatch):
     s = _snap()
     s["dbs"].pop("rent_stats")
-    monkeypatch.setattr(sc, "take", lambda *a, **k: s)
-    assert sc.main(["snapshot", "--db-env", "X", "--out", str(tmp_path / "d.json")]) == 1
+    assert _snapshot_exit(tmp_path, monkeypatch, s) == 1
+
+
+def test_snapshot_exits_1_when_track_counts_off(tmp_path, monkeypatch):
+    s = _snap()
+    s["dbs"]["built_stats"]["track_counts"] = "off"
+    assert _snapshot_exit(tmp_path, monkeypatch, s) == 1
+
+
+def test_snapshot_exits_1_when_reread_is_not_stable(tmp_path, monkeypatch):
+    s = _snap()
+    s["dbs"]["collective_stats"]["stable"] = False
+    assert _snapshot_exit(tmp_path, monkeypatch, s) == 1
+
+
+def test_snapshot_exits_1_when_counter_read_failed(tmp_path, monkeypatch):
+    s = _snap()
+    s["dbs"]["rent_stats"]["tables"] = None
+    assert _snapshot_exit(tmp_path, monkeypatch, s) == 1
+    s = _snap()
+    s["dbs"]["rent_stats"]["stats_reset_ok"] = False
+    assert _snapshot_exit(tmp_path, monkeypatch, s) == 1
+
+
+def test_snapshot_exits_0_when_counters_are_complete(tmp_path, monkeypatch):
+    assert _snapshot_exit(tmp_path, monkeypatch, _snap()) == 0
+
+
+def test_read_stable_sees_insert_between_reads():
+    """같은 트랜잭션에 가두면 두 번째 읽기도 0이다. 행을 하나 넣은 뒤 새 스냅샷이면 stable 이 아니다."""
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.engine import make_url
+
+    sys.path.insert(0, str(ROOT / "pipeline" / "collective"))
+    try:
+        from migrate_p2_keys import server_url_from_env
+        base = make_url(server_url_from_env())
+    except Exception as ex:  # noqa: BLE001
+        pytest.fail(f"미실행: 임시 DB 접속 정보를 읽지 못함 ({type(ex).__name__})")
+    fx = "ch2_statread_p2r"
+    admin = create_engine(base.set(database="postgres").set(drivername="postgresql+psycopg2"),
+                          isolation_level="AUTOCOMMIT", connect_args={"connect_timeout": 3})
+    try:
+        with admin.connect() as c:
+            c.execute(text(f"DROP DATABASE IF EXISTS {fx} WITH (FORCE)"))
+            c.execute(text(f"CREATE DATABASE {fx}"))
+    except Exception as ex:  # noqa: BLE001
+        admin.dispose()
+        pytest.fail(f"미실행: 임시 DB를 만들지 못함 ({type(ex).__name__})")
+    url = base.set(database=fx).render_as_string(hide_password=False)
+    writer = create_engine(url, isolation_level="AUTOCOMMIT", connect_args={"connect_timeout": 3})
+    try:
+        with writer.connect() as w:
+            w.execute(text("CREATE TABLE stat_probe (id int)"))
+        with sc.ro_conn(url) as conn:
+            def insert_one(_s):
+                with writer.connect() as w:
+                    w.execute(text("INSERT INTO stat_probe VALUES (1)"))
+                    # PG18 은 넣는 세션이 통계를 내보내기 전에는 n_tup_ins 가 0이다.
+                    # 스냅샷이 고정된 채로는, 이 호출 뒤에도 두 번째 읽기가 0으로 남는다.
+                    w.execute(text("SELECT pg_stat_force_next_flush()"))
+
+            out = sc.read_stable(conn, sc.Timed(), 10_000, sleeper=insert_one, settle_s=0)
+        assert out["stable"] is False
+        row = out["tables"]["public.stat_probe"]
+        assert row[0] >= 1
+    finally:
+        writer.dispose()
+        with admin.connect() as c:
+            c.execute(text(f"DROP DATABASE IF EXISTS {fx} WITH (FORCE)"))
+        admin.dispose()
 
 
 # --- overlay: 낮 전체 해시 + 밤 병합 표만(가벼운 비교 통과가 전제) -------------------------------------------------------
