@@ -9,8 +9,13 @@
              · stats_reset 이 바뀜(카운터가 초기화돼 비교할 수 없음)
              · 표가 빠짐(낮에 있던 표가 지금 없음) 또는 새 표가 생김
              · 필요한 DB(collective_stats·rent_stats·built_stats) 가 낮 또는 지금 기록에 없음
-             · 전체가 --deadline(기본 60초) 안에 끝나지 않음(쿼리 시간 초과 포함) — 시간 초과·누락은 통과로 세지 않는다
+             · 전체가 --deadline(기본 60초) 안에 끝나지 않음 — 쿼리 statement_timeout 과 별도로, 접속이 멈춰도 전체를 그 시각에 끊는다
+             · track_counts 가 on 이 아님
+             · 한 DB 를 10초 간격으로 두 번 읽었는데 값이 다름(통계가 아직 반영 중) — 같을 때만 비교한다
              통과만 종료 코드 0. (이 도구는 「검증 못 함」(2)을 두지 않는다 — 밤에는 못 본 것도 실패로 멈춘다)
+             순서 판정에 쓰는 measured_at·compared_at 은 로컬 PC 시계 UTC 이고 출처는 local 이다.
+             DB now() 는 server_now(출처 server)로만 남기고 순서 판정에 쓰지 않는다.
+             서버에서 실행할 때는 --order-clock defer 로 비워 두고, 로컬 PC 에서 stamp-local 로 찍는다.
 
   python prod_stat_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --db-env RENT_DATABASE_URL --db-env BUILT_DATABASE_URL \\
       --env-file /opt/ch2_Macro/backend/.env --out /var/backups/ch2/p2/stat_day.json
@@ -23,13 +28,14 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
 import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from _common import Timed, db_name, db_url, now_iso, read_json, ro_conn, write_json  # noqa: E402
+from _common import Timed, db_name, db_url, now_iso, read_json, ro_conn, stamp_local, write_json  # noqa: E402
 
 KIND = "stat_compare"
 REQUIRED_DBS = ("collective_stats", "rent_stats", "built_stats")
@@ -57,22 +63,83 @@ def _by_role(snap: dict) -> dict:
 STAT_SQL = ("SELECT schemaname || '.' || relname, n_tup_ins, n_tup_upd, n_tup_del FROM pg_stat_user_tables "
             "ORDER BY 1")
 RESET_SQL = "SELECT stats_reset FROM pg_stat_database WHERE datname = current_database()"
+TRACK_SQL = "SHOW track_counts"
+SETTLE_S = 10.0
+
+
+def _call_with_deadline(fn, timeout_s: float):
+    """fn 을 데몬 스레드에서 돌리고 timeout_s 안에 안 끝나면 (False, None). 접속·DNS 정지도 여기서 끊는다."""
+    box: dict = {}
+    err: dict = {}
+
+    def run():
+        try:
+            box["v"] = fn()
+        except BaseException as ex:  # noqa: BLE001  — SystemExit(접속 정보 없음)도 호출한 쪽으로
+            err["e"] = ex
+
+    th = threading.Thread(target=run, daemon=True)
+    th.start()
+    th.join(max(0.0, timeout_s))
+    if th.is_alive():
+        return False, None
+    if "e" in err:
+        raise err["e"]
+    return True, box.get("v")
 
 
 def read_db(conn, t: Timed, timeout_ms: int) -> dict:
-    """한 DB 의 카운터. 쿼리가 실패·시간 초과면 tables/stats_reset 이 None(→ 비교에서 실패)."""
+    """한 DB 의 카운터. 쿼리가 실패·시간 초과면 tables/stats_reset 이 None(→ 비교에서 실패).
+    server_now 는 DB now() 참고값이다. 순서 판정에는 쓰지 않는다."""
+    from sqlalchemy import text
+
     rows = t.run(conn, "pg_stat_user_tables", STAT_SQL, timeout_ms=timeout_ms, fetch="all")
     reset = t.run(conn, "pg_stat_database.stats_reset", RESET_SQL, timeout_ms=timeout_ms, fetch="one")
-    return {"db": db_name(conn), "measured_at": now_iso(),
+    track = t.run(conn, "track_counts", TRACK_SQL, timeout_ms=timeout_ms, fetch="scalar")
+    try:
+        server_now = conn.execute(text("SELECT now()::text")).scalar()
+    except Exception:  # noqa: BLE001
+        conn.rollback()
+        server_now = None
+    return {"db": db_name(conn), "measured_at": None, "measured_at_source": None,
+            "server_now": None if server_now is None else str(server_now), "server_now_source": "server",
+            "track_counts": None if track is None else str(track),
             "stats_reset": None if reset is None else str(reset[0]),
             "stats_reset_ok": reset is not None,
             "tables": None if rows is None else {r[0]: [int(r[1]), int(r[2]), int(r[3])] for r in rows}}
 
 
-def take(db_envs: list[str], env_file: Path | None, *, deadline_s: float, clock=time.monotonic, reader=None) -> dict:
-    """여러 DB 를 차례로 읽는다. 전체 deadline 을 넘기면 남은 DB 는 읽지 않고 timed_out=True."""
+def judge_stable(first: dict, second: dict) -> dict:
+    """두 번 읽은 값이 같을 때만 stable. track_counts 는 두 번째 읽기 값으로 남긴다."""
+    out = dict(second)
+    out["stable"] = bool(first.get("tables") is not None and first.get("tables") == second.get("tables")
+                         and first.get("stats_reset") == second.get("stats_reset"))
+    out["track_counts_ok"] = str(out.get("track_counts")).lower() == "on"
+    return out
+
+
+def read_stable(conn, t: Timed, timeout_ms: int, sleeper=time.sleep, settle_s: float = SETTLE_S) -> dict:
+    """요청이 끝난 뒤 settle_s 초 간격으로 한 DB 를 두 번 읽는다. 표마다 반복하지 않는다."""
+    first = read_db(conn, t, timeout_ms)
+    sleeper(settle_s)
+    second = read_db(conn, t, timeout_ms)
+    return judge_stable(first, second)
+
+
+def _finish_clock(snap: dict, order_clock: str) -> dict:
+    if order_clock == "local":
+        snap["measured_at"] = now_iso()
+        snap["measured_at_source"] = "local"
+    return snap
+
+
+def take(db_envs: list[str], env_file: Path | None, *, deadline_s: float, clock=time.monotonic, reader=None,
+         opener=None, sleeper=time.sleep, settle_s: float = SETTLE_S, order_clock: str = "local") -> dict:
+    """여러 DB 를 차례로 읽는다. 전체 deadline 을 넘기면 남은 DB 는 읽지 않고 timed_out=True.
+    실제 접속은 스레드 제한으로 끊는다(statement_timeout 은 쿼리에만 걸린다). reader 를 주면 테스트용으로 그 경로를 쓴다."""
     t0 = clock()
-    out = {"kind": KIND, "measured_at": now_iso(), "deadline_s": deadline_s, "dbs": {}, "timed_out": False, "errors": []}
+    out = {"kind": KIND, "measured_at": None, "measured_at_source": None, "deadline_s": deadline_s, "dbs": {},
+           "timed_out": False, "errors": []}
     for env in db_envs:
         left = deadline_s - (clock() - t0)
         if left <= 0:
@@ -83,10 +150,20 @@ def take(db_envs: list[str], env_file: Path | None, *, deadline_s: float, clock=
             if reader is not None:
                 snap = reader(env, left)
             else:
-                t = Timed()
-                with ro_conn(db_url(env, env_file)) as conn:
-                    snap = read_db(conn, t, int(max(1, left) * 1000))
-                    snap["_timings"] = t.log
+                def work(env=env, left=left):
+                    if opener is not None:
+                        return opener(env, left)
+                    t = Timed()
+                    with ro_conn(db_url(env, env_file)) as conn:
+                        snap = read_stable(conn, t, int(max(1, left) * 1000), sleeper, settle_s)
+                        snap["_timings"] = t.log
+                        return snap
+
+                ok, snap = _call_with_deadline(work, left)
+                if not ok:
+                    out["timed_out"] = True
+                    out["errors"].append(f"{env}: 시간 초과로 끊음")
+                    continue
         except SystemExit as ex:                       # 접속 정보 없음 등
             out["errors"].append(f"{env}: {ex}")
             continue
@@ -97,7 +174,7 @@ def take(db_envs: list[str], env_file: Path | None, *, deadline_s: float, clock=
     out["elapsed_s"] = round(clock() - t0, 2)
     if out["elapsed_s"] > deadline_s:
         out["timed_out"] = True
-    return out
+    return _finish_clock(out, order_clock)
 
 
 def compare_snaps(day: dict, night: dict) -> tuple[str, list[list[str]]]:
@@ -120,6 +197,10 @@ def compare_snaps(day: dict, night: dict) -> tuple[str, list[list[str]]]:
         if a is None or b is None:
             prob.append([db, "DB 기록 없음", "있음" if a else "없음", "있음" if b else "없음"])
             continue
+        if str(a.get("track_counts")).lower() != "on" or str(b.get("track_counts")).lower() != "on":
+            prob.append([db, "track_counts 가 on 이 아님", str(a.get("track_counts")), str(b.get("track_counts"))])
+        if a.get("stable") is False or b.get("stable") is False:
+            prob.append([db, "카운터가 두 번 읽기에서 다름", "", ""])
         if not a.get("stats_reset_ok", True) or not b.get("stats_reset_ok", True):
             prob.append([db, "stats_reset 을 읽지 못함", str(a.get("stats_reset")), str(b.get("stats_reset"))])
         elif a.get("stats_reset") != b.get("stats_reset"):
@@ -148,15 +229,24 @@ def main(argv=None) -> int:
         s = sub.add_parser(name)
         s.add_argument("--db-env", action="append", required=True, help="접속 URL 환경변수 이름(DB 마다 한 번, 값은 출력 안 함)")
         s.add_argument("--env-file", type=Path, default=None)
-        s.add_argument("--deadline", type=float, default=60.0, help="전체 시간 제한(초, 기본 60)")
+        s.add_argument("--deadline", type=float, default=60.0, help="전체 시간 제한(초, 기본 60). 쿼리 제한과 별도로 접속까지 끊는다")
+        s.add_argument("--order-clock", choices=["local", "defer"], default="local",
+                       help="local=끝난 시각을 로컬 PC UTC 로 기록. defer=비워 두고 stamp-local(서버에서 실행할 때)")
         if name == "snapshot":
             s.add_argument("--out", type=Path, required=True)
         else:
             s.add_argument("--baseline", type=Path, required=True)
             s.add_argument("--result-out", type=Path, default=None)
             s.add_argument("--night-out", type=Path, default=None, help="밤에 읽은 값도 남길 때")
+    st = sub.add_parser("stamp-local", help="서버에서 만든 JSON 에 로컬 PC UTC 시각을 찍는다(순서 판정용)")
+    st.add_argument("--file", type=Path, required=True)
+    st.add_argument("--field", action="append", required=True)
     a = p.parse_args(argv)
-    snap = take(a.db_env, a.env_file, deadline_s=a.deadline)
+    if a.cmd == "stamp-local":
+        write_json(a.file, stamp_local(read_json(a.file), *a.field))
+        print(f"local 시각 기록: {', '.join(a.field)} → {a.file}")
+        return 0
+    snap = take(a.db_env, a.env_file, deadline_s=a.deadline, order_clock=a.order_clock)
     if a.cmd == "snapshot":
         write_json(a.out, snap)
         bad = snap["timed_out"] or snap["errors"] or set(REQUIRED_DBS) - {role(x) for x in snap["dbs"]}
@@ -169,8 +259,13 @@ def main(argv=None) -> int:
     if a.night_out:
         write_json(a.night_out, snap)
     status, prob = compare_snaps(day, snap)
-    res = {"kind": KIND + "_result", "status": status, "compared_at": now_iso(),
-           "baseline_measured_at": (day or {}).get("measured_at"), "night_measured_at": snap.get("measured_at"),
+    res = {"kind": KIND + "_result", "status": status,
+           "compared_at": now_iso() if a.order_clock == "local" else None,
+           "compared_at_source": "local" if a.order_clock == "local" else None,
+           "baseline_measured_at": (day or {}).get("measured_at"),
+           "baseline_measured_at_source": (day or {}).get("measured_at_source"),
+           "night_measured_at": snap.get("measured_at"),
+           "night_measured_at_source": snap.get("measured_at_source"),
            "elapsed_s": snap.get("elapsed_s"), "dbs": sorted(snap.get("dbs") or {}), "problems": prob,
            "excluded": {k: sorted(v) for k, v in EXCLUDE.items()}}
     if a.result_out:

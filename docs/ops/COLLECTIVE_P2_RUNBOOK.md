@@ -267,13 +267,14 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 | F6 | 운영 코드 배포 | 백엔드·스키마를 바꾸는 배포(이번 반영 코드는 4절 #1 로 미리 배포) | 운영 DB·동작이 바뀜 |
 
 - 운영 서버 예약 작업 없음 확인(읽기 전용): `crontab -l; sudo crontab -l; systemctl list-timers --all | grep -i ch2`. 무엇이 나오면 멈추고 보고한다.
-- **낮 순서:** 동결 시작 → (1·2) 무거운 동기화·운영 카운터 기록 → 5절 로컬 적용 → 5.4 검증·로컬 전체 해시·(3) 로컬 카운터 기록 → T 확인 → built 덤프·업로드(S 실측)·built QA 행 수 기록 → 밤 6.1.
+- **낮 순서:** 동결 시작 → (1·2) 무거운 동기화·운영 카운터 기록 → 5절 로컬 적용 → 5.4 검증·(3) 로컬 카운터 기록(①) → 로컬 전체 해시(②) → T 확인 → built 덤프·업로드(S 실측)·built QA 행 수 기록 → 밤 6.1.
+- **순서 판정 시계:** ①~⑤ 에 쓰는 시각은 모두 로컬 PC 시계의 UTC 이고, 각 명령이 끝난 뒤에 찍는다. 출처는 `local`. DB `now()` 는 산출물의 `server_now`(출처 `server`)로만 남기고 순서 판정에 쓰지 않는다. 로컬에서 끝나는 명령은 스크립트가 끝날 때 찍는다. 운영 서버에서 실행한 산출물은 `--order-clock defer` 로 비워 두고, 파일을 로컬로 가져온 뒤 `stamp-local` 로 찍는다(서버 시계로 순서를 재지 않는다).
 - **낮(동결 시작 직후, 로컬 적용 전, Codex) — 무거운 동기화와 카운터 기록을 같이:**
   1. 3절 `prod_sync_check snapshot --allow-heavy`(세 DB) → 아직 적용 전인 로컬과 compare(다름 0) → 결과 파일(`--result-out`, 48시간 유효 — 5절 로컬 적용·밤 병합 `--real-apply` 가 쓴다). 예상 collective 3~6 · rent 5~10 · built 1분(운영 최대 2배).
   2. **같은 시간대에** 운영의 가벼운 비교 기준을 기록한다(읽기 전용, 몇 초):
-     `cd /opt/ch2_Macro && backend/.venv/bin/python scripts/ops/collective_p2_verify/prod_stat_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --db-env RENT_DATABASE_URL --db-env BUILT_DATABASE_URL --env-file backend/.env --out /var/backups/ch2/p2/stat_day_prod.json`
-     — 세 DB 모든 표의 `pg_stat_user_tables(n_tup_ins, n_tup_upd, n_tup_del)` 와 `pg_stat_database.stats_reset`. 종료 0 이어야 한다(시간 초과·DB 누락은 1).
-  3. 로컬도 5.4 의 전체 해시와 같은 때에 기준을 기록한다: `py scripts\ops\collective_p2_verify\prod_stat_compare.py snapshot --db-env … --env-file backend\.env --out logs\collective_p2\stat_day_local.json`.
+     `cd /opt/ch2_Macro && backend/.venv/bin/python scripts/ops/collective_p2_verify/prod_stat_compare.py snapshot --order-clock defer --db-env COLLECTIVE_DATABASE_URL --db-env RENT_DATABASE_URL --db-env BUILT_DATABASE_URL --env-file backend/.env --out /var/backups/ch2/p2/stat_day_prod.json`
+     — 세 DB 모든 표의 `pg_stat_user_tables(n_tup_ins, n_tup_upd, n_tup_del)` 와 `pg_stat_database.stats_reset`, `track_counts`. 한 DB 를 10초 간격으로 두 번 읽어 값이 같을 때만 남긴다. 종료 0 이어야 한다(시간 초과·DB 누락·`track_counts` 가 on 이 아님·두 번 읽기가 다름은 1). 이 파일의 순서 시각은 서버에서 찍지 않는다.
+  3. 로컬 카운터 기준(①)은 5.4 전체 해시(②)보다 **먼저** 기록한다: `py scripts\ops\collective_p2_verify\prod_stat_compare.py snapshot --db-env … --env-file backend\.env --out logs\collective_p2\stat_day_local.json`. 명령이 끝난 시각이 `measured_at`(출처 `local`)이다.
   - 이 뒤로 밤까지 F1~F6 을 하지 않는다. 밤에는 무거운 동기화를 다시 하지 않고 **가벼운 비교**(6.1 3)로 「낮 이후 운영 전용 표 밖 쓰기 없음」만 본다.
 - **운영 쓰기 차단 = nginx 점검 모드(안 A):** 운영 서버가 직접 쓰는 표(2.5 — 좌표 캐시 3표·QA 기록)는 API 요청으로만 바뀐다. 밤 점검 창(6.1) 동안 **nginx 가 API 전체에 503** 을 돌려주게 해서, 운영 전용 4표 덤프부터 promote 끝까지 운영에 새 쓰기가 생기지 않게 한다.
   - **나누기:** 낮 = 키 이전·로컬 적용·T 확인·동결·무거운 동기화·카운터 기록(운영 서비스는 그대로). 밤 = 6.1 의 한 묶음(점검 모드 ON → … → OFF).
@@ -475,8 +476,8 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 - `prod_c5_core.py --env-file backend/.env --out logs/collective_p2/local_c5.json` 를 돌린다.
 - 7.1 기대값(0 이어야 할 지표)을 모두 통과해야 한다. 이 JSON 이 운영 비교의 기준이다.
 - 운영 비교용 행 해시 스냅샷도 뜬다.
-  - `prod_hash_compare.py snapshot --db-env <DB별> --out logs/collective_p2/hash_local_<db>_day.json` 로 DB 3개를 뜬다(**낮 전체 해시** — 밤에는 병합한 표만 다시 떠서 overlay, 6.1 10).
-  - 로컬 반영 직후에 뜨고, 그 뒤 로컬은 밤 병합(4표) 말고는 바꾸지 않는다. 같은 때 가벼운 비교 기준(`stat_day_local.json`, 3.2)도 뜬다.
+  - **먼저** 3.2 의 로컬 카운터 기준(`stat_day_local.json`, ①)을 끝내고, **그 다음** `prod_hash_compare.py snapshot --db-env <DB별> --out logs/collective_p2/hash_local_<db>_day.json` 로 DB 3개를 뜬다(**낮 전체 해시** ② — 밤에는 병합한 표만 다시 떠서 overlay, 6.1 10). ① 과 ② 가 같은 초여도 된다. ② 가 ① 보다 이르면 밤 overlay 가 거절한다.
+  - 로컬 반영 직후에 뜨고, 그 뒤 로컬은 밤 병합(4표) 말고는 바꾸지 않는다. 해시가 끝난 시각이 각 파일의 `measured_at`(출처 `local`)이다. `server_now` 는 참고다.
 
 ## 6. 운영 반영 (새벽 점검 창 — 한 묶음)
 
@@ -566,24 +567,24 @@ location /api/ {
 | # | 할 일 | 누가 | 통과 조건 | 예상 |
 |---|---|---|---|---|
 | 1 | **점검 모드 ON**(6.0 켜기) · 17곳 503 확인 | Codex | 도메인별 17곳 모두 503(macro·IP·허브·viewer), 서버 안 `/health` 200 | 3분 |
-| 2 | **진행 중 요청 0**(6.0 ①②③) → `FREEZE_AT` 기록 | Codex | 백엔드 연결 0 · 켠 뒤 503 아닌 API 응답 없음 · 앱 DB 세션 0 | 1~5분 |
+| 2 | **진행 중 요청 0**(6.0 ①②③) → `FREEZE_AT`(KST, 덤프·병합용)와 `FREEZE_AT_UTC`(로컬 PC UTC, 순서 판정용)를 같은 순간에 기록 | Codex | 백엔드 연결 0 · 켠 뒤 503 아닌 API 응답 없음 · 앱 DB 세션 0 | 1~5분 |
 | 2a | **built QA 행 수 재확인**(낮과 같은 읽기 전용 쿼리, 6절 머리) | Codex | 낮 기록(0)과 같음. **다르면 즉시 중단 → 점검 모드 OFF**(아직 아무것도 바꾸지 않음) | 1분 |
-| 3 | **가벼운 비교**(무거운 동기화 대신 — 낮 이후 운영 전용 표 밖 쓰기 없음): 운영 `prod_stat_compare.py compare --baseline /var/backups/ch2/p2/stat_day_prod.json --db-env COLLECTIVE_DATABASE_URL --db-env RENT_DATABASE_URL --db-env BUILT_DATABASE_URL --env-file backend/.env --result-out /var/backups/ch2/p2/stat_night_prod_result.json` · 로컬도 같은 명령(`--baseline logs\collective_p2\stat_day_local.json --result-out logs\collective_p2\stat_night_local_result.json`) | Codex · Opus | 둘 다 종료 0. **실패(종료 1) = 중단 → OFF**: 운영 전용 표(집합 3 · 임대 1 · 복합 `qa_audit_run`) 밖 표의 `n_tup_ins·upd·del` 하나라도 다름 · `stats_reset` 바뀜 · 표 빠짐·새 표 · DB 누락 · **60초 안에 안 끝남**(시간 초과·누락은 통과가 아님) | **L** |
+| 3 | **가벼운 비교**(③, 무거운 동기화 대신 — 낮 이후 운영 전용 표 밖 쓰기 없음): 운영 `prod_stat_compare.py compare --order-clock defer --baseline /var/backups/ch2/p2/stat_day_prod.json --db-env COLLECTIVE_DATABASE_URL --db-env RENT_DATABASE_URL --db-env BUILT_DATABASE_URL --env-file backend/.env --result-out /var/backups/ch2/p2/stat_night_prod_result.json` · 로컬 `prod_stat_compare.py compare --baseline logs\collective_p2\stat_day_local.json --result-out logs\collective_p2\stat_night_local_result.json`(끝난 시각 = `compared_at`, 출처 `local`) | Codex · Opus | 둘 다 종료 0. **실패(종료 1) = 중단 → OFF**: 운영 전용 표(집합 3 · 임대 1 · 복합 `qa_audit_run`) 밖 표의 `n_tup_ins·upd·del` 하나라도 다름 · `stats_reset` 바뀜 · 표 빠짐·새 표 · DB 누락 · `track_counts` 가 on 이 아님 · 한 DB 를 10초 간격으로 두 번 읽은 값이 다름 · **60초 안에 안 끝남**(10초 대기 3회를 포함한다. 접속이 멈춰도 60초에 끊는다. 시간 초과·누락은 통과가 아님) | **L** |
 | 4 | **운영 전용 4표 새 덤프**(데이터만, 아래 명령) + manifest → 로컬 `logs/collective_p2/prod_only/` | Codex | `created_kst ≥ FREEZE_AT` | 1분(덤프 실측 1.6초 · 0.6MB) |
 | 5 | `git check-ignore` 로 커밋 대상 아님 확인 · 임시 원본 DB 2개 복원(표 구조는 로컬 반영본 `pg_dump --schema-only -t <표>` → `pg_restore --data-only`) | Opus | ignore 됨 · 임시 DB 행 수 = manifest | 5~9 합 5분(실측 4.6초) |
 | 6 | 병합 드라이런(`--manifest … --freeze-at $FREEZE_AT`) | Opus | 종료 0. **manifest 엄격 검사**: DB 2개(`collective_stats`·`rent_stats`)·표 4개 정확히 — 누락·중복·모르는 DB/표·행 수 누락이면 쓰기 전에 종료 2 · SHA-256·크기 = 덤프 · 덤프 시각 ≥ `FREEZE_AT` · 임시 DB 행 수 = manifest | (실측 1.4초) |
-| 7 | **병합 적용** `--real-apply …`(아래) | Opus | 종료 0 · 보고서 `applied: true` · DB 마다 한 트랜잭션 · 계획 = 넣은/바꾼 행 = 최종 행 · 대상 원장에 없는 키는 버리고 `drop_not_in_ledger` 로 기록 | (실측 1.3초) |
+| 7 | **병합 적용** `--real-apply …`(아래). 명령이 끝난 시각을 로컬 PC UTC 로 `MERGED_AT_UTC`(④)에 적는다 | Opus | 종료 0 · 보고서 `applied: true` · DB 마다 한 트랜잭션 · 계획 = 넣은/바꾼 행 = 최종 행 · 대상 원장에 없는 키는 버리고 `drop_not_in_ledger` 로 기록 | (실측 1.3초) |
 | 8 | **c29 검사** `check --report <7 보고서>` | Opus | 종료 0. **엄격 판정**: `applied=true` · 두 쪽·네 표 보고서 · 필수 카운터 · 보고서의 원본/대상 DB 이름 = 검사 인자. 게이트: 병합 고아 0 · C-2/C-01 옛 키 좌표 0 · 조각 키 운영 좌표 0. 충돌 건수·규칙별 건수 기록 | (실측 4.4초) |
 | 9 | 스냅샷 A → **병합 재실행** → 스냅샷 B → `idempotent --report <재실행 보고서> --a A --b B` | Opus | 종료 0: insert 0 · update 0 · QA 같은 id 추가·새 id 0 · 네 표 행 수·해시 같음 · QA 시퀀스 `last_value`·`is_called` 같음 | (실측 합 약 3초) |
-| 10 | **전제: 3 의 가벼운 비교(운영·로컬) 통과.** ① 로컬 promote 덤프 collective·rent(2.2 — 병합 뒤라 여기서 다시 만든다) ② **병합한 표만 다시 해시**(전체 행 해시는 낮 5.4 결과를 쓴다): `prod_hash_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --tables collective_building_geocodes,collective_commercial_map_geocodes,qa_audit_run --out logs\collective_p2\hash_local_collective_merged.json` · rent 는 `--tables rent_building_geocodes` → `overlay --base hash_local_<db>_day.json --patch hash_local_<db>_merged.json --stat-result logs\collective_p2\stat_night_local_result.json --out hash_local_<db>.json`(가벼운 비교 결과가 통과가 아니거나 낮 해시보다 먼저면 거절, 종료 2). built 는 낮 해시 그대로 ③ scp → 서버에서 크기·SHA-256 대조 | Opus → Codex | 덤프 종료 0 · overlay 종료 0 · 대조 일치 | 덤프 6분 21초(리허설 DB 실측) + **H** + **S** |
+| 10 | **전제: 3 의 가벼운 비교(운영·로컬) 통과.** ① 로컬 promote 덤프 collective·rent(2.2 — 병합 뒤라 여기서 다시 만든다) ② **병합한 표만 다시 해시**(⑤, 전체 행 해시는 낮 5.4 결과를 쓴다): `prod_hash_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --tables collective_building_geocodes,collective_commercial_map_geocodes,qa_audit_run --out logs\collective_p2\hash_local_collective_merged.json` · rent 는 `--tables rent_building_geocodes` → `overlay --base hash_local_<db>_day.json --patch hash_local_<db>_merged.json --stat-result logs\collective_p2\stat_night_local_result.json --merged-at $MERGED_AT_UTC --freeze-at $FREEZE_AT_UTC --out hash_local_<db>.json`. 거절(종료 2): 가벼운 비교가 통과가 아님, 시각 출처가 `local` 이 아님, ① 카운터 기준 > ② 낮 해시, 또는 ②<③<④<⑤ 가 아님, ⑤ 가 점검 ON 이전이거나 같음. built 는 낮 해시 그대로 ③ scp → 서버에서 크기·SHA-256 대조 | Opus → Codex | 덤프 종료 0 · overlay 종료 0 · 대조 일치 | 덤프 6분 21초(리허설 DB 실측) + **H** + **S** |
 | 11 | **세 DB promote**(2.2 `vps_promote_db_sql.sh`, collective → rent → built). DB 마다 `/health` OK 뒤 다음 | Codex | 스크립트 종료 0(R4) | 47분(11/3 실측: built 1분 5초 · collective 15분 7초 · rent 30분 44초, 반영 전 덤프 포함) |
 | 12 | `analysis_cache` 비우기(6.3) · **R5 스모크를 서버 localhost 로**(6.3) · `vps_collective_smoke.sh` | Codex/Opus | R5 종료 0(3/3) · 스모크 통과 | 3분 |
 | 13 | **점검 모드 OFF**(6.0 끄기) · 17곳 확인 — **마감 06:00 KST** | Codex | 503 인 곳 0 | 2분 |
-| 14 | 7절 운영 확인(Opus, 읽기 전용) — OFF 뒤 **07:00 까지** | Opus | R1~R3 | 7절(점검 창 밖) |
+| 14 | 7절 핵심 확인(Opus, 읽기 전용) — OFF 뒤 **07:00 까지**: R5 는 12 에서 이미 끝났다. 여기서는 주요 화면과 7.1 | Opus | R1·R2 · 화면 | 7.1 |
 
-- **시간식(T 결정):** **점검 ON 시작 ≤ 06:00 − (74분 + L + H + S + 30분)**. 06:00 = 점검 OFF 마감. 7절 운영 확인은 OFF 뒤 07:00 까지.
+- **시간식(T 결정):** **점검 ON 시작 ≤ 06:00 − (74분 + L + H + S + 30분)**. 06:00 = 점검 OFF 마감. 07:00 까지는 핵심 확인(R5·주요 화면·7.1)만 한다. 세 DB 전체 해시(7.2)는 **09:00 까지** 마치는 사후 검증이다. 거기서 차이가 나면 6.2 되돌리기를 판단한다. 그 사이 화면은 열려 있다.
   - **74분**(L·H·S 를 뺀 단계 합): 1 3분 · 2 5분(상한) · 2a 1분 · 4 1분 · 5~9 5분 · 10 로컬 덤프 6분 21초 · 11 47분 · 12 3분 · 13 2분 = 73분 21초 → 74분.
-  - **L = 1분**(가벼운 비교, 리허설 실측 2026-11-16: 세 DB 스냅샷 0.44초 · 비교 0.45초 — 표 47·14·9개. 운영 2배·사람 확인을 더해 1분으로 잡음).
+  - **L = 1분**(가벼운 비교. 세 DB 를 10초 간격으로 두 번 읽는 30초가 60초 제한 안에 들어간다. 리허설 실측 2026-11-16 쿼리 자체는 0.5초 안쪽 — 표 47·14·9개. 운영 2배·사람 확인을 더해 1분으로 잡음).
   - **H = 1분**(병합 표 해시, 리허설 실측: collective 3표 0.49초 · rent 1표 0.41초 + overlay. 1분으로 잡음).
   - **S** = 낮 built 업로드에서 실측: 속도 `v = 파일 크기 / 걸린 시간`(`Measure-Command { scp … built_stats_p2_promote.sql.gz … }`), `S = 5.0GB / v × 1.2`. `logs/collective_p2/window_plan.txt` 에 v·S·시작 상한을 적는다.
   - 따라서 **시작 상한 = 06:00 − (106분 + S)**. 예: v = 10MB/s → S ≈ 10분 → **04:04 전에 ON**. v = 5MB/s → S ≈ 20분 → 03:54 전.
@@ -631,14 +632,14 @@ PY scripts\lab\collective_p2\c29_merge_prod_only_check.py --dst-collective colle
 | (낮) built QA 행 수가 0 이 아님 | — | — | 그날은 진행하지 않는다(점검 모드를 켜지 않음). 행의 출처를 확인하고 T 에게 알린다 | 다른 날 |
 | 1~2 점검 모드가 안 걸림 · 진행 중 요청이 0 이 안 됨 | 반영 전 | 병합 전 | 설정 확인(`nginx -t`, include 누락 location), 남은 연결의 출처 확인. 5분 안에 안 되면 중단 | OFF · 다른 새벽에 다시 |
 | 2a built QA 행 수가 낮 기록과 다름 | 반영 전 | 병합 전 | **즉시 중단.** 아무것도 바꾸지 않은 상태다. 늘어난 행의 출처(누가 QA 를 저장했는지)를 확인하고 T 에게 알린다 | OFF · 다른 날(낮 built 덤프부터 다시) |
-| 3 가벼운 비교 실패(카운터 다름 · `stats_reset` 바뀜 · 표 빠짐 · DB 누락 · 60초 초과) | 반영 전 | 병합 전 | **즉시 중단.** 결과 파일의 문제 목록으로 어느 표가 바뀌었는지 기록. 다시 하려면 낮 동결·무거운 동기화·카운터 기록부터(밤에 무거운 동기화를 하지 않는다) | OFF · 다른 날 |
+| 3 가벼운 비교 실패(카운터 다름 · `stats_reset` 바뀜 · 표 빠짐 · DB 누락 · `track_counts` off · 두 번 읽기 불일치 · 60초 초과) | 반영 전 | 병합 전 | **즉시 중단.** 결과 파일의 문제 목록으로 어느 표가 바뀌었는지 기록. 다시 하려면 낮 동결·무거운 동기화·카운터 기록부터(밤에 무거운 동기화를 하지 않는다) | OFF · 다른 날 |
 | 4~6 덤프·manifest·사전 확인 거절(종료 2) | 반영 전 | 병합 전 | 4 부터 다시(새 덤프 → 새 manifest). manifest 형식 문제면 Codex 가 고쳐 다시 만든다 | 통과 → 7 · 세 번 실패 → OFF · 중단 |
 | 7 병합 실패 | 반영 전 | DB 마다 트랜잭션: 실패한 DB 는 그대로, 먼저 끝난 DB 는 병합됐을 수 있음 | 보고서·오류 확인 → 고친 뒤 7 다시(멱등 — 이미 들어간 행은 다시 넣지 않음) | 8 로 · 못 고치면 OFF · 중단(로컬 병합분은 그대로 두고 다음 창에서 4 부터, 낮 작업은 되돌리지 않음) |
 | 8~9 c29 · 멱등 실패 | 반영 전 | 병합됨 | 실패 항목 확인(보고서 형식이면 7 다시 → 8, 고아·옛 키 좌표면 연결표·규칙 확인). 고칠 수 없으면 promote 하지 않음 | OFF · 중단 |
 | 10 덤프·병합 표 해시·overlay·scp 실패 | 반영 전 | 병합됨 | 다시(overlay 거절이면 3 의 로컬 가벼운 비교 결과 확인). 시간식(6.1)에 안 들어오면 11 전에 멈춤 | 11 로 · 안 되면 OFF · 중단 |
 | 11 promote 중 실패(R4·R6) | **일부 DB 반영됨** | 병합됨 | 8절 롤백 — **이미 새 상태가 된 DB 모두**를 반영 직전 덤프로 → `prod_sync_check` 로 반영 전 운영 스냅샷과 다름 0 → 옛 상태 확인(옛 키 상세 200) | OFF |
 | 12 R5·스모크 실패 | 반영됨 | 병합됨 | 백엔드 재시작 뒤 R5 한 번 더. 그래도 실패면 8절 롤백(세 DB 모두) → 다름 0 확인 | OFF |
-| 14 OFF 뒤 7절 R1~R3 실패 | 반영됨 · 사용자 접근 중 · OFF 뒤 새로 쌓인 운영 전용 행 있음 | — | 아래 「OFF 뒤 되돌리기」 | OFF |
+| 14 핵심 확인(07:00, R1·R2·화면) 또는 7.2 해시(09:00, R3) 실패 | 반영됨 · 사용자 접근 중 · OFF 뒤 새로 쌓인 운영 전용 행 있음 | — | 아래 「OFF 뒤 되돌리기」. 해시 차이는 09:00 까지 나온 결과로 판단한다 | OFF |
 
 **OFF 뒤 되돌리기(T 결정 2026-11-16 — 서버 역방향 병합은 하지 않는다):**
 
@@ -683,6 +684,10 @@ PY scripts\lab\collective_p2\c29_merge_prod_only_check.py --dst-collective colle
 
 ## 7. 운영 확인 (Opus, 읽기 전용)
 
+07:00 까지는 핵심만 본다. R5 스모크는 6.1 12 에서 이미 끝나 있다. 여기서는 주요 화면과 7.1 이다.
+
+세 DB 전체 해시(7.2)는 07:00 창에서 빼서, 09:00 까지 마치는 사후 검증으로 둔다. 차이가 나면 6.2 의 되돌리기를 판단한다. 점검 OFF(06:00) 뒤 해시가 끝나기 전까지 화면은 열려 있다.
+
 ### 7.1 c5 핵심 지표 — `prod_c5_core.py`
 
 ```bash
@@ -706,7 +711,7 @@ python3 prod_c5_core.py --env-file /opt/ch2_Macro/backend/.env --out /var/backup
   - `c2_shape_pending` 은 0 이어야 한다.
 - 무거운 검사는 T 승인 뒤 실행한다.
 
-### 7.2 행 해시 비교 — `prod_hash_compare.py`
+### 7.2 행 해시 비교 — `prod_hash_compare.py` (사후 검증, 09:00 까지)
 
 ```bash
 python3 prod_hash_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --env-file /opt/ch2_Macro/backend/.env --out /var/backups/ch2/p2/hash_prod_collective.json

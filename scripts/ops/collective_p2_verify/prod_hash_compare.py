@@ -26,7 +26,7 @@
   python prod_hash_compare.py compare local_collective.json prod_collective.json
   # 밤 점검 창(런북 6.1 10): 낮 전체 해시 + 밤에 병합 표만 다시 → 한 파일(가벼운 비교 통과가 전제)
   python prod_hash_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --tables collective_building_geocodes,collective_commercial_map_geocodes,qa_audit_run --out night_merged.json
-  python prod_hash_compare.py overlay --base hash_local_collective_day.json --patch night_merged.json --stat-result stat_local_result.json --out hash_local_collective.json
+  python prod_hash_compare.py overlay --base hash_local_collective_day.json --patch night_merged.json --stat-result stat_local_result.json --merged-at 2026-11-19T18:05:00+00:00 --freeze-at 2026-11-19T17:10:00+00:00 --out hash_local_collective.json
 """
 from __future__ import annotations
 
@@ -38,8 +38,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from _common import (  # noqa: E402
-    EXIT, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn, table_columns,
-    finalize_result, make_result, now_iso, snapshot_failures, table_exists, write_json,
+    EXIT, PASS, DIFF, STATUS_KO, UNVERIFIED, Timed, db_name, db_url, md_table, read_json, ro_conn,
+    table_columns, finalize_result, make_result, now_iso, snapshot_failures, stamp_local, table_exists, write_json,
 )
 
 # 이번 반영이 바꾸는 표(원장·부속·통계·연결표·보존 표). 보존 표(_p2_before)는 promote 로 같이 올라가므로 함께 비교한다.
@@ -112,10 +112,20 @@ def sums_sql(table: str, types: dict[str, str], exclude: list[str], cond: str) -
 
 
 def snapshot(conn, tables: list[str], *, exclude: list[str], id_chunks: int = 16, timeout_ms: int = 600_000,
-             mode: str = "hash") -> dict:
+             mode: str = "hash", order_clock: str = "local") -> dict:
+    """measured_at 은 명령이 끝난 시각이다. order_clock=local 이면 출처 local(이 프로세스가 로컬 PC 일 때).
+    defer 면 비워 두고, 로컬 PC 가 stamp-local 로 나중에 찍는다. server_now 는 DB now() 참고값이라 순서 판정에 쓰지 않는다."""
     t = Timed()
-    out: dict = {"db": db_name(conn), "measured_at": now_iso(), "mode": mode, "exclude": exclude,
-                 "requested": list(tables), "tables": {}}
+    from sqlalchemy import text
+
+    try:
+        server_now = conn.execute(text("SELECT now()::text")).scalar()
+    except Exception:  # noqa: BLE001  — 참고값이라 실패해도 해시는 계속한다
+        conn.rollback()
+        server_now = None
+    out: dict = {"db": db_name(conn), "measured_at": None, "measured_at_source": None,
+                 "server_now": None if server_now is None else str(server_now), "server_now_source": "server",
+                 "mode": mode, "exclude": exclude, "requested": list(tables), "tables": {}}
     minus = "".join(f" - '{c}'" for c in exclude)
     for tb in tables:
         if not table_exists(conn, tb):
@@ -137,6 +147,9 @@ def snapshot(conn, tables: list[str], *, exclude: list[str], id_chunks: int = 16
             parts[name] = None if r is None else [int(r[0]), r[1]]
         out["tables"][tb] = parts
     out["_timings"] = t.log
+    if order_clock == "local":
+        out["measured_at"] = now_iso()
+        out["measured_at_source"] = "local"
     return out
 
 
@@ -275,12 +288,45 @@ def _parse_iso(s):
     return d if d.tzinfo else d.replace(tzinfo=_dt.timezone.utc)
 
 
-def overlay(base: dict, patch: dict, stat_result: dict) -> dict:
+def _local_at(container: dict, field: str, label: str):
+    """순서 판정은 출처가 local 인 시각만 본다. server_now 는 읽지 않는다."""
+    if not isinstance(container, dict) or container.get(field + "_source") != "local":
+        raise OverlayError(f"{label} 시각 출처가 local 이 아님")
+    t = _parse_iso(container.get(field))
+    if t is None:
+        raise OverlayError(f"{label} 시각을 읽을 수 없음")
+    return t
+
+
+def _check_order(base: dict, patch: dict, stat_result: dict, merged_at: str, freeze_at: str) -> None:
+    """① 낮 카운터 기준 ≤ ② 낮 전체 해시 < ③ 밤 카운터 비교 < ④ 병합 < ⑤ 병합 표 해시.
+    ⑤ 는 점검 ON(freeze_at) 보다 뒤여야 한다. 시각은 모두 로컬 PC UTC."""
+    t1 = _local_at(stat_result, "baseline_measured_at", "카운터 기준")
+    t2 = _local_at(base, "measured_at", "낮 해시")
+    t3 = _local_at(stat_result, "compared_at", "밤 카운터 비교")
+    t4 = _local_at({"merged_at": merged_at, "merged_at_source": "local"}, "merged_at", "병합")
+    t5 = _local_at(patch, "measured_at", "병합 표 해시")
+    tf = _local_at({"freeze_at": freeze_at, "freeze_at_source": "local"}, "freeze_at", "점검 ON")
+    if t1 > t2:
+        raise OverlayError("카운터 기준이 낮 해시보다 늦게 기록됨")
+    if not (t2 < t3):
+        raise OverlayError("밤 카운터 비교가 낮 해시보다 먼저거나 같음")
+    if not (t3 < t4):
+        raise OverlayError("병합이 밤 카운터 비교보다 먼저거나 같음")
+    if not (t4 < t5):
+        raise OverlayError("병합 표 해시가 병합보다 먼저거나 같음")
+    if not (t5 > tf):
+        raise OverlayError("병합 표 해시가 이번 점검 창(점검 ON 이후)이 아님")
+
+
+def overlay(base: dict, patch: dict, stat_result: dict, *, merged_at: str, freeze_at: str) -> dict:
     """낮 전체 해시 스냅샷(base)에서 병합한 표만 밤 스냅샷(patch)으로 바꾼다. 전제(하나라도 어긋나면 OverlayError):
-    ① 가벼운 비교(prod_stat_compare compare) 결과가 통과이고 이 DB 를 포함하며, base 측정 뒤에 비교했다
-    ② base·patch 가 같은 DB·같은 방식(mode·exclude)
-    ③ patch 의 표 = 이 DB 의 병합 표 집합(MERGED_TABLES) 정확히, 조각 쿼리 실패 없음, 표가 비지 않음
-    ④ patch 표가 base 의 대상에 있음."""
+    ① 가벼운 비교(prod_stat_compare compare) 결과가 통과이고 이 DB 를 포함한다
+    ② 시각 순서: 카운터 기준 ≤ 낮 해시 < 밤 비교 < 병합 < 병합 표 해시, 그리고 병합 표 해시는 점검 ON 이후.
+       순서에 쓰는 시각의 출처는 local. server_now 는 보지 않는다.
+    ③ base·patch 가 같은 DB·같은 방식(mode·exclude)
+    ④ patch 의 표 = 이 DB 의 병합 표 집합(MERGED_TABLES) 정확히, 조각 쿼리 실패 없음, 표가 비지 않음
+    ⑤ patch 표가 base 의 대상에 있음."""
     db = base.get("db")
     if not isinstance(stat_result, dict) or stat_result.get("kind") != "stat_compare_result":
         raise OverlayError("가벼운 비교 결과 파일이 아님(prod_stat_compare compare --result-out)")
@@ -288,9 +334,6 @@ def overlay(base: dict, patch: dict, stat_result: dict) -> dict:
         raise OverlayError(f"가벼운 비교가 통과가 아님({stat_result.get('status')}) — 낮 해시를 쓸 수 없음")
     if db not in (stat_result.get("dbs") or []):
         raise OverlayError(f"가벼운 비교 결과에 {db} 가 없음")
-    tb, tc = _parse_iso(base.get("measured_at")), _parse_iso(stat_result.get("compared_at"))
-    if tb is None or tc is None or tc < tb:
-        raise OverlayError("가벼운 비교가 낮 해시보다 먼저 했거나 시각을 읽을 수 없음")
     if patch.get("db") != db:
         raise OverlayError(f"DB 다름: 낮 {db} · 밤 {patch.get('db')}")
     for k in ("mode", "exclude"):
@@ -311,11 +354,18 @@ def overlay(base: dict, patch: dict, stat_result: dict) -> dict:
     not_in_base = [t for t in want if t not in (base.get("requested") or [])]
     if not_in_base:
         raise OverlayError(f"낮 해시 대상에 없는 표: {not_in_base}")
+    _check_order(base, patch, stat_result, merged_at, freeze_at)
     return {**base, "tables": {**base["tables"], **{t: patch["tables"][t] for t in want}},
             "_timings": [x for x in base.get("_timings") or [] if x.get("query", "").split(" ")[0] not in want]
                         + list(patch.get("_timings") or []),
             "overlay": {"tables": want, "patch_measured_at": patch.get("measured_at"),
-                        "stat_compare_at": stat_result.get("compared_at")}}
+                        "patch_measured_at_source": patch.get("measured_at_source"),
+                        "stat_compare_at": stat_result.get("compared_at"),
+                        "stat_compare_at_source": stat_result.get("compared_at_source"),
+                        "baseline_measured_at": stat_result.get("baseline_measured_at"),
+                        "baseline_measured_at_source": stat_result.get("baseline_measured_at_source"),
+                        "merged_at": merged_at, "merged_at_source": "local",
+                        "freeze_at": freeze_at, "freeze_at_source": "local"}}
 
 
 def main(argv=None) -> int:
@@ -325,7 +375,12 @@ def main(argv=None) -> int:
     o.add_argument("--base", type=Path, required=True, help="낮 snapshot JSON(전 표)")
     o.add_argument("--patch", type=Path, required=True, help="밤 snapshot JSON(--tables = 병합 표만)")
     o.add_argument("--stat-result", type=Path, required=True, help="prod_stat_compare compare --result-out JSON(통과)")
+    o.add_argument("--merged-at", required=True, help="병합 적용 명령이 끝난 시각(로컬 PC UTC, 출처 local)")
+    o.add_argument("--freeze-at", required=True, help="점검 ON·진행 중 요청 0 을 확인한 시각(로컬 PC UTC, 출처 local)")
     o.add_argument("--out", type=Path, required=True)
+    st = sub.add_parser("stamp-local", help="서버에서 만든 JSON 에 로컬 PC UTC 시각을 찍는다(순서 판정용)")
+    st.add_argument("--file", type=Path, required=True)
+    st.add_argument("--field", action="append", required=True, help="찍을 칸. 예: measured_at")
     s = sub.add_parser("snapshot")
     s.add_argument("--db-env", required=True, help="접속 URL 환경변수 이름(값은 출력하지 않음)")
     s.add_argument("--env-file", type=Path, default=None)
@@ -334,6 +389,8 @@ def main(argv=None) -> int:
     s.add_argument("--id-chunks", type=int, default=16)
     s.add_argument("--timeout", type=int, default=600, help="조각 쿼리 시간 제한(초)")
     s.add_argument("--mode", choices=["hash", "sums"], default="hash")
+    s.add_argument("--order-clock", choices=["local", "defer"], default="local",
+                   help="local=이 명령이 끝난 시각을 로컬 PC UTC 로 기록. defer=비워 두고 stamp-local 로 찍는다(서버에서 실행할 때)")
     s.add_argument("--out", type=Path, required=True)
     g = sub.add_parser("pgcheck", help="작은 표로 hash·sums 를 함께 떠서 PG 버전 차이를 판정할 재료를 만든다")
     g.add_argument("--db-env", required=True)
@@ -345,9 +402,14 @@ def main(argv=None) -> int:
     c.add_argument("right", type=Path)
     c.add_argument("--result-out", type=Path, default=None)
     a = p.parse_args(argv)
+    if a.cmd == "stamp-local":
+        write_json(a.file, stamp_local(read_json(a.file), *a.field))
+        print(f"local 시각 기록: {', '.join(a.field)} → {a.file}")
+        return EXIT[PASS]
     if a.cmd == "overlay":
         try:
-            res = overlay(read_json(a.base), read_json(a.patch), read_json(a.stat_result))
+            res = overlay(read_json(a.base), read_json(a.patch), read_json(a.stat_result),
+                          merged_at=a.merged_at, freeze_at=a.freeze_at)
         except (OSError, ValueError, OverlayError) as ex:
             print(f"중단: {ex}", file=sys.stderr)
             return EXIT[UNVERIFIED]
@@ -361,7 +423,8 @@ def main(argv=None) -> int:
             if not tables:
                 raise SystemExit(f"기본 대상 표가 없는 DB: {name} — --tables 로 지정")
             snap = snapshot(conn, tables, exclude=[x for x in a.exclude_cols.split(",") if x],
-                            id_chunks=a.id_chunks, timeout_ms=a.timeout * 1000, mode=a.mode)
+                            id_chunks=a.id_chunks, timeout_ms=a.timeout * 1000, mode=a.mode,
+                            order_clock=a.order_clock)
         write_json(a.out, snap)
         fails = [x for x in snap["_timings"] if not x["ok"]]
         print(f"{name}: 표 {len(tables)} · 조각 쿼리 {len(snap['_timings'])} · 실패 {len(fails)} · "

@@ -116,9 +116,20 @@ STATUS_KO = {PASS: "통과", DIFF: "차이", UNVERIFIED: "검증 못 함"}
 
 
 def now_iso() -> str:
+    """이 프로세스가 도는 기계의 시계를 UTC 로. 순서 판정에 쓰는 값은 로컬 PC 에서 끝난 뒤에만 local 로 둔다."""
     import datetime as _dt
 
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
+
+
+def stamp_local(obj: dict, *fields: str) -> dict:
+    """로컬 PC 시계(UTC)로 순서 판정 시각을 찍고 출처를 local 로 둔다. server_now 는 건드리지 않는다."""
+    now = now_iso()
+    out = dict(obj)
+    for f in fields:
+        out[f] = now
+        out[f + "_source"] = "local"
+    return out
 
 
 def oldest_measured(*snaps: dict) -> tuple[str | None, list[str]]:

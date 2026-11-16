@@ -7,6 +7,7 @@ import copy
 import importlib.util
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -29,8 +30,8 @@ hc = _load("prod_hash_compare")
 
 
 def _db(name, tables, reset="2026-08-01 00:00:00+00"):
-    return {"db": name, "measured_at": "2026-11-17T01:00:00+00:00", "stats_reset": reset, "stats_reset_ok": True,
-            "tables": tables}
+    return {"db": name, "measured_at": "2026-11-17T01:00:00+00:00", "measured_at_source": "local",
+            "track_counts": "on", "stable": True, "stats_reset": reset, "stats_reset_ok": True, "tables": tables}
 
 
 def _snap(**over):
@@ -41,7 +42,8 @@ def _snap(**over):
         "rent_stats": _db("rent_stats", {"public.rent_transactions": [7, 0, 0], "public.rent_building_geocodes": [3, 0, 0]}),
         "built_stats": _db("built_stats", {"public.built_transactions": [4, 0, 0], "public.qa_audit_run": [0, 0, 0]}),
     }
-    s = {"kind": sc.KIND, "measured_at": "2026-11-17T01:00:00+00:00", "deadline_s": 60, "dbs": dbs, "timed_out": False,
+    s = {"kind": sc.KIND, "measured_at": "2026-11-17T01:00:00+00:00", "measured_at_source": "local",
+         "deadline_s": 60, "dbs": dbs, "timed_out": False,
          "errors": [], "elapsed_s": 1.2}
     s.update(over)
     return s
@@ -123,6 +125,57 @@ def test_cli_compare_unreadable_baseline_exits_1(tmp_path, monkeypatch):
     assert sc.main(["compare", "--baseline", str(base), "--db-env", "X"]) == 1
 
 
+def test_track_counts_off_fails():
+    night = _snap()
+    night["dbs"]["rent_stats"]["track_counts"] = "off"
+    status, prob = sc.compare_snaps(_snap(), night)
+    assert status == "fail" and any("track_counts" in p[1] for p in prob)
+
+
+def test_unstable_reread_fails_without_being_treated_as_equal():
+    night = _snap()
+    night["dbs"]["collective_stats"]["stable"] = False
+    status, prob = sc.compare_snaps(_snap(), night)
+    assert status == "fail" and any("두 번 읽기" in p[1] for p in prob)
+
+
+def test_read_stable_sleeps_once_per_db(monkeypatch):
+    calls = {"n": 0}
+
+    def fake(conn, t, timeout_ms):
+        calls["n"] += 1
+        return _db("collective_stats", {"public.t": [1, 0, 0]})
+
+    monkeypatch.setattr(sc, "read_db", fake)
+    slept = []
+    out = sc.read_stable(None, None, 1000, sleeper=lambda s: slept.append(s))
+    assert calls["n"] == 2 and slept == [sc.SETTLE_S] and out["stable"] is True and out["track_counts_ok"] is True
+
+
+def test_read_stable_mismatch(monkeypatch):
+    n = {"n": 0}
+
+    def fake(conn, t, timeout_ms):
+        n["n"] += 1
+        return _db("collective_stats", {"public.t": [n["n"], 0, 0]})
+
+    monkeypatch.setattr(sc, "read_db", fake)
+    out = sc.read_stable(None, None, 1000, sleeper=lambda s: None)
+    assert out["stable"] is False
+
+
+def test_take_deadline_cuts_a_hung_connect():
+    """statement_timeout 밖에 있는 접속 정지도 deadline 에 끊긴다."""
+    def hung(env, left):
+        time.sleep(2)
+        return _snap()["dbs"]["collective_stats"]
+
+    t0 = time.monotonic()
+    snap = sc.take(["C"], None, deadline_s=0.2, opener=hung, order_clock="defer")
+    assert time.monotonic() - t0 < 1.5
+    assert snap["timed_out"] is True and "collective_stats" not in snap["dbs"] and snap["measured_at_source"] is None
+
+
 def test_cli_snapshot_incomplete_exits_1(tmp_path, monkeypatch):
     s = _snap()
     s["dbs"].pop("rent_stats")
@@ -133,15 +186,27 @@ def test_cli_snapshot_incomplete_exits_1(tmp_path, monkeypatch):
 # --- overlay: 낮 전체 해시 + 밤 병합 표만(가벼운 비교 통과가 전제) -------------------------------------------------------
 
 def _hash(db, tables, at="2026-11-16T10:00:00+00:00"):
-    return {"db": db, "measured_at": at, "mode": "hash", "exclude": [], "requested": list(tables),
+    return {"db": db, "measured_at": at, "measured_at_source": "local",
+            "server_now": "2020-01-01T00:00:00+00:00", "server_now_source": "server",
+            "mode": "hash", "exclude": [], "requested": list(tables),
             "tables": {t: {"all": [1, "h-" + t]} for t in tables}, "_timings": [{"query": f"{t} all", "ok": True} for t in tables]}
 
 
 MERGED_C = ["collective_building_geocodes", "collective_commercial_map_geocodes", "qa_audit_run"]
 
 
-def _stat(status="pass", dbs=("collective_stats", "rent_stats", "built_stats"), at="2026-11-17T02:00:00+00:00"):
-    return {"kind": "stat_compare_result", "status": status, "compared_at": at, "dbs": list(dbs)}
+MERGED_AT = "2026-11-17T02:05:00+00:00"
+FREEZE_AT = "2026-11-17T01:00:00+00:00"
+
+
+def _stat(status="pass", dbs=("collective_stats", "rent_stats", "built_stats"), at="2026-11-17T02:00:00+00:00",
+          baseline="2026-11-16T09:00:00+00:00"):
+    return {"kind": "stat_compare_result", "status": status, "compared_at": at, "compared_at_source": "local",
+            "baseline_measured_at": baseline, "baseline_measured_at_source": "local", "dbs": list(dbs)}
+
+
+def _overlay(base, patch, stat=None, merged_at=MERGED_AT, freeze_at=FREEZE_AT):
+    return hc.overlay(base, patch, _stat() if stat is None else stat, merged_at=merged_at, freeze_at=freeze_at)
 
 
 def test_overlay_replaces_only_merged_tables():
@@ -149,7 +214,7 @@ def test_overlay_replaces_only_merged_tables():
     patch = _hash("collective_stats", MERGED_C, at="2026-11-17T02:10:00+00:00")
     for t in MERGED_C:
         patch["tables"][t] = {"all": [2, "night-" + t]}
-    out = hc.overlay(base, patch, _stat())
+    out = _overlay(base, patch)
     assert out["tables"]["collective_transactions"] == {"all": [1, "h-collective_transactions"]}       # 낮 그대로
     assert all(out["tables"][t] == {"all": [2, "night-" + t]} for t in MERGED_C)
     assert out["overlay"]["tables"] == MERGED_C and out["measured_at"] == base["measured_at"]
@@ -158,7 +223,7 @@ def test_overlay_replaces_only_merged_tables():
 @pytest.mark.parametrize("make,needle", [
     (lambda b, p: (b, p, _stat(status="fail")), "통과가 아님"),
     (lambda b, p: (b, p, _stat(dbs=("rent_stats",))), "결과에 collective_stats 가 없음"),
-    (lambda b, p: (b, p, _stat(at="2026-11-16T09:00:00+00:00")), "먼저 했거나"),
+    (lambda b, p: (b, p, _stat(at="2026-11-16T09:00:00+00:00")), "먼저거나 같음"),
     (lambda b, p: (b, p, {"status": "pass"}), "결과 파일이 아님"),
     (lambda b, p: (b, {**p, "db": "rent_stats"}, _stat()), "DB 다름"),
     (lambda b, p: (b, {**p, "mode": "sums"}, _stat()), "mode 다름"),
@@ -172,7 +237,7 @@ def test_overlay_refused(make, needle):
     patch = _hash("collective_stats", MERGED_C, at="2026-11-17T02:10:00+00:00")
     b, p, s = make(copy.deepcopy(base), copy.deepcopy(patch))
     with pytest.raises(hc.OverlayError, match=needle):
-        hc.overlay(b, p, s)
+        _overlay(b, p, s)
 
 
 def test_overlay_cli_refusal_exit_code(tmp_path):
@@ -180,7 +245,8 @@ def test_overlay_cli_refusal_exit_code(tmp_path):
                    ("s", _stat())):
         (tmp_path / f"{n}.json").write_text(json.dumps(obj), encoding="utf-8")
     rc = hc.main(["overlay", "--base", str(tmp_path / "b.json"), "--patch", str(tmp_path / "p.json"),
-                  "--stat-result", str(tmp_path / "s.json"), "--out", str(tmp_path / "o.json")])
+                  "--stat-result", str(tmp_path / "s.json"), "--merged-at", MERGED_AT, "--freeze-at", FREEZE_AT,
+                  "--out", str(tmp_path / "o.json")])
     assert rc == 2 and not (tmp_path / "o.json").exists()                 # built 는 병합 표가 없어 거절
 
 
@@ -191,3 +257,50 @@ def test_merged_tables_are_in_day_hash_targets_and_stat_excludes():
         assert {f"public.{t}" for t in tables} <= set(sc.EXCLUDE[db])
     assert sc.EXCLUDE["built_stats"] == frozenset({"public.qa_audit_run"})          # built QA 는 1a 로 따로 본다
     assert sc.role("collective_stats_p2r") == "collective_stats" and sc.role("rent_stats") == "rent_stats"
+
+
+def test_overlay_accepts_counter_baseline_in_the_same_second_and_ignores_server_now():
+    base = _hash("collective_stats", ["collective_transactions", *MERGED_C])
+    base["server_now"] = "2099-01-01T00:00:00+00:00"          # 서버 시계가 어긋나도 순서 판정에 안 쓴다
+    patch = _hash("collective_stats", MERGED_C, at="2026-11-17T02:10:00+00:00")
+    out = _overlay(base, patch, _stat(baseline=base["measured_at"]))
+    assert out["measured_at"] == base["measured_at"]
+    assert out["overlay"]["freeze_at_source"] == "local" and "server_now" not in out["overlay"]
+
+
+def test_overlay_rejects_counter_baseline_recorded_after_the_hash():
+    base = _hash("collective_stats", ["collective_transactions", *MERGED_C])
+    patch = _hash("collective_stats", MERGED_C, at="2026-11-17T02:10:00+00:00")
+    late = _stat(baseline="2026-11-16T11:00:00+00:00")       # 낮 해시 10:00 보다 늦음
+    with pytest.raises(hc.OverlayError, match="늦게 기록됨"):
+        _overlay(base, patch, late)
+
+
+def test_overlay_rejects_previous_day_merged_hash():
+    base = _hash("collective_stats", ["collective_transactions", *MERGED_C])
+    patch = _hash("collective_stats", MERGED_C, at="2026-11-16T02:10:00+00:00")
+    with pytest.raises(hc.OverlayError, match="병합보다 먼저"):
+        _overlay(base, patch)
+
+
+def test_overlay_rejects_merged_hash_not_after_maintenance_on():
+    base = _hash("collective_stats", ["collective_transactions", *MERGED_C])
+    patch = _hash("collective_stats", MERGED_C, at="2026-11-17T02:10:00+00:00")
+    with pytest.raises(hc.OverlayError, match="점검 창"):
+        _overlay(base, patch, freeze_at="2026-11-17T02:10:00+00:00")
+
+
+def test_overlay_rejects_server_clock_used_as_order_time():
+    base = _hash("collective_stats", ["collective_transactions", *MERGED_C])
+    base["measured_at_source"] = "server"
+    patch = _hash("collective_stats", MERGED_C, at="2026-11-17T02:10:00+00:00")
+    with pytest.raises(hc.OverlayError, match="local 이 아님"):
+        _overlay(base, patch)
+
+
+def test_stamp_local_keeps_server_now(tmp_path):
+    path = tmp_path / "a.json"
+    path.write_text(json.dumps({"measured_at": None, "server_now": "srv", "server_now_source": "server"}), encoding="utf-8")
+    assert hc.main(["stamp-local", "--file", str(path), "--field", "measured_at"]) == 0
+    obj = json.loads(path.read_text(encoding="utf-8"))
+    assert obj["measured_at_source"] == "local" and obj["measured_at"] and obj["server_now"] == "srv"
