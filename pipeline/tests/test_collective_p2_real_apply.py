@@ -110,14 +110,19 @@ def test_real_apply_needs_all_three_conditions(tmp_path):
         mig.assert_rehearsal_db(_Conn("land_stats"), "land_stats")
 
 
+C2_OK = ["--c2-approved-sha256", "a" * 64, "--c2-approved-rows", "4311"]   # 판정 표 대조 인자(형식만 — 가드가 먼저 막는다)
+
+
 def test_cli_entrypoints_refuse_real_db_without_real_mode_and_reject_real_rollback(tmp_path):
     from collective import fix_p2_deal_types as fdt
     from collective import prune_split_annual_p2 as pr
 
     with pytest.raises(mig.GuardError, match="리허설 이름"):
         mig.main(["--collective-db", "collective_stats", "--apply"])
-    with pytest.raises(mig.GuardError, match="다시 입력"):
+    with pytest.raises(mig.GuardError, match="c2-approved"):          # C-2 판정 승인값 없으면 가장 먼저 거부
         mig.main(["--collective-db", "collective_stats", "--real-apply"])
+    with pytest.raises(mig.GuardError, match="다시 입력"):
+        mig.main(["--collective-db", "collective_stats", "--real-apply", *C2_OK])
     with pytest.raises(mig.GuardError, match="적용만"):
         mig.main(["--collective-db", "collective_stats", "--real-apply", "--rollback"])
     with pytest.raises(mig.GuardError, match="리허설 이름"):
@@ -150,7 +155,8 @@ def test_sync_result_file_from_prod_sync_check_is_accepted(tmp_path):
 def test_real_apply_requires_local_loopback_target(tmp_path, monkeypatch):
     """--real-apply 는 접속 대상이 로컬 루프백이어야 한다 — URL 은 localhost 라도 libpq 최종 인자(PGHOSTADDR 등)가 원격이면 거부."""
     good = [str(_result(tmp_path, "collective_stats"))]
-    args = ["--collective-db", "collective_stats", "--real-apply", "--confirm-db", "collective_stats", "--sync-result", *good]
+    args = ["--collective-db", "collective_stats", "--real-apply", "--confirm-db", "collective_stats", "--sync-result", *good,
+            *C2_OK]
     for k in ("PGHOST", "PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("PGHOSTADDR", "10.0.0.5")

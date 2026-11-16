@@ -281,6 +281,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
   - 이 전체 실행은 운영 DB 에 10초를 넘는 쿼리를 보내므로 **T 승인 뒤 새벽에** 한다.
   - 그 결과 파일(48시간 유효) 안에 1회차 로컬 적용을 시작한다.
 - 로컬 반영 전 **로컬 덤프**(로컬 되돌리기용)를 뜬다: `pg_dump -Fd -j 4 -d <db> -f backups\p2\<db>.dir`.
+- **Insight before 확보 — 로컬 적용 직전**(5.1 0a 전, 덤프와 같은 상태): `c22_insight_recompute.py run --side before`(08·03·12) · `c27_insight14_compare.py prepare → run --side before`. after 는 5.3 끝난 직후(5.4 전) 확보한다(7.3). 둘 다 c8 같은 되돌리기 전에 끝낸다.
 - 명령·기대값은 Phase C 리허설과 같다. DB 이름만 `*_p2r` 대신 실제 이름이다(`--collective-db collective_stats` 등).
 - 아래 시간은 로컬 리허설 실측이다.
 - `PY`, `P=pipeline`, `AS_OF=<현재 as_of, YYYY-MM-01>`, `W="--as-of $AS_OF --windows 3,5,7"`.
@@ -314,13 +315,17 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 
 ### 5.1 키 이전 (원장)
 
+**순서: C-2 판정 표 적재 → 승인값 대조 → 키 이전**(Codex Phase D 3). `H` = 승인된 판정 파일 `logs/collective_p2/c2_units_final.csv` 의 SHA-256(T 승인 때 기록), 행 수 4,311.
+
 | # | 명령 | 소요 | 기대값(리허설) |
 |---|---|---|---|
-| 1 | `migrate_p2_keys.py --collective-db collective_stats --built-db built_stats --rent-db rent_stats` (드라이런) | 수 분 | 키 바뀌는 행 166,595 · 분할 옛 키 1,531 → 새 키 3,447 · 충돌 0 · **C-2 확정 후 채움** |
-| 2 | 위 + `--real-apply --confirm-db collective_stats --confirm-db built_stats --confirm-db rent_stats --sync-result logs/collective_p2/sync_result_collective.json --sync-result …_rent.json --sync-result …_built.json` | 23분 | DB 마다 원자적(3개 전체는 아님, 2.3a). `p2_migration_log` 기록 |
-| 3 | 위 + `--verify` | 3.5분 | 16항목 OK(옛 시도명 0 · 옛 키 남은 행 0 · 연결표 7,414 · 원장 행 수 불변) |
+| 0a | `load_c2_units.py --collective-db collective_stats --approved-sha256 $H --approved-rows 4311` (드라이런 — 파일 해시·행 수 대조 + 형식 검사) | 수 초 | 4,311행 · split 단위 1,610 · 늘어나는 키 2,045 · 값이 다른 행 0 |
+| 0b | 위 + `--real-apply --confirm-db collective_stats --sync-result logs/collective_p2/sync_result_collective.json` | 1분 | 판정 표 4,311행. `p2_migration_log`(step `load_c2_units`)에 파일 SHA-256·내용 해시 기록 |
+| 1 | `migrate_p2_keys.py --collective-db collective_stats --built-db built_stats --rent-db rent_stats` (드라이런) | 수 분 | C-01: 키 바뀌는 행 166,595 · 분할 옛 키 1,531 → 새 키 3,447 · C-2: 늘어나는 키 2,045 · 옮겨지는 거래 14,288 · 충돌 0 · 자동 등록 0 |
+| 2 | 위 + `--real-apply --confirm-db collective_stats --confirm-db built_stats --confirm-db rent_stats --sync-result logs/collective_p2/sync_result_collective.json --sync-result …_rent.json --sync-result …_built.json --c2-approved-sha256 $H --c2-approved-rows 4311` | 1시간(리허설 재실행 실측 59분) | **시작 전 판정 표 대조**: 표가 없거나 비었음 · 판정 행(자동 등록 `p2_migrate`·`auto_ingest` 제외) 수 ≠ 4,311 · 마지막 적재 기록의 파일 해시 ≠ `H` · 적재 뒤 내용이 바뀜 → 쓰기 전에 거부. 통과하면 DB 마다 원자적(3개 전체는 아님, 2.3a). `p2_migration_log` 기록 |
+| 3 | 위 + `--verify` | 5.5분 | 20항목 OK(옛 시도명 0 · 옛 키 남은 행 0 · 연결표 9,695(C-01 7,414 + C-2 2,281) · 원장 행 수 불변 · C-2 4항목) |
 | 4 | `fix_p2_deal_types.py --collective-db collective_stats --raw-root <raw> --logs-dir <logs> --real-apply --confirm-db collective_stats --sync-result logs/collective_p2/sync_result_collective.json` | 5.3분 | 분양권 비정상·공란 → 0·0 · 비주거 공란 ≤ 1 |
-| 4a | **C-2 키 이전 — C-2 확정 후 채움** (`migrate_p2_keys` 에 C-2 판정 파일 연결 필요, 아래 메모) | | |
+| 4a | C-2 키는 2번(`migrate_p2_keys`)이 판정 표를 읽어 같이 옮긴다(12.1 P1). 별도 명령 없음 | | |
 
 **실제 적용 모드(`--real-apply`) — 키 이전·거래유형 보정·annual 정리 공통:**
 
@@ -362,7 +367,7 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
     - 조회에 실패하면(401·403·5xx·연결) 「정상」이 아니라 「단지 분리 여부를 확인할 수 없습니다」로 알린다.
     - 분리된 단지 링크를 누르면 기존 행을 복사하지 않는다. 후보 키의 실제 목록 행을 다시 조회한 뒤 상세를 연다. 조회하는 동안 로딩을 보이고, 실패하면 안내한다. 응답 헤더 `X-CH2-Key-C2-Split` 와 JSON 객체 응답의 `key_split_c2`(「분리된 단지 있음」·새 키 목록)를 붙인다.
   - C-01 옛 키(1:N)는 그대로 409. C-01 새 키가 다시 C-2 옛 키면 그 키로 열고 C-2 안내를 붙인다(테스트로 확인).
-- **남은 일:** 1회성 이전(`migrate_p2_keys`)에 C-2 판정 표를 읽어 원장 키·연결표를 바꾸는 단계를 연결하는 일은 C-2 확정 뒤에 한다(12절 3).
+- **연결됨:** 1회성 이전(`migrate_p2_keys`)이 C-2 판정 표를 읽어 원장 키·연결표를 바꾼다(12.1 P1). 실제 DB 는 판정 표 적재·대조(위 0a·0b·2번 시작 전 대조) 뒤에만 시작한다.
 
 ### 5.2 통계표 재생성 (이번 as_of 만)
 
@@ -442,6 +447,7 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 
 ### 5.4 로컬 검증 (1회차 끝 → T 확인)
 
+- **먼저 Insight after 확보**(5.3 끝난 직후, 이 검증 전 — 7.3): `c22 run --side before --label ops_after` · `c27 run --side before --label ops_after` → 각 `compare`.
 - `prod_c5_core.py --env-file backend/.env --out logs/collective_p2/local_c5.json` 를 돌린다.
 - 7.1 기대값(0 이어야 할 지표)을 모두 통과해야 한다. 이 JSON 이 운영 비교의 기준이다.
 - 운영 비교용 행 해시 스냅샷도 뜬다.
@@ -474,7 +480,11 @@ sudo -u postgres /usr/lib/postgresql/16/bin/pg_dump -Fc --data-only -d rent_stat
        4. 끝나면 시퀀스가 `max(id)` 이상인지 다시 확인한다: `SELECT last_value >= (SELECT max(id) FROM qa_audit_run) FROM qa_audit_run_id_seq;`
        - 건수 확인: 합친 뒤 행 수 = 로컬 원래 행 + 1번 행 + 3번 행.
    - 합친 뒤 5.4 의 `prod_c5_core`(가벼운 지표)·해시 스냅샷을 다시 뜨고, promote 용 덤프를 다시 만든다(2.2).
-   - 이 합치기 SQL 은 C-2 확정 뒤 리허설 때 스크립트로 만들어 리허설 DB 에서 시험한다(13절 C-9).
+   - **스크립트:** 위 규칙은 `scripts/ops/collective_p2_merge_prod_only.py` 가 그대로 한다(13절 C-9). C-01 분할 옛 키와 C-2 옛 키(연결표 reason 에 `c2` · 판정 표 split base_key) 좌표는 버리고, 1:1 은 재키, 로컬에 없는 행만 넣는다. QA 기록은 위 0~4. 단계별 건수를 JSON(`logs/collective_p2/merge_prod_only.json`)으로 낸다.
+     - 드라이런: `PY scripts/ops/collective_p2_merge_prod_only.py --src-collective prod_only_tmp --src-rent prod_only_rent_tmp --dst-collective collective_stats --dst-rent rent_stats`
+     - 적용: 위 + `--real-apply --confirm-db collective_stats --confirm-db rent_stats --sync-result …_collective.json --sync-result …_rent.json`(키 이전과 같은 가드). DB 마다 한 트랜잭션, 계획과 넣은 행 수·최종 행 수가 다르면 되돌림.
+     - 다시 돌려도 중복이 생기지 않는다(로컬에 있는 키 유지, QA 는 같은 내용이면 건너뜀).
+     - 시험: fixture 테스트 `pipeline/tests/test_collective_p2_merge_prod_only.py`. 리허설 DB 시험은 Codex 가 운영 4표를 읽기 전용으로 뜬 덤프(T 승인)가 오면 `--dst-* *_p2r --apply` 로 돌려 건수·재키·폐기 내역을 보고한다.
 3. 반영 직전 운영 덤프(2.2 스크립트가 자동으로 뜸, 아래는 위치 고정용 수동 덤프).
 4. 운영 디스크(4절 #4)를 확인한다.
 
@@ -493,7 +503,15 @@ sudo -u postgres /usr/lib/postgresql/16/bin/pg_dump -Fc --no-owner --no-acl -f /
 - **캐시:**
   - `vps_promote_db_sql.sh` 가 백엔드를 재시작하므로 프로세스 안 캐시가 새로 읽힌다. 키 재매핑 미들웨어의 연결표, `lru_cache` 등이 해당된다.
   - **promote 뒤 `analysis_cache` 를 비운다**(T 결정): `cd /opt/ch2_Macro/backend && .venv/bin/python scripts/clear_analysis_cache.py --with-base-cache`. 토지 DB 의 유료 분석 캐시라 이번 DB 와 직접 관련은 없지만 확인 전에 비운다.
-- 스모크: `deploy/scripts/vps_collective_smoke.sh` + 분할 옛 키 1개 → 409(후보 목록), 1:1 옛 키 1개 → 새 키 응답.
+- 스모크: `deploy/scripts/vps_collective_smoke.sh` + 키 이전 확인(옛 키는 로컬 연결표 `collective_building_key_map` 에서 reason 별로 1개씩 고른다):
+
+| 옛 키 종류(연결표 reason) | 기대 응답(집합 상세) | 그 밖이면 |
+|---|---|---|
+| C-01 분할 옛 키(`split`·`honam_sido+split`) | **409** + 후보 목록(키·이름·동만, 숫자 없음) | 실패(R5) |
+| C-2 옛 키(본 조각 옛 키, `c2_split`·`honam_sido+c2_split`) | **200** + 분리 안내: JSON 본문 최상위 `key_split_c2`(「분리된 단지 있음」·새 키 목록), 헤더 `X-CH2-Key-C2-Split` | 실패(R5) — 409·404·500·안내 없는 200 모두 |
+| 1:1 옛 키(`honam_sido`) | **200** + 새 키 응답 | 실패(R5) |
+
+  - C-2 확인은 `key_split_c2` 가 본문에 실제로 있어야 통과다(헤더만 있고 본문이 JSON 객체인데 없으면 실패).
 
 ## 7. 운영 확인 (Opus, 읽기 전용)
 
@@ -538,13 +556,18 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 
 ### 7.3 Insight 비교
 
-- Insight 14·08·03·12 를 C-2 반영 리허설 뒤 로컬에서 다시 계산한 값으로 고정한다(`scripts/lab/collective_p2/c22_insight_recompute.py`).
-  - before = 로컬 원본, after = 리허설. 기간은 공개 스냅샷과 같게 한다.
+- **확보 시점(Codex Phase D 2):** Insight 는 되돌리기(c8·로컬 덤프 복원) **앞에서** 확보·검증한다. 되돌린 뒤에는 after 상태가 없다.
+  - 운영 절차: **before = 로컬 적용 직전**(5절 머리, 5.1 0a 전), **after = 적용 직후**(5.3 끝, 5.4 전). 둘 다 실제 로컬 DB 를 읽기 전용으로 읽는다.
+  - 리허설: before = 실제 로컬 DB(읽기 전용), after = `*_p2r`(12.2 9번, c8 앞).
+- **08·03·12 — `scripts/lab/collective_p2/c22_insight_recompute.py`:**
+  - 운영: `run --side before --label ops_before` → (적용) → `run --side before --label ops_after` → `compare --before-label ops_before --after-label ops_after`
+  - 리허설: `run --side before` · `run --side after` → `compare`
+  - 기간은 공개 스냅샷과 같게 고정한다(03·08 as_of 2026-08-01).
+  - 출력은 모두 `logs/collective_p2/insight/<label>/`(03 의 부속 CSV·표제부 캐시 포함). 실행 전후 저장소 추적 파일 변경이 0 이어야 하고, 생기면 종료 코드 4 로 멈춘다.
+- **14 — `scripts/lab/collective_p2/c27_insight14_compare.py`**(wip 생성기를 main 에 넣지 않음, T 결정 · 12.1 P5 와 같은 절차):
+  - `prepare`(고정 커밋 detached worktree) → 운영 `run --side before --label ops_before` · (적용) · `run --side before --label ops_after` / 리허설 `run --side after` → `compare --label <ops_after|after>` → `cleanup`
+  - 실행 전후 worktree 무변경 + 이 저장소 추적 파일 변경 0 을 확인한다(있으면 멈춤). as_of 2026-10-01 고정.
 - **운영 반영 뒤에는 공개 스냅샷(정적)이 바뀌지 않는다.** 고정한 after 값을 공개할지는 별도 결정이다.
-- **Insight 14 는 wip 브랜치 생성기로 비교만 한다**(main 에 반영하지 않음, T 결정).
-  - 생성기 파일만 logs 로 꺼낸다: `git show wip/ai-revision-20261109:backend/app/collective/apt_officetel_same_building_lab.py > logs/collective_p2/insight/gen14.py`
-  - `c22_insight_recompute.py run --side before|after --gen14 logs/collective_p2/insight/gen14.py` 로 돌린다.
-  - 그 파일이 main 에 없는 모듈을 import 하면 실패한다. 그때는 「재계산 못 함」으로 기록하고 공개 스냅샷만 둔다.
 
 ## 8. 롤백 — 반영 직전 운영 덤프로 되돌림
 
@@ -556,7 +579,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 | R2 | 7.1 `--expect` 비교 | 결과 「차이」(종료 코드 1). 「검증 못 함」(2)은 무거운 검사를 다시 돌려 통과·차이로 확정 |
 | R3 | 7.2 해시 비교 | 결과 「차이」. 「검증 못 함」은 시간 제한을 늘려 다시 돌려 확정 |
 | R4 | promote 스크립트 | `psql ON_ERROR_STOP` 실패 · `/health` 가 60초 안에 응답 없음(스크립트 종료 코드 1) |
-| R5 | 스모크 | 집합·임대 상세가 5곳 이상 비거나 500 · 분할 옛 키가 409 가 아님 |
+| R5 | 스모크(6.3) | 집합·임대 상세가 5곳 이상 비거나 500 · **C-01 분할 옛 키가 409 가 아님** · **C-2 옛 키가 200 + `key_split_c2` 분리 안내가 아님**(409·404·500·안내 없는 200) · 1:1 옛 키가 200 이 아님 |
 | R6 | 시간 | 한 DB 복원이 지난 promote 기록(2.3)의 2배를 넘고 원인이 불명 |
 
 **되돌리기(DB 마다, 운영):**
@@ -633,7 +656,7 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 |---|---|---|
 | P1 | `migrate_p2_keys` 에 C-2 연결 | 판정 표(`collective_building_key_c2_units`)를 읽어 2단계 키(호남·C-01 뒤) 위에 `apply_building_key_split_c2`. 본 조각 = 옛 키, 나머지 = `c2_key(원문, p<n>)`. 3건 미만 본번은 같은 규칙(같은 건축년도 조각 → 가까운 본번). 표에 없는 3건+ 본번은 새 조각으로 표에 등록(`source=p2_migrate`, `--rollback` 때 지움). 연결표: 옛 키 → 조각(`c2_split`, 앞 단계가 있으면 `honam_sido+c2_split`·`split+c2_split`), 2단계 키 → 조각(`c2_chain`), 옛 키 → 2단계 키(n_tx 0 경로 행, 필요할 때만). 부속 표(속성·공시지가)는 C-2 전 단계 연결표로 처리 → 본 조각이 그대로 가진다. `--verify` C-2 4항목(조각 본번이 옛 키에 남은 행 0 · c2 연결표 행 있음 · C-2 키 좌표 남은 행 0 · 조각 키 하나에 유형 여럿 0). `prune_split_annual` 은 본 조각이 남는 C-2 키(`c2_split`·`c2_chain` 만)를 대상에서 뺀다 |
 | P2 | C-2 옛 키 좌표 버리기 | `--apply` 안에서 같이: C-2 분할 키(본 조각 옛 키 포함)와, 재키하면 그 키가 되는 행의 `collective_building_geocodes` → `c2_discard`(원래 행은 `_p2_before`, 되돌리기 복원). 임대 키는 C-2 로 나누지 않으므로(임대 적재도 C-2 안 함) `rent_building_geocodes` 는 건드리지 않는다 |
-| P3 | 판정 표 적재 | `pipeline/collective/load_c2_units.py`: 이름 가드(…_p2r) + 접속 DB 이름 확인, 형식 검사(키·법정동·조각 0 존재·조각 번호 법정동 간 중복 금지 등), 멱등, 값이 다른 행이 있으면 멈춤, 출력은 건수만. 실제 DB 쓰기 모드 없음(운영은 promote) |
+| P3 | 판정 표 적재 | `pipeline/collective/load_c2_units.py`: 이름 가드(…_p2r) + 접속 DB 이름 확인, 형식 검사(키·법정동·조각 0 존재·조각 번호 법정동 간 중복 금지 등), 멱등, 값이 다른 행이 있으면 멈춤, 출력은 건수만. 실제 로컬 DB 모드(`--real-apply`, 키 이전과 같은 가드 + 승인 파일 SHA-256·행 수 대조, Codex Phase D 3 — 5.1 0a·0b). 운영은 promote |
 | P4 | 분할 아파트 표시 이름 | 12.3 |
 | P5 | Insight 14 비교 | `scripts/lab/collective_p2/c27_insight14_compare.py`: wip 생성기를 main 에 가져오지 않고 `wip/ai-revision-20261109`(ed56f0d) detached worktree 를 읽기 전용으로 실행(PGOPTIONS 읽기 전용, 출력 logs/, 실행 전후 worktree 무변경 확인, as_of 2026-10-01 고정) → 공개값(main `insight14.ts` SNAP + 고정 커밋 JSON)과 비교 |
 
@@ -652,12 +675,13 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 | 6 | 속성·공시지가 — 새 분할 키 목록(C-01 3,447 + C-2 2,045) | 추정 20분(Phase C 3,447키 12분) |
 | 7 | 매매·임대 연결(C-2 판정 키·조각 키는 exact 보류, `c2_held` 출력) · 복합 scope · integrity_p2 --deep(C-2형 판정 밖 0) | 4분 · 1분 · 수 분 |
 | 8 | 검증 c5(39항목 + C-2 항목) · c6(+ C-2 annual: 통계 = 원장 재계산, 근거 없는 행 0) · c7(+ C-2 보류 연결 수, 보류 대상 누출 0) · c9 · c10 | 추정 1~1.5시간 |
-| 9 | c8 롤백·행 해시(덤프 복원 방식) | 5시간 30분(Phase C 실측) |
-| 10 | Insight 08·03·12 재계산(`c22 run --side before/after` → `compare`) · Insight 14(`c27 prepare → run --side after → compare → cleanup`) | 추정 30~60분 · 추정 10~20분 |
+| 9 | **Insight 확보·검증(c8 앞 — c8 이 after 상태를 지운다)**: 08·03·12(`c22 run --side before/after` → `compare`) · 14(`c27 prepare → run --side after → compare → cleanup`). 실행 전후 추적 파일 변경 0 | 7분(재실행 실측 22b 225초 + 22a 206초) · 수 분 |
+| 10 | c8 롤백·행 해시(덤프 복원 방식) | 6시간 16분(재실행 실측) |
 | 11 | 백엔드 전체 테스트 + pipeline 전체 테스트 + 집합 컴포넌트 테스트·tsc | 3분 + 30초 + 1분 |
 | | 합(c8 포함) | 약 12~14시간 |
 
 - 2~7 은 하루 안에 이어서 한다(약 4시간 20분). 8~11 은 다음 날 해도 된다(리허설 DB 는 그대로).
+- Insight(9)는 반드시 c8(10) 앞이다. 2026-11-16 재실행은 이 순서로 했다(지시 순서와 달랐던 것을 Codex Phase D 2 로 런북에 고정).
 - 멈춤 조건은 Phase C 와 같다:
   - 지표가 예측과 다름(규칙·설계 문제) — 3단계 기준: 미리 보기 숫자(키 +2,045 · 옮겨지는 거래 14,288 · 충돌 0 · 자동 등록 0)
   - 쓰기 대상이 `*_p2r` 밖
@@ -712,5 +736,5 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 | C-6 | `analysis_cache` 비우기 | **결정됨** — promote 뒤 |
 | C-7 | Insight 14 | **결정됨** — wip 생성기로 비교만 |
 | C-8 | C-2 옛 키·미들웨어 | **결정됨·구현** — 가장 큰 그룹 옛 키 유지, 409 대신 안내 |
-| C-9 | 운영 전용 표(2.5) 합치기 SQL — 스크립트화·리허설 시험 | 열림(C-2 리허설 때) |
+| C-9 | 운영 전용 표(2.5) 합치기 SQL — 스크립트화·리허설 시험 | **스크립트·fixture 시험 완료**(`scripts/ops/collective_p2_merge_prod_only.py`, 6.1). 리허설 DB 시험은 Codex 가 운영 4표를 읽기 전용으로 뜬 덤프(T 승인)가 오면 |
 | C-10 | PG 버전 해시 | **절차 넣음** — 3.1 `pgcheck`, 다르면 `--mode sums` |

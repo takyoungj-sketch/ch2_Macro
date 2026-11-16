@@ -12,6 +12,7 @@ main 으로 가져오지 않는다. 그 브랜치를 **분리된(detached) workt
 - 하위 프로세스에 `PGOPTIONS=-c default_transaction_read_only=on` — 어느 DB 에도 쓰지 못한다. after 는 DB 이름이 *_p2r 인지 확인.
 - 생성기의 고정 출력 경로(docs/lab/…json)는 하위 프로세스 안에서 logs/ 로 바꾼다. 바이트코드도 쓰지 않는다(PYTHONDONTWRITEBYTECODE).
 - 실행 전후로 worktree 가 고정 커밋 그대로이고 바뀐 파일이 없는지 확인한다(있으면 멈춤).
+- 이 저장소의 추적 파일도 실행 전후 변경 0 이어야 한다(`git status --porcelain --untracked-files=no`, 있으면 멈춤).
 - 기간은 공개값과 같게 as_of 2026-10-01(2021-11~2026-10)로 고정한다(리허설 mart 의 최신 월이 달라도).
 - 접속 정보는 출력하지 않는다. 결과에는 집계 숫자만 있다(키·지번 없음).
 """
@@ -80,6 +81,14 @@ def check_worktree(info: dict, *, git_=git) -> None:
         raise StopRun(f"worktree 에 바뀐 파일 {len(dirty.splitlines())}개 — 읽기 전용 실행이 아님")
 
 
+def check_repo_clean(when: str, *, git_=git) -> None:
+    """이 저장소의 추적 파일 변경 0(수정·삭제). 추적 안 되는 새 파일은 보지 않는다(logs/ 는 gitignore)."""
+    dirty = git_("status", "--porcelain", "--untracked-files=no", cwd=ROOT)
+    if dirty:
+        names = [ln[3:].strip() for ln in dirty.splitlines() if ln.strip()]
+        raise StopRun(f"{when}: 저장소 추적 파일 변경 {len(names)}개 — {', '.join(names[:10])}")
+
+
 def cleanup(*, git_=git) -> None:
     if WT.exists():
         git_("worktree", "remove", str(WT))
@@ -119,18 +128,22 @@ def runner_code(info: dict, out: Path) -> str:
     return RUNNER.format(backend=Path(info["path"]) / "backend", out=out, as_of=AS_OF)
 
 
-def run(side: str, *, git_=git, runner=subprocess.run) -> int:
+def run(side: str, *, label: str | None = None, git_=git, runner=subprocess.run) -> int:
+    """side = 접속 DB 묶음, label = 출력 이름(기본 side). 운영: --side before --label ops_before / ops_after."""
     sys.path.insert(0, str(ROOT / "pipeline"))
     from collective.migrate_p2_keys import server_url_from_env
 
     info = load_worktree_info()
     check_worktree(info, git_=git_)
+    check_repo_clean("실행 전", git_=git_)
     OUT.mkdir(parents=True, exist_ok=True)
-    out = OUT / f"{side}.json"
+    name = label or side
+    out = OUT / f"{name}.json"
     r = runner([PY, "-c", runner_code(info, out)], cwd=OUT, env=env_for(side, server_url_from_env()),
                capture_output=True, text=True, encoding="utf-8", errors="replace")
-    (OUT / f"{side}.log").write_text((r.stdout or "")[-8000:] + "\n" + (r.stderr or "")[-8000:], encoding="utf-8")
+    (OUT / f"{name}.log").write_text((r.stdout or "")[-8000:] + "\n" + (r.stderr or "")[-8000:], encoding="utf-8")
     check_worktree(info, git_=git_)          # 실행 뒤에도 worktree 그대로
+    check_repo_clean("실행 뒤", git_=git_)    # 이 저장소(main 쪽) 추적 파일도 그대로
     print(f"insight14 {side}: rc={r.returncode} → {out.relative_to(ROOT)}")
     return int(r.returncode)
 
@@ -216,13 +229,13 @@ def compare_table(snap: dict, pub: dict | None, after: dict | None) -> tuple[str
     return "\n".join(lines), diffs
 
 
-def compare(*, git_=git) -> int:
+def compare(*, label: str = "after", git_=git) -> int:
     info = None
     try:
         info = load_worktree_info()
     except StopRun:
         pass
-    f = OUT / "after.json"
+    f = OUT / f"{label}.json"
     after = json.loads(f.read_text(encoding="utf-8")) if f.is_file() else None
     tab, diffs = compare_table(ts_snapshot(), published_json(info, git_=git_), after)
     md = "\n".join(["# Insight 14 — 리허설 재계산 ↔ 공개값", "",
@@ -242,17 +255,23 @@ def main(argv=None) -> int:
     sub.add_parser("prepare")
     r = sub.add_parser("run")
     r.add_argument("--side", choices=list(SIDES), default="after")
-    sub.add_parser("compare")
+    r.add_argument("--label", default="", help="출력 이름(기본 side). 운영: ops_before · ops_after")
+    cp = sub.add_parser("compare")
+    cp.add_argument("--label", default="after", help="공개값과 비교할 결과 이름(기본 after)")
     sub.add_parser("cleanup")
     a = p.parse_args(argv)
+    lab = getattr(a, "label", "") or ""
+    if lab and not re.fullmatch(r"[a-z0-9_]+", lab):
+        print("중단: --label 은 영소문자·숫자·_ 만", file=sys.stderr)
+        return 3
     try:
         if a.cmd == "prepare":
             print(json.dumps(prepare(), ensure_ascii=False))
             return 0
         if a.cmd == "run":
-            return run(a.side)
+            return run(a.side, label=lab or None)
         if a.cmd == "compare":
-            return compare()
+            return compare(label=lab or "after")
         cleanup()
         return 0
     except StopRun as ex:

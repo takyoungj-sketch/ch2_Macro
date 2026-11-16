@@ -213,3 +213,31 @@ def test_parcel_step_skipped_and_logged_when_copy_missing(c3, monkeypatch):
     recs = [json.loads(x) for x in (c3.OUT / "c3_steps.jsonl").read_text(encoding="utf-8").splitlines()]
     assert recs[0]["step"] == "title_fill_new_keys" and "skipped" in recs[0]
     assert recs[1]["step"] == "rent_sale_map" and recs[1]["rc"] == 0
+
+
+def test_c6_sample_excludes_only_orphan_key_type_year_cells():
+    """Codex Phase D 5: 표본 제외는 고정 연도 정리 보존 표의 (키·유형·연도)만 — 같은 키의 2010~2018·다른 유형은 비교."""
+    c6 = _load("c6_annual_check")
+
+    class _C:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def execute(self, *_a, **_k):
+            return list(self.rows)
+
+    k = "k" * 64
+    before = _C([("rowhouse", 2015, 3, 100.0), ("rowhouse", 2019, 2, 90.0), ("rowhouse", 2020, 1, 95.0),
+                 ("apartment", 2019, 4, 200.0), ("rowhouse", 2022, 5, 120.0)])
+    after_ok = _C([("rowhouse", 2015, 3, 100.0), ("apartment", 2019, 4, 200.0), ("rowhouse", 2022, 6, 121.0)])
+    orphan = {(k, "rowhouse", 2019), (k, "rowhouse", 2020)}
+    r = c6.compare_sample_key(before, after_ok, k, orphan)
+    assert r["fail"] is False and r["skipped"] == ["rowhouse:2019", "rowhouse:2020"]
+    assert r["n_pre"] == 2 and r["post_changed"] == ["rowhouse:2022"]          # 2015·아파트 2019 는 계속 비교
+    # 정리 대상이 아닌 2018 이전 값이 바뀌면 실패(키째 빼지 않음)
+    after_bad = _C([("rowhouse", 2015, 2, 100.0), ("apartment", 2019, 4, 200.0)])
+    bad = c6.compare_sample_key(before, after_bad, k, orphan)
+    assert bad["fail"] is True and bad["changed"] == ["rowhouse:2015"]
+    # 같은 키라도 다른 유형의 같은 연도(아파트 2019)가 사라지면 실패
+    gone = c6.compare_sample_key(before, _C([("rowhouse", 2015, 3, 100.0)]), k, orphan)
+    assert gone["fail"] is True and gone["changed"] == ["apartment:2019"]

@@ -999,6 +999,18 @@ def build_plan(ceng: Engine, beng: Engine | None, reng: Engine | None, units: di
     return plan
 
 
+def assert_c2_units_approved(eng: Engine, sha: str, rows: int) -> dict:
+    """실제 적용 시작 전: C-2 판정 표가 비었거나, 적재한 파일 해시·행 수가 승인값과 다르거나, 적재 뒤 내용이 바뀌었으면 거부.
+    판정은 load_c2_units.approved_table_state(적재 도구와 같은 정규 해시)."""
+    from collective import load_c2_units as lc
+
+    with eng.connect() as c:
+        try:
+            return lc.approved_table_state(c, sha, rows)
+        except lc.LoadError as ex:
+            raise GuardError(f"실제 적용 거부: {ex}") from ex
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--collective-db", required=True)
@@ -1011,10 +1023,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--split-units", default="", help="분할 목록 CSV(기본 pipeline/collective/data/p2_split_units.csv)")
     p.add_argument("--base-url", default="", help="DB 서버 URL(기본 backend/.env). DB 이름은 위 인자로 바꾼다")
     add_real_apply_args(p)
+    p.add_argument("--c2-approved-sha256", default="",
+                   help="승인된 C-2 판정 파일 SHA-256(실제 DB 모드 필수 — 판정 표 적재 기록과 대조)")
+    p.add_argument("--c2-approved-rows", type=int, default=None, help="승인된 C-2 판정 행 수(실제 DB 모드 필수, 이번 4,311)")
     a = p.parse_args(argv)
     if a.real_apply and (a.rollback or a.verify):
         raise GuardError("--real-apply 는 적용만 한다(실제 DB 되돌리기는 런북의 로컬 덤프 복원)")
     if a.real_apply:
+        if not a.c2_approved_sha256 or a.c2_approved_rows is None:
+            raise GuardError("--real-apply 는 --c2-approved-sha256 · --c2-approved-rows 가 필요하다(런북 5.1 판정 표 대조)")
         a.apply = True
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     units = load_split_units(a.split_units or None)
@@ -1025,6 +1042,9 @@ def main(argv: list[str] | None = None) -> int:
     ce = engine_for(a.collective_db, read_only=not write, base_url=base)
     be = engine_for(a.built_db, read_only=not write, base_url=base) if a.built_db else None
     re_ = engine_for(a.rent_db, read_only=not write, base_url=base) if a.rent_db else None
+    if a.real_apply:
+        print(json.dumps({"c2_units_approved": assert_c2_units_approved(ce, a.c2_approved_sha256, a.c2_approved_rows)},
+                         ensure_ascii=False))
 
     if a.rollback:
         print(json.dumps({"collective": rollback_collective(ce, a.collective_db),

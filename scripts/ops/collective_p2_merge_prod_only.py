@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""집합 2단계 — 운영 전용 표(런북 2.5)를 로컬 반영본에 합친다(6.1, promote 직전).
+
+운영에서 `pg_dump --data-only` 로 뜬 4개 표를 로컬 임시 DB(원본, 읽기만)에 복원한 뒤, 대상 DB(키 이전이 끝난 로컬 반영본)에 합친다.
+
+  좌표 캐시 3표 — collective_building_geocodes(building_key) · collective_commercial_map_geocodes(cluster_key)
+                  · rent_building_geocodes(building_key)
+    1. 키 이전 적용(대상 DB 의 연결표 collective_building_key_map / collective_cluster_key_map / rent_building_key_map):
+       - 연결표에 없는 키 → 그대로
+       - 1:1(호남 시도명 등) → 새 키로 재키
+       - C-01 분할 옛 키(reason 에 split, c2 아닌 것 · 새 키 여럿) → 버림(동이 갈려 좌표가 맞지 않음)
+       - C-2 옛 키(reason 에 c2 · 대상 DB 판정 표의 split base_key) → 버림(키 이전이 로컬 좌표도 버린 것과 같게)
+    2. 재키 뒤 같은 키가 둘이면 updated_at 이 늦은 쪽 하나(나머지는 「재키 겹침」으로 셈)
+    3. 대상에 이미 있는 키는 로컬 값을 유지하고, 없는 행만 `INSERT … ON CONFLICT DO NOTHING`
+  QA 기록 qa_audit_run(collective_stats)
+    0. 넣기 전에 대상 시퀀스를 max(대상 max(id), 원본 max(id)) + 1 로 올린다(새 id 가 어느 쪽 id 와도 겹치지 않게)
+    1. 원본 id 가 대상에 없으면 그 id 로 추가
+    2. 같은 id 가 있으면 id 를 뺀 모든 열을 비교 — 같으면 건너뜀
+    3. 다르면 새 id(nextval)로 추가, 옛 id → 새 id 를 --remap-out CSV 에 남김
+       (대상에 id 만 다르고 내용이 같은 행이 이미 있으면 지난 합치기에서 들어간 것 → 건너뜀, 다시 돌려도 중복 없음)
+    4. 끝나면 시퀀스 last_value ≥ max(id) 확인 · 행 수 = 대상 원래 행 + 1번 + 3번
+
+- 드라이런 기본(두 DB 모두 읽기 전용 접속): 단계별 건수만 낸다. --apply 로 DB 마다 한 트랜잭션.
+- 쓰기 대상은 리허설 DB(…_p2r) 또는 실제 적용 모드(--real-apply · --confirm-db · --sync-result, 키 이전과 같은 가드)뿐.
+  쓰기 직전 current_database() 를 다시 본다. 원본 DB 는 읽기 전용 세션으로만 연다(대상과 같은 이름이면 거부).
+- 출력은 건수만(키·주소·좌표 원문 없음). QA id 대응 CSV 는 logs/ 아래(id 숫자만).
+
+  python scripts/ops/collective_p2_merge_prod_only.py --src-collective prod_only_tmp --src-rent prod_only_rent_tmp \\
+      --dst-collective collective_stats_p2r --dst-rent rent_stats_p2r            # 드라이런
+  … --apply                                                                     # 리허설 DB 에 합치기
+  … --dst-collective collective_stats --dst-rent rent_stats --real-apply --confirm-db collective_stats \\
+      --confirm-db rent_stats --sync-result … --sync-result …                    # 실제 로컬 반영본(런북 6.1)
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
+
+from sqlalchemy import text
+from sqlalchemy.engine import Connection, Engine
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "pipeline"))
+sys.path.insert(0, str(REPO / "pipeline" / "collective"))
+
+from collective.building_keys import C2_TABLE  # noqa: E402
+from collective.migrate_p2_keys import (  # noqa: E402
+    GuardError,
+    add_real_apply_args,
+    assert_rehearsal_db,
+    check_write_targets,
+    engine_for,
+)
+
+OUT = REPO / "logs" / "collective_p2"
+# (DB 쪽, 표, 키 열, 연결표, C-2 판정 표를 볼지)
+GEOCODES = [
+    ("collective", "collective_building_geocodes", "building_key", "collective_building_key_map", True),
+    ("collective", "collective_commercial_map_geocodes", "cluster_key", "collective_cluster_key_map", False),
+    ("rent", "rent_building_geocodes", "building_key", "rent_building_key_map", False),
+]
+QA = "qa_audit_run"
+REKEY, KEEP, DROP_C01, DROP_C2 = "rekey", "keep", "drop_c01", "drop_c2"
+
+
+class MergeError(RuntimeError):
+    pass
+
+
+def _exists(c: Connection, t: str) -> bool:
+    return bool(c.execute(text("SELECT to_regclass(:t) IS NOT NULL"), {"t": f"public.{t}"}).scalar())
+
+
+def _cols(c: Connection, t: str) -> list[tuple[str, str]]:
+    return [(r[0], r[1]) for r in c.execute(text(
+        "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=:t "
+        "ORDER BY ordinal_position"), {"t": t})]
+
+
+# --- 좌표 캐시 ----------------------------------------------------------------
+
+def key_rules(map_rows: list[tuple[str, str, str]], c2_bases: set[str] = frozenset()) -> dict[str, tuple[str, str | None]]:
+    """연결표 행 (old_key, new_key, reason) → 옛 키마다 (규칙, 새 키). 연결표에 없는 키는 규칙 없음(= 그대로)."""
+    by_old: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for o, n, r in map_rows:
+        by_old[str(o).strip()].append((str(n).strip(), str(r or "")))
+    out: dict[str, tuple[str, str | None]] = {}
+    for o, rows in by_old.items():
+        reasons = {r for _, r in rows}
+        news = {n for n, _ in rows}
+        if any("c2" in r for r in reasons) or o in c2_bases:
+            out[o] = (DROP_C2, None)
+        elif any("split" in r for r in reasons) or len(news) > 1:
+            out[o] = (DROP_C01, None)
+        else:
+            out[o] = (REKEY, next(iter(news)))
+    for b in c2_bases:                     # 연결표에 없더라도 판정 표의 split base_key 는 C-2 옛 키
+        out.setdefault(b, (DROP_C2, None))
+    return out
+
+
+def _ts(r: dict):
+    v = r.get("updated_at")
+    return (v is not None, v if v is not None else 0)
+
+
+def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys: set[str]) -> tuple[list[dict], dict]:
+    """원본 행 → 넣을 행과 단계별 건수."""
+    cnt = Counter(src=len(src_rows))
+    picked: dict[str, dict] = {}
+    for r in src_rows:
+        k = str(r[keycol]).strip()
+        rule, new = rules.get(k, (KEEP, None))
+        if rule in (DROP_C01, DROP_C2):
+            cnt[rule] += 1
+            continue
+        if rule == REKEY:
+            cnt["rekeyed"] += 1
+            r = {**r, keycol: new}
+            k = new
+        else:
+            cnt["unchanged"] += 1
+        old = picked.get(k)
+        if old is not None:
+            cnt["rekey_overlap"] += 1
+            if _ts(r) <= _ts(old):
+                continue
+        picked[k] = r
+    ins = [r for k, r in picked.items() if k not in local_keys]
+    cnt["exists_local"] = len(picked) - len(ins)
+    cnt["insert"] = len(ins)
+    keys = ("src", "unchanged", "rekeyed", DROP_C01, DROP_C2, "rekey_overlap", "exists_local", "insert")
+    return ins, {k: int(cnt.get(k, 0)) for k in keys}
+
+
+def _c2_bases(c: Connection) -> set[str]:
+    if not _exists(c, C2_TABLE):
+        return set()
+    return {str(r[0]).strip() for r in c.execute(text(f"SELECT DISTINCT base_key FROM {C2_TABLE} WHERE decision='split'"))}
+
+
+def merge_geocode(src: Connection, dst: Connection, table: str, keycol: str, map_table: str, use_c2: bool,
+                  *, apply: bool) -> dict:
+    if not _exists(src, table):
+        return {"table": table, "status": "원본에 표 없음"}
+    if not _exists(dst, table):
+        raise MergeError(f"대상에 {table} 표가 없음")
+    if not _exists(dst, map_table):
+        raise MergeError(f"대상에 연결표 {map_table} 가 없음 — 키 이전 뒤에 합친다")
+    cols = [c for c, _ in _cols(dst, table)]
+    scols = {c for c, _ in _cols(src, table)}
+    cols = [c for c in cols if c in scols]
+    src_rows = [dict(r._mapping) for r in src.execute(text(f"SELECT {', '.join(cols)} FROM {table}"))]
+    maps = [tuple(r) for r in dst.execute(text(f"SELECT old_key, new_key, reason FROM {map_table}"))]
+    rules = key_rules(maps, _c2_bases(dst) if use_c2 else set())
+    local = {str(r[0]).strip() for r in dst.execute(text(f"SELECT {keycol} FROM {table}"))}
+    ins, cnt = plan_geocodes(src_rows, keycol, rules, local)
+    out = {"table": table, **cnt, "dst_before": len(local)}
+    if apply and ins:
+        sql = text(f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({', '.join(':' + c for c in cols)}) "
+                   f"ON CONFLICT ({keycol}) DO NOTHING")
+        done = 0
+        for i in range(0, len(ins), 1000):
+            done += dst.execute(sql, ins[i:i + 1000]).rowcount or 0
+        if done != len(ins):
+            raise MergeError(f"{table}: 넣은 행 {done} ≠ 계획 {len(ins)} — 되돌림")
+    if apply:
+        after = int(dst.execute(text(f"SELECT count(*) FROM {table}")).scalar() or 0)
+        if after != len(local) + len(ins):
+            raise MergeError(f"{table}: 합친 뒤 행 수 {after} ≠ {len(local)} + {len(ins)} — 되돌림")
+        out["dst_after"] = after
+    return out
+
+
+# --- QA 기록 --------------------------------------------------------------------
+
+def _norm(v):
+    if isinstance(v, str):
+        try:
+            return json.loads(v) if v[:1] in "[{" else v
+        except ValueError:
+            return v
+    return v
+
+
+def merge_qa(src: Connection, dst: Connection, *, apply: bool, remap_out: Path | None) -> dict:
+    if not _exists(src, QA):
+        return {"table": QA, "status": "원본에 표 없음"}
+    n_src = int(src.execute(text(f"SELECT count(*) FROM {QA}")).scalar() or 0)
+    if not _exists(dst, QA):
+        if n_src:
+            raise MergeError(f"대상에 {QA} 표가 없는데 원본에 {n_src}행")
+        return {"table": QA, "status": "양쪽 비었음"}
+    types = dict(_cols(dst, QA))
+    scols = {c for c, _ in _cols(src, QA)}
+    cols = [c for c in types if c in scols and c != "id"]
+    src_rows = [dict(r._mapping) for r in src.execute(text(f"SELECT id, {', '.join(cols)} FROM {QA} ORDER BY id"))]
+    dst_rows = {int(r["id"]): r for r in (dict(x._mapping) for x in
+                                          dst.execute(text(f"SELECT id, {', '.join(cols)} FROM {QA}")))}
+    src_max = max((int(r["id"]) for r in src_rows), default=0)
+    dst_max = max(dst_rows, default=0)
+    def sig(r):
+        return tuple(json.dumps(_norm(r[c]), sort_keys=True, ensure_ascii=False, default=str) for c in cols)
+
+    dst_sigs = {sig(r) for r in dst_rows.values()}
+    same_id_new, same, merged, diff = [], 0, 0, []
+    for r in src_rows:
+        d = dst_rows.get(int(r["id"]))
+        if d is None:
+            same_id_new.append(r)
+        elif all(_norm(r[c]) == _norm(d[c]) for c in cols):
+            same += 1
+        elif sig(r) in dst_sigs:          # 지난 합치기에서 새 id 로 이미 들어간 같은 기록(다시 돌려도 중복 없음)
+            merged += 1
+        else:
+            diff.append(r)
+    out = {"table": QA, "src": len(src_rows), "dst_before": len(dst_rows), "src_max_id": src_max, "dst_max_id": dst_max,
+           "insert_same_id": len(same_id_new), "skip_identical": same, "skip_already_merged": merged,
+           "insert_new_id": len(diff)}
+    if not apply:
+        return out
+    seq = dst.execute(text(f"SELECT pg_get_serial_sequence('{QA}', 'id')")).scalar()
+    if not seq:
+        raise MergeError(f"{QA}.id 시퀀스를 찾을 수 없음")
+    # 0) 넣기 전에 시퀀스를 양쪽 max 보다 크게
+    dst.execute(text("SELECT setval(CAST(:s AS regclass), :v, false)"), {"s": seq, "v": max(src_max, dst_max) + 1})
+
+    def val(c, v):
+        return json.dumps(v, ensure_ascii=False) if types[c] in ("jsonb", "json") and v is not None and not isinstance(v, str) else v
+
+    ph = ", ".join(f"CAST(:{c} AS {types[c]})" if types[c] in ("jsonb", "json") else f":{c}" for c in cols)
+    for r in same_id_new:                                   # 1) 같은 id 로
+        dst.execute(text(f"INSERT INTO {QA} (id, {', '.join(cols)}) VALUES (:id, {ph})"),
+                    {"id": r["id"], **{c: val(c, r[c]) for c in cols}})
+    remap = []
+    for r in diff:                                          # 3) 새 id 로
+        nid = dst.execute(text(f"INSERT INTO {QA} ({', '.join(cols)}) VALUES ({ph}) RETURNING id"),
+                          {c: val(c, r[c]) for c in cols}).scalar()
+        remap.append((int(r["id"]), int(nid)))
+    last, mx = dst.execute(text(f"SELECT (SELECT last_value FROM {seq}), (SELECT coalesce(max(id), 0) FROM {QA})")).one()
+    if int(last) < int(mx):                                 # 4) 시퀀스 ≥ max(id)
+        raise MergeError(f"{QA} 시퀀스 {last} < max(id) {mx} — 되돌림")
+    after = int(dst.execute(text(f"SELECT count(*) FROM {QA}")).scalar() or 0)
+    if after != len(dst_rows) + len(same_id_new) + len(diff):
+        raise MergeError(f"{QA}: 합친 뒤 행 수 {after} ≠ {len(dst_rows)} + {len(same_id_new)} + {len(diff)} — 되돌림")
+    out.update({"dst_after": after, "seq_last_value": int(last), "max_id_after": int(mx), "remapped": len(remap)})
+    if remap_out is not None and remap:
+        remap_out.parent.mkdir(parents=True, exist_ok=True)
+        with remap_out.open("w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["prod_id", "new_id"])
+            w.writerows(remap)
+        out["remap_csv"] = remap_out.name
+    return out
+
+
+# --- 실행 -----------------------------------------------------------------------
+
+def merge_side(src_eng: Engine, dst_eng: Engine, dst_name: str, side: str, *, apply: bool,
+               remap_out: Path | None = None) -> list[dict]:
+    """한 DB 쪽(collective·rent): 원본은 읽기 전용 세션, 대상은 한 트랜잭션(apply) 또는 읽기(드라이런)."""
+    with src_eng.connect() as s, (dst_eng.begin() if apply else dst_eng.connect()) as d:
+        if apply:
+            assert_rehearsal_db(d, dst_name)
+        res = [merge_geocode(s, d, t, k, m, c2, apply=apply) for sd, t, k, m, c2 in GEOCODES if sd == side]
+        if side == "collective":
+            res.append(merge_qa(s, d, apply=apply, remap_out=remap_out))
+        return res
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--src-collective", required=True, help="운영 collective 4표 덤프를 복원한 임시 DB(읽기만)")
+    p.add_argument("--src-rent", default="", help="운영 rent_building_geocodes 덤프를 복원한 임시 DB(읽기만)")
+    p.add_argument("--dst-collective", required=True)
+    p.add_argument("--dst-rent", default="")
+    p.add_argument("--apply", action="store_true")
+    p.add_argument("--base-url", default="", help="DB 서버 URL(기본 backend/.env)")
+    p.add_argument("--remap-out", default=str(OUT / "qa_audit_id_remap.csv"))
+    p.add_argument("--report-out", default=str(OUT / "merge_prod_only.json"))
+    add_real_apply_args(p)
+    a = p.parse_args(argv)
+    if a.real_apply:
+        a.apply = True
+    if bool(a.src_rent) != bool(a.dst_rent):
+        raise GuardError("--src-rent 와 --dst-rent 는 같이 준다")
+    for s_, d_ in ((a.src_collective, a.dst_collective), (a.src_rent, a.dst_rent)):
+        if s_ and s_ == d_:
+            raise GuardError(f"원본과 대상이 같은 DB: {s_}")
+    base = a.base_url or None
+    dsts = [x for x in (a.dst_collective, a.dst_rent) if x]
+    if a.apply:
+        check_write_targets(dsts, a, base_url=base)
+    report = {"apply": bool(a.apply), "real_apply": bool(a.real_apply), "sides": {}}
+    for side, src, dst in (("collective", a.src_collective, a.dst_collective), ("rent", a.src_rent, a.dst_rent)):
+        if not dst:
+            continue
+        se = engine_for(src, read_only=True, base_url=base)
+        de = engine_for(dst, read_only=not a.apply, base_url=base)
+        try:
+            report["sides"][side] = {"src": src, "dst": dst,
+                                     "tables": merge_side(se, de, dst, side, apply=a.apply,
+                                                          remap_out=Path(a.remap_out) if side == "collective" else None)}
+        finally:
+            se.dispose()
+            de.dispose()
+    txt = json.dumps(report, ensure_ascii=False, indent=1, default=str)
+    Path(a.report_out).parent.mkdir(parents=True, exist_ok=True)
+    Path(a.report_out).write_text(txt, encoding="utf-8")
+    print(txt)
+    if not a.apply:
+        print("드라이런 — 쓰지 않았다. 쓰려면 --apply (리허설 DB) 또는 --real-apply (실제 로컬 반영본, 런북 6.1).")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (GuardError, MergeError) as ex:
+        print(f"중단: {ex}", file=sys.stderr)
+        raise SystemExit(2)

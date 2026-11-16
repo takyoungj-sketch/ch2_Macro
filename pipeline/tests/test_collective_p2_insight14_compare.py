@@ -106,3 +106,56 @@ def test_run_checks_worktree_before_and_after(monkeypatch, tmp_path):
 
     with pytest.raises(c27.StopRun, match="바뀐 파일"):
         c27.run("after", git_=g, runner=runner)
+
+
+def test_run_refuses_when_main_repo_tracked_files_change(monkeypatch, tmp_path):
+    """Codex Phase D 1: 생성기가 이 저장소의 추적 파일(docs/lab 등)을 덮으면 멈춘다(worktree 는 그대로여도)."""
+    (tmp_path / c27.GEN).parent.mkdir(parents=True)
+    (tmp_path / c27.GEN).write_text("", encoding="utf-8")
+    monkeypatch.setattr(c27, "OUT", tmp_path / "out")
+    (tmp_path / "out").mkdir()
+    (tmp_path / "out" / "worktree.json").write_text(json.dumps({"path": str(tmp_path), "commit": "c" * 40}), encoding="utf-8")
+    state = {"repo": ""}
+
+    def runner(cmd, **kw):
+        state["repo"] = " M docs/lab/rowhouse_elevator_attach.csv"
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    def g(*args, cwd=None):
+        if args[:2] == ("rev-parse", "HEAD"):
+            return "c" * 40
+        return state["repo"] if Path(cwd) == c27.ROOT else ""
+
+    with pytest.raises(c27.StopRun, match="저장소 추적 파일 변경 1개"):
+        c27.run("after", git_=g, runner=runner)
+    state["repo"] = " M x.py"
+    with pytest.raises(c27.StopRun, match="실행 전"):
+        c27.run("after", git_=g, runner=runner)
+
+
+def _c22():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "c22", c27.ROOT / "scripts" / "lab" / "collective_p2" / "c22_insight_recompute.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def test_c22_runner03_redirects_attach_csv_and_title_cache(tmp_path):
+    """Codex Phase D 1: Insight 03 의 부속 CSV·표제부 캐시도 logs/<side>/ 로(기본값은 docs/lab — 함수 인자에 묶임)."""
+    c22 = _c22()
+    code = c22.RUNNERS["03"].format(out=tmp_path, as_of="2026-08-01")
+    compile(code, "runner03", "exec")
+    assert "cache_path=cache" in code and "rowhouse_elevator_attach.csv" in code and "write_attach_csv" in code
+    assert "m.purpose_by_building" in code and "fa.scan_title_for_pnus" in code
+    assert "14" not in c22.RUNNERS                         # 14 는 c27 로 통일
+
+
+def test_c22_tracked_change_guard():
+    c22 = _c22()
+    c22.assert_clean("x", git_status="")
+    assert c22.tracked_changes(git_status=" M docs/lab/a.csv\n D b.json\n") == ["b.json", "docs/lab/a.csv"]
+    with pytest.raises(c22.TrackedChange, match="2개"):
+        c22.assert_clean("실행 뒤", git_status=" M docs/lab/a.csv\n M docs/lab/b.json\n")

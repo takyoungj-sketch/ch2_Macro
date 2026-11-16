@@ -160,3 +160,77 @@ def test_final_state_rejects_fragment_number_reused_in_other_dong(eng, tmp_path)
         lc.load(e, DB, df, apply=True)
     with e.connect() as c:
         assert c.execute(text(f"SELECT count(*) FROM {bk.C2_TABLE}")).scalar() == 2
+
+
+# --- Codex Phase D 3: 실제 DB 판정 표 적재 — 승인 파일 해시·행 수 대조, 키 이전 시작 전 확인 ------------------
+
+def _fresh(e):
+    with e.begin() as c:
+        c.execute(text(f"DROP TABLE IF EXISTS {bk.C2_TABLE}"))
+        c.execute(text("DROP TABLE IF EXISTS p2_migration_log"))
+
+
+def test_approved_file_check_hash_and_rows(tmp_path):
+    f = _csv(tmp_path, GOOD)
+    df = lc.read_units(f)
+    sha = lc.file_sha256(f)
+    lc.check_approved_file(f, df, sha, 6)
+    lc.check_approved_file(f, df, sha.upper(), 6)                      # 대소문자 무관
+    with pytest.raises(lc.LoadError, match="SHA-256 이 승인값과 다름"):
+        lc.check_approved_file(f, df, "0" * 64, 6)
+    with pytest.raises(lc.LoadError, match="행 수"):
+        lc.check_approved_file(f, df, sha, 4311)
+    with pytest.raises(lc.LoadError, match="형식"):
+        lc.check_approved_file(f, df, "abc", 6)
+
+
+def test_real_apply_cli_needs_approval_args_and_refuses_wrong_hash_before_write(tmp_path):
+    f = _csv(tmp_path, GOOD)
+    base = ["--collective-db", "collective_stats", "--csv", str(f), "--base-url", "postgresql://u@127.0.0.1/x",
+            "--real-apply", "--confirm-db", "collective_stats"]
+    with pytest.raises(lc.LoadError, match="approved-sha256"):
+        lc.main(base)
+    with pytest.raises(lc.LoadError, match="SHA-256 이 승인값과 다름"):     # 가드(동기화 확인) 전에 파일 대조에서 멈춤
+        lc.main(base + ["--approved-sha256", "0" * 64, "--approved-rows", "6"])
+    with pytest.raises(mig.GuardError):                                   # 해시는 맞아도 동기화 확인 결과 없음 → 거부
+        lc.main(base + ["--approved-sha256", lc.file_sha256(f), "--approved-rows", "6"])
+
+
+def test_migrate_real_apply_refuses_empty_table_wrong_hash_and_passes_when_approved(eng, tmp_path):
+    """키 이전 시작 전 판정 표 대조 — 빈 표 · 다른 해시 · 정상(+ 행 수 다름 · 적재 뒤 바뀜)."""
+    e, base = eng["eng"], eng["base"]
+    f = _csv(tmp_path, GOOD)
+    sha = lc.file_sha256(f)
+    _fresh(e)
+    with pytest.raises(mig.GuardError, match="없음"):                      # 표 자체가 없음
+        mig.assert_c2_units_approved(e, sha, 6)
+    with e.begin() as c:
+        mig._exec_script(c, bk.C2_DDL)
+    with pytest.raises(mig.GuardError, match="비었음"):                    # 빈 표
+        mig.assert_c2_units_approved(e, sha, 6)
+    # 승인 파일로 적재(리허설 모드) → 적재 기록에 파일 해시·내용 해시
+    assert lc.main(["--collective-db", DB, "--csv", str(f), "--base-url", base, "--apply",
+                    "--approved-sha256", sha, "--approved-rows", "6"]) == 0
+    ok = mig.assert_c2_units_approved(e, sha, 6)                          # 정상
+    assert ok["rows"] == 6 and ok["file_sha256"] == sha
+    with pytest.raises(mig.GuardError, match="SHA-256 이 승인값과 다름"):    # 다른 해시
+        mig.assert_c2_units_approved(e, "f" * 64, 6)
+    with pytest.raises(mig.GuardError, match="행 수"):
+        mig.assert_c2_units_approved(e, sha, 4311)
+    # 키 이전이 자동 등록한 행(p2_migrate)은 판정 행으로 세지 않는다
+    with e.begin() as c:
+        c.execute(text(f"""INSERT INTO {bk.C2_TABLE} (base_key, asset_type, beopjungri_code, main_lot, building_year, part,
+            decision, source) VALUES (:a, 'rowhouse', '1150010300', '400', 2020, 2, 'split', 'p2_migrate')"""), {"a": A})
+    assert mig.assert_c2_units_approved(e, sha, 6)["rows"] == 6
+    # 적재 뒤 판정 행이 바뀌면 거부
+    with e.begin() as c:
+        c.execute(text(f"UPDATE {bk.C2_TABLE} SET part = 5 WHERE base_key = :a AND main_lot = '360'"), {"a": A})
+    with pytest.raises(mig.GuardError, match="적재 기록과 다름"):
+        mig.assert_c2_units_approved(e, sha, 6)
+    _fresh(e)
+
+
+def test_migrate_cli_real_apply_requires_c2_approval_args():
+    with pytest.raises(mig.GuardError, match="c2-approved"):
+        mig.main(["--collective-db", "collective_stats", "--real-apply", "--confirm-db", "collective_stats",
+                  "--base-url", "postgresql://u@127.0.0.1/x"])

@@ -5,6 +5,8 @@
 - 고정 연도(2019~2020) annual 합 = 원장 합(전 지역)·원장 근거 없는 행 0(prune_fixed_annual_orphans_p2.verify, T 결정 2026-11-16)
 - C-2 분할 키 2019~2020 범위 교체 검증(c2_annual_replace_p2.verify): 대상 행 통계 = 원장 재계산, 원장 근거 없는 대상 행 0
 - 표본 10곳(시드 20261112): 호남 병합 키 3 · 인천 3 · 그 밖 시도 4. 2020 이전 count·median 이 하나라도 바뀌면 실패.
+  비교 단위는 (유형·연도). 고정 연도 정리 보존 표에 있는 (키·유형·연도)만 비교에서 빼고, 같은 키의 나머지 연도는 비교한다.
+  C-2 대상 키는 2019~2020 범위 교체가 정상이라 표본에서 키째 뺀다.
   호남 표본은 「후」 새 키 기준이고, 「전」은 같은 새 키 행(2019~2020 은 개편 재적재 때 만든 새 이름 행)이다.
 """
 from __future__ import annotations
@@ -22,6 +24,30 @@ from collective import prune_fixed_annual_orphans_p2 as pfo  # noqa: E402
 from collective.mart_replace import stale_annual_report  # noqa: E402
 
 T = "collective_building_annual_stats"
+
+
+def orphan_cells(c) -> set[tuple[str, str, int]]:
+    """고정 연도 정리(prune_fixed_annual_orphans_p2)가 지운 (키·유형·연도) — 보존 표 기준."""
+    return {(str(k).strip(), str(a), int(y)) for k, a, y in c.execute(text(
+        f"SELECT building_key, asset_type, contract_year FROM {pfo.KEEP}"))}
+
+
+def compare_sample_key(cb, ca, key: str, orphan: set) -> dict:
+    """표본 키 하나의 전후 비교 — (유형·연도) 단위. 정리 보존 표에 있는 (키·유형·연도)만 빼고 나머지는 모두 비교한다."""
+    q = text(f"SELECT asset_type, contract_year, count, median FROM {T} WHERE building_key=:k")
+    x = {(r[0], int(r[1])): (int(r[2]), float(r[3])) for r in cb.execute(q, {"k": key})}
+    y = {(r[0], int(r[1])): (int(r[2]), float(r[3])) for r in ca.execute(q, {"k": key})}
+    cells = sorted(set(x) | set(y), key=lambda t: (t[1], t[0]))
+    skipped = [c for c in cells if (key, c[0], c[1]) in orphan]
+    live = [c for c in cells if (key, c[0], c[1]) not in orphan]
+    pre = [c for c in live if c[1] <= 2020]
+    changed = [c for c in pre if x.get(c) is None or y.get(c) is None
+               or x[c][0] != y[c][0] or abs(x[c][1] - y[c][1]) > 1e-6]
+    post = [c for c in live if c[1] > 2020 and x.get(c) != y.get(c)]
+    fmt = lambda cs: [f"{a}:{yr}" for a, yr in cs]  # noqa: E731
+    years = [c[1] for c in cells]
+    return {"span": f"{min(years)}~{max(years)}" if years else "—", "n_pre": len(pre), "changed": fmt(changed),
+            "post_changed": fmt(post), "skipped": fmt(skipped), "fail": bool(changed)}
 
 
 def main():
@@ -70,10 +96,10 @@ def main():
         L.append(f"\n- C-2 항목 실패 {c2fail} / {len(c2rows)}")
         L.append("")
         c2keys = set(c2a.targets(ca)["building_key"])
-        # 고정 연도 정리로 2019~2020 행이 지워진 키도 바뀌는 것이 정상(원장 근거 없음) → 표본에서 뺀다
-        if has_keep:
-            c2keys |= {str(r[0]).strip() for r in ca.execute(text(f"SELECT DISTINCT building_key FROM {pfo.KEEP}"))}
-        # 표본 10곳(C-2 대상 키·고정 연도 정리 키는 2019~2020 이 바뀌는 것이 정상이라 뺀다)
+        # 고정 연도 정리로 지워진 행은 (키·유형·연도) 단위로만 비교에서 뺀다 — 같은 키의 다른 연도(2010~2018 포함)·
+        # 다른 유형은 계속 비교한다(Codex Phase D 5)
+        orphan = orphan_cells(ca) if has_keep else set()
+        # 표본 10곳(C-2 대상 키는 2019~2020 범위 교체가 정상이라 키째 뺀다)
         pick = {
             "호남 병합": """SELECT DISTINCT m.new_key FROM collective_building_key_map m JOIN collective_building_annual_stats a
                          ON a.building_key=m.new_key AND a.contract_year<=2018 WHERE m.reason='honam_sido'""",
@@ -88,22 +114,19 @@ def main():
             keys = sorted(r[0] for r in ca.execute(text(sql)) if r[0] not in c2keys)
             s = pd.Series(keys).sample(n=min(quota[k], len(keys)), random_state=20261112).tolist() if keys else []
             sample += [(k, x) for x in s]
-        q = f"SELECT contract_year, count, median FROM {T} WHERE building_key=:k ORDER BY 1"
-        res, fail = [], 0
+        res, fail, n_skip = [], 0, 0
         for grp, k in sample:
-            x = {r[0]: (int(r[1]), float(r[2])) for r in cb.execute(text(q), {"k": k})}
-            y = {r[0]: (int(r[1]), float(r[2])) for r in ca.execute(text(q), {"k": k})}
-            pre = sorted({yr for yr in set(x) | set(y) if yr <= 2020})
-            changed = [yr for yr in pre if x.get(yr) is None or y.get(yr) is None
-                       or x[yr][0] != y[yr][0] or abs(x[yr][1] - y[yr][1]) > 1e-6]
-            post_changed = [yr for yr in sorted(set(x) | set(y)) if yr > 2020 and x.get(yr) != y.get(yr)]
-            fail += bool(changed)
-            res.append((grp, k[:12], f"{min(set(x)|set(y))}~{max(set(x)|set(y))}", len(pre),
-                        ",".join(map(str, changed)) or "없음", ",".join(map(str, post_changed)) or "없음",
-                        "FAIL" if changed else "OK"))
+            row = compare_sample_key(cb, ca, k, orphan)
+            fail += row["fail"]
+            n_skip += len(row["skipped"])
+            res.append((grp, k[:12], row["span"], row["n_pre"], ",".join(row["changed"]) or "없음",
+                        ",".join(row["post_changed"]) or "없음", ",".join(row["skipped"]) or "없음",
+                        "FAIL" if row["fail"] else "OK"))
         L.append("## 표본 10곳 장기 추세(2020 이전 값 변하면 실패)")
-        L.append(md_table(res, ["묶음", "키(앞 12)", "연도", "2020 이전 연도 수", "2020 이전 바뀐 연도", "2021~ 바뀐 연도", "판정"]))
-        L.append(f"\n- 표본 실패 {fail} / {len(res)}")
+        L.append(md_table(res, ["묶음", "키(앞 12)", "연도", "2020 이전 (유형·연도) 수", "2020 이전 바뀐 (유형·연도)",
+                                "2021~ 바뀐 (유형·연도)", "고정 연도 정리로 뺀 (유형·연도)", "판정"]))
+        L.append(f"\n- 표본 실패 {fail} / {len(res)} · 정리 행으로 비교에서 뺀 (유형·연도) {n_skip}개"
+                 f"(정리 보존 표 (키·유형·연도) {len(orphan):,}개 기준, 키째 빼지 않음)")
     (OUT / "c6_annual.md").write_text("\n".join(L), encoding="utf-8")
     print("\n".join(L))
 

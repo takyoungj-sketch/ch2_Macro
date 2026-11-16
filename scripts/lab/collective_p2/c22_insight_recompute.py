@@ -7,13 +7,17 @@
   python c22_insight_recompute.py run --side before
   python c22_insight_recompute.py run --side after
   python c22_insight_recompute.py compare            → logs/collective_p2/insight/compare.md
+  운영(실제 로컬 DB 를 적용 직전·직후): run --side before --label ops_before · (적용) · run --side before --label ops_after
+    → compare --before-label ops_before --after-label ops_after
 
 - 생성기는 하위 프로세스로 돌리고 `PGOPTIONS=-c default_transaction_read_only=on` 을 준다(어느 DB 에도 쓰지 못함).
   after 는 접속 DB 이름이 *_p2r 인지 확인한다.
 - 생성기의 출력 경로(docs/lab/*.json 고정)는 하위 프로세스 안에서 logs/collective_p2/insight/<side>/ 로 바꾼다(커밋 파일 덮지 않음).
+  03 의 부속 CSV(`floor_elevator_screen.py` → write_attach_csv)·표제부 캐시(`rowhouse_elevator_title_cache.json`)도 같은 폴더로.
+- 실행 전후로 저장소 추적 파일 변경이 0 인지 본다(`git status --porcelain --untracked-files=no`).
+  실행 전에 바뀐 추적 파일이 있으면 시작하지 않고, 생성기 실행 뒤 생기면 거기서 멈춘다(종료 코드 4).
 - 기간은 공개 스냅샷과 같게 고정한다(03·08: as_of 2026-08-01 → 2021-09~2026-08). 12 는 연간(2021–2025)이라 as_of 무관.
-- 14(동일 지번 아파트·오피스텔)의 생성기 `backend/app/collective/apt_officetel_same_building_lab.py` 는 main 에 없다
-  (wip/ai-revision-20261109 에만 있음). --gen14 로 그 파일 경로를 주면 돌리고, 없으면 「생성기 없음」으로 표시한다.
+- 14(동일 지번 아파트·오피스텔)는 이 도구가 아니라 `c27_insight14_compare.py` 로 한다(wip 생성기를 읽기 전용 worktree 에서 실행).
 """
 from __future__ import annotations
 
@@ -37,8 +41,19 @@ SIDES = {"before": {"collective": "collective_stats", "rent": "rent_stats", "bui
 # 하위 프로세스에서 돌릴 코드(출력 경로를 logs 로 바꾸고 기간을 고정)
 RUNNERS = {
     "03": """
-import sys; sys.argv = ["x", "--as-of", "{as_of}", "--out", r"{out}/insight03.json"]
+import functools, shutil, sys
+from pathlib import Path
+sys.argv = ["x", "--as-of", "{as_of}", "--out", r"{out}/insight03.json"]
+from app.rowhouse_lab import floor_elevator_attach as fa
 from app.rowhouse_lab import floor_elevator_screen as m
+# 부속 CSV·표제부 캐시(기본값 docs/lab/… — 함수 정의 때 묶임)를 logs 의 이 쪽 폴더로. 캐시는 커밋본을 복사해 시작(커밋본은 읽기만)
+d = Path(r"{out}")
+cache = d / "rowhouse_elevator_title_cache.json"
+if not cache.exists() and fa.CACHE.exists():
+    shutil.copyfile(fa.CACHE, cache)
+fa.scan_title_for_pnus = functools.partial(fa.scan_title_for_pnus, cache_path=cache)
+m.purpose_by_building = functools.partial(fa.purpose_by_building, cache_path=cache)
+m.write_attach_csv = functools.partial(fa.write_attach_csv, path=d / "rowhouse_elevator_attach.csv")
 m.main()
 """,
     "08": """
@@ -93,26 +108,42 @@ def env_for(side: str) -> dict:
     return env
 
 
-def run(side: str, only: list[str], gen14: Path | None) -> None:
-    d = OUT / side
+class TrackedChange(RuntimeError):
+    pass
+
+
+def tracked_changes(root: Path = ROOT, *, git_status: str | None = None) -> list[str]:
+    """저장소 추적 파일 중 바뀐 것(수정·삭제). 추적 안 되는 새 파일은 보지 않는다(logs/ 는 gitignore)."""
+    if git_status is None:
+        git_status = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=root, check=True,
+                                    capture_output=True, text=True, encoding="utf-8").stdout
+    return sorted(ln[3:].strip() for ln in git_status.splitlines() if ln.strip())
+
+
+def assert_clean(when: str, root: Path = ROOT, *, git_status: str | None = None) -> None:
+    ch = tracked_changes(root, git_status=git_status)
+    if ch:
+        raise TrackedChange(f"{when}: 저장소 추적 파일 변경 {len(ch)}개 — " + ", ".join(ch[:10]))
+
+
+def run(side: str, only: list[str], label: str | None = None) -> int:
+    """side = 접속 DB 묶음(before = 실제 로컬 이름, after = 리허설 *_p2r), label = 출력 폴더 이름(기본 side).
+    운영 절차는 실제 로컬 DB 를 적용 직전·직후 두 번 읽는다: --side before --label ops_before / ops_after (런북 5·7.3)."""
+    assert_clean("실행 전")
+    bad = 0
+    d = OUT / (label or side)
     d.mkdir(parents=True, exist_ok=True)
     env = env_for(side)
-    runners = dict(RUNNERS)
-    if gen14:
-        runners["14"] = f"""
-import importlib.util, sys
-spec = importlib.util.spec_from_file_location("g14", r"{gen14}")
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-sys.argv = ["x", "--out", r"{{out}}/insight14.json"]
-m.main()
-"""
-    for q, code in runners.items():
+    for q, code in RUNNERS.items():
         if only and q not in only:
             continue
         r = subprocess.run([PY, "-c", code.format(out=d, as_of=AS_OF_0308)], cwd=BACKEND, env=env,
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
         (d / f"insight{q}.log").write_text(r.stdout[-5000:] + "\n" + r.stderr[-5000:], encoding="utf-8")
-        print(f"{side} insight{q}: rc={r.returncode}")
+        assert_clean(f"insight{q} 실행 뒤")
+        print(f"{side} insight{q}: rc={r.returncode} · 추적 파일 변경 0")
+        bad += r.returncode != 0
+    return 1 if bad else 0
 
 
 # --- 비교 ---------------------------------------------------------------
@@ -154,17 +185,18 @@ def headline(q: str, d: dict) -> dict:
     return {}
 
 
-def compare() -> str:
-    lines = ["# Insight 재계산 비교 (공개 스냅샷 · before = 로컬 원본 · after = 리허설)", ""]
-    for q in ("14", "08", "03", "12"):
+def compare(before: str = "before", after: str = "after") -> str:
+    lines = [f"# Insight 재계산 비교 (공개 스냅샷 · before = {before} · after = {after})", ""]
+    lines += ["- Insight 14 는 `c27_insight14_compare.py`(wip 생성기 읽기 전용 worktree) — logs/collective_p2/insight14/compare.md", ""]
+    for q in ("08", "03", "12"):
         snap = ts_snapshot(q)
         got = {}
-        for side in ("before", "after"):
-            f = OUT / side / f"insight{q}.json"
+        for side, lab in (("before", before), ("after", after)):
+            f = OUT / lab / f"insight{q}.json"
             got[side] = headline(q, json.loads(f.read_text(encoding="utf-8"))) if f.is_file() else None
         lines += [f"## Insight {q}", ""]
         if got["before"] is None and got["after"] is None:
-            lines += ["재계산 결과 없음" + (" — 생성기가 main 에 없음(--gen14)" if q == "14" else ""), ""]
+            lines += ["재계산 결과 없음", ""]
             continue
         keys = list((got["after"] or got["before"]).keys())
         lines += ["| 지표 | 공개 스냅샷 | before | after | after−before |", "|---|---|---|---|---|"]
@@ -175,7 +207,8 @@ def compare() -> str:
             lines.append(f"| {k} | {snap.get(k, '—')} | {b} | {a} | {dlt} |")
         lines.append("")
     md = "\n".join(lines)
-    (OUT / "compare.md").write_text(md, encoding="utf-8")
+    name = "compare.md" if (before, after) == ("before", "after") else f"compare_{before}_{after}.md"
+    (OUT / name).write_text(md, encoding="utf-8")
     return md
 
 
@@ -185,13 +218,21 @@ def main(argv=None) -> int:
     r = sub.add_parser("run")
     r.add_argument("--side", choices=list(SIDES), required=True)
     r.add_argument("--only", default="", help="쉼표 목록(예: 03,08)")
-    r.add_argument("--gen14", type=Path, default=None)
-    sub.add_parser("compare")
+    r.add_argument("--label", default="", help="출력 폴더 이름(기본 side). 운영: ops_before · ops_after")
+    cp = sub.add_parser("compare")
+    cp.add_argument("--before-label", default="before")
+    cp.add_argument("--after-label", default="after")
     a = p.parse_args(argv)
     if a.cmd == "run":
-        run(a.side, [x for x in a.only.split(",") if x], a.gen14)
+        if a.label and not re.fullmatch(r"[a-z0-9_]+", a.label):
+            raise SystemExit("--label 은 영소문자·숫자·_ 만")
+        try:
+            return run(a.side, [x for x in a.only.split(",") if x], a.label or None)
+        except TrackedChange as ex:
+            print(f"중단: {ex}", file=sys.stderr)
+            return 4
     else:
-        print(compare())
+        print(compare(a.before_label, a.after_label))
     return 0
 
 
