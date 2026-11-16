@@ -24,6 +24,9 @@
   python prod_hash_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --env-file backend/.env --out local_collective.json
   python prod_hash_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --env-file /opt/ch2_Macro/backend/.env --out prod_collective.json
   python prod_hash_compare.py compare local_collective.json prod_collective.json
+  # 밤 점검 창(런북 6.1 10): 낮 전체 해시 + 밤에 병합 표만 다시 → 한 파일(가벼운 비교 통과가 전제)
+  python prod_hash_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --tables collective_building_geocodes,collective_commercial_map_geocodes,qa_audit_run --out night_merged.json
+  python prod_hash_compare.py overlay --base hash_local_collective_day.json --patch night_merged.json --stat-result stat_local_result.json --out hash_local_collective.json
 """
 from __future__ import annotations
 
@@ -50,6 +53,7 @@ TARGETS = {
         "collective_building_assessed_land_price", "collective_building_geocodes", "new_apartment_complex_year",
         "collective_building_key_map", "collective_cluster_key_map", "p2_migration_log",
         "collective_building_key_c2_units",            # C-2 판정 표
+        "collective_commercial_map_geocodes", "qa_audit_run",   # 밤 병합 표(MERGED_TABLES) — 낮 전체 해시에 들어 있어야 overlay 가능
     ],
     "rent_stats": ["rent_transactions", "rent_building_stats", "rent_building_rolling_stats", "rent_sale_building_map",
                    "rent_building_geocodes", "rent_building_key_map"],
@@ -250,9 +254,78 @@ def hash_result(left: dict, right: dict, r: dict) -> dict:
     return finalize_result(obj, [left.get("db")])
 
 
+# 밤 점검 창에서 병합으로 바뀌는 표(런북 6.1 10) — 이 표만 밤에 다시 해시하고 나머지는 낮 결과를 쓴다
+MERGED_TABLES = {
+    "collective_stats": ["collective_building_geocodes", "collective_commercial_map_geocodes", "qa_audit_run"],
+    "rent_stats": ["rent_building_geocodes"],
+}
+
+
+class OverlayError(RuntimeError):
+    pass
+
+
+def _parse_iso(s):
+    import datetime as _dt
+
+    try:
+        d = _dt.datetime.fromisoformat(str(s))
+    except (TypeError, ValueError):
+        return None
+    return d if d.tzinfo else d.replace(tzinfo=_dt.timezone.utc)
+
+
+def overlay(base: dict, patch: dict, stat_result: dict) -> dict:
+    """낮 전체 해시 스냅샷(base)에서 병합한 표만 밤 스냅샷(patch)으로 바꾼다. 전제(하나라도 어긋나면 OverlayError):
+    ① 가벼운 비교(prod_stat_compare compare) 결과가 통과이고 이 DB 를 포함하며, base 측정 뒤에 비교했다
+    ② base·patch 가 같은 DB·같은 방식(mode·exclude)
+    ③ patch 의 표 = 이 DB 의 병합 표 집합(MERGED_TABLES) 정확히, 조각 쿼리 실패 없음, 표가 비지 않음
+    ④ patch 표가 base 의 대상에 있음."""
+    db = base.get("db")
+    if not isinstance(stat_result, dict) or stat_result.get("kind") != "stat_compare_result":
+        raise OverlayError("가벼운 비교 결과 파일이 아님(prod_stat_compare compare --result-out)")
+    if stat_result.get("status") != "pass":
+        raise OverlayError(f"가벼운 비교가 통과가 아님({stat_result.get('status')}) — 낮 해시를 쓸 수 없음")
+    if db not in (stat_result.get("dbs") or []):
+        raise OverlayError(f"가벼운 비교 결과에 {db} 가 없음")
+    tb, tc = _parse_iso(base.get("measured_at")), _parse_iso(stat_result.get("compared_at"))
+    if tb is None or tc is None or tc < tb:
+        raise OverlayError("가벼운 비교가 낮 해시보다 먼저 했거나 시각을 읽을 수 없음")
+    if patch.get("db") != db:
+        raise OverlayError(f"DB 다름: 낮 {db} · 밤 {patch.get('db')}")
+    for k in ("mode", "exclude"):
+        if base.get(k) != patch.get(k):
+            raise OverlayError(f"{k} 다름: 낮 {base.get(k)} · 밤 {patch.get(k)}")
+    import re
+
+    want = MERGED_TABLES.get(re.sub(r"_p2r(_[a-z0-9]+)?$", "", str(db or "")))      # 리허설 이름도 같은 역할
+    if not want:
+        raise OverlayError(f"{db} 는 병합 표가 없음 — 밤 해시 불필요(낮 결과 그대로)")
+    if sorted(patch.get("tables") or {}) != sorted(want):
+        raise OverlayError(f"밤 해시 표 {sorted(patch.get('tables') or {})} ≠ 병합 표 {sorted(want)}")
+    if any(not x.get("ok") for x in patch.get("_timings") or []):
+        raise OverlayError("밤 해시에 조각 쿼리 실패가 있음")
+    missing = [t for t in want if not patch["tables"].get(t)]
+    if missing:
+        raise OverlayError(f"밤 해시에서 표가 비었거나 없음: {missing}")
+    not_in_base = [t for t in want if t not in (base.get("requested") or [])]
+    if not_in_base:
+        raise OverlayError(f"낮 해시 대상에 없는 표: {not_in_base}")
+    return {**base, "tables": {**base["tables"], **{t: patch["tables"][t] for t in want}},
+            "_timings": [x for x in base.get("_timings") or [] if x.get("query", "").split(" ")[0] not in want]
+                        + list(patch.get("_timings") or []),
+            "overlay": {"tables": want, "patch_measured_at": patch.get("measured_at"),
+                        "stat_compare_at": stat_result.get("compared_at")}}
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
+    o = sub.add_parser("overlay", help="낮 전체 해시 + 밤 병합 표 해시 → 운영 비교용 한 파일(가벼운 비교 통과가 전제)")
+    o.add_argument("--base", type=Path, required=True, help="낮 snapshot JSON(전 표)")
+    o.add_argument("--patch", type=Path, required=True, help="밤 snapshot JSON(--tables = 병합 표만)")
+    o.add_argument("--stat-result", type=Path, required=True, help="prod_stat_compare compare --result-out JSON(통과)")
+    o.add_argument("--out", type=Path, required=True)
     s = sub.add_parser("snapshot")
     s.add_argument("--db-env", required=True, help="접속 URL 환경변수 이름(값은 출력하지 않음)")
     s.add_argument("--env-file", type=Path, default=None)
@@ -272,6 +345,15 @@ def main(argv=None) -> int:
     c.add_argument("right", type=Path)
     c.add_argument("--result-out", type=Path, default=None)
     a = p.parse_args(argv)
+    if a.cmd == "overlay":
+        try:
+            res = overlay(read_json(a.base), read_json(a.patch), read_json(a.stat_result))
+        except (OSError, ValueError, OverlayError) as ex:
+            print(f"중단: {ex}", file=sys.stderr)
+            return EXIT[UNVERIFIED]
+        write_json(a.out, res)
+        print(f"{res['db']}: 낮 해시 + 밤 병합 표 {res['overlay']['tables']} → {a.out}")
+        return EXIT[PASS]
     if a.cmd == "snapshot":
         with ro_conn(db_url(a.db_env, a.env_file)) as conn:
             name = db_name(conn)
