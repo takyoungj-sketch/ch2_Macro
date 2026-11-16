@@ -257,6 +257,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 - **멈추기:**
   1. 반영 기간(3절 시작 → 낮 로컬 적용·검증 → T 확인 → 새벽 promote → 7절 확인 끝) 동안 로컬 월간 러너와 다른 promote 를 시작하지 않는다(T 결정). 다른 에이전트·작업자에게 「집합·임대·복합 DB 동결」을 알린다.
   2. 운영 서버에서 읽기 전용으로 예약 작업이 없는지 확인한다: `crontab -l; sudo crontab -l; systemctl list-timers --all | grep -i ch2`. 무엇이 나오면 멈추고 보고한다.
+  3. 2회차(새벽) 시작 때 동결을 다시 알리고 그 시각을 `FREEZE_AT` 으로 기록한다. 운영 전용 4표 덤프는 이 시각 뒤에 뜬 것만 쓴다(6.1 2, 병합 스크립트 `--freeze-at` 가 검사).
 - **다시 켜기:** 7절 운영 확인(Opus)이 끝나면 동결을 푼다. 다음 월간 cycle 은 SOP 대로 진행한다.
   - 다음 월간 적재부터 `building_keys.py` 의 C-01·C-2 키 규칙이 적용된다.
   - 월간 integrity 의 C-2형 경고가 0 인지 본다(9절).
@@ -459,7 +460,22 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 ### 6.1 직전 재확인·운영 전용 표 합치기 (2회차 새벽, promote 직전)
 
 1. 3절 `prod_sync_check` 로 **운영**만 다시 스냅샷한다. 3절의 운영 JSON 과 비교해 2.5 의 4개 표 밖은 다름 0 이어야 한다(그 사이 운영이 바뀌지 않음).
-2. **운영 전용 표 떠서 로컬에 합치기**(2.5):
+2. **동결 직후 — 운영 전용 4표 새 덤프 → manifest SHA-256 확인 → 병합 → c29 검사(고아 0, 충돌 건수 기록) → promote**(2.5):
+   - **동결 시각 `FREEZE_AT`(KST)** = 2회차 시작 때 3.2 동결을 다시 알리고 운영 예약 작업 없음을 확인한 시각. 기록해 둔다(예 `2026-11-20T03:00`).
+   - 순서(하나라도 실패하면 promote 하지 않고 멈춘다):
+
+| # | 할 일 | 누가 | 통과 조건 |
+|---|---|---|---|
+| a | 운영 4표(`collective_building_geocodes`·`collective_commercial_map_geocodes`·`qa_audit_run`·`rent_building_geocodes`)를 읽기 전용으로 **새로** 덤프(데이터만, 아래 명령) + manifest(`created_kst`·파일별 `sha256`·`bytes`·`archive_rows`·`production_read_only: true`) | Codex | **`FREEZE_AT` 뒤에 뜬 덤프**. 지난 리허설 덤프·동결 전 덤프는 쓰지 않는다 |
+| b | 로컬 `logs/collective_p2/prod_only/` 에 둔다. `git check-ignore` 로 커밋 대상 아님 확인. 내용(주소·좌표)은 출력하지 않는다 | Opus | ignore 됨 |
+| c | 임시 원본 DB 2개 만들기: 표 구조는 로컬 반영본에서 `pg_dump --schema-only -t <표>` → `pg_restore --data-only` | Opus | — |
+| d | 병합 드라이런 — `--manifest <manifest> --freeze-at $FREEZE_AT` 사전 확인이 같이 돈다 | Opus | manifest SHA-256·크기 = 덤프, **덤프 시각 ≥ `FREEZE_AT`**(오래되면 「새 덤프 필요」로 멈춤, 종료 코드 2), 운영 읽기 전용 표시, 임시 DB 행 수 = manifest |
+| e | 병합 적용 `--real-apply …`(아래) | Opus | DB 마다 한 트랜잭션, 계획 = 넣은 행 = 최종 행 |
+| f | **c29 검사** `c29_merge_prod_only_check.py --dst-collective collective_stats --dst-rent rent_stats --src-collective <임시> --src-rent <임시> --out-dir logs/collective_p2/merge_ops check --report <병합 보고서>` | Opus | 종료 코드 0: **병합이 넣은 고아(원장에 없는 키) 0** · C-2/C-01 옛 키에 남은 좌표 0 · C-2 조각 키에 운영 좌표 0. **충돌 건수(같은 키 값 다름·좌표 다름)는 기록**(로컬 값 유지) |
+| g | 다시 한 번 병합 적용 → 넣은 행 0(멱등) | Opus | 모든 표 insert 0 |
+| h | 5.4 가벼운 지표·해시 스냅샷 다시 뜨기 → promote 용 덤프(2.2) → 6.2 promote | Codex | — |
+
+   - 리허설 실측(2026-11-16 덤프, `*_p2r`): 좌표 5,413행 → 넣음 517 · C-2 옛 키 버림 34 · C-01 분할 옛 키 버림 24 · 같은 키 값 다름 1(운영 쪽 좌표 없음 `not_found`, 로컬 `ok` 가 12일 늦음 → 로컬 유지) · 비주거 695행 → 넣음 92(값 그대로) · 임대 975행 → 넣음 0 · QA 1행 같음 · 고아 0(임대 28행은 P2 전부터 있던 것) · 두 번째 실행 넣음 0, 4표 해시 같음.
 
 ```bash
 # 운영(읽기) — 표만 데이터로
@@ -481,10 +497,10 @@ sudo -u postgres /usr/lib/postgresql/16/bin/pg_dump -Fc --data-only -d rent_stat
        - 건수 확인: 합친 뒤 행 수 = 로컬 원래 행 + 1번 행 + 3번 행.
    - 합친 뒤 5.4 의 `prod_c5_core`(가벼운 지표)·해시 스냅샷을 다시 뜨고, promote 용 덤프를 다시 만든다(2.2).
    - **스크립트:** 위 규칙은 `scripts/ops/collective_p2_merge_prod_only.py` 가 그대로 한다(13절 C-9). C-01 분할 옛 키와 C-2 옛 키(연결표 reason 에 `c2` · 판정 표 split base_key) 좌표는 버리고, 1:1 은 재키, 로컬에 없는 행만 넣는다. QA 기록은 위 0~4. 단계별 건수를 JSON(`logs/collective_p2/merge_prod_only.json`)으로 낸다.
-     - 드라이런: `PY scripts/ops/collective_p2_merge_prod_only.py --src-collective prod_only_tmp --src-rent prod_only_rent_tmp --dst-collective collective_stats --dst-rent rent_stats`
-     - 적용: 위 + `--real-apply --confirm-db collective_stats --confirm-db rent_stats --sync-result …_collective.json --sync-result …_rent.json`(키 이전과 같은 가드). DB 마다 한 트랜잭션, 계획과 넣은 행 수·최종 행 수가 다르면 되돌림.
+     - 드라이런: `PY scripts/ops/collective_p2_merge_prod_only.py --src-collective prod_only_tmp --src-rent prod_only_rent_tmp --dst-collective collective_stats --dst-rent rent_stats --manifest logs/collective_p2/prod_only/<manifest>.json --freeze-at $FREEZE_AT`
+     - 적용: 위 + `--real-apply --confirm-db collective_stats --confirm-db rent_stats --sync-result …_collective.json --sync-result …_rent.json`(키 이전과 같은 가드). `--real-apply` 는 `--manifest`·`--freeze-at` 없으면 거부. DB 마다 한 트랜잭션, 계획과 넣은 행 수·최종 행 수가 다르면 되돌림.
      - 다시 돌려도 중복이 생기지 않는다(로컬에 있는 키 유지, QA 는 같은 내용이면 건너뜀).
-     - 시험: fixture 테스트 `pipeline/tests/test_collective_p2_merge_prod_only.py`. 리허설 DB 시험은 Codex 가 운영 4표를 읽기 전용으로 뜬 덤프(T 승인)가 오면 `--dst-* *_p2r --apply` 로 돌려 건수·재키·폐기 내역을 보고한다.
+     - 시험: fixture 테스트 `pipeline/tests/test_collective_p2_merge_prod_only.py`(사전 확인 포함). 리허설 DB 시험 완료(위 실측).
 3. 반영 직전 운영 덤프(2.2 스크립트가 자동으로 뜸, 아래는 위치 고정용 수동 덤프).
 4. 운영 디스크(4절 #4)를 확인한다.
 
@@ -736,5 +752,5 @@ C-2 판정은 `logs/collective_p2/c2_units_final.csv`(`collective_building_key_c
 | C-6 | `analysis_cache` 비우기 | **결정됨** — promote 뒤 |
 | C-7 | Insight 14 | **결정됨** — wip 생성기로 비교만 |
 | C-8 | C-2 옛 키·미들웨어 | **결정됨·구현** — 가장 큰 그룹 옛 키 유지, 409 대신 안내 |
-| C-9 | 운영 전용 표(2.5) 합치기 SQL — 스크립트화·리허설 시험 | **스크립트·fixture 시험 완료**(`scripts/ops/collective_p2_merge_prod_only.py`, 6.1). 리허설 DB 시험은 Codex 가 운영 4표를 읽기 전용으로 뜬 덤프(T 승인)가 오면 |
+| C-9 | 운영 전용 표(2.5) 합치기 SQL — 스크립트화·리허설 시험 | **완료** — 스크립트·fixture·리허설 DB 시험(2026-11-16 덤프, 6.1 실측). 운영 때는 동결 뒤 새 덤프만(6.1 2 a~h) |
 | C-10 | PG 버전 해시 | **절차 넣음** — 3.1 `pgcheck`, 다르면 `--mode sums` |

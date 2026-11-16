@@ -195,3 +195,53 @@ def test_merge_refuses_non_rehearsal_target_and_same_db(tmp_path):
     with pytest.raises(mig.GuardError, match="같이"):
         mpo.main(["--src-collective", SRC, "--dst-collective", DST, "--src-rent", SRC_R,
                   "--base-url", "postgresql://u@127.0.0.1/x"])
+
+
+# --- 동결 뒤 새 덤프 사전 확인(런북 6.1) -----------------------------------------------
+
+def _manifest(tmp_path, created="20261117_031000", ro=True, rows=None, tamper=False):
+    import hashlib
+
+    dump = tmp_path / "prod_only_collective_stats_x.dump"
+    dump.write_bytes(b"PGDMP-fixture")
+    sha = hashlib.sha256(dump.read_bytes()).hexdigest()
+    m = {"production_read_only": ro, "created_kst": created, "archives": [
+        {"db": "collective_stats", "file": "C:\other\machine\\" + dump.name, "bytes": dump.stat().st_size,
+         "sha256": ("0" * 64) if tamper else sha, "archive_rows": rows or {"collective_building_geocodes": 3, "qa_audit_run": 1}}]}
+    f = tmp_path / "manifest.json"
+    f.write_text(json.dumps(m), encoding="utf-8")
+    return f
+
+
+def test_preflight_accepts_fresh_matching_dump(tmp_path):
+    f = _manifest(tmp_path)
+    out = mpo.preflight(f, "2026-11-17T03:00", {"collective": {"collective_building_geocodes": 3, "qa_audit_run": 1}})
+    assert out["archives"][0]["sha256_ok"] and out["created_kst"] == "2026-11-17 03:10:00"
+    mpo.preflight(f, "20261117_031000")                                     # 동결 시각과 같으면 통과
+
+
+@pytest.mark.parametrize("kw,freeze,counts,needle", [
+    ({}, "2026-11-17T03:20", None, "동결 시각보다 오래됨"),
+    ({"tamper": True}, "2026-11-17T03:00", None, "SHA-256"),
+    ({"ro": False}, "2026-11-17T03:00", None, "읽기 전용"),
+    ({}, "2026-11-17T03:00", {"collective": {"collective_building_geocodes": 2, "qa_audit_run": 1}}, "행 수가 manifest 와 다름"),
+    ({}, "어제", None, "시각 형식"),
+])
+def test_preflight_refuses(tmp_path, kw, freeze, counts, needle):
+    with pytest.raises(mpo.MergeError, match=needle):
+        mpo.preflight(_manifest(tmp_path, **kw), freeze, counts)
+
+
+def test_preflight_refuses_missing_dump_file(tmp_path):
+    f = _manifest(tmp_path)
+    next(tmp_path.glob("*.dump")).unlink()
+    with pytest.raises(mpo.MergeError, match="덤프 파일 없음"):
+        mpo.preflight(f, "2026-11-17T03:00")
+
+
+def test_real_apply_requires_manifest_and_freeze_time():
+    base = ["--src-collective", SRC, "--dst-collective", "collective_stats", "--base-url", "postgresql://u@127.0.0.1/x"]
+    with pytest.raises(mig.GuardError, match="manifest"):
+        mpo.main(base + ["--real-apply", "--confirm-db", "collective_stats"])
+    with pytest.raises(mig.GuardError, match="같이"):
+        mpo.main(base + ["--manifest", "m.json"])

@@ -24,6 +24,8 @@
 - 쓰기 대상은 리허설 DB(…_p2r) 또는 실제 적용 모드(--real-apply · --confirm-db · --sync-result, 키 이전과 같은 가드)뿐.
   쓰기 직전 current_database() 를 다시 본다. 원본 DB 는 읽기 전용 세션으로만 연다(대상과 같은 이름이면 거부).
 - 출력은 건수만(키·주소·좌표 원문 없음). QA id 대응 CSV 는 logs/ 아래(id 숫자만).
+- 사전 확인(--manifest · --freeze-at, --real-apply 는 필수): manifest SHA-256·크기 = 덤프 파일, 덤프 시각 ≥ 동결 시각,
+  운영 읽기 전용 표시, 원본 임시 DB 행 수 = manifest. 하나라도 어긋나면 아무것도 쓰기 전에 멈춘다.
 
   python scripts/ops/collective_p2_merge_prod_only.py --src-collective prod_only_tmp --src-rent prod_only_rent_tmp \\
       --dst-collective collective_stats_p2r --dst-rent rent_stats_p2r            # 드라이런
@@ -63,6 +65,10 @@ GEOCODES = [
     ("collective", "collective_commercial_map_geocodes", "cluster_key", "collective_cluster_key_map", False),
     ("rent", "rent_building_geocodes", "building_key", "rent_building_key_map", False),
 ]
+# 좌표 표 → (원장, 키 열): 넣는 행 중 원장에 없는 키(고아)를 센다 — 런북 6.1 게이트는 0
+LEDGER = {"collective_building_geocodes": ("collective_transactions", "building_key"),
+          "collective_commercial_map_geocodes": ("collective_commercial_transactions", "cluster_key"),
+          "rent_building_geocodes": ("rent_transactions", "building_key")}
 QA = "qa_audit_run"
 REKEY, KEEP, DROP_C01, DROP_C2 = "rekey", "keep", "drop_c01", "drop_c2"
 
@@ -185,6 +191,12 @@ def merge_geocode(src: Connection, dst: Connection, table: str, keycol: str, map
     local = {str(r[keycol]).strip(): r for r in (dict(x._mapping) for x in
                                                  dst.execute(text(f"SELECT {', '.join(cols)} FROM {table}")))}
     ins, cnt = plan_geocodes(src_rows, keycol, rules, local)
+    led_t, led_c = LEDGER.get(table, (None, None))
+    if led_t and _exists(dst, led_t) and ins:
+        led = {str(r[0]).strip() for r in dst.execute(text(f"SELECT DISTINCT {led_c} FROM {led_t} WHERE {led_c} IS NOT NULL"))}
+        cnt["insert_not_in_ledger"] = sum(1 for r in ins if str(r[keycol]).strip() not in led)
+    else:
+        cnt["insert_not_in_ledger"] = 0
     out = {"table": table, **cnt, "dst_before": len(local),
            "rule": "키 이전 적용(1:1 재키 · C-01 분할 옛 키·C-2 옛 키 버림) → 로컬에 없는 키만 추가, 같은 키는 로컬 값 유지(값은 고치지 않음)"}
     if apply and ins:
@@ -285,6 +297,76 @@ def merge_qa(src: Connection, dst: Connection, *, apply: bool, remap_out: Path |
     return out
 
 
+# --- 덤프 사전 확인(동결 뒤 새 덤프인지) ---------------------------------------------
+
+MANIFEST_TS = "%Y%m%d_%H%M%S"
+ARCHIVE_SIDE = {"collective_stats": "collective", "rent_stats": "rent"}
+
+
+def parse_kst(s: str):
+    """'YYYYMMDD_HHMMSS'(manifest created_kst) 또는 ISO('2026-11-17T03:00' — 시간대 없으면 KST)."""
+    from datetime import datetime, timedelta, timezone
+
+    kst = timezone(timedelta(hours=9))
+    s = (s or "").strip()
+    try:
+        dt = datetime.strptime(s, MANIFEST_TS)
+    except ValueError:
+        try:
+            dt = datetime.fromisoformat(s)
+        except ValueError as ex:
+            raise MergeError(f"시각 형식이 아님: {s!r} (YYYYMMDD_HHMMSS 또는 ISO)") from ex
+    return dt.replace(tzinfo=kst) if dt.tzinfo is None else dt
+
+
+def preflight(manifest: Path, freeze_at: str, src_counts: dict[str, dict[str, int]] | None = None) -> dict:
+    """병합 전 확인(하나라도 어긋나면 MergeError — 아무것도 쓰기 전):
+    ① manifest 의 각 덤프 파일 SHA-256·크기 = 실제 파일(파일은 manifest 와 같은 폴더에서 찾는다)
+    ② manifest created_kst ≥ 동결 시각(--freeze-at) — 동결 전에 뜬(오래된) 덤프면 진행하지 않는다
+    ③ production_read_only = true
+    ④ src_counts 를 주면 원본 임시 DB 의 표별 행 수 = manifest archive_rows(그 덤프를 복원한 DB 인지)."""
+    import hashlib
+
+    manifest = Path(manifest)
+    if not manifest.is_file():
+        raise MergeError(f"manifest 없음: {manifest.name}")
+    m = json.loads(manifest.read_text(encoding="utf-8"))
+    if m.get("production_read_only") is not True:
+        raise MergeError("manifest 가 운영 읽기 전용 덤프로 표시되지 않음(production_read_only)")
+    created, freeze = parse_kst(str(m.get("created_kst", ""))), parse_kst(freeze_at)
+    if created < freeze:
+        raise MergeError(f"덤프가 동결 시각보다 오래됨(덤프 {created:%Y-%m-%d %H:%M:%S} < 동결 {freeze:%Y-%m-%d %H:%M:%S} KST) — 새 덤프 필요")
+    out = {"manifest": manifest.name, "created_kst": f"{created:%Y-%m-%d %H:%M:%S}", "freeze_at": f"{freeze:%Y-%m-%d %H:%M:%S}",
+           "archives": []}
+    for a in m.get("archives") or []:
+        f = manifest.parent / Path(str(a.get("file", "")).replace("\\", "/")).name
+        if not f.is_file():
+            raise MergeError(f"덤프 파일 없음: {f.name}")
+        sha = hashlib.sha256(f.read_bytes()).hexdigest()
+        if sha != str(a.get("sha256", "")).lower():
+            raise MergeError(f"덤프 SHA-256 이 manifest 와 다름: {f.name}")
+        if int(a.get("bytes", -1)) != f.stat().st_size:
+            raise MergeError(f"덤프 크기가 manifest 와 다름: {f.name}")
+        side = ARCHIVE_SIDE.get(a.get("db"))
+        rows = {k: int(v) for k, v in (a.get("archive_rows") or {}).items()}
+        if src_counts is not None and side in src_counts:
+            got = src_counts[side]
+            bad = {t: (n, got.get(t)) for t, n in rows.items() if got.get(t) != n}
+            if bad:
+                raise MergeError(f"원본 임시 DB 행 수가 manifest 와 다름({a.get('db')}): " +
+                                 ", ".join(f"{t} {g} ≠ {n}" for t, (n, g) in bad.items()))
+        out["archives"].append({"db": a.get("db"), "file": f.name, "sha256_ok": True, "rows": rows})
+    if not out["archives"]:
+        raise MergeError("manifest 에 덤프 항목이 없음")
+    return out
+
+
+def source_counts(eng: Engine, side: str) -> dict[str, int]:
+    tabs = [t for sd, t, *_ in GEOCODES if sd == side] + ([QA] if side == "collective" else [])
+    with eng.connect() as c:
+        return {t: int(c.execute(text(f"SELECT count(*) FROM {t}")).scalar() or 0) for t in tabs if _exists(c, t)}
+
+
 # --- 실행 -----------------------------------------------------------------------
 
 def merge_side(src_eng: Engine, dst_eng: Engine, dst_name: str, side: str, *, apply: bool,
@@ -309,10 +391,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--base-url", default="", help="DB 서버 URL(기본 backend/.env)")
     p.add_argument("--remap-out", default=str(OUT / "qa_audit_id_remap.csv"))
     p.add_argument("--report-out", default=str(OUT / "merge_prod_only.json"))
+    p.add_argument("--manifest", default="", help="Codex 덤프 manifest(JSON). --real-apply 필수")
+    p.add_argument("--freeze-at", default="", help="동결 시각(KST, 'YYYY-MM-DDTHH:MM' 또는 YYYYMMDD_HHMMSS). 덤프가 이보다 오래되면 중단")
     add_real_apply_args(p)
     a = p.parse_args(argv)
     if a.real_apply:
+        if not a.manifest or not a.freeze_at:
+            raise GuardError("--real-apply 는 --manifest · --freeze-at 이 필요하다(동결 뒤 새 덤프 확인, 런북 6.1)")
         a.apply = True
+    if bool(a.manifest) != bool(a.freeze_at):
+        raise GuardError("--manifest 와 --freeze-at 은 같이 준다")
     if bool(a.src_rent) != bool(a.dst_rent):
         raise GuardError("--src-rent 와 --dst-rent 는 같이 준다")
     for s_, d_ in ((a.src_collective, a.dst_collective), (a.src_rent, a.dst_rent)):
@@ -323,6 +411,16 @@ def main(argv: list[str] | None = None) -> int:
     if a.apply:
         check_write_targets(dsts, a, base_url=base)
     report = {"apply": bool(a.apply), "real_apply": bool(a.real_apply), "sides": {}}
+    if a.manifest:
+        counts = {}
+        for side, src in (("collective", a.src_collective), ("rent", a.src_rent)):
+            if src:
+                se = engine_for(src, read_only=True, base_url=base)
+                try:
+                    counts[side] = source_counts(se, side)
+                finally:
+                    se.dispose()
+        report["preflight"] = preflight(Path(a.manifest), a.freeze_at, counts)
     for side, src, dst in (("collective", a.src_collective, a.dst_collective), ("rent", a.src_rent, a.dst_rent)):
         if not dst:
             continue
