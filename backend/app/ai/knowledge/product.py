@@ -145,6 +145,19 @@ LIMITATIONS = """
 - 회귀 계수는 조건부 연관이며 인과·적정가를 의미하지 않음
 """
 
+def _feature_view(fn):
+    """D-085: 제품 지식 문구에서 현재 요청자에게 꺼진 기능 설명을 뺀다(feature_filter.product_view)."""
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        from app.ai.feature_filter import product_view
+
+        return product_view(fn(*args, **kwargs))
+
+    return wrapper
+
+
 # 유형별 수집·정제·통계 방식 (경로 제안·출처 질문에 사용). 화면 n은 Bundle만.
 DOMAIN_BY_APP: dict[str, str] = {
     "land": """
@@ -267,6 +280,7 @@ Macro Insight에서 하지 않는 것:
 }
 
 
+@_feature_view
 def format_domain_card(app: str) -> str:
     body = (DOMAIN_BY_APP.get(app) or DOMAIN_BY_APP["built"]).strip()
     return "[유형별 데이터·통계 방식]\n" + body
@@ -297,6 +311,7 @@ def is_cross_app_question(message: str) -> bool:
     )
 
 
+@_feature_view
 def format_all_domain_cards(*, with_negatives: bool = False) -> str:
     parts = ["[유형별 데이터·통계 방식 — 토지·복합·집합·임대·지역프로필]"]
     for key in ("land", "built", "collective", "rent", "profile"):
@@ -306,6 +321,7 @@ def format_all_domain_cards(*, with_negatives: bool = False) -> str:
     return "\n\n".join(parts)
 
 
+@_feature_view
 def format_knowledge_source_answer(*, app: str) -> str:
     return (
         "앞선 안내는 외부 웹이 아니라 **CH2에 넣어 둔 지식**을 쓴 것입니다. "
@@ -737,6 +753,7 @@ def format_function_cards(*, app: str = "", intent_hint: str = "") -> str:
     return "\n".join(lines).strip()
 
 
+@_feature_view
 def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
     """현재 앱 지식. 다른 앱 전문은 넣지 않음."""
     key = app if app in DOMAIN_BY_APP else "built"
@@ -801,6 +818,7 @@ def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
     return "\n\n".join(parts)
 
 
+@_feature_view
 def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
     """LLM 컨텍스트용 — 기본은 현재 앱 + 네거티브. 전 앱은 유형 차이 질문만."""
     lower = message.lower()

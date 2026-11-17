@@ -1460,11 +1460,19 @@ def _answer_land(req: AiChatRequest, session: AiSession, question: QuestionLog) 
     if _unrelated(req.message):
         question.validation = "refusal"
         return _refuse(session, req, current, "그 질문은 CH2와 통계 밖이라 답하지 않습니다.")
-    previous = session.dialogue_evidence
+    from app.ai.feature_filter import replay_allowed
+
+    # D-085: previous 근거도 재생 관문(표지 기반 허용 목록)을 거친다.
+    previous = session.dialogue_evidence if replay_allowed(session.dialogue_evidence_features) else None
     if previous is not None and not current.facts and not _ASKS_PREVIOUS.search(req.message):
         # 새로고침 등으로 지금 화면 통계가 비었는데 이전 분석 숫자로 답하지 않는다(T7).
         previous = None
     sources = _sources(req.message, current, previous)
+    if "previous" in sources:
+        from app.ai.feature_filter import add_used
+
+        # D-085: 이 답은 이전 근거를 쓸 수 있다 — 답 표지 = 현재 요청 ∪ 이전 근거.
+        add_used(session.dialogue_evidence_features)
     focus = current
     message = req.message.lower()
     apps = [app for app, names in _APP_WORDS.items() if any(name in message for name in names)]
@@ -1547,7 +1555,11 @@ def _answer_land(req: AiChatRequest, session: AiSession, question: QuestionLog) 
         refusal = draft["kind"] == "refusal"
         answer = validate_answer(answer, "refusal" if refusal else "ch2")
         if evidence and any(item.ref and not item.ref.startswith("calc.") for item in evidence):
+            from app.ai.feature_filter import make_tag
+
+            # D-085: 근거 표지 = 현재 요청 ∪ 이어 쓴 이전 근거(위에서 add_used 로 합침).
             session.dialogue_evidence = focus
+            session.dialogue_evidence_features = make_tag()
         if draft["kind"] == "knowledge":
             session.dialogue_product_app = apps[0]
     else:

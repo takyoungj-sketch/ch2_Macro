@@ -35,6 +35,7 @@ import {
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
+import { PrivateFeatureBadge, useFeature } from "@ch2/macro-shell/features";
 import { useAppStore } from "../store";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import LandTraitConsentModal from "./LandTraitConsentModal";
@@ -230,6 +231,19 @@ export default function PaidMatrixYearlyModal({
   const [txExportError, setTxExportError] = useState<string | null>(null);
   const [traitEnrich, setTraitEnrich] = useState(false);
   const [traitConsentOpen, setTraitConsentOpen] = useState(false);
+  // D-085: 비공개 기능은 그리지 않는다. 대장 연결이 꺼져 있으면 공시지가 요청도 보내지 않는다.
+  const landRegressionOn = useFeature("land_regression");
+  const ledgerOn = useFeature("land_ledger_link");
+  const traitEnrichOn = traitEnrich && ledgerOn;
+  useEffect(() => {
+    if (!landRegressionOn && panel === "regression") setPanel("trend");
+  }, [landRegressionOn, panel]);
+  useEffect(() => {
+    if (ledgerOn) return;
+    setTraitEnrich(false);
+    setTraitConsentOpen(false);
+    setRegVars((v) => (v.assessed_land_price ? { ...v, assessed_land_price: false } : v));
+  }, [ledgerOn]);
 
   const [ltLoading, setLtLoading] = useState(false);
   const [ltError, setLtError] = useState<string | null>(null);
@@ -453,7 +467,7 @@ export default function PaidMatrixYearlyModal({
       try {
         const data = await fetchAllMatrixCellTransactions({
           ...filterRequest,
-          trait_enrich: traitEnrich,
+          trait_enrich: traitEnrichOn,
         });
         if (!cancelled) setTxData(data);
       } catch (e) {
@@ -468,7 +482,7 @@ export default function PaidMatrixYearlyModal({
     return () => {
       cancelled = true;
     };
-  }, [open, panel, filterRequest, traitEnrich]);
+  }, [open, panel, filterRequest, traitEnrichOn]);
 
   useEffect(() => {
     if (panel !== "transactions") return;
@@ -482,7 +496,7 @@ export default function PaidMatrixYearlyModal({
     try {
       await downloadMatrixCellTransactionsCsv({
         ...filterRequest,
-        trait_enrich: traitEnrich,
+        trait_enrich: traitEnrichOn,
       });
     } catch (e) {
       const parsed = await parseApiErrorAsync(e);
@@ -490,7 +504,7 @@ export default function PaidMatrixYearlyModal({
     } finally {
       setTxExportLoading(false);
     }
-  }, [filterRequest, traitEnrich]);
+  }, [filterRequest, traitEnrichOn]);
 
   const handleAggregateDrillDown = useCallback((filters: LandTxDrillDownFilters) => {
     setTxExternalFilters(
@@ -512,8 +526,8 @@ export default function PaidMatrixYearlyModal({
       { id: "regression", label: "회귀 분석" },
       { id: "longTerm", label: "장기 추세" },
     ];
-    return tabs;
-  }, [isRolling]);
+    return landRegressionOn ? tabs : tabs.filter((t) => t.id !== "regression");
+  }, [isRolling, landRegressionOn]);
 
   const ltPriceLabel = ltMetric === "median" ? "중앙값" : "평균";
   const rollPriceLabel = rollMetric === "median" ? "중앙값" : "평균";
@@ -665,6 +679,7 @@ export default function PaidMatrixYearlyModal({
                 }}
               >
                 {label}
+                {id === "regression" && <PrivateFeatureBadge feature="land_regression" />}
               </button>
             ))}
           </div>
@@ -1187,16 +1202,18 @@ export default function PaidMatrixYearlyModal({
                   {txExportError && (
                     <p className="text-[10px] text-red-500">{txExportError}</p>
                   )}
-                  {traitEnrich && !txLoading && !txError && txData && !txData.trait_enrich_applied && (
+                  {traitEnrichOn && !txLoading && !txError && txData && !txData.trait_enrich_applied && (
                     <p className="text-[10px] text-amber-700">
                       공시지가 자료를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
                     </p>
                   )}
-                  {traitEnrich && txData?.trait_enrich_applied && (
+                  {traitEnrichOn && txData?.trait_enrich_applied && (
                     <p className="text-[11px] text-slate-600">거래단가 만원/㎡ · 공시지가 원/㎡</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {ledgerOn && (
+                  <>
                   <label className="flex items-center gap-1 text-[11px] text-slate-700 whitespace-nowrap">
                     <input
                       type="checkbox"
@@ -1210,6 +1227,7 @@ export default function PaidMatrixYearlyModal({
                       }}
                     />
                     공시지가 표시
+                    <PrivateFeatureBadge feature="land_ledger_link" />
                   </label>
                   <button
                     type="button"
@@ -1217,6 +1235,8 @@ export default function PaidMatrixYearlyModal({
                     onClick={() => setTraitConsentOpen(true)}
                     className="rounded-full border border-slate-300 w-5 h-5 text-xs text-slate-700"
                   >?</button>
+                  </>
+                  )}
                   {!txLoading && !txError && txData && (
                     <div
                       className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5"
@@ -1275,7 +1295,7 @@ export default function PaidMatrixYearlyModal({
                       items={txData.items}
                       truncated={txData.total > txData.items.length}
                       showLandCategory={matrixMode === "group"}
-                      showTraitEnrich={traitEnrich && Boolean(txData.trait_enrich_applied)}
+                      showTraitEnrich={traitEnrichOn && Boolean(txData.trait_enrich_applied)}
                       externalSelectFilters={txExternalFilters}
                       externalFilterToken={txExternalFilterToken}
                     />
@@ -1285,7 +1305,7 @@ export default function PaidMatrixYearlyModal({
             </div>
           )}
 
-          {canDetail && panel === "regression" && filterRequest && (
+          {canDetail && landRegressionOn && panel === "regression" && filterRequest && (
             <div className="space-y-4">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
                 <p className="text-xs font-semibold text-slate-600">투입 변수 선택</p>
@@ -1300,7 +1320,7 @@ export default function PaidMatrixYearlyModal({
                       ["beopjungri_fe", "법정동 FE"],
                       ["assessed_land_price", "개별공시지가"],
                     ] as [keyof LandRegressionVariables, string][]
-                  ).map(([key, label]) => (
+                  ).filter(([key]) => ledgerOn || key !== "assessed_land_price").map(([key, label]) => (
                     <label key={key} className="flex items-center gap-1.5 cursor-pointer">
                       <input
                         type="checkbox"
@@ -1311,6 +1331,7 @@ export default function PaidMatrixYearlyModal({
                         className="accent-blue-600"
                       />
                       <span>{label}</span>
+                      {key === "assessed_land_price" && <PrivateFeatureBadge feature="land_ledger_link" />}
                     </label>
                   ))}
                 </div>
@@ -1488,7 +1509,7 @@ export default function PaidMatrixYearlyModal({
 
     </DraggableModalShell>
     <LandTraitConsentModal
-      open={traitConsentOpen}
+      open={ledgerOn && traitConsentOpen}
       onCancel={() => setTraitConsentOpen(false)}
       onConfirm={() => {
         setTraitEnrich(true);

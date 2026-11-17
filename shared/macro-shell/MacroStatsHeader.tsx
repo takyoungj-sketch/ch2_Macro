@@ -6,6 +6,7 @@ import MacroProfileNavLink from "./MacroProfileNavLink";
 import MacroRentNavLink from "./MacroRentNavLink";
 import MacroTypeNav, { type MacroAppKind } from "./MacroTypeNav";
 import { useNarrowScreen } from "./useNarrowScreen";
+import { useFeatureWatch } from "./features";
 
 type Props = {
   /** stats 앱(토지·복합·집합) 중 현재 페이지. 지역프로필 단독 화면이면 null */
@@ -39,6 +40,8 @@ export default function MacroStatsHeader({
 }: Props) {
   const headerRef = useRef(null);
   const narrow = useNarrowScreen();
+  // D-085: 같은 탭에서 권한이 바뀌면 화면 데이터를 비운다(5앱 공통 헤더).
+  useFeatureWatch();
 
   useEffect(() => {
     const el = headerRef.current;

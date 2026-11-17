@@ -130,6 +130,8 @@ def _cleanup_overrides(monkeypatch):
 
     monkeypatch.setattr(settings, "api_token", "")
     monkeypatch.setattr(product_gate, "product_gate_response", _open)
+    # D-085 임대 회귀는 기본 관리자 전용 — 이 테스트는 시간 제한만 본다.
+    monkeypatch.setenv("FEATURE_RENT_REGRESSION", "public")
     yield
     from app.main import app
 
