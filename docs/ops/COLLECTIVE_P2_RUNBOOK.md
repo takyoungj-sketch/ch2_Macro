@@ -13,7 +13,7 @@
 | 운영 확인 | 읽기 전용 운영 확인 스크립트(`scripts/ops/collective_p2_verify/`) | 3·7절 |
 | 롤백 | **반영 직전 운영 덤프로 되돌린다.** 통계표 재빌드 경로는 쓰지 않고 리허설도 하지 않는다 | 8절 |
 | 서비스 | **새벽 점검 창에 nginx 점검 모드(API 전체 503)를 건다**(T 결정 2026-11-16 안 A — 운영 전용 표 덤프부터 promote 끝까지 운영 쓰기 차단) | 3.2 · 6.0 · 6.3 |
-| 나누기 | **낮: 키 이전·로컬 적용·T 확인 → 동결(3.2 F1~F6) → 무거운 동기화·(동결 확인 90초 뒤) 가벼운 비교 기준 기록(운영 서비스 그대로) → 새벽 한 묶음: 점검 모드 ON → 진행 중 요청 0 → 2a built QA → 2b 90초 → 3 비교 → 운영 전용 4표 덤프·병합·c29 → promote → R5 → OFF(06:00 마감).** | 3.2 · 5 · 6 |
+| 나누기 | **코드 선배포(4-1, 직후부터 배치·보강 금지) → 낮: 동결(3.2 F1~F6) → 무거운 동기화·(동결 확인 90초 뒤) 가벼운 비교 기준 기록 → 키 이전·로컬 적용·검증·T 확인(운영 서비스 그대로) → 새벽 한 묶음: 점검 모드 ON → 진행 중 요청 0 → 2a built QA → 2b 90초 → 3 비교 → 운영 전용 4표 덤프·병합·c29 → promote → R5 → OFF(06:00 마감).** | 4-1 · 3.2 · 5 · 6 |
 | 운영 전용 데이터 | promote 전에 운영에서만 쓰이는 표를 떠서 로컬에 합친다 | 2.5 · 6.1 |
 | 캐시 | promote 뒤 `analysis_cache` 를 비운다 | 6.3 |
 | Insight 14 | wip 브랜치 생성기로 **비교만** 한다(main 에 반영하지 않음) | 7.3 |
@@ -257,6 +257,8 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 
 **동결 범위(낮 무거운 동기화 전에 시작 → 밤 점검 창의 7절 확인 끝까지).** 다른 에이전트·작업자에게 아래 목록을 그대로 알린다:
 
+**동결 이전 공백 구간도 금지:** 코드 선배포(4-1)가 끝난 직후부터 이 동결 시작까지, 로컬·운영의 **월간 배치(F1)·보강 작업(F4) 및 그 결과의 promote를 실행하지 않는다.** 새 키 빌더가 옛 DB를 먼저 바꾸면 코드만 되돌릴 수 있는 전제가 깨진다. 선배포 전에 진행 중인 해당 작업이 없음을 확인하고, 금지 시작 시각·대상·실행 주체(Cursor)를 기록한다. 이 금지는 동결 F1~F6으로 이어지며, 7절 확인 완료 뒤 해제한다. 5절의 승인된 P2 이전·보강은 이 런북 순서 안에서만 실행한다.
+
 | # | 멈추는 것 | 대상 | 왜 |
 |---|---|---|---|
 | F1 | 월간 배치 | 집합·복합·토지·임대 러너(로컬), 그 결과의 promote | 로컬 반영본·운영이 바뀌면 낮 동기화·밤 비교가 무의미 |
@@ -278,7 +280,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
   3. 로컬 카운터 기준(①)은 5.4 전체 해시(②)보다 **먼저** 기록한다: `py scripts\ops\collective_p2_verify\prod_stat_compare.py snapshot --confirmed-at $QUIET_AT_LOCAL --db-env … --env-file backend\.env --out logs\collective_p2\stat_day_local.json`. 같은 90초 규칙이다. 명령이 끝난 시각이 `measured_at`(출처 `local`)이다.
   - 이 뒤로 밤까지 F1~F6 을 하지 않는다. 밤에는 무거운 동기화를 다시 하지 않고 **가벼운 비교**(6.1 3)로 「낮 이후 운영 전용 표 밖 쓰기 없음」만 본다.
 - **운영 쓰기 차단 = nginx 점검 모드(안 A):** 운영 서버가 직접 쓰는 표(2.5 — 좌표 캐시 3표·QA 기록)는 API 요청으로만 바뀐다. 밤 점검 창(6.1) 동안 **nginx 가 API 전체에 503** 을 돌려주게 해서, 운영 전용 4표 덤프부터 promote 끝까지 운영에 새 쓰기가 생기지 않게 한다.
-  - **나누기:** 낮 = 키 이전·로컬 적용·T 확인·동결·무거운 동기화·카운터 기록(운영 서비스는 그대로). 밤 = 6.1 의 한 묶음(점검 모드 ON → … → OFF).
+  - **나누기:** 코드 선배포·즉시 배치/보강 금지(4-1) → 낮 = 동결·무거운 동기화·카운터 기록 → 키 이전·로컬 적용·검증·T 확인(운영 서비스는 그대로). 밤 = 6.1 의 한 묶음(점검 모드 ON → … → OFF).
   - **`FREEZE_AT`** = 점검 모드 ON 을 확인하고 진행 중 요청 0 을 확인한 시각(KST). 운영 전용 4표 덤프는 이 시각 뒤에 뜬 것만 쓴다(병합 스크립트 `--freeze-at` 가 검사, 오래되면 종료 코드 2).
   - **점검 모드는 nginx 에서 걸고 백엔드와 무관하다.** `vps_promote_db_sql.sh` 가 DB 마다 백엔드(`ch2-macro-backend`)를 멈추고 다시 켜도 nginx 는 그대로라 점검 모드(503)가 유지된다. promote 스크립트의 `/health` 확인과 R5 스모크는 nginx 를 거치지 않고 `http://127.0.0.1:8000` 으로 백엔드에 직접 묻는다 → 점검 모드 중에도 확인할 수 있다.
   - 설치·명령·확인 방법은 6.0(서버 파일 수정은 Cursor 몫).
@@ -290,7 +292,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 
 | # | 조건 | 확인 |
 |---|---|---|
-| 1 | **코드:** `data/collective-p2` 가 main 에 병합돼 운영에 배포됨. 키 재매핑 미들웨어·새 빌더 포함. 미들웨어는 연결표가 비어 있으면 통과만 하므로 데이터보다 먼저 배포해도 된다 | 운영 배포 해시 · `/health` |
+| 1 | **코드:** `data/collective-p2`의 main 병합·구형 DB 호환 검수 뒤 **4-1 코드 선배포**. 키 재매핑 미들웨어·새 빌더 포함. 연결표가 없거나 비면 재매핑·C-2 라벨은 적용하지 않는다. 선배포 직후부터 월간 배치·보강 금지 | 배포 파일 해시 · `/health` · 구형 DB 주요 API |
 | 2 | **동기화:** 3절 비교 다름 0 | 3절 JSON |
 | 3 | **동결:** 3.2(로컬 동결) · 6.0 점검 모드 설치 끝(점검 창 전날까지, 깃발 ON/OFF 시험) | `nginx -t` · 깃발 시험 503 |
 | 4 | **디스크:** 로컬 — 덤프 3개 + `_p2_before` 보존 표 · 운영 — 반영 전 덤프 3개(-Fc) + 업로드한 .sql.gz 3개 + 새 DB. 운영 디스크(Lightsail 80GB SSD, `docs/PARCEL_MASTER_DESIGN.md`)의 여유가 **올릴 DB 크기의 2.5배**보다 작으면 멈춘다 | `df -h /var/lib/postgresql /var/backups` |
@@ -299,6 +301,16 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 | 7 | **두 번에 나눔(T 결정):**<br>- 낮(운영 무관): 3절 확인 → 로컬 적용(약 3시간 20분) → 5.4 전체 검증 → **T 확인** · built promote 덤프·업로드 미리<br>- 새벽(한 묶음, 6.1): 점검 모드 ON → 진행 중 요청 0 → 90초 대기 → 운영 전용 4표 덤프·병합·c29·재실행 → collective·rent promote 덤프·scp → 세 DB promote → R5 → OFF → 7절 확인<br>- 그 사이 로컬 동결 유지 | — |
 | 8 | **표제부 DB:** 5.0 으로 진짜 `parcel_master` 를 로컬에 만들어 둠(1회차 전) | 5.0 |
 | 9 | **운영 서버 스크립트(배포 전 확인, Cursor):** R5 스모크가 서버에서 돈다 — `/opt/ch2_Macro/scripts/ops/collective_p2_r5_smoke.py` 가 배포돼 있음 · `cd /opt/ch2_Macro && backend/.venv/bin/python scripts/ops/collective_p2_r5_smoke.py --help` 종료 0 · `backend/.venv/bin/python -c "import sqlalchemy, psycopg2"` 종료 0 · `backend/.env` 에 `COLLECTIVE_DATABASE_URL`. 이 스크립트는 `pipeline/` 이 필요 없다(서버에 `pipeline/collective/*` 가 없어도 됨). 운영 확인 스크립트(`scripts/ops/collective_p2_verify/`)도 같은 방식으로 `--help` 확인. **가벼운 비교(6.1 3)도 서버에서 돈다:** `backend/.venv/bin/python scripts/ops/collective_p2_verify/prod_stat_compare.py --help` 종료 0(pipeline 불필요). OFF 뒤 되돌리기는 보존만 하므로 병합·c29 를 서버에 둘 필요 없다 | 각 명령 종료 0 |
+
+### 4-1. 코드 선배포 · DB 반영 전 코드 복귀 (Cursor)
+
+이 절은 실행 계획이다. 이번 로컬 Phase 3 검수에서 운영 배포·DB 쓰기는 실행하지 않았다.
+
+1. **코드부터 배포한다.** D-085가 포함된 main `6633cf5`와 P2를 합친 `762804e` 및 후속 검수 수정본을 main에 병합·검증한 뒤, `deploy/AGENT_DEPLOY_RUNBOOK.md`에 따라 배포한다. 집합뿐 아니라 임대·공통 게이트·AI·공유 UI도 바뀌므로 `deploy/scripts/deploy-from-windows.ps1 -Scope all` 범위로 확인한다. `collective` 단일 scope로 공통 모듈까지 배포됐다고 가정하지 않는다. R5·검증 스크립트의 서버 배치는 4절 #9대로 별도 확인한다. 서버에는 git이 없으므로 커밋명만 적지 말고 배포 파일 해시와 실행 시각을 남긴다.
+2. 아직 운영 DB는 옛 형태다. `/health`, 집합 주거·비주거 목록/상세, 임대 목록·rolling·거래·매매 연결, built 주요 API와 D-085 공개/관리자 차단을 확인한다. 이때 C-01 409·C-2 안내가 나오는 **R5는 실행하지 않는다. R5는 세 DB promote가 끝난 뒤 6.1 #12에서만 실행**한다. 연결표가 없는 구형 DB에서 R5의 분할 기대값은 성립하지 않는다.
+3. **선배포 직후부터 낮 동결까지도 월간 배치·보강 작업 금지.** 3.2의 선배포 공백 구간 금지를 알리고 기록한다. 코드 배포만 하고 P2 이전 전에 `run_collective_cycle_csv.py` 등 새 빌더를 실행하지 않는다. 동결 뒤에도 5절 승인 절차 외 쓰기는 금지한다.
+4. **운영 데이터 반영 전 코드 문제:** 운영 DB가 세 개 모두 옛 상태이고, 선배포 뒤 새 빌더·배치·보강이 실행되지 않았음을 확인한 경우에만 **`6633cf5` 코드를 재배포**한다. `git revert`나 서버 git 명령으로 대신하지 않는다. 별도 복귀 worktree를 `git worktree add <복귀폴더> --detach 6633cf5`로 준비하고, 고정 SSH 키를 안전하게 제공한 뒤 그 worktree의 `deploy/scripts/deploy-from-windows.ps1 -Scope all -SkipPush`로 재배포한다(main·원격을 과거로 되감거나 키를 커밋하지 않는다). 파일 해시·health·옛 키 상세 및 D-085를 재확인한다. 로컬 DB만 P2 적용됐다면 로컬은 5절 백업으로 따로 복원한다.
+5. **운영 데이터가 일부라도 반영된 뒤에는 코드만 `6633cf5`로 되돌리기 금지.** 새 키·연결표를 옛 코드가 해석하지 못한다. 6.2·8절대로 점검 모드를 유지/다시 켜고, 새 상태가 된 DB를 모두 반영 직전 덤프로 복원·검증한 뒤에만 옛 코드 복귀를 판단한다. OFF 뒤에는 6.2의 운영 전용 데이터 보존 절차도 먼저 수행한다.
 
 ## 5. 실행 순서 — 로컬 실제 DB 에 반영 (Cursor)
 
@@ -748,6 +760,8 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 - **운영 반영 뒤에는 공개 스냅샷(정적)이 바뀌지 않는다.** 고정한 after 값을 공개할지는 별도 결정이다.
 
 ## 8. 롤백 — 반영 직전 운영 덤프로 되돌림
+
+**코드 복귀 경계:** 운영 DB 반영 전에는 4-1 #4의 조건을 만족할 때 `6633cf5`를 재배포할 수 있다. 운영 DB가 하나라도 새 상태라면 **코드만 되돌리지 않는다**(4-1 #5). 먼저 이 절과 6.2에 따라 바뀐 DB를 모두 복원한다.
 
 **판단 기준(하나라도 해당하면 되돌린다):**
 
