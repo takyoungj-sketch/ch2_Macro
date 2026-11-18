@@ -5,6 +5,8 @@
   compare   : 두 JSON 을 비교해 다른 표·조각을 낸다. 다르면 종료 코드 1.
 
 행 해시 = md5(정렬한 행 md5 이어붙이기), 행 md5 = md5((to_jsonb(행) - 제외 열)::text).
+세션 시작 시 SET TimeZone TO 'UTC'. to_jsonb 가 timestamptz 를 세션 시간대 문자열로 넣으므로
+로컬(Asia/Seoul)과 운영(Etc/UTC)이 같은 시각을 다른 해시로 내지 않게 한다.
 큰 표는 조각으로 나눈다: building_key 가 있으면 키 첫 글자(16진 16조각), 없고 정수 id 가 있으면 id 범위 N조각, 둘 다 없으면 통째.
 조각마다 쿼리 하나·시간 제한 하나(--timeout, 기본 600초). 출력에는 표 이름·조각 이름·건수·해시만 있다(행 값 없음).
 
@@ -119,10 +121,14 @@ def snapshot(conn, tables: list[str], *, exclude: list[str], id_chunks: int = 16
     t = Timed()
     from sqlalchemy import text
 
+    conn.execute(text("SET TimeZone TO 'UTC'"))
+    if conn.execute(text("SHOW TimeZone")).scalar() != "UTC":
+        raise SystemExit("TimeZone UTC 가 아님")
     try:
         server_now = conn.execute(text("SELECT now()::text")).scalar()
     except Exception:  # noqa: BLE001  — 참고값이라 실패해도 해시는 계속한다
         conn.rollback()
+        conn.execute(text("SET TimeZone TO 'UTC'"))
         server_now = None
     out: dict = {"db": db_name(conn), "measured_at": None, "measured_at_source": None,
                  "server_now": None if server_now is None else str(server_now), "server_now_source": "server",
@@ -422,7 +428,7 @@ def main(argv=None) -> int:
         print(f"{res['db']}: 낮 해시 + 밤 병합 표 {res['overlay']['tables']} → {a.out}")
         return EXIT[PASS]
     if a.cmd == "snapshot":
-        with ro_conn(db_url(a.db_env, a.env_file)) as conn:
+        with ro_conn(db_url(a.db_env, a.env_file), timezone="UTC") as conn:
             name = db_name(conn)
             tables = [x for x in a.tables.split(",") if x] or default_tables(conn, name)
             if not tables:
@@ -439,7 +445,7 @@ def main(argv=None) -> int:
         return EXIT[UNVERIFIED] if fails else EXIT[PASS]
     if a.cmd == "pgcheck":
         tables = [x for x in a.tables.split(",") if x]
-        with ro_conn(db_url(a.db_env, a.env_file)) as conn:
+        with ro_conn(db_url(a.db_env, a.env_file), timezone="UTC") as conn:
             both = {"db": db_name(conn), "pgcheck": True,
                     "hash": snapshot(conn, tables, exclude=[], mode="hash"),
                     "sums": snapshot(conn, tables, exclude=[], mode="sums")}

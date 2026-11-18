@@ -42,18 +42,22 @@ def db_url(env_name: str, env_file: Path | None = None) -> str:
     return v
 
 
-def ro_engine(url: str) -> Engine:
+def ro_engine(url: str, *, timezone: str | None = None) -> Engine:
     u = make_url(url)
     if u.drivername == "postgresql":
         u = u.set(drivername="postgresql+psycopg2")
+    opts = f"-c default_transaction_read_only=on -c statement_timeout={LIGHT_MS}"
+    if timezone is not None:
+        if not all(ch.isalnum() or ch in "/_+-" for ch in timezone):
+            raise SystemExit("TimeZone 값 거부")
+        opts += f" -c TimeZone={timezone}"
     return create_engine(u, poolclass=NullPool,
-                         connect_args={"options": f"-c default_transaction_read_only=on -c statement_timeout={LIGHT_MS}",
-                                       "connect_timeout": 10})
+                         connect_args={"options": opts, "connect_timeout": 10})
 
 
 @contextmanager
-def ro_conn(url: str) -> Iterator[Connection]:
-    eng = ro_engine(url)
+def ro_conn(url: str, *, timezone: str | None = None) -> Iterator[Connection]:
+    eng = ro_engine(url, timezone=timezone)
     try:
         with eng.connect() as c:
             if c.execute(text("SHOW transaction_read_only")).scalar() != "on":

@@ -255,9 +255,11 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 - **월간 배치는 로컬 PC 에서 사람이 돌리고 promote 로 올린다.** 집합 `run_collective_cycle_csv.py`, 복합 `run_built_cycle_csv.py`, 토지 `run_land_cycle_csv.py`, 임대 분기 import 가 그렇다.
 - 저장소에는 운영 서버 cron·systemd timer 가 없다(`deploy/templates` 에 `ch2-macro-backend.service`·`ch2-board.service` 만 있음).
 
+**동결 선언:** 2026-11-18 10:12:34 KST. `QUIET_AT_LOCAL=2026-11-18T01:12:34+00:00`, `QUIET_AT_SERVER=2026-11-18T01:12:35+00:00`. 실행 주체 Cursor. F1~F6은 이 시각부터다. 06:00 마감 검사는 참고이며 이번 창의 중단 조건이 아니다(T 2026-11-18).
+
 **동결 범위(낮 무거운 동기화 전에 시작 → 밤 점검 창의 7절 확인 끝까지).** 다른 에이전트·작업자에게 아래 목록을 그대로 알린다:
 
-**동결 이전 공백 구간도 금지:** 코드 선배포(4-1)가 끝난 직후부터 이 동결 시작까지, 로컬·운영의 **월간 배치(F1)·보강 작업(F4) 및 그 결과의 promote를 실행하지 않는다.** 새 키 빌더가 옛 DB를 먼저 바꾸면 코드만 되돌릴 수 있는 전제가 깨진다. 선배포 전에 진행 중인 해당 작업이 없음을 확인하고, 금지 시작 시각·대상·실행 주체(Cursor)를 기록한다. 이 금지는 동결 F1~F6으로 이어지며, 7절 확인 완료 뒤 해제한다. 5절의 승인된 P2 이전·보강은 이 런북 순서 안에서만 실행한다.
+**동결 이전 공백 구간도 금지:** 코드 선배포(4-1)가 끝난 직후부터 이 동결 시작까지, 로컬·운영의 **월간 배치(F1)·보강 작업(F4) 및 그 결과의 promote를 실행하지 않는다.** 새 키 빌더가 옛 DB를 먼저 바꾸면 코드만 되돌릴 수 있는 전제가 깨진다. 선배포 전에 진행 중인 해당 작업이 없음을 확인하고, 금지 시작 시각·대상·실행 주체(Cursor)를 기록한다. 이 금지는 동결 F1~F6으로 이어진다. 7.2 전체 해시 통과와 T의 운영 화면 확인이 둘 다 끝난 뒤, 해제 여부는 T가 결정한다. 그 전에 배치·보강을 시작하지 않는다. 5절의 승인된 P2 이전·보강은 이 런북 순서 안에서만 실행한다.
 
 | # | 멈추는 것 | 대상 | 왜 |
 |---|---|---|---|
@@ -295,7 +297,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 | 1 | **코드:** `data/collective-p2`의 main 병합·구형 DB 호환 검수 뒤 **4-1 코드 선배포**. 키 재매핑 미들웨어·새 빌더 포함. 연결표가 없거나 비면 재매핑·C-2 라벨은 적용하지 않는다. 선배포 직후부터 월간 배치·보강 금지 | 배포 파일 해시 · `/health` · 구형 DB 주요 API |
 | 2 | **동기화:** 3절 비교 다름 0 | 3절 JSON |
 | 3 | **동결:** 3.2(로컬 동결) · 6.0 점검 모드 설치 끝(점검 창 전날까지, 깃발 ON/OFF 시험) | `nginx -t` · 깃발 시험 503 |
-| 4 | **디스크:** 로컬 — 덤프 3개 + `_p2_before` 보존 표 · 운영 — 반영 전 덤프 3개(-Fc) + 업로드한 .sql.gz 3개 + 새 DB. 운영 디스크(Lightsail 80GB SSD, `docs/PARCEL_MASTER_DESIGN.md`)의 여유가 **올릴 DB 크기의 2.5배**보다 작으면 멈춘다 | `df -h /var/lib/postgresql /var/backups` |
+| 4 | **디스크:** 세 DB를 시작하기 전에 단계별 최저 여유를 계산한다. 단계: 옛 DB `-Fc` 덤프가 있는 동안(옛 DB도 있음), DROP 뒤, 새 DB 복원 중(인덱스 정렬 임시파일 포함). 기존 대기 덤프는 지우지 않고, 그 용량은 측정된 `df` 여유에 이미 빠져 있다. `/tmp`와 DB 디렉터리가 같은 파일이면 덤프는 한 벌만 잡는다. 모든 단계의 최저 여유 ≥ 그 단계 복원 대상 DB 크기 × 1.5. 하나라도 작으면 어느 DB도 시작하지 않는다. 각 DB 시작 직전에 `df`를 다시 보고, 계산한 시작 여유보다 5GiB 이상 적으면 그 DB 전에 멈춘다. 이 5GiB 중단은 첫 DB 전에만 적용한다. collective를 시작한 뒤에는 rent·built까지 가고, 실패하면 6.2를 따른다. 2026-11-18 계산은 `logs/collective_p2/promote_disk_plan.txt` | `df -B1 /` |
 | 5 | **원천 파일(로컬):** K-apt 기본정보·필지고유번호 xlsx, 공시지가 slim 원천, 표제부 DB(5.3) | 경로 존재 |
 | 6 | **접속 대상:** 로컬 `backend/.env` 의 `COLLECTIVE_/RENT_/BUILT_DATABASE_URL`·`DATABASE_URL`·`PARCEL_MASTER_DATABASE_URL` 이 의도한 DB 를 가리킴. 값은 출력하지 않고 `SELECT current_database()` 로 이름만 확인 | — |
 | 7 | **두 번에 나눔(T 결정):**<br>- 낮(운영 무관): 3절 확인 → 로컬 적용(약 3시간 20분) → 5.4 전체 검증 → **T 확인** · built promote 덤프·업로드 미리<br>- 새벽(한 묶음, 6.1): 점검 모드 ON → 진행 중 요청 0 → 90초 대기 → 운영 전용 4표 덤프·병합·c29·재실행 → collective·rent promote 덤프·scp → 세 DB promote → R5 → OFF → 7절 확인<br>- 그 사이 로컬 동결 유지 | — |
@@ -304,7 +306,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 
 ### 4-1. 코드 선배포 · DB 반영 전 코드 복귀 (Cursor)
 
-**선배포 실행:** 2026-11-18 09:37 KST. `origin/main`은 `6633cf5`에서 `eec7883`으로 fast-forward했다. `deploy/scripts/deploy-from-windows.ps1 -Scope all`. 서버 `main.py`·`collective/key_remap.py`·`product_gate.py`·`shared/macro-shell/features.tsx` 해시는 이 커밋과 같다. DB는 바꾸지 않았다. 이 시각부터 2026-11-20 데이터 반영(7절 확인)까지 로컬·운영의 월간 배치(F1)·보강(F4)와 그 결과의 promote를 하지 않는다. 실행 주체 Cursor.
+**선배포 실행:** 2026-11-18 09:37 KST. `origin/main`은 `6633cf5`에서 `eec7883`으로 fast-forward했다. `deploy/scripts/deploy-from-windows.ps1 -Scope all`. 서버 `main.py`·`collective/key_remap.py`·`product_gate.py`·`shared/macro-shell/features.tsx` 해시는 이 커밋과 같다. DB는 바꾸지 않았다. 이 시각부터 로컬·운영의 월간 배치(F1)·보강(F4)와 그 결과의 promote를 하지 않는다. 7.2 통과와 T의 운영 화면 확인이 둘 다 끝난 뒤에도, 금지를 풀지는 T가 결정한다. 실행 주체 Cursor.
 
 1. **코드부터 배포한다.** D-085가 포함된 main `6633cf5`와 P2를 합친 `762804e` 및 후속 검수 수정본을 main에 병합·검증한 뒤, `deploy/AGENT_DEPLOY_RUNBOOK.md`에 따라 배포한다. 집합뿐 아니라 임대·공통 게이트·AI·공유 UI도 바뀌므로 `deploy/scripts/deploy-from-windows.ps1 -Scope all` 범위로 확인한다. `collective` 단일 scope로 공통 모듈까지 배포됐다고 가정하지 않는다. R5·검증 스크립트의 서버 배치는 4절 #9대로 별도 확인한다. 서버에는 git이 없으므로 커밋명만 적지 말고 배포 파일 해시와 실행 시각을 남긴다.
 2. 아직 운영 DB는 옛 형태다. `/health`, 집합 주거·비주거 목록/상세, 임대 목록·rolling·거래·매매 연결, built 주요 API와 D-085 공개/관리자 차단을 확인한다. 이때 C-01 409·C-2 안내가 나오는 **R5는 실행하지 않는다. R5는 세 DB promote가 끝난 뒤 6.1 #12에서만 실행**한다. 연결표가 없는 구형 DB에서 R5의 분할 기대값은 성립하지 않는다.
@@ -693,7 +695,8 @@ PY scripts\lab\collective_p2\c29_merge_prod_only_check.py --dst-collective colle
   - C-2 확인은 `key_split_c2` 가 본문에 실제로 있어야 통과다.
   - **스크립트:** `scripts/ops/collective_p2_r5_smoke.py`(C-01 · C-2 · 일반 세 가지, 하나라도 다르면 종료 1). 로컬 주소만 받고 운영 도메인·IP URL 이면 아무것도 하지 않고 종료 2. 키는 앞 8자만 출력.
     - **운영 실행(6.1 12 — 서버 안이라 점검 모드 중에도 된다):**
-      `cd /opt/ch2_Macro && backend/.venv/bin/python scripts/ops/collective_p2_r5_smoke.py --base-url http://127.0.0.1:8000 --collective-db collective_stats --out /tmp/r5_smoke.json`
+      `cd /opt/ch2_Macro && API_TOKEN="$(grep '^API_TOKEN=' backend/.env | cut -d= -f2- | tr -d '\r' | sed -e 's/^"//' -e 's/"$//')" backend/.venv/bin/python scripts/ops/collective_p2_r5_smoke.py --base-url http://127.0.0.1:8000 --collective-db collective_stats --token-env API_TOKEN --out /tmp/r5_smoke.json`
+    - `--token-env API_TOKEN`: 그 환경변수 값을 `X-Api-Token` 헤더로 넣는다. 값은 출력하지 않는다. 운영은 `API_TOKEN`이 있으면 헤더 없는 요청을 401로 돌리므로, 토큰 없이 실행하면 세 표본이 401이라 실패다. 셸에 올리는 값만 쓰고 `.env`의 따옴표는 벗긴다.
     - 의존: 백엔드 venv 의 sqlalchemy·psycopg2 와 `backend/.env` 의 `COLLECTIVE_DATABASE_URL` 뿐이다. `pipeline/` 을 import 하지 않는다. **배포 전 확인(4절 #9).**
     - 리허설 실측(2026-11-16, 리허설 DB 에 붙인 로컬 백엔드 :8017): 3/3 통과(409 · 200+안내 · 200).
 
@@ -743,6 +746,8 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
   - **필수 표가 한쪽이라도 없으면** 「검증 못 함」이다. 비교는 결과 JSON 의 키가 아니라 필수 표 목록(DB 기본 대상 + 두 스냅샷이 요청한 표)을 순회한다.
 - 기본 대상에는 보존 표(`*_p2_before`, 이름 꼴로 자동 포함)와 C-2 판정 표(`collective_building_key_c2_units`)가 들어 있다.
 - 예상 소요는 collective 25~50분 · rent 30~65분 · built 1~2분이다(로컬 c8 해시 실측 기반, 운영 최대 2배).
+- 세션 시작 시 `SET TimeZone TO 'UTC'`. `to_jsonb`가 timestamptz를 세션 시간대 문자열로 넣으므로, 로컬(Asia/Seoul)과 운영(Etc/UTC)이 같은 시각을 다른 해시로 내지 않게 한다.
+- **2026-11-18 실행 — 7.2 통과.** 첫 비교는 행 수가 같고 핵심 원장·통계 해시도 같았으나, 시간대 문자열 때문에 조각 해시가 달랐다(collective 102, rent 17, built 18). 시각 값은 같았다. UTC로 고친 스크립트로 그 조각을 운영·로컬에서 다시 계산했고 전부 일치했다. 배치·보강 금지 해제는 T가 운영 화면 확인과 이 통과를 본 뒤 결정한다.
 
 ### 7.3 Insight 비교
 
@@ -840,6 +845,15 @@ while :; do rem=$((deadline - SECONDS)); (( rem > 0 )) || break
   - 월간 SOP·체크리스트는 이 스크립트를 부르지 않는다. 언급은 `docs/NEW_APARTMENT_REGRESSION_DESIGN.md`(「VPS K-apt 공통 전제」)와 KB_FILL 보고뿐이다.
   - 월간 속성 단계를 만들 때 이 스크립트를 키 목록·추가 전용 방식으로 바꾸거나 폐기할지 같이 정한다.
 - `vps_promote_collective_pg18.sh`(반영 전 덤프 없음)·`vps_promote_7y_marts.sh`(속성 TRUNCATE)의 정리 여부.
+- **`vps_promote_db_sql.sh` 줄바꿈 — 저장소는 LF.** `.gitattributes`의 `*.sh text eol=lf`로 blob는 LF다. 2026-11-18 서버에 처음 올린 파일은 작업 폴더의 CRLF 사본이라 `set -o pipefail`이 거절됐다. 서버 파일은 LF로 다시 썼고, CR을 뺀 해시는 저장소 blob과 같다. 다음 배포도 LF 내용을 올린다.
+- **4절 디스크 조건 — 단계별 최저 여유로 반영함.** 2.5배 문장을 뺐다. 모든 단계의 최저 여유 ≥ 그 단계 복원 대상 DB × 1.5. 2026-11-18에는 업로드 뒤 여유가 rent의 2.5배보다 약 3.78GiB 작았고, T가 그 미달을 받은 뒤 단계 계산을 통과해 promote했다. 계산은 `logs/collective_p2/promote_disk_plan.txt`.
+- **해시 TimeZone — 반영함.** `prod_hash_compare.py`가 세션 시작 시 `SET TimeZone TO 'UTC'`를 한다. 2026-11-18 불일치 조각(collective 102, rent 17, built 18)을 다시 계산해 전부 일치했다. 7.2 통과.
+- **7.2 `measured_at` 빈 스냅샷.** 운영 스냅샷을 `--order-clock defer`로 만들고 `stamp-local`을 하지 않으면 `measured_at`이 비고, 조각 차이가 있어도 결과 검사가 전체를 「검증 못 함」(종료 2)으로 내린다. 2026-11-18 비교가 그렇게 됐다. 운영 스냅샷은 로컬에서 시각을 찍거나, 서버에서 돌릴 때 시각 출처를 결과 검사가 받게 고친다.
+- **개선 목록 (아직 안 함):**
+  - `vps_collective_smoke.sh` 기대값. 단지 검색은 시군구(`addr2`)가 없으면 400이다. 거래 목록·연도 통계는 API 토큰이 있어도 로그인 세션이 없으면 401이다. 일반 키 rolling은 토큰이 있으면 200이다.
+  - nginx 점검 include를 저장소 템플릿에 넣기. 2026-11-18에는 서버 설정에만 있다(`sites-available/ch2-macro`, `snippets/ch2-lab-api.conf`, `sites-available/ch2data-hub`, `sites-available/ch2-viewer`). `apply_nginx`가 저장소 템플릿을 다시 복사하면 macro와 랩 조각의 include가 지워진다. viewer는 저장소 템플릿이 없다.
+  - 키 이전에서 C-2 옛 키 좌표 1행이 남은 원인. 2026-11-18 c29가 `collective_building_geocodes`의 C-2 분할 기준 키 1행을 잡았다. 운영 덤프에는 없었고 로컬에만 있었다. `migrate_p2_keys`의 `c2_discard`가 빠뜨렸는지, 좌표 0 검증 뒤에 로컬 지도 조회가 다시 넣었는지 조사한다. 좌표는 통계가 아니고, 그 창에서는 백업 후 그 1행만 지우고 진행했다.
+  - 같은 이름 단지 중 일부만 `(YYYY년 준공)`이 붙는 표시. C-2로 나뉜 아파트만 `display_label`에 연도가 붙는다. 같은 이름인데 분할 대상이 아닌 동(소사구 JN팰리스 가운데 연도가 이름에 없는 동)은 이름만 보인다.
 
 ## 12. C-2 확정 뒤 전체 리허설 재실행 (T 승인 뒤 실행 — 순서·예상 시간만)
 
