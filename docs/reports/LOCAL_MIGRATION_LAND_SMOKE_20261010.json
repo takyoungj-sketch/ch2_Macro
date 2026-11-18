@@ -1,0 +1,329 @@
+{
+  "checked_at": "2026-10-10T02:27:40.945208+00:00",
+  "as_of": "2026-09-01",
+  "checks": [
+    {
+      "name": "regions",
+      "path": "/free/v2/regions",
+      "status": 200,
+      "ok": true,
+      "items_length": 1,
+      "seconds": 0.163
+    },
+    {
+      "name": "meta",
+      "path": "/free/v2/meta/as-of",
+      "status": 200,
+      "ok": true,
+      "max_as_of_month": "2026-09-01",
+      "seconds": 0.254
+    },
+    {
+      "name": "latest_snapshot",
+      "ok": true
+    },
+    {
+      "name": "default_as_of",
+      "path": "/free/v2/stats/4311311400",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2021-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 5,
+      "count": 120,
+      "matrix_length": 19,
+      "seconds": 0.058
+    },
+    {
+      "name": "default_matches_latest",
+      "ok": true
+    },
+    {
+      "name": "basic_4311311400_3_category",
+      "path": "/free/v2/stats/4311311400",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2023-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 3,
+      "count": 72,
+      "matrix_length": 17,
+      "seconds": 0.1
+    },
+    {
+      "name": "basic_4311311400_3_group",
+      "path": "/free/v2/stats/4311311400",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2023-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 3,
+      "count": 72,
+      "matrix_length": 13,
+      "seconds": 0.133
+    },
+    {
+      "name": "basic_4311311400_5_category",
+      "path": "/free/v2/stats/4311311400",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2021-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 5,
+      "count": 120,
+      "matrix_length": 19,
+      "seconds": 0.053
+    },
+    {
+      "name": "basic_4311311400_5_group",
+      "path": "/free/v2/stats/4311311400",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2021-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 5,
+      "count": 120,
+      "matrix_length": 14,
+      "seconds": 0.057
+    },
+    {
+      "name": "basic_4311311400_7_category",
+      "path": "/free/v2/stats/4311311400",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2019-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 7,
+      "count": 181,
+      "matrix_length": 21,
+      "seconds": 0.059
+    },
+    {
+      "name": "basic_4311311400_7_group",
+      "path": "/free/v2/stats/4311311400",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2019-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 7,
+      "count": 181,
+      "matrix_length": 14,
+      "seconds": 0.08
+    },
+    {
+      "name": "basic_4311210200_3_category",
+      "path": "/free/v2/stats/4311210200",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2023-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 3,
+      "count": 33,
+      "matrix_length": 12,
+      "seconds": 0.058
+    },
+    {
+      "name": "basic_4311210200_3_group",
+      "path": "/free/v2/stats/4311210200",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2023-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 3,
+      "count": 33,
+      "matrix_length": 11,
+      "seconds": 0.257
+    },
+    {
+      "name": "basic_4311210200_5_category",
+      "path": "/free/v2/stats/4311210200",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2021-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 5,
+      "count": 111,
+      "matrix_length": 14,
+      "seconds": 0.156
+    },
+    {
+      "name": "basic_4311210200_5_group",
+      "path": "/free/v2/stats/4311210200",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2021-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 5,
+      "count": 111,
+      "matrix_length": 12,
+      "seconds": 0.055
+    },
+    {
+      "name": "basic_4311210200_7_category",
+      "path": "/free/v2/stats/4311210200",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2019-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 7,
+      "count": 191,
+      "matrix_length": 17,
+      "seconds": 0.058
+    },
+    {
+      "name": "basic_4311210200_7_group",
+      "path": "/free/v2/stats/4311210200",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2019-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 7,
+      "count": 191,
+      "matrix_length": 13,
+      "seconds": 0.059
+    },
+    {
+      "name": "bulk",
+      "path": "/free/v2/stats/bulk",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2021-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 5,
+      "count": 231,
+      "matrix_length": 72,
+      "seconds": 0.237
+    },
+    {
+      "name": "bulk_count_equals_single_sum",
+      "ok": true
+    },
+    {
+      "name": "paid",
+      "path": "/paid/analyze",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "count": 114,
+      "matrix_length": 18,
+      "seconds": 0.125
+    },
+    {
+      "name": "paid_area_filter",
+      "path": "/paid/analyze",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "count": 45,
+      "matrix_length": 9,
+      "seconds": 0.036
+    },
+    {
+      "name": "filter_does_not_increase_count",
+      "ok": true
+    },
+    {
+      "name": "transactions",
+      "path": "/paid/matrix-cell-transactions",
+      "status": 200,
+      "ok": true,
+      "count": 58,
+      "items_length": 25,
+      "seconds": 0.038
+    },
+    {
+      "name": "cell_count_matches_transactions",
+      "ok": true
+    },
+    {
+      "name": "transaction_page_has_unique_ids",
+      "ok": true
+    },
+    {
+      "name": "transactions_within_period",
+      "ok": true
+    },
+    {
+      "name": "rolling_trend",
+      "path": "/paid/matrix-yearly",
+      "status": 200,
+      "ok": true,
+      "seconds": 0.019
+    },
+    {
+      "name": "histogram",
+      "path": "/paid/matrix-cell-histogram",
+      "status": 200,
+      "ok": true,
+      "seconds": 0.02
+    },
+    {
+      "name": "long_term",
+      "path": "/paid/long-term-trend",
+      "status": 200,
+      "ok": true,
+      "series_length": 1,
+      "seconds": 0.358
+    },
+    {
+      "name": "upper_stats",
+      "path": "/paid/upper-stats/sigungu/43113",
+      "status": 200,
+      "ok": true,
+      "as_of_month": "2026-09-01",
+      "period_start": "2021-10-01",
+      "period_end": "2026-09-30",
+      "window_years": 5,
+      "count": 7385,
+      "matrix_length": 155,
+      "seconds": 1.969
+    },
+    {
+      "name": "map_config",
+      "path": "/map/config",
+      "status": 200,
+      "ok": true,
+      "seconds": 0.012
+    },
+    {
+      "name": "map_neighbors",
+      "path": "/map/neighbors",
+      "status": 200,
+      "ok": true,
+      "neighbor_codes_length": 8,
+      "seconds": 0.01
+    },
+    {
+      "name": "map_has_neighbors",
+      "ok": true
+    },
+    {
+      "name": "map_boundaries",
+      "path": "/map/boundaries",
+      "status": 200,
+      "ok": true,
+      "features_length": 80,
+      "seconds": 0.927
+    },
+    {
+      "name": "map_has_geometry",
+      "ok": true
+    }
+  ],
+  "passed": 35,
+  "failed": 0
+}
