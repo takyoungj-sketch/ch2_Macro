@@ -304,7 +304,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 
 ### 4-1. 코드 선배포 · DB 반영 전 코드 복귀 (Cursor)
 
-이 절은 실행 계획이다. 이번 로컬 Phase 3 검수에서 운영 배포·DB 쓰기는 실행하지 않았다.
+**선배포 실행:** 2026-11-18 09:37 KST. `origin/main`은 `6633cf5`에서 `eec7883`으로 fast-forward했다. `deploy/scripts/deploy-from-windows.ps1 -Scope all`. 서버 `main.py`·`collective/key_remap.py`·`product_gate.py`·`shared/macro-shell/features.tsx` 해시는 이 커밋과 같다. DB는 바꾸지 않았다. 이 시각부터 2026-11-20 데이터 반영(7절 확인)까지 로컬·운영의 월간 배치(F1)·보강(F4)와 그 결과의 promote를 하지 않는다. 실행 주체 Cursor.
 
 1. **코드부터 배포한다.** D-085가 포함된 main `6633cf5`와 P2를 합친 `762804e` 및 후속 검수 수정본을 main에 병합·검증한 뒤, `deploy/AGENT_DEPLOY_RUNBOOK.md`에 따라 배포한다. 집합뿐 아니라 임대·공통 게이트·AI·공유 UI도 바뀌므로 `deploy/scripts/deploy-from-windows.ps1 -Scope all` 범위로 확인한다. `collective` 단일 scope로 공통 모듈까지 배포됐다고 가정하지 않는다. R5·검증 스크립트의 서버 배치는 4절 #9대로 별도 확인한다. 서버에는 git이 없으므로 커밋명만 적지 말고 배포 파일 해시와 실행 시각을 남긴다.
 2. 아직 운영 DB는 옛 형태다. `/health`, 집합 주거·비주거 목록/상세, 임대 목록·rolling·거래·매매 연결, built 주요 API와 D-085 공개/관리자 차단을 확인한다. 이때 C-01 409·C-2 안내가 나오는 **R5는 실행하지 않는다. R5는 세 DB promote가 끝난 뒤 6.1 #12에서만 실행**한다. 연결표가 없는 구형 DB에서 R5의 분할 기대값은 성립하지 않는다.
