@@ -254,3 +254,10 @@ bash /opt/ch2_Macro/deploy/scripts/redeploy.sh main
 ---
 
 **한 줄:** 배포 요청 = commit → push → scp(또는 git pull) → VPS build → restart → macro.ch2data.com 검증.
+
+---
+
+## 9. 로컬 정리에서 지우면 안 되는 것 (2026-11-18)
+
+- `D:\ch2\ch2_Macro-collp2`는 `raw/` 132GiB를 품고 있으므로 삭제 금지. 체크아웃을 지우는 작업에 이 폴더를 넣지 않는다.
+- `raw/` 외장 백업은 2026-11-18에 `G:\raw`(WD SCORPIO)로 복사됐고, 0번 대조를 통과했다. 파일 4,176개, 142,118,369,568바이트가 같고, `raw addition/` 무작위 200개와 가장 큰 파일 20개의 SHA-256이 같다. 자세한 표는 [docs/ops/reports/20261118_cleanup_B1.md](../docs/ops/reports/20261118_cleanup_B1.md).
