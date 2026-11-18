@@ -257,9 +257,13 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 
 **동결 선언:** 2026-11-18 10:12:34 KST. `QUIET_AT_LOCAL=2026-11-18T01:12:34+00:00`, `QUIET_AT_SERVER=2026-11-18T01:12:35+00:00`. 실행 주체 Cursor. F1~F6은 이 시각부터다. 06:00 마감 검사는 참고이며 이번 창의 중단 조건이 아니다(T 2026-11-18).
 
+**금지 해제:** 2026-11-18 20:57 KST. P2 완료(T·Opus 운영 확인, 7.2 통과). T가 월간 배치(F1)·보강(F4)과 그 결과의 promote 금지를 해제했다. 실행 주체 Cursor.
+
+**다음 월간 배치:** 새 키 구조로 처음 돈다. 집합 `run_collective_cycle_csv.py`가 끝나면 신규 C-2 조각 생성 수와 c29 성격의 고아 검사(원장에 없는 키의 좌표 행, C-2·C-01 옛 키에 남은 좌표)를 보고한다.
+
 **동결 범위(낮 무거운 동기화 전에 시작 → 밤 점검 창의 7절 확인 끝까지).** 다른 에이전트·작업자에게 아래 목록을 그대로 알린다:
 
-**동결 이전 공백 구간도 금지:** 코드 선배포(4-1)가 끝난 직후부터 이 동결 시작까지, 로컬·운영의 **월간 배치(F1)·보강 작업(F4) 및 그 결과의 promote를 실행하지 않는다.** 새 키 빌더가 옛 DB를 먼저 바꾸면 코드만 되돌릴 수 있는 전제가 깨진다. 선배포 전에 진행 중인 해당 작업이 없음을 확인하고, 금지 시작 시각·대상·실행 주체(Cursor)를 기록한다. 이 금지는 동결 F1~F6으로 이어진다. 7.2 전체 해시 통과와 T의 운영 화면 확인이 둘 다 끝난 뒤, 해제 여부는 T가 결정한다. 그 전에 배치·보강을 시작하지 않는다. 5절의 승인된 P2 이전·보강은 이 런북 순서 안에서만 실행한다.
+**동결 이전 공백 구간도 금지:** 코드 선배포(4-1)가 끝난 직후부터 이 동결 시작까지, 로컬·운영의 **월간 배치(F1)·보강 작업(F4) 및 그 결과의 promote를 실행하지 않는다.** 새 키 빌더가 옛 DB를 먼저 바꾸면 코드만 되돌릴 수 있는 전제가 깨진다. 선배포 전에 진행 중인 해당 작업이 없음을 확인하고, 금지 시작 시각·대상·실행 주체(Cursor)를 기록한다. 이 금지는 동결 F1~F6으로 이어진다. 7.2 전체 해시 통과와 T의 운영 화면 확인이 둘 다 끝난 뒤, 해제 여부는 T가 결정한다. 그 전에 배치·보강을 시작하지 않는다. T가 2026-11-18 20:57 KST에 해제했다. 5절의 승인된 P2 이전·보강은 이 런북 순서 안에서만 실행한다.
 
 | # | 멈추는 것 | 대상 | 왜 |
 |---|---|---|---|
@@ -306,7 +310,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 
 ### 4-1. 코드 선배포 · DB 반영 전 코드 복귀 (Cursor)
 
-**선배포 실행:** 2026-11-18 09:37 KST. `origin/main`은 `6633cf5`에서 `eec7883`으로 fast-forward했다. `deploy/scripts/deploy-from-windows.ps1 -Scope all`. 서버 `main.py`·`collective/key_remap.py`·`product_gate.py`·`shared/macro-shell/features.tsx` 해시는 이 커밋과 같다. DB는 바꾸지 않았다. 이 시각부터 로컬·운영의 월간 배치(F1)·보강(F4)와 그 결과의 promote를 하지 않는다. 7.2 통과와 T의 운영 화면 확인이 둘 다 끝난 뒤에도, 금지를 풀지는 T가 결정한다. 실행 주체 Cursor.
+**선배포 실행:** 2026-11-18 09:37 KST. `origin/main`은 `6633cf5`에서 `eec7883`으로 fast-forward했다. `deploy/scripts/deploy-from-windows.ps1 -Scope all`. 서버 `main.py`·`collective/key_remap.py`·`product_gate.py`·`shared/macro-shell/features.tsx` 해시는 이 커밋과 같다. DB는 바꾸지 않았다. 이 시각부터 로컬·운영의 월간 배치(F1)·보강(F4)와 그 결과의 promote를 하지 않는다. 금지는 2026-11-18 20:57 KST에 T가 해제했다(3.2). 실행 주체 Cursor.
 
 1. **코드부터 배포한다.** D-085가 포함된 main `6633cf5`와 P2를 합친 `762804e` 및 후속 검수 수정본을 main에 병합·검증한 뒤, `deploy/AGENT_DEPLOY_RUNBOOK.md`에 따라 배포한다. 집합뿐 아니라 임대·공통 게이트·AI·공유 UI도 바뀌므로 `deploy/scripts/deploy-from-windows.ps1 -Scope all` 범위로 확인한다. `collective` 단일 scope로 공통 모듈까지 배포됐다고 가정하지 않는다. R5·검증 스크립트의 서버 배치는 4절 #9대로 별도 확인한다. 서버에는 git이 없으므로 커밋명만 적지 말고 배포 파일 해시와 실행 시각을 남긴다.
 2. 아직 운영 DB는 옛 형태다. `/health`, 집합 주거·비주거 목록/상세, 임대 목록·rolling·거래·매매 연결, built 주요 API와 D-085 공개/관리자 차단을 확인한다. 이때 C-01 409·C-2 안내가 나오는 **R5는 실행하지 않는다. R5는 세 DB promote가 끝난 뒤 6.1 #12에서만 실행**한다. 연결표가 없는 구형 DB에서 R5의 분할 기대값은 성립하지 않는다.
@@ -747,7 +751,7 @@ py scripts/ops/collective_p2_verify/prod_hash_compare.py compare logs/collective
 - 기본 대상에는 보존 표(`*_p2_before`, 이름 꼴로 자동 포함)와 C-2 판정 표(`collective_building_key_c2_units`)가 들어 있다.
 - 예상 소요는 collective 25~50분 · rent 30~65분 · built 1~2분이다(로컬 c8 해시 실측 기반, 운영 최대 2배).
 - 세션 시작 시 `SET TimeZone TO 'UTC'`. `to_jsonb`가 timestamptz를 세션 시간대 문자열로 넣으므로, 로컬(Asia/Seoul)과 운영(Etc/UTC)이 같은 시각을 다른 해시로 내지 않게 한다.
-- **2026-11-18 실행 — 7.2 통과.** 첫 비교는 행 수가 같고 핵심 원장·통계 해시도 같았으나, 시간대 문자열 때문에 조각 해시가 달랐다(collective 102, rent 17, built 18). 시각 값은 같았다. UTC로 고친 스크립트로 그 조각을 운영·로컬에서 다시 계산했고 전부 일치했다. 배치·보강 금지 해제는 T가 운영 화면 확인과 이 통과를 본 뒤 결정한다.
+- **2026-11-18 실행 — 7.2 통과.** 첫 비교는 행 수가 같고 핵심 원장·통계 해시도 같았으나, 시간대 문자열 때문에 조각 해시가 달랐다(collective 102, rent 17, built 18). 시각 값은 같았다. UTC로 고친 스크립트로 그 조각을 운영·로컬에서 다시 계산했고 전부 일치했다. 배치·보강 금지는 2026-11-18 20:57 KST에 T가 해제했다(3.2).
 
 ### 7.3 Insight 비교
 
