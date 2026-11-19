@@ -19,7 +19,12 @@ from sqlalchemy import text
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "pipeline"))
 
-from collective.building_keys import apply_building_key_split, attach_building_identity, derive_display_name  # noqa: E402
+from collective.building_keys import (  # noqa: E402
+    apply_building_key_split,
+    apply_rent_c2_assignment,
+    attach_building_identity,
+    derive_display_name,
+)
 from region_mapping import attach_beopjungri_codes, clean_code_columns  # noqa: E402
 from rent.db_utils import get_land_engine_for_region_copy, get_rent_engine  # noqa: E402
 from rent.molit_schemas import ASSET_DIRS, FILE_LABEL, RentAssetType  # noqa: E402
@@ -183,7 +188,14 @@ def find_csvs(root: Path, asset_type: RentAssetType) -> list[Path]:
     return sorted(set(out))
 
 
-def _prepare(df: pd.DataFrame, asset_type: RentAssetType, land_engine, region_maps: dict) -> pd.DataFrame:
+def _prepare(
+    df: pd.DataFrame,
+    asset_type: RentAssetType,
+    land_engine,
+    region_maps: dict,
+    rent_units: dict | None = None,
+    collective_unique: dict | None = None,
+) -> pd.DataFrame:
     if asset_type == "detached":
         a3 = df.get("addr3", pd.Series("", index=df.index)).fillna("").astype(str)
         lot = df.get("lot_number", pd.Series("", index=df.index)).fillna("").astype(str)
@@ -198,6 +210,12 @@ def _prepare(df: pd.DataFrame, asset_type: RentAssetType, land_engine, region_ma
     df = clean_code_columns(df)
     if asset_type != "detached":
         df = apply_building_key_split(df, asset_type)
+        df = apply_rent_c2_assignment(
+            df,
+            asset_type,
+            units=rent_units,
+            collective_unique=collective_unique,
+        )
     return df
 
 
