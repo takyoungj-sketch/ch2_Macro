@@ -12,6 +12,7 @@ import RentTransactionTable from "./RentTransactionTable";
 import RollingTrendChart from "./RollingTrendChart";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { PrivateFeatureBadge, useFeature } from "@ch2/macro-shell/features";
+import RentPendingNotice from "./RentPendingNotice";
 
 type PanelMode = "conversion" | "rolling" | "transactions" | "regression";
 type RollingSeriesId = "jeonse" | "mixed_deposit" | "mixed_monthly" | "monthly";
@@ -316,6 +317,7 @@ export default function BuildingDetailModal({
           {assetTypeLabel(row.asset_type)} · 거래 {n.toLocaleString("ko-KR")}건
           {row.building_year ? ` · ${row.building_year}년 준공` : ""}
           {row.jibun_address ? ` · ${row.jibun_address}` : ""}
+          <RentPendingNotice pendingN={row.pending_n} />
         </>
       }
       headerExtra={

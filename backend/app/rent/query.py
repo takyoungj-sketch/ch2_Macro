@@ -308,6 +308,27 @@ def list_addr3(
     return [(str(r[0]), int(r[1])) for r in rows]
 
 
+def pending_n_by_key(conn: Connection, keys: list[str]) -> dict[str, int]:
+    """판정 표의 pending key 만 센다. 표가 없으면 빈 결과라 목록은 지금과 같다."""
+    wanted = [k for k in keys if k]
+    if not wanted:
+        return {}
+    if not conn.execute(text("SELECT to_regclass('public.rent_building_key_c2_units')")).scalar():
+        return {}
+    rows = conn.execute(
+        text(
+            """
+            SELECT base_key, count(*)::int
+            FROM rent_building_key_c2_units
+            WHERE decision = 'pending' AND base_key = ANY(CAST(:keys AS text[]))
+            GROUP BY base_key
+            """
+        ),
+        {"keys": wanted},
+    ).all()
+    return {str(key): int(n) for key, n in rows}
+
+
 def list_buildings(
     db: Session,
     *,
@@ -407,6 +428,12 @@ def list_buildings(
             j_eq, m_eq = converted[key]
             row = row.model_copy(update={"jeonse_equiv": j_eq, "monthly_equiv": m_eq})
         items.append(row)
+    counts = pending_n_by_key(conn, [item.building_key for item in items])
+    if counts:
+        items = [
+            item.model_copy(update={"pending_n": counts.get(item.building_key, 0)})
+            for item in items
+        ]
     return items, ps, pe, list(rates.values())
 
 
