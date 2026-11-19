@@ -1,4 +1,7 @@
-"""FieldNote AI 프록시 — OpenAI 키 서버 보관 + device quota (short/long/sheet)."""
+"""FieldNote AI 프록시 — 계정 접근과 OpenAI 호출.
+
+기기 ID 헤더는 받아 두기만 하고 한도 판정에 쓰지 않는다.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +20,12 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user
-from app.platform.entitlements import list_entitlements
+from app.platform.fieldnote_ai_access import (
+    fieldnote_usage,
+    monthly_limit,
+    raise_fieldnote_deny,
+    resolve_fieldnote_ai_access,
+)
 
 router = APIRouter(prefix="/fieldnote/ai", tags=["fieldnote-ai"])
 _log = logging.getLogger(__name__)
@@ -29,13 +37,15 @@ _kind_columns_ready = False
 @router.get("/allowance")
 def fieldnote_allowance(db: Session = Depends(get_platform_db),
                         user: CurrentUser | None = Depends(get_optional_user)):
+    access = resolve_fieldnote_ai_access(db, user)
+    if access.deny_code:
+        raise_fieldnote_deny(access.deny_code)
     from app.ai import allowances as quota
-    if not settings.ai_subscription_quota_enabled or user is None:
-        return {"mode": "legacy", "items": []}
-    if user.role == "admin":
-        return {"mode": "staff", "items": []}
-    grant = quota.grant_for(db, user)
-    return quota.snapshot(db.get_bind(), grant) if grant else {"mode": "legacy", "items": []}
+    if access.tier == "paid":
+        grant = quota.grant_for(db, user)
+        if grant is not None and grant.plan == "bundle":
+            return quota.snapshot(db.get_bind(), grant)
+    return fieldnote_usage(db.get_bind(), user.id, access)
 
 
 def _uses_completion_tokens(model: str) -> bool:
@@ -250,15 +260,11 @@ def validated_input(body, feature):
     return len(seen) if feature == "photo_analysis_image" else 1
 
 
-def _is_fieldnote_premium(db: Session, user: CurrentUser | None) -> bool:
-    if user is None:
-        return False
-    try:
-        ent = list_entitlements(db, user.id)
-        return bool(ent.get("fieldnote"))
-    except Exception:
-        _log.exception("entitlement check failed user_id=%s", getattr(user, "id", None))
-        return False
+def _usage_body(engine, grant, access):
+    from app.ai import allowances as quota
+    if access.tier == "paid" and getattr(grant, "plan", None) == "bundle":
+        return quota.snapshot(engine, grant)
+    return fieldnote_usage(engine, grant.user_id, access)
 
 
 async def _proxy_openai(
@@ -271,32 +277,37 @@ async def _proxy_openai(
     user: CurrentUser | None = None,
     feature: str = "photo_analysis_image",
 ):
+    del device_id, kind  # 헤더는 유지한다. 한도는 계정을 본다.
+    access = resolve_fieldnote_ai_access(db, user)
+    if access.deny_code:
+        raise_fieldnote_deny(access.deny_code)
     if not settings.openai_api_key:
         raise HTTPException(503, "OpenAI API 미설정")
-    did = (device_id or "").strip()
-    if not did:
-        raise HTTPException(401, detail={"code": "device_required", "message": "X-Device-Id 헤더가 필요합니다."})
-    if len(did) > 128:
-        raise HTTPException(400, detail={"code": "device_invalid", "message": "X-Device-Id가 올바르지 않습니다."})
     from app.ai import allowances as quota
     units = validated_input(body, feature)
-    premium = _is_fieldnote_premium(db, user)
-    ticket = None
-    if settings.ai_subscription_quota_enabled and user is not None and user.role != "admin":
+    if access.tier == "admin":
+        grant = quota.Grant(user.id, "admin", access.period_start, access.period_end)
+    else:
         grant = quota.grant_for(db, user)
-        if grant:
-            if not premium:
-                raise HTTPException(403, "Fieldnote 구독이 필요합니다.")
-            ticket = quota.reserve(db.get_bind(), grant, feature, units, body.request_id or f"legacy-{uuid.uuid4()}",
-                quota.fingerprint({"messages": body.messages, "feature": feature, "response_format": body.response_format,
-                                   "max_tokens": body.max_tokens, "temperature": body.temperature}))
-            if ticket.replay is not None:
-                return {**ticket.replay, "ch2_usage": quota.snapshot(db.get_bind(), grant)}
-    legacy_month = None
-    if ticket is None and not (settings.ai_subscription_quota_enabled and user is not None and user.role == "admin"):
-        if feature == "text_writing":
-            raise HTTPException(403, "문구 작성은 동시 구독 AI 정책 활성화 후 이용할 수 있습니다.")
-        legacy_month = _check_and_increment_quota(db, did, kind, premium=premium)
+        if grant is None:
+            raise_fieldnote_deny("subscription_required")
+    ticket = quota.reserve(
+        db.get_bind(),
+        grant,
+        feature,
+        units,
+        body.request_id or f"legacy-{uuid.uuid4()}",
+        quota.fingerprint({
+            "messages": body.messages,
+            "feature": feature,
+            "response_format": body.response_format,
+            "max_tokens": body.max_tokens,
+            "temperature": body.temperature,
+        }),
+        limit=monthly_limit(feature, access.tier),
+    )
+    if ticket.replay is not None:
+        return {**ticket.replay, "ch2_usage": _usage_body(db.get_bind(), grant, access)}
     # VPS OPENAI_MODEL이 우선 — 앱 body.model이 예전 gpt-4o로 고정돼 있어도 서버 업그레이드가 적용됨
     model = (settings.openai_model or body.model or "gpt-5-mini").strip()
     requested_tokens = min(max(1, int(body.max_tokens or max_tokens_default)), settings.ai_max_output_tokens)
@@ -357,17 +368,13 @@ async def _proxy_openai(
                             raise ValueError()
                 except (ValueError, TypeError):
                     raise HTTPException(502, "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요.")
-            if ticket:
-                quota.finish(ticket, data)
-                data["ch2_usage"] = quota.snapshot(db.get_bind(), ticket.grant)
-                data["ch2_request_id"] = ticket.id
+            quota.finish(ticket, data)
+            data["ch2_usage"] = _usage_body(db.get_bind(), ticket.grant, access)
+            data["ch2_request_id"] = ticket.id
             return data
     except BaseException:
-        if ticket:
-            if not provider_recorded:
-                with quota.tracking(ticket):
-                    quota.record_provider_failure(model)
-            quota.finish(ticket, error="fieldnote_failed")
-        elif legacy_month:
-            _refund_legacy_quota(db, did, kind, legacy_month)
+        if not provider_recorded:
+            with quota.tracking(ticket):
+                quota.record_provider_failure(model)
+        quota.finish(ticket, error="fieldnote_failed")
         raise

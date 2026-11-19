@@ -172,8 +172,9 @@ class Ticket:
     replay: dict | None = None
 
 
-def reserve(engine, grant, feature, units, key, digest):
-    if feature not in LIMITS[grant.plan]:
+def reserve(engine, grant, feature, units, key, digest, limit=None):
+    # limit이 None이면 기존 LIMITS 경로다. 값을 주면 그 상한을 쓰고, 전역 계정(user 0)만 동시 예약을 허용한다.
+    if limit is None and feature not in LIMITS[grant.plan]:
         raise HTTPException(403, detail={"code": "feature_not_in_plan", "message": "구독에 포함되지 않은 AI 기능입니다."})
     if not key or len(key) > 128 or not 1 <= units <= 500:
         raise HTTPException(400, detail={"code": "invalid_ai_request", "message": "유효한 작업 ID와 입력이 필요합니다."})
@@ -193,9 +194,10 @@ def reserve(engine, grant, feature, units, key, digest):
             raise HTTPException(503, detail={"code": "ai_temporarily_unavailable", "message": "AI 서비스 점검 중입니다. 기존 결과는 계속 조회할 수 있습니다."})
         busy = c.execute(select(jobs.c.id).where(jobs.c.user_id == grant.user_id,
                                                  jobs.c.status.in_(["reserved", "unknown"]))).first()
-        if busy:
+        if busy and grant.user_id != 0:
             raise HTTPException(409, detail={"code": "ai_busy", "message": "진행 중인 AI 작업이 끝난 뒤 다시 시도해 주세요."})
-        limit = LIMITS[grant.plan][feature]
+        if limit is None:
+            limit = LIMITS[grant.plan][feature]
         _upsert(c, balances, {"user_id": grant.user_id, "feature": feature, "period_start": grant.start,
             "period_end": grant.end, "limit_units": limit, "used": 0, "reserved": 0, "policy": POLICY})
         where = _balance_where(grant, feature)

@@ -166,6 +166,19 @@ class Settings(BaseSettings):
     fieldnote_ai_sheet_pro_monthly_quota: int = Field(
         default=200, validation_alias="FIELDNOTE_AI_SHEET_PRO_MONTHLY_QUOTA"
     )
+    #: FN-001. 비로그인은 이 값이 0이면 거절한다. 기기 ID 한도로 되돌리지 않는다.
+    fieldnote_ai_anon_monthly_quota: int = Field(
+        default=0, validation_alias="FIELDNOTE_AI_ANON_MONTHLY_QUOTA"
+    )
+    fieldnote_ai_paid_monthly_photo: int = Field(default=500, validation_alias="FIELDNOTE_AI_PAID_MONTHLY_PHOTO")
+    fieldnote_ai_paid_monthly_sheet: int = Field(default=100, validation_alias="FIELDNOTE_AI_PAID_MONTHLY_SHEET")
+    fieldnote_ai_paid_monthly_write: int = Field(default=100, validation_alias="FIELDNOTE_AI_PAID_MONTHLY_WRITE")
+    fieldnote_ai_trial_monthly_photo: int = Field(default=125, validation_alias="FIELDNOTE_AI_TRIAL_MONTHLY_PHOTO")
+    fieldnote_ai_trial_monthly_sheet: int = Field(default=25, validation_alias="FIELDNOTE_AI_TRIAL_MONTHLY_SHEET")
+    fieldnote_ai_trial_monthly_write: int = Field(default=25, validation_alias="FIELDNOTE_AI_TRIAL_MONTHLY_WRITE")
+    fieldnote_ai_admin_monthly_photo: int = Field(default=1000, validation_alias="FIELDNOTE_AI_ADMIN_MONTHLY_PHOTO")
+    fieldnote_ai_admin_monthly_sheet: int = Field(default=200, validation_alias="FIELDNOTE_AI_ADMIN_MONTHLY_SHEET")
+    fieldnote_ai_admin_monthly_write: int = Field(default=200, validation_alias="FIELDNOTE_AI_ADMIN_MONTHLY_WRITE")
     #: 토스페이먼츠 (Macro 웹). 비어 있으면 /subscribe 결제는 비활성.
     toss_client_key: str = Field(default="", validation_alias="TOSS_CLIENT_KEY")
     toss_secret_key: str = Field(default="", validation_alias="TOSS_SECRET_KEY")
