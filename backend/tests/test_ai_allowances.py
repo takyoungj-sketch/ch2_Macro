@@ -214,6 +214,7 @@ def test_fieldnote_bundle_photo_settlement_and_failure(ledger, monkeypatch):
     asyncio.run(route._proxy_openai(body,"device",db,kind="long",user=user,feature="text_writing"))
     assert q.snapshot(*ledger)["items"][2]["used"]==1
     # Old released apps have no request_id; still count server-side image units.
+    replies[0]={"model":"gpt-5-mini","choices":[{"message":{"content":"{\"primary_name\":\"tree\"}"},"finish_reason":"stop"}],"usage":{}}
     legacy = AiProxyRequest(messages=[{"role":"user","content":[image()]}])
     asyncio.run(route._proxy_openai(legacy,"device",db,kind="short",user=user))
     assert q.snapshot(*ledger)["items"][1]["used"]==3

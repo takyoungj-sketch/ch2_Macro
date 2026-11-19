@@ -59,10 +59,19 @@ def _uses_completion_tokens(model: str) -> bool:
 class AiProxyRequest(BaseModel):
     request_id: str | None = None
     model: str | None = None
-    messages: list[dict]
+    messages: list[dict] | None = None
     temperature: float = 0.15
     max_tokens: int = 900
     response_format: dict | None = None
+    format: int | None = None
+    mode: str | None = None
+    photos: list | None = None
+    note: str | None = None
+    ocr_hints: list | str | None = None
+    images: list | None = None
+    hint: str | None = None
+    kind: str | None = None
+    source_text: str | None = None
 
 
 def _usage_month() -> str:
@@ -284,14 +293,16 @@ async def _proxy_openai(
     feature: str = "photo_analysis_image",
     request: Request | None = None,
 ):
-    del device_id, kind  # 헤더는 유지한다. 한도는 계정을 본다.
+    del device_id  # 헤더는 유지한다. 한도와 프롬프트는 계정을 본다.
     access = resolve_fieldnote_ai_access(db, user)
     if access.deny_code:
         raise_fieldnote_deny(access.deny_code)
+    from app.platform.fieldnote_ai_prompts import prepare_fieldnote_call
+    prepared = prepare_fieldnote_call(body, feature, kind)
     if not settings.openai_api_key:
         raise HTTPException(503, "OpenAI API 미설정")
     from app.ai import allowances as quota
-    units = validated_input(body, feature)
+    units = prepared.units
     if access.tier == "admin":
         grant = quota.Grant(user.id, "admin", access.period_start, access.period_end)
     else:
@@ -304,37 +315,22 @@ async def _proxy_openai(
         feature,
         units,
         body.request_id or f"legacy-{uuid.uuid4()}",
-        quota.fingerprint({
-            "messages": body.messages,
-            "feature": feature,
-            "response_format": body.response_format,
-            "max_tokens": body.max_tokens,
-            "temperature": body.temperature,
-        }),
+        quota.fingerprint({"messages": prepared.messages, "feature": feature}),
         limit=monthly_limit(feature, access.tier),
     )
     if ticket.replay is not None:
         return {**ticket.replay, "ch2_usage": _usage_body(db.get_bind(), grant, access)}
-    # VPS OPENAI_MODEL이 우선 — 앱 body.model이 예전 gpt-4o로 고정돼 있어도 서버 업그레이드가 적용됨
-    model = (settings.openai_model or body.model or "gpt-5-mini").strip()
-    requested_tokens = min(max(1, int(body.max_tokens or max_tokens_default)), settings.ai_max_output_tokens)
-    payload: dict = {
-        "model": model,
-        "messages": body.messages,
-    }
-    if feature == "text_writing":
-        payload["messages"] = [{"role": "system", "content":
-            "사용자가 제공한 현장 메모를 이해하기 쉬운 한국어 조사 문구로 정리합니다. "
-            "제공되지 않은 사실·수치·가격 판단을 추가하지 않습니다. 정리된 문구만 답하세요."}, *body.messages]
-    # gpt-5 / o-series: max_tokens 미지원 → max_completion_tokens (+ reasoning 여유)
+    model = prepared.model
+    payload: dict = {"model": model, "messages": prepared.messages}
+    if prepared.response_format:
+        payload["response_format"] = prepared.response_format
     if _uses_completion_tokens(model):
-        payload["max_completion_tokens"] = min(max(requested_tokens, 4000), settings.ai_max_output_tokens)
+        payload["max_completion_tokens"] = prepared.max_tokens
         payload["reasoning_effort"] = "low"
     else:
-        payload["temperature"] = body.temperature
-        payload["max_tokens"] = requested_tokens
-    if body.response_format:
-        payload["response_format"] = body.response_format
+        payload["temperature"] = prepared.temperature
+        payload["max_tokens"] = prepared.max_tokens
+    del max_tokens_default
     provider_recorded = False
     attempted = False
     global_ticket = None
@@ -378,7 +374,7 @@ async def _proxy_openai(
             content = ((data.get("choices") or [{}])[0].get("message") or {}).get("content")
             if not content or (data.get("choices") or [{}])[0].get("finish_reason") == "length":
                 raise HTTPException(502, "AI 답변이 완료되지 않았습니다. 다시 시도해 주세요.")
-            if feature == "address_sheet_job" or (body.response_format and body.response_format.get("type") == "json_object"):
+            if feature == "address_sheet_job" or (prepared.response_format and prepared.response_format.get("type") == "json_object"):
                 try:
                     parsed = json.loads(content)
                     if not isinstance(parsed, dict):

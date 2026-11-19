@@ -186,6 +186,9 @@ class Settings(BaseSettings):
     fieldnote_ai_account_per_hour: int = Field(default=120, validation_alias="FIELDNOTE_AI_ACCOUNT_PER_HOUR")
     fieldnote_ai_ip_per_minute: int = Field(default=20, validation_alias="FIELDNOTE_AI_IP_PER_MINUTE")
     fieldnote_ai_ip_per_hour: int = Field(default=240, validation_alias="FIELDNOTE_AI_IP_PER_HOUR")
+    fieldnote_ai_accept_legacy_format: bool = Field(
+        default=True, validation_alias="FIELDNOTE_AI_ACCEPT_LEGACY_FORMAT"
+    )
     #: 토스페이먼츠 (Macro 웹). 비어 있으면 /subscribe 결제는 비활성.
     toss_client_key: str = Field(default="", validation_alias="TOSS_CLIENT_KEY")
     toss_secret_key: str = Field(default="", validation_alias="TOSS_SECRET_KEY")

@@ -32,12 +32,12 @@ FEATURES = (
 # 앱 extractRejectionCode는 detail.code를 읽는다. 문구에 결제·웹 결제 안내를 넣지 않는다.
 _DENY = {
     "login_required": (401, "AI 의견은 CH2 계정 로그인 후 이용할 수 있습니다."),
-    "subscription_required": (403, "FieldNote 구독이 필요합니다."),
-    "trial_ended": (403, "체험 기간이 끝났습니다."),
-    "quota_exceeded": (429, "이번 이용 기간의 AI 제공량을 모두 사용했습니다."),
+    "subscription_required": (403, "AI 이용 기간이 아닙니다."),
+    "trial_ended": (403, "무료체험이 끝났습니다."),
+    "quota_exceeded": (429, "이번 달 AI 사용량을 모두 썼습니다."),
     "rate_limited": (429, "요청이 많습니다. 잠시 후 다시 시도해 주세요."),
-    "daily_cap": (503, "오늘 AI 제공량이 마감되었습니다. 내일 다시 이용해 주세요."),
-    "invalid_request": (400, "요청 형식을 확인해 주세요."),
+    "daily_cap": (503, "오늘 AI 이용이 많아 잠시 후 다시 이용해 주세요."),
+    "invalid_request": (400, "요청 형식이 올바르지 않습니다."),
 }
 
 
