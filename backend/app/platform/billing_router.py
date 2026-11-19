@@ -154,18 +154,19 @@ def subscription_me(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    sub = get_web_subscription(db, user.id)
-    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
+    access = resolve_access(db, user)
+    sub = get_web_subscription(db, user.id) if access.mode == "legacy" else access.subscription
+    ent = access.products
     if not sub:
-        return {"active": False, "entitlements": ent}
+        return {"active": access.mode == "v2" and access.state in {"trial", "paid", "admin"}, "entitlements": ent}
     plan = PLANS_BY_ID.get(str(sub.get("plan_id") or ""))
     return {
-        "active": True,
+        "active": True if access.mode == "legacy" else access.state in {"trial", "paid", "admin"},
         "product": sub.get("product"),
         "plan_id": sub.get("plan_id"),
         "price": plan["price"] if plan else None,
         "status": sub.get("status"),
-        "current_period_end": sub.get("current_period_end"),
+        "current_period_end": sub.get("current_period_end") if access.mode == "legacy" else access.period_end,
         "next_billing_at": sub.get("next_billing_at"),
         "cancel_at_period_end": bool(sub.get("cancel_at_period_end")),
         "entitlements": ent,
