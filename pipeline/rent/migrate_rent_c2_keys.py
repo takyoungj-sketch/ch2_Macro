@@ -39,9 +39,12 @@ def assert_rehearsal_local(target) -> None:
     ops = str(Path(__file__).resolve().parents[2] / "scripts" / "ops" / "collective_p2_verify")
     if ops not in sys.path:
         sys.path.insert(0, ops)
-    from ops_guards import assert_local_target
+    from ops_guards import TargetError, assert_local_target
 
-    assert_local_target(target)
+    try:
+        assert_local_target(target)
+    except TargetError as exc:
+        raise GuardError(str(exc)) from None
 
 
 def assert_fixture(name: str) -> None:
@@ -54,6 +57,8 @@ def rent_engine(dbname: str, *, write: bool, base_url: str | None = None) -> Eng
     url = make_url(base_url or server_url_from_env()).set(database=dbname)
     if url.drivername == "postgresql":
         url = url.set(drivername="postgresql+psycopg2")
+    if write:
+        assert_rehearsal_local(url)
     mode = "off" if write else "on"
     opts = f"-c statement_timeout=0 -c default_transaction_read_only={mode}"
     return create_engine(url, pool_pre_ping=True, connect_args={"options": opts})
@@ -109,8 +114,7 @@ def apply(engine: Engine, *, raw_of: dict[tuple[str, str], str] | None = None) -
     raw_of = raw_of or {}
     target = str(engine.url.database or "")
     assert_fixture(target)
-    if target == REHEARSAL_DB:
-        assert_rehearsal_local(engine)
+    assert_rehearsal_local(engine)
     with engine.begin() as conn:
         name = str(conn.execute(text("SELECT current_database()")).scalar() or "")
         assert_fixture(name)

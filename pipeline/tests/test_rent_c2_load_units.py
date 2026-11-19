@@ -224,6 +224,17 @@ def test_unapproved_bypass_rejects_remote_host(tmp_path: Path, monkeypatch):
     assert code == 2
 
 
+def test_apply_rejects_remote_fixture(tmp_path: Path, monkeypatch, capsys):
+    path = _csv(tmp_path, _split_rows())
+    monkeypatch.setattr(loader, "rent_engine", _refuse_connect)
+    code = loader.main([
+        "--rent-db", FIXTURE, "--csv", str(path), "--apply",
+        "--base-url", "postgresql://u@203.0.113.9/unused",
+    ])
+    assert code == 2
+    assert "로컬" in capsys.readouterr().err
+
+
 def test_apply_then_same_file_inserts_once(fixture_db, tmp_path: Path):
     path = _csv(tmp_path, _split_rows())
     assert loader.main([

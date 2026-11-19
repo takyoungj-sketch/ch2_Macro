@@ -391,3 +391,8 @@ def test_resume_after_partial_matches_one_shot(fixture_db):
     engine.dispose()
     assert once == resumed
     assert once[0] == [(2, piece), (3, piece)]
+
+
+def test_remote_fixture_write_is_refused():
+    with pytest.raises(mig.GuardError):
+        mig.rent_engine("ch2rent_c2m_p2r", write=True, base_url="postgresql://u@203.0.113.9/unused")

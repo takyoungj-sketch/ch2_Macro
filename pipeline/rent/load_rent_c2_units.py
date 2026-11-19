@@ -93,6 +93,8 @@ def rent_engine(dbname: str, *, apply: bool, base_url: str | None = None) -> Eng
     url = make_url(base_url or server_url_from_env()).set(database=dbname)
     if url.drivername == "postgresql":
         url = url.set(drivername="postgresql+psycopg2")
+    if apply:
+        assert_rehearsal_local(url)
     mode = "off" if apply else "on"
     opts = f"-c statement_timeout=0 -c default_transaction_read_only={mode}"
     return create_engine(url, pool_pre_ping=True, connect_args={"options": opts})
@@ -327,7 +329,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         assert_write_db(args.rent_db)
         base = make_url(args.base_url or server_url_from_env()).set(database=args.rent_db)
-        if args.rent_db == REHEARSAL_DB or (args.apply and args.test_fixture_unapproved):
+        if args.apply or args.rent_db == REHEARSAL_DB:
             assert_rehearsal_local(base)
         df = read_units(args.csv)
         validate(df)
