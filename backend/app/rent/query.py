@@ -310,19 +310,30 @@ def list_addr3(
 
 
 def pending_n_by_key(conn: Connection, keys: list[str]) -> dict[str, int]:
-    """판정 표의 pending key 만 센다. 표가 없으면 빈 결과라 목록은 지금과 같다."""
+    """pending 본번의 유효 거래 수. 표나 원장이 없으면 빈 결과라 목록은 지금과 같다."""
     wanted = [k for k in keys if k]
     if not wanted:
         return {}
     if not conn.execute(text("SELECT to_regclass('public.rent_building_key_c2_units')")).scalar():
         return {}
+    if not conn.execute(text("SELECT to_regclass('public.rent_transactions')")).scalar():
+        return {}
     rows = conn.execute(
         text(
             """
-            SELECT base_key, count(*)::int
-            FROM rent_building_key_c2_units
-            WHERE decision = 'pending' AND base_key = ANY(CAST(:keys AS text[]))
-            GROUP BY base_key
+            SELECT p.base_key, count(t.id)::int
+            FROM rent_building_key_c2_units p
+            JOIN rent_transactions t
+              ON rtrim(t.building_key) = p.base_key
+             AND t.asset_type = p.asset_type
+             AND left(t.beopjungri_code, 10) = left(p.beopjungri_code, 10)
+             AND CASE WHEN split_part(btrim(t.lot_number), '-', 1) ~ '^[0-9]+$'
+                      THEN coalesce(nullif(ltrim(split_part(btrim(t.lot_number), '-', 1), '0'), ''), '0')
+                      ELSE btrim(split_part(btrim(t.lot_number), '-', 1)) END = p.main_lot
+             AND t.is_valid
+            WHERE p.decision = 'pending'
+              AND p.base_key = ANY(CAST(:keys AS text[]))
+            GROUP BY p.base_key
             """
         ),
         {"keys": wanted},

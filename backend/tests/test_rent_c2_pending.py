@@ -1,4 +1,4 @@
-"""pending_n 은 판정 표의 pending key 만 센다."""
+"""pending_n 은 pending 본번의 유효 거래 수다."""
 from __future__ import annotations
 
 import time
@@ -79,18 +79,37 @@ def test_pending_count_ignores_other_decisions_and_times_both_states(engine, cap
     with engine.begin() as conn:
         conn.execute(text(
             """
+            CREATE TABLE rent_transactions (
+                id bigserial PRIMARY KEY,
+                building_key text,
+                asset_type text,
+                beopjungri_code text,
+                lot_number text,
+                is_valid boolean
+            );
             CREATE TABLE rent_building_key_c2_units (
-                base_key text, decision text, main_lot text
+                base_key text,
+                asset_type text,
+                beopjungri_code text,
+                decision text,
+                main_lot text
             );
             INSERT INTO rent_building_key_c2_units VALUES
-                (:k, 'keep', '1'),
-                (:p, 'pending', '2'),
-                (:p, 'split', '3');
+                (:k, 'apartment', '1111010100', 'keep', '1'),
+                (:p, 'apartment', '1111010100', 'pending', '2'),
+                (:p, 'apartment', '1111010100', 'split', '3');
+            INSERT INTO rent_transactions
+                (building_key, asset_type, beopjungri_code, lot_number, is_valid)
+            VALUES
+                (:p, 'apartment', '1111010100', '2', true),
+                (:p, 'apartment', '1111010100', '2-1', true),
+                (:p, 'apartment', '1111010100', '2', false),
+                (:p, 'apartment', '1111010100', '3', true);
             """
         ), {"k": KEEP, "p": PEND})
     with engine.connect() as conn:
         present_ms, present = _ms(conn)
-    assert present == {PEND: 1}
+    assert present == {PEND: 2}
     print(f"LIST_MS_ABSENT {absent_ms:.3f}")
     print(f"LIST_MS_PRESENT {present_ms:.3f}")
     captured = capsys.readouterr()
