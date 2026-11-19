@@ -126,6 +126,45 @@ def test_split_without_part_zero_is_invalid():
     assert loader.final_state_errors(rows)
 
 
+def _frame(rows: list[dict]) -> pd.DataFrame:
+    out = pd.DataFrame(rows)
+    out["part"] = pd.to_numeric(out["part"])
+    return out
+
+
+def test_part_zero_keep_and_split_may_span_legal_dongs():
+    rows = _frame([
+        _row(base_key="k1", beopjungri_code="1111010100", main_lot="1", part="0", decision="keep", evidence=""),
+        _row(base_key="k1", beopjungri_code="1111010200", main_lot="2", part="0", decision="keep", evidence="title_register"),
+        _row(base_key="s1", beopjungri_code="1111010100", main_lot="10", part="0", decision="split", evidence="collective_reuse"),
+        _row(base_key="s1", beopjungri_code="1111010100", main_lot="11", part="1", decision="split", evidence="collective_reuse"),
+        _row(base_key="s1", beopjungri_code="1111010200", main_lot="12", part="0", decision="split", evidence=""),
+        _row(base_key="s1", beopjungri_code="1111010200", main_lot="13", part="2", decision="split", evidence="collective_reuse"),
+    ])
+    assert loader.final_state_errors(rows) == []
+
+
+def test_nonzero_part_spanning_legal_dongs_is_rejected():
+    rows = _frame([
+        _row(base_key="s1", beopjungri_code="1111010100", main_lot="10", part="0", decision="split", evidence="collective_ledger"),
+        _row(base_key="s1", beopjungri_code="1111010100", main_lot="11", part="1", decision="split", evidence="collective_ledger"),
+        _row(base_key="s1", beopjungri_code="1111010200", main_lot="12", part="0", decision="split", evidence="collective_ledger"),
+        _row(base_key="s1", beopjungri_code="1111010200", main_lot="13", part="1", decision="split", evidence="collective_ledger"),
+    ])
+    errors = loader.final_state_errors(rows)
+    assert any("0이 아닌 조각이 법정동을 넘는다" in item for item in errors)
+
+
+def test_split_dong_and_keep_dong_on_one_key_passes():
+    rows = _frame([
+        _row(base_key="b1", beopjungri_code="1111010100", main_lot="10", part="0", decision="split", evidence="collective_reuse"),
+        _row(base_key="b1", beopjungri_code="1111010100", main_lot="11", part="1", decision="split", evidence="collective_reuse"),
+        _row(base_key="b1", beopjungri_code="1111010200", main_lot="20", part="0", decision="keep", evidence=""),
+        _row(base_key="b1", beopjungri_code="1111010200", main_lot="21", part="0", decision="keep", evidence="title_register"),
+    ])
+    assert loader.final_state_errors(rows) == []
+
+
 def test_rent_stats_is_refused_and_rehearsal_name_is_allowed():
     for name in ("rent_stats", "collective_stats"):
         with pytest.raises(loader.GuardError):

@@ -188,13 +188,14 @@ def final_state_errors(df: pd.DataFrame) -> list[str]:
             errors.append(f"분할 묶음에 part 0이 없다: {missing}")
         if single:
             errors.append(f"분할 묶음이 조각 하나뿐이다: {single}")
-    if df.duplicated(["base_key", "part"]).any():
-        # 같은 base_key·part가 법정동을 넘으면 안 된다. 자산이 달라도 같은 조각 키다.
-        crossed = (
-            df.groupby(["base_key", "part"], sort=False)["beopjungri_code"].nunique().gt(1).sum()
+    # 집합 final_state_errors와 같다. part 0은 옛 key라 법정동을 넘어도 되고, 0이 아닌 조각만 거부한다.
+    nonzero = df.loc[pd.to_numeric(df["part"], errors="coerce").fillna(0).ne(0)]
+    if not nonzero.empty:
+        crossed = int(
+            nonzero.groupby(["base_key", "part"], sort=False)["beopjungri_code"].nunique().gt(1).sum()
         )
-        if int(crossed):
-            errors.append(f"같은 조각이 법정동을 넘는다: {int(crossed)}")
+        if crossed:
+            errors.append(f"0이 아닌 조각이 법정동을 넘는다: {crossed}")
     mixed = int(df.groupby("base_key", sort=False)["asset_type"].nunique().gt(1).sum())
     if mixed:
         errors.append(f"같은 base_key에 자산이 둘 이상이다: {mixed}")
