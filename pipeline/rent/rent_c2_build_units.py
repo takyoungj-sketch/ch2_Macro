@@ -71,6 +71,56 @@ def timed(conn, sql, params=None):
     return rows, round(time.perf_counter() - started, 3), None
 
 
+def recover_raw_of(conn, pairs: list[tuple[str, str]]) -> dict[tuple[str, str], str]:
+    """분할 조각의 원문. 읽기만 하고, 없으면 그 키는 결과에 넣지 않는다."""
+    keys = sorted({key for key, _asset in pairs})
+    if not keys:
+        return {}
+    rows = conn.execute(
+        text(
+            """
+            SELECT rtrim(building_key) AS building_key, asset_type,
+                   addr1, addr2, addr3, addr4, building_name, lot_number, road_name,
+                   count(*)::bigint AS n
+            FROM rent_transactions
+            WHERE is_valid AND asset_type IN ('apartment', 'rowhouse', 'officetel')
+              AND building_key = ANY(CAST(:keys AS char(64)[]))
+            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+            """
+        ),
+        {"keys": keys},
+    ).mappings().all()
+    by_key: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for row in rows:
+        by_key[(str(row["building_key"]).strip(), str(row["asset_type"]).strip())].append(dict(row))
+    c01 = load_split_units()
+    found_of: dict[tuple[str, str], str] = {}
+    for key, asset in pairs:
+        variants = by_key.get((key, asset), [])
+        if not variants:
+            continue
+        frames = [pd.DataFrame(variants)]
+        alt = []
+        for row in variants:
+            copied = dict(row)
+            addr = copied.get("addr1")
+            copied["addr1"] = LEGACY_SIDO_TO_CURRENT.get(addr, addr) if isinstance(addr, str) else addr
+            alt.append(copied)
+        frames.append(pd.DataFrame(alt))
+        found = None
+        for frame in frames:
+            raws = building_key_raw_series(frame, asset)
+            for raw in raws.tolist():
+                found = _key_raw_for(str(raw), key, c01)
+                if found is not None:
+                    break
+            if found is not None:
+                break
+        if found is not None:
+            found_of[(key, asset)] = found
+    return found_of
+
+
 def write_units_csv(rows: list[dict], path: Path) -> str:
     ordered = sorted(
         rows,

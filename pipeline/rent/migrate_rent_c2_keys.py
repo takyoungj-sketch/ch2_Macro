@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -12,9 +13,9 @@ from pipeline.collective.building_keys import c2_key, main_lot_of
 from pipeline.collective.migrate_p2_keys import server_url_from_env
 
 FIXTURE_RE = re.compile(r"^ch2rent_c2m_p2r(_[a-z0-9]+)?$")
+REHEARSAL_DB = "rent_stats_rc2r"
 FORBIDDEN = {
     "rent_stats",
-    "rent_stats_rc2r",
     "collective_stats",
     "built_stats",
     "land_stats",
@@ -33,9 +34,19 @@ class MigrateError(RuntimeError):
     pass
 
 
+def assert_rehearsal_local(target) -> None:
+    ops = str(Path(__file__).resolve().parents[2] / "scripts" / "ops" / "collective_p2_verify")
+    if ops not in sys.path:
+        sys.path.insert(0, ops)
+    from ops_guards import assert_local_target
+
+    assert_local_target(target)
+
+
 def assert_fixture(name: str) -> None:
-    if name in FORBIDDEN or FIXTURE_RE.fullmatch(name) is None:
-        raise GuardError("이 실행기는 테스트 fixture 데이터베이스만 연다")
+    if name == REHEARSAL_DB or FIXTURE_RE.fullmatch(name):
+        return
+    raise GuardError("이 실행기는 fixture 또는 리허설 데이터베이스만 연다")
 
 
 def rent_engine(dbname: str, *, write: bool, base_url: str | None = None) -> Engine:
@@ -62,6 +73,10 @@ def _piece(base: str, asset: str, part: int, raw_of: dict[tuple[str, str], str])
 
 def apply(engine: Engine, *, raw_of: dict[tuple[str, str], str] | None = None) -> dict:
     raw_of = raw_of or {}
+    target = str(engine.url.database or "")
+    assert_fixture(target)
+    if target == REHEARSAL_DB:
+        assert_rehearsal_local(engine)
     with engine.begin() as conn:
         name = str(conn.execute(text("SELECT current_database()")).scalar() or "")
         assert_fixture(name)

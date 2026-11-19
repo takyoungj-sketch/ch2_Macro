@@ -1,7 +1,7 @@
 """임대 C-2 판정 표 적재.
 
-기본은 읽기 전용이다. 쓰기는 테스트 fixture 데이터베이스에만 허용한다.
-rent_stats와 리허설 DB에는 연결하지 않는다.
+기본은 읽기 전용이다. 쓰기는 테스트 fixture 또는 로컬 리허설 rent_stats_rc2r 만 허용한다.
+rent_stats 와 집합 DB에는 연결하지 않는다.
 """
 from __future__ import annotations
 
@@ -43,14 +43,15 @@ DECISIONS = {"split", "keep", "pending"}
 EVIDENCE = {"", "collective_reuse", "collective_ledger", "title_register", "manual"}
 FORBIDDEN_DBS = {
     "rent_stats",
-    "rent_stats_rc2r",
     "collective_stats",
     "built_stats",
     "land_stats",
     "macro_ts",
     "platform",
     "postgres",
+    "parcel_master",
 }
+REHEARSAL_DB = "rent_stats_rc2r"
 FIXTURE_RE = re.compile(r"^ch2rent_c2u_p2r(_[a-z0-9]+)?$")
 
 DDL = """
@@ -97,9 +98,19 @@ def rent_engine(dbname: str, *, apply: bool, base_url: str | None = None) -> Eng
     return create_engine(url, pool_pre_ping=True, connect_args={"options": opts})
 
 
+def assert_rehearsal_local(target) -> None:
+    ops = str(Path(__file__).resolve().parents[2] / "scripts" / "ops" / "collective_p2_verify")
+    if ops not in sys.path:
+        sys.path.insert(0, ops)
+    from ops_guards import assert_local_target
+
+    assert_local_target(target)
+
+
 def assert_write_db(name: str) -> None:
-    if name in FORBIDDEN_DBS or FIXTURE_RE.fullmatch(name) is None:
-        raise GuardError("이 적재기는 테스트 fixture 데이터베이스만 연다")
+    if name == REHEARSAL_DB or FIXTURE_RE.fullmatch(name):
+        return
+    raise GuardError("이 적재기는 fixture 또는 리허설 데이터베이스만 연다")
 
 
 def file_sha256(path: Path) -> str:
@@ -306,6 +317,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         assert_write_db(args.rent_db)
+        if args.rent_db == REHEARSAL_DB:
+            base = make_url(args.base_url or server_url_from_env()).set(database=args.rent_db)
+            assert_rehearsal_local(base)
         df = read_units(args.csv)
         validate(df)
         if args.approved_sha256 is not None or args.approved_rows is not None:

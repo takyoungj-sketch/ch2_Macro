@@ -126,10 +126,11 @@ def test_split_without_part_zero_is_invalid():
     assert loader.final_state_errors(rows)
 
 
-def test_rent_stats_and_rehearsal_are_refused():
-    for name in ("rent_stats", "rent_stats_rc2r", "collective_stats"):
+def test_rent_stats_is_refused_and_rehearsal_name_is_allowed():
+    for name in ("rent_stats", "collective_stats"):
         with pytest.raises(loader.GuardError):
             loader.assert_write_db(name)
+    loader.assert_write_db("rent_stats_rc2r")
 
 
 def _db_url(url) -> str:

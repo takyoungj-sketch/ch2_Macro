@@ -129,9 +129,10 @@ def test_source_does_not_open_collective_writer():
 
 
 def test_real_rent_names_are_refused():
-    for name in ("rent_stats", "rent_stats_rc2r", "collective_stats"):
+    for name in ("rent_stats", "collective_stats"):
         with pytest.raises(mig.GuardError):
             mig.assert_fixture(name)
+    mig.assert_fixture("rent_stats_rc2r")
 
 
 def _reset(url):
