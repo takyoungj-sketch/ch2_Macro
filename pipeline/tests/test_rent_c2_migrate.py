@@ -1,6 +1,7 @@
 """임대 C-2 키 이전. fixture 만 쓰고 집합 쓰기는 실패로 본다."""
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 
@@ -212,3 +213,181 @@ def test_split_moves_keys_and_drops_old_geocode(fixture_db):
     assert added == piece
     assert int(gone) == 0
     assert int(saved) == 1
+
+
+def test_rerun_with_no_valid_part0_changes_nothing(fixture_db):
+    engine = _reset(fixture_db)
+    with engine.begin() as conn:
+        conn.execute(text(
+            """
+            CREATE TABLE rent_transactions (
+                id bigint PRIMARY KEY,
+                building_key text,
+                asset_type text,
+                beopjungri_code text,
+                lot_number text,
+                is_valid boolean NOT NULL
+            );
+            CREATE TABLE rent_building_key_map (
+                old_key varchar(64) NOT NULL,
+                new_key varchar(64) NOT NULL,
+                asset_type varchar(32) NOT NULL,
+                reason varchar(32) NOT NULL,
+                split_part int NOT NULL DEFAULT 0,
+                n_tx int,
+                PRIMARY KEY (old_key, new_key)
+            );
+            CREATE TABLE rent_building_geocodes (
+                building_key text PRIMARY KEY,
+                label text NOT NULL,
+                normalized_address text NOT NULL,
+                status text NOT NULL DEFAULT 'ok'
+            );
+            CREATE TABLE rent_building_key_c2_units (
+                base_key varchar(64) NOT NULL,
+                asset_type varchar(16) NOT NULL,
+                beopjungri_code varchar(10) NOT NULL,
+                main_lot varchar(16) NOT NULL,
+                part integer NOT NULL,
+                decision varchar(8) NOT NULL,
+                evidence varchar(32) NOT NULL DEFAULT '',
+                source varchar(32) NOT NULL,
+                collective_sha256 char(64) NOT NULL,
+                PRIMARY KEY (base_key, asset_type, beopjungri_code, main_lot)
+            );
+            INSERT INTO rent_transactions VALUES
+                (1, :k, 'apartment', '1111010100', '10', false),
+                (2, :k, 'apartment', '1111010100', '11', true);
+            INSERT INTO rent_building_geocodes VALUES (:k, '옛', '주소', 'ok');
+            INSERT INTO rent_building_key_c2_units VALUES
+                (:k, 'apartment', '1111010100', '10', 0, 'split', '', 'rent_c2_20261119', :sha),
+                (:k, 'apartment', '1111010100', '11', 1, 'split', '', 'rent_c2_20261119', :sha);
+            """
+        ), {"k": BASE, "sha": SHA})
+    with pytest.raises(mig.MigrateError):
+        mig.apply(engine, raw_of={})
+    first = mig.apply(engine, raw_of={(BASE, "apartment"): RAW})
+    again = mig.apply(engine, raw_of={})
+    engine.dispose()
+    assert first["updated"] == 1
+    assert again["changed"] == 0
+    engine = _engine(fixture_db, write=False)
+    with engine.connect() as conn:
+        valid_part0 = conn.execute(text(
+            "SELECT count(*) FROM rent_transactions WHERE id = 1 AND is_valid"
+        )).scalar()
+        part1 = conn.execute(text("SELECT building_key FROM rent_transactions WHERE id = 2")).scalar()
+    engine.dispose()
+    assert int(valid_part0) == 0
+    assert part1 == c2_key(RAW, "p1")
+
+
+def test_resume_after_partial_matches_one_shot(fixture_db):
+    raw = "apartment|서울|강남|역삼|name:한빛"
+    base = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    piece = c2_key(raw, "p1")
+
+    def build(engine):
+        with engine.begin() as conn:
+            conn.execute(text("DROP SCHEMA public CASCADE"))
+            conn.execute(text("CREATE SCHEMA public"))
+            conn.execute(text(
+                """
+                CREATE TABLE rent_transactions (
+                    id bigint PRIMARY KEY,
+                    building_key text,
+                    asset_type text,
+                    beopjungri_code text,
+                    lot_number text,
+                    is_valid boolean NOT NULL,
+                    addr1 text,
+                    addr2 text,
+                    addr3 text,
+                    addr4 text,
+                    building_name text,
+                    road_name text
+                );
+                CREATE TABLE rent_building_key_map (
+                    old_key varchar(64) NOT NULL,
+                    new_key varchar(64) NOT NULL,
+                    asset_type varchar(32) NOT NULL,
+                    reason varchar(32) NOT NULL,
+                    split_part int NOT NULL DEFAULT 0,
+                    n_tx int,
+                    PRIMARY KEY (old_key, new_key)
+                );
+                CREATE TABLE rent_building_geocodes (
+                    building_key text PRIMARY KEY,
+                    label text NOT NULL,
+                    normalized_address text NOT NULL,
+                    status text NOT NULL DEFAULT 'ok'
+                );
+                CREATE TABLE rent_building_key_c2_units (
+                    base_key varchar(64) NOT NULL,
+                    asset_type varchar(16) NOT NULL,
+                    beopjungri_code varchar(10) NOT NULL,
+                    main_lot varchar(16) NOT NULL,
+                    part integer NOT NULL,
+                    decision varchar(8) NOT NULL,
+                    evidence varchar(32) NOT NULL DEFAULT '',
+                    source varchar(32) NOT NULL,
+                    collective_sha256 char(64) NOT NULL,
+                    PRIMARY KEY (base_key, asset_type, beopjungri_code, main_lot)
+                );
+                INSERT INTO rent_transactions VALUES
+                    (2, :k, 'apartment', '1111010100', '11', true, '서울', '강남', '역삼', '', '한빛', ''),
+                    (3, :k, 'apartment', '1111010100', '11', true, '서울', '강남', '역삼', '', '한빛', '');
+                INSERT INTO rent_building_geocodes VALUES (:k, '옛', '주소', 'ok');
+                INSERT INTO rent_building_key_c2_units VALUES
+                    (:k, 'apartment', '1111010100', '10', 0, 'split', '', 'rent_c2_20261119', :sha),
+                    (:k, 'apartment', '1111010100', '11', 1, 'split', '', 'rent_c2_20261119', :sha);
+                """
+            ), {"k": base, "sha": SHA})
+
+    def snapshot(engine):
+        with engine.connect() as conn:
+            txs = conn.execute(text(
+                "SELECT id, building_key FROM rent_transactions ORDER BY id"
+            )).all()
+            mapped = conn.execute(text(
+                """
+                SELECT old_key, new_key, split_part FROM rent_building_key_map
+                WHERE reason = 'c2_split' ORDER BY split_part, new_key
+                """
+            )).all()
+            geo = int(conn.execute(text("SELECT count(*) FROM rent_building_geocodes")).scalar() or 0)
+            saved = int(conn.execute(text(
+                "SELECT count(*) FROM rent_building_geocodes_rc2_before"
+            )).scalar() or 0)
+        return [(int(i), str(k)) for i, k in txs], [(str(a), str(b), int(c)) for a, b, c in mapped], geo, saved
+
+    engine = _engine(fixture_db, write=True)
+    build(engine)
+    mig.apply(engine, raw_of={(base, "apartment"): raw})
+    once = snapshot(engine)
+    engine.dispose()
+
+    engine = _engine(fixture_db, write=True)
+    build(engine)
+    with engine.begin() as conn:
+        conn.execute(text(
+            """
+            CREATE TABLE rent_transactions_rc2_before (
+                id bigint PRIMARY KEY,
+                building_key text,
+                saved_at timestamptz NOT NULL DEFAULT now()
+            );
+            INSERT INTO rent_transactions_rc2_before (id, building_key) VALUES
+                (2, :k), (3, :k);
+            UPDATE rent_transactions SET building_key = :piece WHERE id = 2;
+            CREATE TABLE rent_building_geocodes_rc2_before (LIKE rent_building_geocodes);
+            INSERT INTO rent_building_geocodes_rc2_before
+            SELECT * FROM rent_building_geocodes;
+            DELETE FROM rent_building_geocodes;
+            """
+        ), {"k": base, "piece": piece})
+    mig.apply(engine, raw_of={})
+    resumed = snapshot(engine)
+    engine.dispose()
+    assert once == resumed
+    assert once[0] == [(2, piece), (3, piece)]

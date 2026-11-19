@@ -71,25 +71,7 @@ def timed(conn, sql, params=None):
     return rows, round(time.perf_counter() - started, 3), None
 
 
-def recover_raw_of(conn, pairs: list[tuple[str, str]]) -> dict[tuple[str, str], str]:
-    """분할 조각의 원문. 읽기만 하고, 없으면 그 키는 결과에 넣지 않는다."""
-    keys = sorted({key for key, _asset in pairs})
-    if not keys:
-        return {}
-    rows = conn.execute(
-        text(
-            """
-            SELECT rtrim(building_key) AS building_key, asset_type,
-                   addr1, addr2, addr3, addr4, building_name, lot_number, road_name,
-                   count(*)::bigint AS n
-            FROM rent_transactions
-            WHERE is_valid AND asset_type IN ('apartment', 'rowhouse', 'officetel')
-              AND building_key = ANY(CAST(:keys AS char(64)[]))
-            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
-            """
-        ),
-        {"keys": keys},
-    ).mappings().all()
+def _found_raw(rows, pairs: list[tuple[str, str]]) -> dict[tuple[str, str], str]:
     by_key: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for row in rows:
         by_key[(str(row["building_key"]).strip(), str(row["asset_type"]).strip())].append(dict(row))
@@ -119,6 +101,60 @@ def recover_raw_of(conn, pairs: list[tuple[str, str]]) -> dict[tuple[str, str], 
         if found is not None:
             found_of[(key, asset)] = found
     return found_of
+
+
+def recover_raw_of(conn, pairs: list[tuple[str, str]]) -> dict[tuple[str, str], str]:
+    """분할 조각의 원문. 읽기만 하고, 없으면 그 키는 결과에 넣지 않는다."""
+    keys = sorted({key for key, _asset in pairs})
+    if not keys:
+        return {}
+    rows = conn.execute(
+        text(
+            """
+            SELECT rtrim(building_key) AS building_key, asset_type,
+                   addr1, addr2, addr3, addr4, building_name, lot_number, road_name,
+                   count(*)::bigint AS n
+            FROM rent_transactions
+            WHERE is_valid AND asset_type IN ('apartment', 'rowhouse', 'officetel')
+              AND building_key = ANY(CAST(:keys AS char(64)[]))
+            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+            """
+        ),
+        {"keys": keys},
+    ).mappings().all()
+    return _found_raw(rows, pairs)
+
+
+def recover_raw_from_before(conn, pairs: list[tuple[str, str]]) -> dict[tuple[str, str], str]:
+    """이미 옮긴 거래의 원문. 보존 표의 옛 key 로 주소 열을 읽는다."""
+    keys = sorted({key for key, _asset in pairs})
+    if not keys or not conn.execute(text("SELECT to_regclass('public.rent_transactions_rc2_before')")).scalar():
+        return {}
+    has_cols = conn.execute(text(
+        """
+        SELECT count(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'rent_transactions'
+          AND column_name IN ('is_valid', 'addr1', 'building_name')
+        """
+    )).scalar()
+    if int(has_cols or 0) < 3:
+        return {}
+    rows = conn.execute(
+        text(
+            """
+            SELECT rtrim(b.building_key) AS building_key, t.asset_type,
+                   t.addr1, t.addr2, t.addr3, t.addr4, t.building_name, t.lot_number, t.road_name,
+                   count(*)::bigint AS n
+            FROM rent_transactions_rc2_before b
+            JOIN rent_transactions t ON t.id = b.id
+            WHERE t.is_valid AND t.asset_type IN ('apartment', 'rowhouse', 'officetel')
+              AND rtrim(b.building_key) = ANY(CAST(:keys AS char(64)[]))
+            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+            """
+        ),
+        {"keys": keys},
+    ).mappings().all()
+    return _found_raw(rows, pairs)
 
 
 def write_units_csv(rows: list[dict], path: Path) -> str:

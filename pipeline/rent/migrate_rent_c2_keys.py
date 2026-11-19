@@ -72,6 +72,39 @@ def _piece(base: str, asset: str, part: int, raw_of: dict[tuple[str, str], str])
     return c2_key(raw, f"p{part}")
 
 
+def _c2_split_keys(conn) -> dict[tuple[str, str, int], str]:
+    if not _exists(conn, "rent_building_key_map"):
+        return {}
+    rows = conn.execute(text(
+        """
+        SELECT rtrim(old_key), asset_type, split_part, rtrim(new_key)
+        FROM rent_building_key_map
+        WHERE reason = 'c2_split'
+        """
+    )).all()
+    found: dict[tuple[str, str, int], str] = {}
+    for old, asset, part, new in rows:
+        key = (str(old).strip(), str(asset).strip(), int(part or 0))
+        new_key = str(new).strip()
+        if key in found and found[key] != new_key:
+            raise MigrateError("분할 조각의 원문이 없다")
+        found[key] = new_key
+    return found
+
+
+def _piece_for_rerun(base: str, asset: str, part: int, raw_of: dict, mapped: dict, preserved: dict) -> str:
+    """첫 실행은 넘긴 원문만 쓴다. 다시 돌 때는 저장된 조각 키, 없으면 보존 표 원문이다."""
+    if part == 0:
+        return base
+    saved = mapped.get((base, asset, part))
+    if saved:
+        return saved
+    merged = raw_of
+    if (base, asset) not in raw_of and (base, asset) in preserved:
+        merged = {**raw_of, (base, asset): preserved[(base, asset)]}
+    return _piece(base, asset, part, merged)
+
+
 def apply(engine: Engine, *, raw_of: dict[tuple[str, str], str] | None = None) -> dict:
     raw_of = raw_of or {}
     target = str(engine.url.database or "")
@@ -91,15 +124,29 @@ def apply(engine: Engine, *, raw_of: dict[tuple[str, str], str] | None = None) -
             """
         )).mappings().all()
         old_keys = sorted({str(r["base_key"]) for r in units})
+        mapped = _c2_split_keys(conn)
+        need = []
+        for row in units:
+            part = int(row["part"])
+            if part == 0:
+                continue
+            base, asset = str(row["base_key"]), str(row["asset_type"])
+            if (base, asset, part) not in mapped and (base, asset) not in raw_of:
+                need.append((base, asset))
+        preserved: dict[tuple[str, str], str] = {}
+        if need:
+            from pipeline.rent.rent_c2_build_units import recover_raw_from_before
+            preserved = recover_raw_from_before(conn, need)
         moves: list[dict] = []
         for row in units:
             part = int(row["part"])
             if part == 0:
                 continue
-            new_key = _piece(str(row["base_key"]), str(row["asset_type"]), part, raw_of)
+            base, asset = str(row["base_key"]), str(row["asset_type"])
+            new_key = _piece_for_rerun(base, asset, part, raw_of, mapped, preserved)
             moves.append({
-                "base": str(row["base_key"]),
-                "asset": str(row["asset_type"]),
+                "base": base,
+                "asset": asset,
                 "bjd": str(row["beopjungri_code"])[:10],
                 "lot": main_lot_of(row["main_lot"]) or "",
                 "part": part,
