@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
@@ -21,6 +21,8 @@ _KST = ZoneInfo("Asia/Seoul")
 PHOTO = "photo_analysis_image"
 SHEET = "address_sheet_job"
 WRITE = "text_writing"
+DAILY = "fieldnote_daily_calls"
+_cap_warned_on = None
 FEATURES = (
     (PHOTO, "장"),
     (SHEET, "회"),
@@ -115,6 +117,71 @@ def resolve_fieldnote_ai_access(db, user, now: datetime | None = None) -> Fieldn
     if grant is not None and fieldnote:
         return FieldnoteAiAccess("paid", grant.start, grant.end, None)
     return FieldnoteAiAccess("none", None, None, "subscription_required")
+
+
+def kst_day(now: datetime) -> tuple[datetime, datetime]:
+    local = now.astimezone(_KST)
+    start = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    return start, start + timedelta(days=1)
+
+
+def warn_daily_cap(now: datetime | None = None) -> None:
+    global _cap_warned_on
+    day = kst_day(now or datetime.now(timezone.utc))[0].date()
+    if _cap_warned_on == day:
+        return
+    _cap_warned_on = day
+    _log.warning("FieldNote AI 하루 상한에 도달했습니다. day=%s", day.isoformat())
+
+
+def daily_grant(now: datetime | None = None):
+    from app.ai.allowances import Grant
+
+    start, end = kst_day(now or datetime.now(timezone.utc))
+    return Grant(0, "fieldnote", start, end)
+
+
+def reserve_daily_call(engine, parent_id: str, now: datetime | None = None):
+    """전역 계정 0은 동시 예약을 허용하고, 호출 수 상한은 행 잠금 안에서 센다."""
+    from app.ai import allowances as quota
+
+    grant = daily_grant(now)
+    return quota.reserve(
+        engine,
+        grant,
+        DAILY,
+        1,
+        f"fn-daily:{parent_id}",
+        quota.fingerprint({"parent": parent_id}),
+        limit=int(settings.fieldnote_ai_daily_cap_calls),
+    )
+
+
+def daily_dollar_exceeds(engine, grant) -> bool:
+    """정산액(금액 없는 호출은 최악 단가)과 진행 중 예약에 최악 단가를 더한다."""
+    from app.ai.allowances import balances, calls, jobs, locked, utc
+
+    worst = float(settings.fieldnote_ai_worst_call_usd)
+    cap = float(settings.fieldnote_ai_daily_cap_usd)
+    with locked(engine, 0) as conn:
+        reserved = conn.execute(
+            select(balances.c.reserved).where(
+                balances.c.user_id == 0,
+                balances.c.feature == DAILY,
+                balances.c.period_start == grant.start,
+            )
+        ).scalar()
+        rows = conn.execute(
+            select(calls.c.usd, calls.c.created_at).select_from(
+                calls.join(jobs, calls.c.request_id == jobs.c.id)
+            ).where(jobs.c.feature.in_((PHOTO, SHEET, WRITE)))
+        ).all()
+    settled = 0.0
+    for usd, created in rows:
+        created_at = utc(created)
+        if grant.start <= created_at < grant.end:
+            settled += worst if usd is None else float(usd)
+    return settled + int(reserved or 0) * worst > cap
 
 
 def fieldnote_usage(engine, user_id: int, access: FieldnoteAiAccess) -> dict:

@@ -12,7 +12,7 @@ from contextlib import nullcontext
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -21,10 +21,13 @@ from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user
 from app.platform.fieldnote_ai_access import (
+    daily_dollar_exceeds,
     fieldnote_usage,
     monthly_limit,
     raise_fieldnote_deny,
+    reserve_daily_call,
     resolve_fieldnote_ai_access,
+    warn_daily_cap,
 )
 
 router = APIRouter(prefix="/fieldnote/ai", tags=["fieldnote-ai"])
@@ -182,6 +185,7 @@ def _refund_legacy_quota(db: Session, device_id: str, kind: str, month: str):
 @router.post("/vision")
 async def ai_vision(
     body: AiProxyRequest,
+    request: Request,
     db: Session = Depends(get_platform_db),
     user: CurrentUser | None = Depends(get_optional_user),
     x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
@@ -190,12 +194,13 @@ async def ai_vision(
     kind = _normalize_kind(x_ai_kind, endpoint_default="short")
     if kind == "sheet":
         kind = "short"
-    return await _proxy_openai(body, x_device_id, db, kind=kind, user=user, feature="photo_analysis_image")
+    return await _proxy_openai(body, x_device_id, db, kind=kind, user=user, feature="photo_analysis_image", request=request)
 
 
 @router.post("/sheet")
 async def ai_sheet(
     body: AiProxyRequest,
+    request: Request,
     db: Session = Depends(get_platform_db),
     user: CurrentUser | None = Depends(get_optional_user),
     x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
@@ -209,14 +214,15 @@ async def ai_sheet(
         max_tokens_default=3500,
         user=user,
         feature="address_sheet_job",
+        request=request,
     )
 
 
 @router.post("/write")
-async def ai_write(body: AiProxyRequest, db: Session = Depends(get_platform_db),
+async def ai_write(body: AiProxyRequest, request: Request, db: Session = Depends(get_platform_db),
                    user: CurrentUser | None = Depends(get_optional_user),
                    x_device_id: str | None = Header(default=None, alias="X-Device-Id")):
-    return await _proxy_openai(body, x_device_id, db, kind="long", user=user, feature="text_writing")
+    return await _proxy_openai(body, x_device_id, db, kind="long", user=user, feature="text_writing", request=request)
 
 
 def validated_input(body, feature):
@@ -276,6 +282,7 @@ async def _proxy_openai(
     max_tokens_default: int = 900,
     user: CurrentUser | None = None,
     feature: str = "photo_analysis_image",
+    request: Request | None = None,
 ):
     del device_id, kind  # 헤더는 유지한다. 한도는 계정을 본다.
     access = resolve_fieldnote_ai_access(db, user)
@@ -329,8 +336,24 @@ async def _proxy_openai(
     if body.response_format:
         payload["response_format"] = body.response_format
     provider_recorded = False
+    attempted = False
+    global_ticket = None
     try:
+        if request is not None:
+            from app.ai.rate_limit import check_fieldnote_ai_rate_limit
+            check_fieldnote_ai_rate_limit(request, user.id)
+        try:
+            global_ticket = reserve_daily_call(db.get_bind(), ticket.id)
+        except HTTPException as exc:
+            if isinstance(exc.detail, dict) and exc.detail.get("code") == "quota_exceeded":
+                warn_daily_cap()
+                raise_fieldnote_deny("daily_cap")
+            raise
+        if daily_dollar_exceeds(db.get_bind(), global_ticket.grant):
+            warn_daily_cap()
+            raise_fieldnote_deny("daily_cap")
         with quota.tracking(ticket) if ticket else nullcontext():
+            attempted = True
             async with httpx.AsyncClient(timeout=120.0) as client:
                 res = await client.post(
                     OPENAI_CHAT_URL,
@@ -369,12 +392,15 @@ async def _proxy_openai(
                 except (ValueError, TypeError):
                     raise HTTPException(502, "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요.")
             quota.finish(ticket, data)
+            quota.finish(global_ticket, {"ok": True})
             data["ch2_usage"] = _usage_body(db.get_bind(), ticket.grant, access)
             data["ch2_request_id"] = ticket.id
             return data
     except BaseException:
-        if not provider_recorded:
+        if attempted and not provider_recorded:
             with quota.tracking(ticket):
                 quota.record_provider_failure(model)
         quota.finish(ticket, error="fieldnote_failed")
+        if global_ticket is not None:
+            quota.finish(global_ticket, error="fieldnote_failed")
         raise
