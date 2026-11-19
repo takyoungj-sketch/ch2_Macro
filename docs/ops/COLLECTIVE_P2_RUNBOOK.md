@@ -598,7 +598,7 @@ location /api/ {
 | 9 | 스냅샷 A → **병합 재실행** → 스냅샷 B → `idempotent --report <재실행 보고서> --a A --b B` | Opus | 종료 0: insert 0 · update 0 · QA 같은 id 추가·새 id 0 · 네 표 행 수·해시 같음 · QA 시퀀스 `last_value`·`is_called` 같음 | (실측 합 약 3초) |
 | 10 | **전제: 3 의 가벼운 비교(운영·로컬) 통과.** ① 로컬 promote 덤프 collective·rent(2.2 — 병합 뒤라 여기서 다시 만든다) ② **병합한 표만 다시 해시**(⑤, 전체 행 해시는 낮 5.4 결과를 쓴다): `prod_hash_compare.py snapshot --db-env COLLECTIVE_DATABASE_URL --tables collective_building_geocodes,collective_commercial_map_geocodes,qa_audit_run --out logs\collective_p2\hash_local_collective_merged.json` · rent 는 `--tables rent_building_geocodes` → `overlay --base hash_local_<db>_day.json --patch hash_local_<db>_merged.json --stat-result logs\collective_p2\stat_night_local_result.json --merged-at $MERGED_AT_UTC --freeze-at $FREEZE_AT_UTC --out hash_local_<db>.json`. 거절(종료 2): 가벼운 비교가 통과가 아님, 시각 출처가 `local` 이 아님, ① 카운터 기준 > ② 낮 해시, 또는 ②<③<④<⑤ 가 아님, ⑤ 가 점검 ON 이전이거나 같음. built 는 낮 해시 그대로 ③ scp → 서버에서 크기·SHA-256 대조 | Opus → Cursor | 덤프 종료 0 · overlay 종료 0 · 대조 일치 | 덤프 6분 21초(리허설 DB 실측) + **H** + **S** |
 | 11 | **세 DB promote**(2.2 `vps_promote_db_sql.sh`, collective → rent → built). DB 마다 `/health` OK 뒤 다음 | Cursor | 스크립트 종료 0(R4) | 47분(11/3 실측: built 1분 5초 · collective 15분 7초 · rent 30분 44초, 반영 전 덤프 포함) |
-| 12 | `analysis_cache` 비우기(6.3) · **R5 스모크를 서버 localhost 로**(6.3) · `vps_collective_smoke.sh` | Cursor/Opus | R5 종료 0(3/3) · 스모크 통과 | 3분 |
+| 12 | `analysis_cache` 비우기(6.3) · **R5 스모크를 서버 localhost 로**(6.3) · `vps_collective_smoke.sh`(조회만. DDL·재시작 없음) | Cursor/Opus | R5 종료 0(3/3) · 스모크 통과 | 3분 |
 | 13 | **점검 모드 OFF**(6.0 끄기) · 17곳 확인 — **마감 06:00 KST** | Cursor | 503 인 곳 0 | 2분 |
 | 14 | 7절 핵심 확인(Opus, 읽기 전용) — OFF 뒤 **07:00 까지**: R5 는 12 에서 이미 끝났다. 여기서는 주요 화면과 7.1 | Opus | R1·R2 · 화면 | 7.1 |
 
@@ -669,7 +669,7 @@ PY scripts\lab\collective_p2\c29_merge_prod_only_check.py --dst-collective colle
 | a | **점검 모드 ON**(6.0) · 17곳 503 | 6.0 |
 | b | **진행 중 요청 0**(6.0 ①②③) → 이 시각 = `KEEP_AT` | 셋 다 0 |
 | c | **운영 전용 표 덤프·manifest 검증·보존** — 6.1 4 와 같은 명령·같은 manifest 형식(새 키 상태의 운영에서). 검증은 로컬에서 `collective_p2_merge_prod_only.py` 드라이런(`--manifest … --freeze-at $KEEP_AT`, 대상은 아무 리허설 DB) 의 사전 확인 통과로 한다(쓰지 않음). 보존은 아래 | manifest 엄격 검사 통과 · `created_kst ≥ KEEP_AT` |
-| d | **8절 되돌리기**(새 상태가 된 DB 모두를 반영 직전 덤프로) → `prod_sync_check` 로 반영 전 스냅샷과 다름 0 → **옛 상태 확인**(옛 키 상세 200 · `vps_collective_smoke.sh`) | 다름 0 · 스모크 통과 |
+| d | **8절 되돌리기**(새 상태가 된 DB 모두를 반영 직전 덤프로) → `prod_sync_check` 로 반영 전 스냅샷과 다름 0 → **옛 상태 확인**(옛 키 상세 200 · `vps_collective_smoke.sh`, 조회만) | 다름 0 · 스모크 통과 |
 | e | **점검 모드 OFF** · 17곳 확인 | 503 인 곳 0 |
 
 - **보존(c):**
@@ -687,7 +687,7 @@ PY scripts\lab\collective_p2\c29_merge_prod_only_check.py --dst-collective colle
 - **캐시:**
   - `vps_promote_db_sql.sh` 가 백엔드를 재시작하므로 프로세스 안 캐시가 새로 읽힌다. 키 재매핑 미들웨어의 연결표, `lru_cache` 등이 해당된다.
   - **promote 뒤 `analysis_cache` 를 비운다**(T 결정): `cd /opt/ch2_Macro/backend && .venv/bin/python scripts/clear_analysis_cache.py --with-base-cache`. 토지 DB 의 유료 분석 캐시라 이번 DB 와 직접 관련은 없지만 확인 전에 비운다.
-- 스모크: `deploy/scripts/vps_collective_smoke.sh` + 키 이전 확인(R5):
+- 스모크: `deploy/scripts/vps_collective_smoke.sh`는 조회만 한다. 운영 DB DDL과 백엔드 재시작은 하지 않는다. 키 이전 확인(R5):
 
 | 키 종류(연결표 reason) | 기대 응답(집합 상세 `…/stats/rolling?window_years=5`) | 그 밖이면 |
 |---|---|---|
@@ -854,7 +854,7 @@ while :; do rem=$((deadline - SECONDS)); (( rem > 0 )) || break
 - **해시 TimeZone — 반영함.** `prod_hash_compare.py`가 세션 시작 시 `SET TimeZone TO 'UTC'`를 한다. 2026-11-18 불일치 조각(collective 102, rent 17, built 18)을 다시 계산해 전부 일치했다. 7.2 통과.
 - **7.2 `measured_at` 빈 스냅샷.** 운영 스냅샷을 `--order-clock defer`로 만들고 `stamp-local`을 하지 않으면 `measured_at`이 비고, 조각 차이가 있어도 결과 검사가 전체를 「검증 못 함」(종료 2)으로 내린다. 2026-11-18 비교가 그렇게 됐다. 운영 스냅샷은 로컬에서 시각을 찍거나, 서버에서 돌릴 때 시각 출처를 결과 검사가 받게 고친다.
 - **개선 목록 (아직 안 함):**
-  - `vps_collective_smoke.sh` 기대값. 단지 검색은 시군구(`addr2`)가 없으면 400이다. 거래 목록·연도 통계는 API 토큰이 있어도 로그인 세션이 없으면 401이다. 일반 키 rolling은 토큰이 있으면 200이다.
+  - `vps_collective_smoke.sh` 기대값 — **OPS-004로 처리.** 스크립트는 조회만 한다. 단지 검색은 `addr2`를 넣고, 키가 비면 실패다. rolling 5년은 200, 거래·연도는 비로그인 401과 `로그인이 필요합니다.`다.
   - nginx 점검 include를 저장소 템플릿에 넣기. 2026-11-18에는 서버 설정에만 있다(`sites-available/ch2-macro`, `snippets/ch2-lab-api.conf`, `sites-available/ch2data-hub`, `sites-available/ch2-viewer`). `apply_nginx`가 저장소 템플릿을 다시 복사하면 macro와 랩 조각의 include가 지워진다. viewer는 저장소 템플릿이 없다.
   - 키 이전에서 C-2 옛 키 좌표 1행이 남은 원인. 2026-11-18 c29가 `collective_building_geocodes`의 C-2 분할 기준 키 1행을 잡았다. 운영 덤프에는 없었고 로컬에만 있었다. `migrate_p2_keys`의 `c2_discard`가 빠뜨렸는지, 좌표 0 검증 뒤에 로컬 지도 조회가 다시 넣었는지 조사한다. 좌표는 통계가 아니고, 그 창에서는 백업 후 그 1행만 지우고 진행했다.
   - 같은 이름 단지 중 일부만 `(YYYY년 준공)`이 붙는 표시. C-2로 나뉜 아파트만 `display_label`에 연도가 붙는다. 같은 이름인데 분할 대상이 아닌 동(소사구 JN팰리스 가운데 연도가 이름에 없는 동)은 이름만 보인다.

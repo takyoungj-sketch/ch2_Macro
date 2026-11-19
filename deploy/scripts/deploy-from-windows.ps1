@@ -254,27 +254,23 @@ echo "==> collective commercial meta/filters"
 curl -sf "${HDR[@]}" http://127.0.0.1:8000/api/collective/commercial/meta/filters | head -c 120
 echo
 
-echo "==> built regression 가경동"
+echo "==> built regression gate (anonymous 401)"
 BODY='{"asset_type":"commercial","addr1":"충청북도","addr2":"청주시","addr4_list":["가경동"],"leaf_level":"addr4","window_years":5,"variables":{"gross_area":true,"land_area":true,"building_age":true,"road_width_dummy":true,"zone_type_dummy":true,"building_use_dummy":true,"structure_dummy":true},"exclude_outliers_iqr":false}'
-curl -sf --max-time 90 "${HDR[@]}" -H "Content-Type: application/json" \
-  -d "$BODY" http://127.0.0.1:8000/api/built/regression/run > /tmp/built_reg_smoke.json
-python3 - <<'PY'
-import json
-d = json.load(open("/tmp/built_reg_smoke.json"))
-p = d["primary"]
-print("primary:", p.get("admin_level"), p.get("scope_label"), "n=", p.get("n"))
-if p.get("admin_level") != "eupmyeondong":
-    raise SystemExit("FAIL: expected primary.admin_level=eupmyeondong")
-if "가경" not in (p.get("scope_label") or ""):
-    raise SystemExit("FAIL: expected 가경 in primary.scope_label")
-gu = [c for c in (d.get("comparisons") or []) if c.get("admin_level") == "gu"]
-if not gu or "흥덕" not in (gu[0].get("scope_label") or ""):
-    raise SystemExit("FAIL: expected 흥덕구 in comparisons")
-res = p.get("residuals") or {}
-if not res.get("n"):
-    raise SystemExit("FAIL: expected primary.residuals")
-print("residuals n:", res.get("n"), "bias_pct:", res.get("bias_pct"))
-print("OK")
+CODE=$(curl -sS -o /tmp/built_reg_smoke.json -w '%{http_code}' --max-time 20 "${HDR[@]}" -H "Content-Type: application/json" \
+  -d "$BODY" http://127.0.0.1:8000/api/built/regression/run)
+python3 - "$CODE" <<'PY'
+import json, sys
+code = sys.argv[1]
+raw = open("/tmp/built_reg_smoke.json", "rb").read()
+try:
+    data = json.loads(raw) if raw else {}
+except json.JSONDecodeError:
+    data = {}
+detail = data.get("detail") if isinstance(data, dict) else None
+if code == "401" and detail == "로그인이 필요합니다.":
+    print("OK: built regression gate 401")
+    raise SystemExit(0)
+raise SystemExit(f"FAIL: expected 401 로그인이 필요합니다., got {code} detail={detail!r}")
 PY
 '@
     $verifyBash | & ssh -i $Key $VpsHost "tr -d '\r' | bash"

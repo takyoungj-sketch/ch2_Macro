@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Commercial cluster mart + rolling smoke (mirror vps_collective_smoke.sh)
+# 조회만 하는 스모크. 상업 클러스터 목록·5년 롤링은 무료, 연도 통계·코호트는 구독 게이트.
 set -euo pipefail
 ENV=/opt/ch2_Macro/backend/.env
 TOKEN=$(grep '^API_TOKEN=' "$ENV" | cut -d= -f2- | tr -d '\r')
@@ -32,25 +32,36 @@ if len(pts) < 1:
     raise SystemExit('FAIL: no rolling points')
 "
 
-echo "==> by-year"
-curl -sf "${HDR[@]}" \
-  "$BASE/clusters/$KEY/stats/by-year" \
-  | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-pts=d.get('points',[])
-print('years', len(pts), 'source', d.get('data_source'))
-"
+expect_login_gate() {
+  local url="$1"
+  local label="$2"
+  shift 2
+  local code
+  code=$(curl -sS -o /tmp/ch2_smoke_body.json -w '%{http_code}' --max-time 30 "${HDR[@]}" "$@" "$url")
+  python3 - "$label" "$code" <<'PY'
+import json, sys
+label, code = sys.argv[1], sys.argv[2]
+raw = open("/tmp/ch2_smoke_body.json", "rb").read()
+try:
+    data = json.loads(raw) if raw else {}
+except json.JSONDecodeError:
+    data = {}
+detail = data.get("detail") if isinstance(data, dict) else None
+if code == "401" and detail == "로그인이 필요합니다.":
+    print(f"OK: {label} gate 401")
+    raise SystemExit(0)
+print(f"FAIL: {label} expected 401 로그인이 필요합니다., got {code} detail={detail!r}")
+raise SystemExit(1)
+PY
+}
 
-echo "==> cohort histogram (2 clusters)"
+echo "==> by-year gate"
+expect_login_gate "$BASE/clusters/$KEY/stats/by-year" "commercial by-year"
+
+echo "==> cohort histogram gate"
 KEY2=$(echo "$LIST" | python3 -c "import sys,json; d=json.load(sys.stdin); items=d.get('items') or []; print(items[1]['cluster_key'] if len(items)>1 else items[0]['cluster_key'])")
-curl -sf "${HDR[@]}" -X POST "$BASE/analysis/cohort/histogram" \
-  -H 'Content-Type: application/json' \
-  -d "{\"cluster_keys\":[\"$KEY\",\"$KEY2\"],\"year_from\":2021,\"year_to\":2026}" \
-  | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print('cohort bins', len(d.get('bins',[])), 'n', d.get('n'))
-"
+expect_login_gate "$BASE/analysis/cohort/histogram" "commercial cohort" \
+  -X POST -H 'Content-Type: application/json' \
+  -d "{\"cluster_keys\":[\"$KEY\",\"$KEY2\"],\"year_from\":2021,\"year_to\":2026}"
 
 echo "OK: commercial smoke passed"

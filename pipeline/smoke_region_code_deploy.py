@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Multi-entry-point region-code deploy smoke (D-028).
 
-Exercises land · built · collective · profile · twin · map · search APIs and
-asserts user-facing codes are canonical (never raw historical).
+무료로 열 수 있는 경로는 그 조건(예: window_years=5)으로 기능을 확인하고,
+구독 게이트 전용 경로는 비로그인 401과 '로그인이 필요합니다.'를 통과로 본다.
+200은 게이트가 열린 것이므로 실패다. 무료 200 응답의 코드는 계속 정규 코드만 허용한다.
 
 Exit 0 = PASS, 1 = FAIL.
 
@@ -37,6 +38,17 @@ HIST_EUP_YANGJI = "41461360"
 CANON_EUP_YANGJI = "41461262"
 
 FORBIDDEN = {HIST_EUP, HIST_RI, HIST_EUP_YANGJI}
+LOGIN_DETAIL = "로그인이 필요합니다."
+
+
+def _login_detail(data: Any) -> str:
+    if isinstance(data, dict) and isinstance(data.get("detail"), str):
+        return str(data.get("detail"))
+    return ""
+
+
+def _gate_closed(status: int, data: Any) -> bool:
+    return status == 401 and _login_detail(data) == LOGIN_DETAIL
 
 
 @dataclass
@@ -125,7 +137,7 @@ def _run_land_free_v2(report: SmokeReport, base: str, token: str | None) -> None
         base,
         f"/api/free/v2/stats/{CANON_RI}",
         token=token,
-        params={"window_years": 3},
+        params={"window_years": 5},
     )
     if status == 404:
         report.add(name, "skip", "no mart row for pilot ri")
@@ -150,7 +162,7 @@ def _run_land_free_v2_hist_input(report: SmokeReport, base: str, token: str | No
         base,
         f"/api/free/v2/stats/{HIST_RI}",
         token=token,
-        params={"window_years": 3},
+        params={"window_years": 5},
     )
     if status == 404:
         report.add(name, "skip", "historical path 404 (mart/resolver)")
@@ -170,7 +182,7 @@ def _run_upper_stats(report: SmokeReport, base: str, token: str | None) -> None:
         base,
         f"/api/paid/upper-stats/eupmyeondong/{HIST_EUP}",
         token=token,
-        params={"window_years": 3},
+        params={"window_years": 5},
     )
     if status == 404:
         report.add(name, "skip", "upper mart missing for pilot")
@@ -186,9 +198,9 @@ def _run_upper_stats(report: SmokeReport, base: str, token: str | None) -> None:
 
 
 def _run_built_lookup(report: SmokeReport, base: str, token: str | None) -> None:
-    for label, inp, expect in (
-        ("hist", HIST_EUP, CANON_EUP),
-        ("canon", CANON_EUP, CANON_EUP),
+    for label, inp in (
+        ("hist", HIST_EUP),
+        ("canon", CANON_EUP),
     ):
         name = f"built.lookup-code({label})"
         status, data = _get_json(
@@ -200,14 +212,10 @@ def _run_built_lookup(report: SmokeReport, base: str, token: str | None) -> None
         if status == 503:
             report.add(name, "skip", "built DB not configured")
             return
-        if status != 200:
-            report.add(name, "fail", f"HTTP {status}: {data}")
+        if _gate_closed(status, data):
+            report.add(name, "pass", "gate 401")
             continue
-        code = (data or {}).get("code")
-        if code != expect:
-            report.add(name, "fail", f"code={code} expected {expect}")
-        else:
-            report.add(name, "pass", f"code={code}")
+        report.add(name, "fail", f"HTTP {status}: gate expected 401 {LOGIN_DETAIL}: {data}")
 
 
 def _run_built_resolve(report: SmokeReport, base: str, token: str | None) -> None:
@@ -226,19 +234,10 @@ def _run_built_resolve(report: SmokeReport, base: str, token: str | None) -> Non
     if status == 503:
         report.add(name, "skip", "built DB not configured")
         return
-    if status != 200:
-        report.add(name, "fail", f"HTTP {status}: {data}")
+    if _gate_closed(status, data):
+        report.add(name, "pass", "gate 401")
         return
-    codes: list[str] = []
-    _collect_codes(data, codes)
-    err = _assert_no_historical(codes, context=name)
-    if err:
-        report.add(name, "fail", err)
-        return
-    if CANON_EUP not in codes and not any(c.startswith(CANON_EUP) for c in codes):
-        report.add(name, "fail", f"canonical eup missing in {codes[:8]}")
-        return
-    report.add(name, "pass", f"codes={len(codes)}")
+    report.add(name, "fail", f"HTTP {status}: gate expected 401 {LOGIN_DETAIL}: {data}")
 
 
 def _run_built_scope(report: SmokeReport, base: str, token: str | None) -> None:
@@ -257,14 +256,10 @@ def _run_built_scope(report: SmokeReport, base: str, token: str | None) -> None:
     if status == 503:
         report.add(name, "skip", "built DB not configured")
         return
-    if status != 200:
-        report.add(name, "fail", f"HTTP {status}: {data}")
+    if _gate_closed(status, data):
+        report.add(name, "pass", "gate 401")
         return
-    total = int((data or {}).get("total") or 0)
-    if total < 1:
-        report.add(name, "fail", f"total={total} (ledger expand regression?)")
-    else:
-        report.add(name, "pass", f"total={total}")
+    report.add(name, "fail", f"HTTP {status}: gate expected 401 {LOGIN_DETAIL}: {data}")
 
 
 def _run_collective_resolve(report: SmokeReport, base: str, token: str | None) -> None:
@@ -303,15 +298,10 @@ def _run_profile(report: SmokeReport, base: str, token: str | None) -> None:
     if status in (404, 503):
         report.add(name, "skip", f"HTTP {status}")
         return
-    if status != 200:
-        report.add(name, "fail", f"HTTP {status}: {data}")
+    if _gate_closed(status, data):
+        report.add(name, "pass", "gate 401")
         return
-    meta = (data or {}).get("meta") or {}
-    rc = meta.get("region_code")
-    if rc != CANON_EUP:
-        report.add(name, "fail", f"meta.region_code={rc}")
-    else:
-        report.add(name, "pass", f"features={meta.get('feature_count')}")
+    report.add(name, "fail", f"HTTP {status}: gate expected 401 {LOGIN_DETAIL}: {data}")
 
 
 def _run_profile_twins(report: SmokeReport, base: str, token: str | None) -> None:
@@ -326,20 +316,10 @@ def _run_profile_twins(report: SmokeReport, base: str, token: str | None) -> Non
     if status == 404:
         report.add(name, "skip", "no twin batch/anchor")
         return
-    if status != 200:
-        report.add(name, "fail", f"HTTP {status}: {data}")
-        return
-    codes: list[str] = []
-    _collect_codes(data, codes)
-    err = _assert_no_historical(codes, context=name)
-    algo = (data or {}).get("algorithm_version")
-    if algo not in (None, 21):
-        report.add(name, "fail", f"algorithm_version={algo}")
-    elif err:
-        report.add(name, "fail", err)
+    if _gate_closed(status, data):
+        report.add(name, "pass", "gate 401")
     else:
-        n = len((data or {}).get("neighbors") or [])
-        report.add(name, "pass", f"neighbors={n}")
+        report.add(name, "fail", f"HTTP {status}: gate expected 401 {LOGIN_DETAIL}: {data}")
 
     name_eup = "regional-profile.twins-eup(canon)"
     status, data = _get_json(
@@ -351,13 +331,10 @@ def _run_profile_twins(report: SmokeReport, base: str, token: str | None) -> Non
     if status == 404:
         report.add(name_eup, "skip", "no eup twin batch")
         return
-    if status != 200:
-        report.add(name_eup, "fail", f"HTTP {status}: {data}")
+    if _gate_closed(status, data):
+        report.add(name_eup, "pass", "gate 401")
         return
-    codes = []
-    _collect_codes(data, codes)
-    err = _assert_no_historical(codes, context=name_eup)
-    report.add(name_eup, "pass" if not err else "fail", err or "OK")
+    report.add(name_eup, "fail", f"HTTP {status}: gate expected 401 {LOGIN_DETAIL}: {data}")
 
 
 def _run_map_config(report: SmokeReport, base: str, token: str | None) -> None:

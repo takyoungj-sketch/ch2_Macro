@@ -149,8 +149,8 @@ cd c:\ch2\ch2_Macro\backend
 ..\.venv\Scripts\python.exe ..\pipeline\smoke_region_code_deploy.py --base-url https://macro.ch2data.com
 ```
 
-커버: land free/v2 · upper-stats · built lookup/resolve/scope · collective resolve · profile · twin · map · region search.  
-user-facing 응답에 historical code(`43770340` 등) **금지**.
+커버: health · land free/v2(`window_years=5`) · upper-stats(`window_years=5`) · collective resolve · map · region search는 무료 조건으로 기능을 확인한다. built lookup/resolve/scope · regional-profile · twin은 비로그인 **401**과 detail `로그인이 필요합니다.`를 게이트 정상으로 본다. 그 경로의 200은 실패다.  
+무료 200 응답의 user-facing 코드에 historical code(`43770340` 등) **금지**.
 
 ### 5.1 백엔드
 
@@ -167,51 +167,19 @@ ssh -i "c:\ch2\ch2_Macro\LightsailDefaultKey-ap-northeast-2.pem" ubuntu@13.209.2
    ../pipeline/.venv/bin/python ../pipeline/smoke_region_code_deploy.py --base-url http://127.0.0.1:8000"
 ```
 
-### 5.2 복합 회귀 (구·동 2-way 스모크)
+### 5.2 복합 회귀 게이트 스모크
 
-로컬 Python:
+배포 스크립트 검증은 `POST /api/built/regression/run`을 비로그인으로 호출한다. 계산 결과 단언은 하지 않는다.
 
-```python
-import json, urllib.request, ssl
-body = {
-    "asset_type": "commercial",
-    "addr1": "충청북도", "addr2": "청주시",
-    "addr4_list": ["가경동"], "leaf_level": "addr4",
-    "window_years": 5,
-    "variables": {
-        "gross_area": True, "land_area": True, "building_age": True,
-        "road_width_dummy": True, "zone_type_dummy": True,
-        "building_use_dummy": True, "structure_dummy": True,
-    },
-    "exclude_outliers_iqr": False,
-}
-req = urllib.request.Request(
-    "https://macro.ch2data.com/api/built/regression/run",
-    data=json.dumps(body).encode(),
-    headers={"Content-Type": "application/json"},
-    method="POST",
-)
-with urllib.request.urlopen(req, context=ssl.create_default_context(), timeout=30) as r:
-    d = json.load(r)
-# 초점 = 사용자가 고른 단위(가경동). 흥덕구는 comparisons[]에 상위로 붙는다.
-assert d["primary"]["admin_level"] == "eupmyeondong"
-assert "가경" in d["primary"]["scope_label"]
-gu = [c for c in d.get("comparisons", []) if c.get("admin_level") == "gu"]
-assert gu and "흥덕" in gu[0]["scope_label"]
-```
+**기대:** HTTP **401**, detail `로그인이 필요합니다.` 200·403·500과 다른 detail은 실패다. nginx가 공개 URL에 `X-Api-Token`(또는 `X-CH2-Proxy-Token`)을 넣으므로 호출자가 토큰을 붙이지 않아도 API 토큰 검사는 통과한다. 비로그인을 막는 것은 구독 게이트다. VPS 안 `http://127.0.0.1:8000`은 nginx를 거치지 않으므로 스크립트가 `X-Api-Token`을 붙인다.
 
-**기대:** `primary` = **가경동**(`eupmyeondong`), `comparisons[]`에 **흥덕구**(`gu`)와
-청주시(`sigungu`). 운영 URL은 `X-Api-Token` 헤더가 필요하므로, 토큰 없이 돌리려면
-VPS 안에서 `http://127.0.0.1:8000`으로 호출한다 (§5.1 패턴).
-
-> 2026-09-19 수정: 이전 기대값은 `primary.admin_level == "gu"`였다. 상위지역 재적합 설계
-> (`docs/BUILT_REGRESSION_ANALYSIS_UI.md`)에서 초점은 **사용자가 고른 단위**이고 상위는
-> 비교로 분리됐으므로, 옛 기대값은 정상 동작에서 실패한다.
+회귀가 실제로 가경동·흥덕구를 계산하는지는 §5.3 로그인 브라우저 확인이다.
 
 ### 5.3 브라우저
 
 - `https://macro.ch2data.com/built/` — **Ctrl+Shift+R** (정적 JS 캐시 무시)
 - nginx는 `index.html` no-cache, `assets/*` hash — 빌드 후 새 hash면 자동 갱신
+- **배포 후 T(또는 관리자) 로그인 확인:** 가경동 복합 회귀를 연다. 초점 `primary`는 가경동(`eupmyeondong`)이고, 비교에는 흥덕구(`gu`)가 붙어야 한다. 이 기능 확인은 자동 스모크가 하지 않는다.
 
 ---
 
