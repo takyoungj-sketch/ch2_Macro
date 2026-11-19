@@ -158,7 +158,7 @@ try {
       Invoke-Scp @("backend/app") "backend/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-profile/package.json", "frontend-profile/package-lock.json", "frontend-profile/tsconfig.json", "frontend-profile/vite.config.ts", "frontend-profile/tailwind.config.js", "frontend-profile/postcss.config.js", "frontend-profile/index.html", "frontend-profile/src") "frontend-profile/"
-      Invoke-Scp @("deploy/templates/nginx-ch2-macro.conf", "deploy/macro-gateway") "deploy/"
+      Invoke-Scp @("deploy/templates", "deploy/macro-gateway") "deploy/"  # OPS-006: apply_nginx 가 쓰는 deploy/templates/ 로 올린다(점검 조각·랩 조각 포함)
       Invoke-Scp @("deploy/scripts") "deploy/"
     }
     "lab" {
@@ -183,7 +183,7 @@ try {
       Invoke-Scp @("backend/app/ai/panel_capabilities.py", "backend/app/ai/stats_kb.py") "backend/app/ai/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-rent/package.json", "frontend-rent/package-lock.json", "frontend-rent/tsconfig.json", "frontend-rent/vite.config.ts", "frontend-rent/tailwind.config.js", "frontend-rent/postcss.config.js", "frontend-rent/index.html", "frontend-rent/src") "frontend-rent/"
-      Invoke-Scp @("deploy/templates/nginx-ch2-macro.conf", "deploy/macro-gateway") "deploy/"
+      Invoke-Scp @("deploy/templates", "deploy/macro-gateway") "deploy/"  # OPS-006: apply_nginx 가 쓰는 deploy/templates/ 로 올린다(점검 조각·랩 조각 포함)
       Invoke-Scp @("deploy/scripts") "deploy/"
     }
     "insight" {

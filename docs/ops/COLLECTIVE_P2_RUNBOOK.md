@@ -512,7 +512,7 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 
 ### 6.0 nginx 점검 모드 — 설치(1회, 점검 창 전날까지) · 켜기 · 끄기 · 확인 (Cursor)
 
-**점검 대상 = 백엔드(`127.0.0.1:8000`)로 넘기는 실효 location 17곳**(Codex 운영 확인 2026-11-16). 저장소 템플릿에 있는 16곳 + viewer(템플릿 없음, 서버 설정만). **17곳 모두의 맨 앞**에 같은 조각을 넣는다(서버 파일 수정은 Cursor).
+**점검 대상 = 백엔드(`127.0.0.1:8000`)로 넘기는 실효 location 17곳**(Codex 운영 확인 2026-11-16). 저장소 템플릿에 있는 16곳 + viewer 1곳. **17곳 모두의 맨 앞**에 같은 조각을 넣는다(서버 파일 수정은 Cursor). **OPS-006(2026-11-19):** Macro 템플릿 16곳(설정 줄 13)과 조각 템플릿 `deploy/templates/nginx-ch2-maintenance.snippet`을 저장소에 넣었고, 템플릿을 서버에 복사하는 스크립트는 조각을 먼저 설치한다(깃발 파일은 만들지 않는다). viewer는 Viewer 저장소 `deploy/templates/nginx-ch2-viewer.conf`가 있으나 그 `main`판이 서버보다 뒤처져 있어(`/api/auth/` location 없음) 아직 반영하지 않았다 — OPS-006 RESULT 참고.
 
 | # | 서버(server_name) | 설정 파일 | location | ON 시험 URL(→ 503) |
 |---|---|---|---|---|
@@ -532,7 +532,7 @@ py -u -m parcel_master.load_title_pilot --skip-ledger --sido <parcel_master.path
 | 14 | 〃 | 〃 | `/api/platform/` | `https://ch2data.com/api/platform/` |
 | 15 | 〃 | 〃 | `/api/board/` | `https://ch2data.com/api/board/` |
 | 16 | 〃 | 〃 | `/api/ops/` | `https://ch2data.com/api/ops/` |
-| 17 | viewer.ch2data.com | 서버의 viewer 설정(저장소 템플릿 없음 — Cursor 가 경로 기록) | `/api/auth/` | `https://viewer.ch2data.com/api/auth/` |
+| 17 | viewer.ch2data.com | 서버 `sites-available/ch2-viewer`. Viewer 저장소 `nginx-ch2-viewer.conf`(`redeploy-portal.sh`가 복사) — main판에는 이 location이 없다(OPS-006) | `/api/auth/` | `https://viewer.ch2data.com/api/auth/` |
 
 - 설치 때 `sudo nginx -T | grep -n "proxy_pass http://127.0.0.1:8000"` 로 백엔드 proxy 줄을 다시 센다. `nginx -T` 는 파일을 한 번씩만 출력하므로 **두 서버가 include 하는 랩 API 조각(3줄)은 한 번만 보인다** → 기대 **14줄**(macro 설정 5 · 랩 조각 3 · 허브 5 · viewer 1) = 실효 location 17곳. `sudo nginx -T | grep -c "include /etc/nginx/snippets/ch2-maintenance.conf"` 도 **14**. 수가 다르면 표를 고치고 T 에게 알린다. 실효 17곳은 아래 일괄 확인(19 URL)으로 본다.
 - 17곳 일괄 확인(켜기·끄기 시험 공통, 응답 코드만 출력):
@@ -855,7 +855,7 @@ while :; do rem=$((deadline - SECONDS)); (( rem > 0 )) || break
 - **7.2 `measured_at` 빈 스냅샷.** 운영 스냅샷을 `--order-clock defer`로 만들고 `stamp-local`을 하지 않으면 `measured_at`이 비고, 조각 차이가 있어도 결과 검사가 전체를 「검증 못 함」(종료 2)으로 내린다. 2026-11-18 비교가 그렇게 됐다. 운영 스냅샷은 로컬에서 시각을 찍거나, 서버에서 돌릴 때 시각 출처를 결과 검사가 받게 고친다.
 - **개선 목록 (아직 안 함):**
   - `vps_collective_smoke.sh` 기대값 — **OPS-004로 처리.** 스크립트는 조회만 한다. 단지 검색은 `addr2`를 넣고, 키가 비면 실패다. rolling 5년은 200, 거래·연도는 비로그인 401과 `로그인이 필요합니다.`다.
-  - nginx 점검 include를 저장소 템플릿에 넣기. 2026-11-18에는 서버 설정에만 있다(`sites-available/ch2-macro`, `snippets/ch2-lab-api.conf`, `sites-available/ch2data-hub`, `sites-available/ch2-viewer`). `apply_nginx`가 저장소 템플릿을 다시 복사하면 macro와 랩 조각의 include가 지워진다. viewer는 저장소 템플릿이 없다.
+  - nginx 점검 include를 저장소 템플릿에 넣기. 2026-11-18에는 서버 설정에만 있다(`sites-available/ch2-macro`, `snippets/ch2-lab-api.conf`, `sites-available/ch2data-hub`, `sites-available/ch2-viewer`). `apply_nginx`가 저장소 템플릿을 다시 복사하면 macro와 랩 조각의 include가 지워진다. viewer는 저장소 템플릿이 없다. → **OPS-006로 처리**(2026-11-19): Macro 템플릿·조각·복사 스크립트는 반영(검수·병합 전). viewer는 Viewer 저장소에 템플릿이 있으나 main판이 서버와 달라 보류(OPS-006 RESULT).
   - 키 이전에서 C-2 옛 키 좌표 1행이 남은 원인. 2026-11-18 c29가 `collective_building_geocodes`의 C-2 분할 기준 키 1행을 잡았다. 운영 덤프에는 없었고 로컬에만 있었다. `migrate_p2_keys`의 `c2_discard`가 빠뜨렸는지, 좌표 0 검증 뒤에 로컬 지도 조회가 다시 넣었는지 조사한다. 좌표는 통계가 아니고, 그 창에서는 백업 후 그 1행만 지우고 진행했다.
   - 같은 이름 단지 중 일부만 `(YYYY년 준공)`이 붙는 표시. C-2로 나뉜 아파트만 `display_label`에 연도가 붙는다. 같은 이름인데 분할 대상이 아닌 동(소사구 JN팰리스 가운데 연도가 이름에 없는 동)은 이름만 보인다.
 

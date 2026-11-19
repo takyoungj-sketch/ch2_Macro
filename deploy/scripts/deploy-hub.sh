@@ -30,6 +30,8 @@ fi
 sudo chown -R www-data:www-data "$HUB_DEST"
 
 echo "==> nginx site ch2data-hub"
+# OPS-006 점검 모드 조각. 사이트·랩 설정이 include 하므로 먼저 설치한다(템플릿이 없으면 여기서 멈춘다). 깃발 파일은 만들지 않는다.
+sudo install -m 644 "$REPO_ROOT/deploy/templates/nginx-ch2-maintenance.snippet" /etc/nginx/snippets/ch2-maintenance.conf
 sudo cp "$REPO_ROOT/deploy/templates/nginx-ch2data-hub.conf" "$NGINX_SITE"
 sudo ln -sf "$NGINX_SITE" "$NGINX_ENABLED"
 
