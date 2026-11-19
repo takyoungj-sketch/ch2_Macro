@@ -477,6 +477,16 @@ def _insert(engine, records: list[tuple]) -> None:
         raw.close()
 
 
+def _limit_month(df: pd.DataFrame, year_month: tuple[int, int] | None) -> pd.DataFrame:
+    if year_month is None or df.empty:
+        return df
+    year, month = year_month
+    if "contract_year" not in df.columns or "contract_month" not in df.columns:
+        return df.iloc[0:0].copy()
+    picked = df[(df["contract_year"] == year) & (df["contract_month"] == month)]
+    return picked.copy()
+
+
 def ingest_asset(
     asset_type: RentAssetType,
     *,
@@ -487,6 +497,8 @@ def ingest_asset(
     limit_files: int | None = None,
     collective_engine=None,
     read_collective: bool = True,
+    year_month: tuple[int, int] | None = None,
+    before_commit=None,
 ) -> int:
     assert_rent_write_local(engine)
     owned = None
@@ -511,6 +523,7 @@ def ingest_asset(
             log.info("read %s", rel)
             raw_df = read_rent_csv(path)
             df = refine_rent_dataframe(raw_df, asset_type, source_path=rel)
+            df = _limit_month(df, year_month)
             if df.empty:
                 log.warning("empty after refine %s", path.name)
                 continue
@@ -519,6 +532,8 @@ def ingest_asset(
                 rent_units=units, collective_unique=unique,
             )
             pending = list(df.attrs.get("rent_c2_pending") or [])
+            if before_commit is not None:
+                before_commit(df)
             wrote = commit_rent_batch(engine, df, pending)
             total += wrote["inserted"]
             log.info(

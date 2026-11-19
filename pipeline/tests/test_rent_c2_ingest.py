@@ -247,3 +247,14 @@ def test_unique_collective_part_is_read_only(fixture_db):
         found = molit.collective_unique_parts(conn, "apartment", [BASE])
     reader.dispose()
     assert found == {(BASE, "1111010100", "13"): 2}
+
+
+def test_month_filter_keeps_only_the_requested_month():
+    df = pd.DataFrame({
+        "contract_year": [2026, 2026, 2025],
+        "contract_month": [10, 9, 10],
+        "transaction_hash": ["a", "b", "c"],
+    })
+    picked = molit._limit_month(df, (2026, 10))
+    assert picked["transaction_hash"].tolist() == ["a"]
+    assert len(molit._limit_month(df, None)) == 3
