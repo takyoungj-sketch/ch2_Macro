@@ -586,14 +586,21 @@ def apply_rent_c2_assignment(
     """임대 판정 표에 있는 본번만 기존 part로 보낸다.
 
     units 가 없거나 비면 표를 만들지 않은 것과 같이 키를 그대로 둔다.
-    표에 없는 본번은 collective_unique 에 조각이 하나일 때만 그 part 를 쓰고,
-    아니면 part 0 과 pending 한 행이다. 새 part 번호는 만들지 않는다.
+    split 이 있는 (base, 법정동)에서 표에 없는 본번은 collective_unique 에 조각이
+    하나일 때만 그 part 를 쓴다. 유일 조각도 없으면 part 0 과 pending 한 행이다.
+    keep 그룹과 판정 표에 없는 base 는 옛 key 를 유지하고 pending 을 만들지 않는다.
+    새 part 번호는 만들지 않는다.
     """
     out = df.copy()
     out.attrs["rent_c2_pending"] = []
     out.attrs["rent_c2_new_parts"] = []
     if not units or out.empty or "building_key" not in out.columns or asset_type in ("detached", _PRESALE_KEY_ASSET):
         return out
+    split_dongs = {
+        (str(base), str(code))
+        for (base, code, _lot), (_part, decision) in units.items()
+        if str(decision) == "split"
+    }
     codes = out["beopjungri_code"].astype(str).str.strip().str[:10] if "beopjungri_code" in out.columns else pd.Series("", index=out.index)
     lots = (out["lot_number"] if "lot_number" in out.columns else pd.Series("", index=out.index)).map(main_lot_of)
     if raw_of is None:
@@ -615,23 +622,26 @@ def apply_rent_c2_assignment(
             part = int(hit[0])
             new_keys.append(_rent_piece(base, part, raw))
             continue
-        uniq = None if not collective_unique else collective_unique.get(slot)
-        if isinstance(uniq, int):
-            new_keys.append(_rent_piece(base, int(uniq), raw))
+        if (base, str(code)) in split_dongs:
+            uniq = None if not collective_unique else collective_unique.get(slot)
+            if isinstance(uniq, int):
+                new_keys.append(_rent_piece(base, int(uniq), raw))
+                continue
+            new_keys.append(base)
+            if slot not in seen:
+                seen.add(slot)
+                pending.append({
+                    "base_key": base,
+                    "asset_type": asset_type,
+                    "beopjungri_code": str(code),
+                    "main_lot": lot or "",
+                    "part": 0,
+                    "decision": "pending",
+                    "evidence": "",
+                    "source": RENT_C2_AUTO_SOURCE,
+                })
             continue
         new_keys.append(base)
-        if slot not in seen:
-            seen.add(slot)
-            pending.append({
-                "base_key": base,
-                "asset_type": asset_type,
-                "beopjungri_code": str(code),
-                "main_lot": lot or "",
-                "part": 0,
-                "decision": "pending",
-                "evidence": "",
-                "source": RENT_C2_AUTO_SOURCE,
-            })
     out["building_key"] = new_keys
     out.attrs["rent_c2_pending"] = pending
     out.attrs["rent_c2_new_parts"] = []

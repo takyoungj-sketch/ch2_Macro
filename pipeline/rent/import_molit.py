@@ -219,6 +219,193 @@ def _prepare(
     return df
 
 
+APPROVED_COLLECTIVE_SHA = "372e114bf7c664ca5489660596adc7969f04302d6d0a68b1f7f84ee0aabe62e5"
+_LOT_NORM = (
+    "CASE WHEN split_part(btrim(lot_number), '-', 1) ~ '^[0-9]+$' "
+    "THEN coalesce(nullif(ltrim(split_part(btrim(lot_number), '-', 1), '0'), ''), '0') "
+    "ELSE btrim(split_part(btrim(lot_number), '-', 1)) END"
+)
+
+
+class IngestGuard(RuntimeError):
+    pass
+
+
+def assert_rent_write_local(engine) -> None:
+    ops = str(REPO / "scripts" / "ops" / "collective_p2_verify")
+    if ops not in sys.path:
+        sys.path.insert(0, ops)
+    from ops_guards import TargetError, assert_local_target
+
+    try:
+        assert_local_target(engine)
+    except TargetError as exc:
+        raise IngestGuard(str(exc)) from None
+
+
+def load_rent_c2_units_for(conn, asset_type: str) -> dict | None:
+    """판정 표가 없거나 이 유형의 행이 없으면 None. 있으면 (base, 법정동, 본번) → (part, decision)."""
+    if not conn.execute(text("SELECT to_regclass('public.rent_building_key_c2_units')")).scalar():
+        return None
+    rows = conn.execute(
+        text(
+            """
+            SELECT rtrim(base_key), left(beopjungri_code, 10), btrim(main_lot), part, decision
+            FROM rent_building_key_c2_units
+            WHERE asset_type = :asset
+            """
+        ),
+        {"asset": asset_type},
+    ).all()
+    if not rows:
+        return None
+    return {
+        (str(base).strip(), str(code).strip(), str(lot).strip()): (int(part), str(decision))
+        for base, code, lot, part, decision in rows
+    }
+
+
+def split_bases_of(units: dict) -> list[str]:
+    return sorted({base for (base, _code, _lot), (_part, decision) in units.items() if decision == "split"})
+
+
+def collective_unique_parts(conn, asset_type: str, base_keys: list[str]) -> dict:
+    """집합 원장에서 본번이 한 조각에만 있는 (base, 법정동, 본번) → part. SELECT 만 실행한다."""
+    mode = str(conn.execute(text("SHOW default_transaction_read_only")).scalar() or "").lower()
+    if mode not in {"on", "true", "1"}:
+        raise IngestGuard("집합 데이터베이스는 읽기 전용이어야 한다")
+    if not base_keys:
+        return {}
+    has_tx = conn.execute(text("SELECT to_regclass('public.collective_transactions')")).scalar()
+    has_map = conn.execute(text("SELECT to_regclass('public.collective_building_key_map')")).scalar()
+    if not has_tx:
+        return {}
+    mapped: dict[str, set[tuple[str, int]]] = {key: {(key, 0)} for key in base_keys}
+    if has_map:
+        rows = conn.execute(
+            text(
+                """
+                SELECT rtrim(old_key), rtrim(new_key), split_part
+                FROM collective_building_key_map
+                WHERE reason = 'c2_split' AND asset_type = :asset
+                  AND rtrim(old_key) = ANY(CAST(:keys AS text[]))
+                """
+            ),
+            {"asset": asset_type, "keys": base_keys},
+        ).all()
+        for old, new, part in rows:
+            mapped.setdefault(str(new).strip(), set()).add((str(old).strip(), int(part or 0)))
+    resolved = {key: next(iter(pairs)) for key, pairs in mapped.items() if len(pairs) == 1}
+    if not resolved:
+        return {}
+    tx_rows = conn.execute(
+        text(
+            f"""
+            SELECT rtrim(building_key), left(beopjungri_code, 10), {_LOT_NORM} AS lot
+            FROM collective_transactions
+            WHERE is_valid AND asset_type = :asset
+              AND rtrim(building_key) = ANY(CAST(:keys AS text[]))
+              AND beopjungri_code IS NOT NULL
+              AND coalesce(btrim(lot_number), '') <> ''
+            """
+        ),
+        {"asset": asset_type, "keys": list(resolved)},
+    ).all()
+    found: dict[tuple[str, str, str], set[int]] = {}
+    for key, code, lot in tx_rows:
+        base, part = resolved[str(key).strip()]
+        slot = (base, str(code or "").strip(), str(lot or "").strip())
+        found.setdefault(slot, set()).add(part)
+    return {slot: next(iter(parts)) for slot, parts in found.items() if len(parts) == 1}
+
+
+def pending_for_inserted(df: pd.DataFrame, pending: list[dict], inserted: set[str]) -> list[dict]:
+    """새로 들어간 거래의 본번만 pending 후보로 남긴다. 중복으로 빠진 거래는 만들지 않는다."""
+    if not pending or not inserted:
+        return []
+    from collective.building_keys import main_lot_of
+
+    wanted = {(p["base_key"], p["beopjungri_code"], p["main_lot"]) for p in pending}
+    hit: set[tuple] = set()
+    for row in df.itertuples(index=False):
+        digest = str(getattr(row, "transaction_hash", "") or "").strip()
+        if digest not in inserted:
+            continue
+        slot = (
+            str(getattr(row, "building_key", "") or "").strip(),
+            str(getattr(row, "beopjungri_code", "") or "").strip()[:10],
+            main_lot_of(getattr(row, "lot_number", "")),
+        )
+        if slot in wanted:
+            hit.add(slot)
+    return [p for p in pending if (p["base_key"], p["beopjungri_code"], p["main_lot"]) in hit]
+
+
+def _insert_returning(cur, records: list[tuple]) -> set[str]:
+    inserted: set[str] = set()
+    page = 2000
+    sql = INSERT_SQL + " RETURNING transaction_hash"
+    for start in range(0, len(records), page):
+        chunk = records[start : start + page]
+        got = execute_values(cur, sql, chunk, page_size=len(chunk), fetch=True)
+        inserted.update(str(row[0]).strip() for row in got)
+    return inserted
+
+
+def commit_rent_batch(engine, df: pd.DataFrame, pending: list[dict]) -> dict:
+    """거래 삽입과 pending 등록을 한 트랜잭션에서 끝낸다. pending 은 실제 삽입된 거래만."""
+    assert_rent_write_local(engine)
+    records = _records(df)
+    chosen_pending = pending
+    raw = engine.raw_connection()
+    try:
+        cur = raw.cursor()
+        inserted = _insert_returning(cur, records) if records else set()
+        chosen = pending_for_inserted(df, chosen_pending, inserted)
+        if chosen:
+            bases = sorted({row["base_key"] for row in chosen})
+            for base in bases:
+                cur.execute(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                    ("ch2:c2:" + base,),
+                )
+            payload = [
+                (
+                    row["base_key"],
+                    row["asset_type"],
+                    row["beopjungri_code"],
+                    row["main_lot"],
+                    0,
+                    "pending",
+                    "",
+                    "auto_ingest",
+                    APPROVED_COLLECTIVE_SHA,
+                    "월간 적재 자동 등록 — 판정 검토 대상",
+                )
+                for row in chosen
+            ]
+            execute_values(
+                cur,
+                """
+                INSERT INTO rent_building_key_c2_units
+                    (base_key, asset_type, beopjungri_code, main_lot, part, decision,
+                     evidence, source, collective_sha256, note)
+                VALUES %s
+                ON CONFLICT (base_key, asset_type, beopjungri_code, main_lot) DO NOTHING
+                """,
+                payload,
+                page_size=len(payload),
+            )
+        raw.commit()
+        cur.close()
+    except Exception:
+        raw.rollback()
+        raise
+    finally:
+        raw.close()
+    return {"inserted": len(inserted) if records else 0, "pending": len(chosen) if records else 0}
+
+
 def _records(df: pd.DataFrame) -> list[tuple]:
     rows: list[tuple] = []
     for row in df.itertuples(index=False):
@@ -298,26 +485,62 @@ def ingest_asset(
     land_engine,
     region_maps: dict,
     limit_files: int | None = None,
+    collective_engine=None,
+    read_collective: bool = True,
 ) -> int:
+    assert_rent_write_local(engine)
+    owned = None
+    reader = collective_engine
+    if read_collective and reader is None:
+        owned = _read_only_collective_engine()
+        reader = owned
     paths = find_csvs(root, asset_type)
     if limit_files:
         paths = paths[:limit_files]
     log.info("%s files=%d", asset_type, len(paths))
     total = 0
-    for path in paths:
-        rel = str(path.relative_to(REPO)).replace("\\", "/")
-        log.info("read %s", rel)
-        raw_df = read_rent_csv(path)
-        df = refine_rent_dataframe(raw_df, asset_type, source_path=rel)
-        if df.empty:
-            log.warning("empty after refine %s", path.name)
-            continue
-        df = _prepare(df, asset_type, land_engine, region_maps)
-        recs = _records(df)
-        _insert(engine, recs)
-        total += len(recs)
-        log.info("inserted attempt %s rows=%d (cumulative %d)", path.name, len(recs), total)
+    try:
+        with engine.connect() as conn:
+            units = load_rent_c2_units_for(conn, asset_type)
+        unique = None
+        if units and reader is not None:
+            with reader.connect() as conn:
+                unique = collective_unique_parts(conn, asset_type, split_bases_of(units))
+        for path in paths:
+            rel = str(path.relative_to(REPO)).replace("\\", "/")
+            log.info("read %s", rel)
+            raw_df = read_rent_csv(path)
+            df = refine_rent_dataframe(raw_df, asset_type, source_path=rel)
+            if df.empty:
+                log.warning("empty after refine %s", path.name)
+                continue
+            df = _prepare(
+                df, asset_type, land_engine, region_maps,
+                rent_units=units, collective_unique=unique,
+            )
+            pending = list(df.attrs.get("rent_c2_pending") or [])
+            wrote = commit_rent_batch(engine, df, pending)
+            total += wrote["inserted"]
+            log.info(
+                "inserted %s rows=%d pending=%d (cumulative %d)",
+                path.name, wrote["inserted"], wrote["pending"], total,
+            )
+    finally:
+        if owned is not None:
+            owned.dispose()
     return total
+
+
+def _read_only_collective_engine():
+    from sqlalchemy import create_engine
+    from collective.db_utils import get_collective_engine
+
+    src = get_collective_engine()
+    url = src.url
+    src.dispose()
+    assert_rent_write_local(url)
+    opts = "-c statement_timeout=0 -c default_transaction_read_only=on"
+    return create_engine(url, pool_pre_ping=True, connect_args={"options": opts})
 
 
 def print_report(engine) -> None:

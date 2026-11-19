@@ -65,3 +65,15 @@ def test_unique_collective_part_does_not_create_a_new_part():
     assert out["building_key"].tolist() == [c2_key(RAW, "p2")]
     assert out.attrs["rent_c2_pending"] == []
     assert out.attrs["rent_c2_new_parts"] == []
+
+
+def test_keep_group_and_unknown_base_do_not_pending():
+    keep = {(BASE, "1111010100", "10"): (0, "keep")}
+    kept = apply_rent_c2_assignment(_frame(["99"]), "apartment", units=keep, raw_of={BASE: RAW})
+    assert kept["building_key"].tolist() == [BASE]
+    assert kept.attrs["rent_c2_pending"] == []
+    other = _frame(["12"])
+    other["building_key"] = "c" * 64
+    missed = apply_rent_c2_assignment(other, "apartment", units=UNITS, raw_of={BASE: RAW})
+    assert missed["building_key"].tolist() == ["c" * 64]
+    assert missed.attrs["rent_c2_pending"] == []
