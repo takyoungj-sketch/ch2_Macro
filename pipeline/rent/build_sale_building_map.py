@@ -50,6 +50,68 @@ def c2_hold_keys(conn) -> set[str]:
     return out
 
 
+COLLECTIVE_SHA = "372e114bf7c664ca5489660596adc7969f04302d6d0a68b1f7f84ee0aabe62e5"
+
+
+def apply_rent_hold(
+    collective_hold: set[str],
+    rows: list[dict],
+    *,
+    sale: set[tuple[str, str]],
+    rent: set[tuple[str, str]],
+    lot_ok: set[str],
+    fanout: set[str],
+) -> set[str]:
+    """collective_reuse 이면서 조건이 맞는 조각만 보류에서 뺀다. 임대 전용 split·pending 은 보류."""
+    held = set(collective_hold)
+    for row in rows:
+        key = str(row["key"])
+        asset = str(row["asset_type"])
+        release = (
+            row.get("decision") == "split"
+            and row.get("evidence") == "collective_reuse"
+            and row.get("collective_sha256") == COLLECTIVE_SHA
+            and (asset, key) in sale
+            and (asset, key) in rent
+            and key in lot_ok
+            and key not in fanout
+        )
+        if release:
+            held.discard(key)
+        elif row.get("decision") in ("split", "pending"):
+            held.add(key)
+    return held
+
+
+def matching_lot_keys(rent_conn, collective_conn, keys: list[str]) -> set[str]:
+    """같은 키의 임대·매매 본번 집합이 같고 비어 있지 않으면 그 키만 돌려준다."""
+    if not keys:
+        return set()
+
+    def lots(conn, table: str) -> dict[str, set[tuple[str, str]]]:
+        rows = conn.execute(text(
+            f"""
+            SELECT rtrim(building_key::text),
+                   left(beopjungri_code, 10),
+                   CASE WHEN split_part(btrim(lot_number), '-', 1) ~ '^[0-9]+$'
+                        THEN coalesce(nullif(ltrim(split_part(btrim(lot_number), '-', 1), '0'), ''), '0')
+                        ELSE btrim(split_part(btrim(lot_number), '-', 1)) END
+            FROM {table}
+            WHERE rtrim(building_key::text) = ANY(CAST(:keys AS text[]))
+              AND coalesce(btrim(lot_number), '') <> ''
+            GROUP BY 1, 2, 3
+            """
+        ), {"keys": keys}).all()
+        out: dict[str, set[tuple[str, str]]] = {}
+        for key, bjd, lot in rows:
+            out.setdefault(str(key), set()).add((str(bjd or ""), str(lot or "")))
+        return out
+
+    left = lots(rent_conn, "rent_transactions")
+    right = lots(collective_conn, "collective_transactions")
+    return {key for key in keys if left.get(key) and left[key] == right.get(key)}
+
+
 def exact_links(sale: set[tuple[str, str]], rent: set[tuple[str, str]], hold: set[str]) -> tuple[set, set]:
     """(만들 exact 연결, 보류한 연결) — 둘 다 (asset_type, key)."""
     both = sale & rent
@@ -63,6 +125,65 @@ def main() -> None:
     rent = _keys(get_rent_engine(), "rent_transactions")
     with ceng.connect() as conn:
         hold = c2_hold_keys(conn)
+    rent_eng = get_rent_engine()
+    with rent_eng.connect() as conn:
+        if conn.execute(text("SELECT to_regclass('public.rent_building_key_c2_units')")).scalar():
+            loaded = conn.execute(text(
+                """
+                SELECT base_key, asset_type, part, decision, evidence, collective_sha256
+                FROM rent_building_key_c2_units
+                """
+            )).mappings().all()
+            rows = [
+                {
+                    "key": str(r["base_key"]),
+                    "asset_type": str(r["asset_type"]),
+                    "decision": r["decision"],
+                    "evidence": r["evidence"],
+                    "collective_sha256": r["collective_sha256"],
+                }
+                for r in loaded
+                if int(r["part"] or 0) == 0 or r["decision"] == "pending"
+            ]
+            # 조각 키(part>0)는 연결표의 c2_split 새 키를 쓴다. 표가 없으면 본 키만 본다.
+            if conn.execute(text("SELECT to_regclass('public.rent_building_key_map')")).scalar():
+                mapped = conn.execute(text(
+                    """
+                    SELECT old_key, new_key, asset_type, split_part
+                    FROM rent_building_key_map WHERE reason = 'c2_split'
+                    """
+                )).mappings().all()
+            else:
+                mapped = []
+            by_part = {(str(m["old_key"]), str(m["asset_type"]), int(m["split_part"])): str(m["new_key"]) for m in mapped}
+            for r in loaded:
+                part = int(r["part"] or 0)
+                if part == 0:
+                    continue
+                key = by_part.get((str(r["base_key"]), str(r["asset_type"]), part))
+                if not key:
+                    continue
+                rows.append({
+                    "key": key,
+                    "asset_type": str(r["asset_type"]),
+                    "decision": r["decision"],
+                    "evidence": r["evidence"],
+                    "collective_sha256": r["collective_sha256"],
+                })
+            counts: dict[str, int] = {}
+            for m in mapped:
+                counts[str(m["old_key"])] = counts.get(str(m["old_key"]), 0) + 1
+            fanout = {key for key, n in counts.items() if n > 1}
+            candidates = [
+                r["key"] for r in rows
+                if r["evidence"] == "collective_reuse" and r["decision"] == "split"
+            ]
+            if candidates:
+                with ceng.connect() as collective_conn:
+                    lot_ok = matching_lot_keys(conn, collective_conn, candidates)
+            else:
+                lot_ok = set()
+            hold = apply_rent_hold(hold, rows, sale=sale, rent=rent, lot_ok=lot_ok, fanout=fanout)
     exact, held = exact_links(sale, rent, hold)
     today = date.today()
     rows = [
