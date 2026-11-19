@@ -92,3 +92,11 @@ def test_rolling_response_carries_display_label(monkeypatch):
     assert r.building_stats_rolling(FRAG, db=_Db(), window_years=5).display_label == "주공 (1986년 준공)"
     out = r.building_stats_rolling(OTHER, db=_Db(), window_years=5)
     assert out.display_label is None and out.display_name == "주공"
+
+
+def test_rent_fragment_uses_the_same_apartment_label():
+    rent_key = "r" * 64
+    cache = KeyMapCache(loader=lambda name: {"rent": {rent_key: [(FRAG, 1, 4, "c2")]}}.get(name, {}), ttl=0)
+    assert dl.c2_fragment_keys(cache, app="rent") == {rent_key, FRAG}
+    assert dl.c2_label(FRAG, "한빛", "apartment", 2001, keys=dl.c2_fragment_keys(cache, app="rent")) == "한빛 (2001년 준공)"
+    assert dl.c2_fragment_keys(_cache()) == {BASE, FRAG}

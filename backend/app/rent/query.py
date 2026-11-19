@@ -10,6 +10,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
 from app.collective.address import format_jibun_address
+from app.collective.display_label import c2_fragment_keys, c2_label
 from app.flat_sido_region import (
     FLAT_SIDO_ADDR2_TOKEN,
     apply_addr2_scope,
@@ -429,9 +430,18 @@ def list_buildings(
             row = row.model_copy(update={"jeonse_equiv": j_eq, "monthly_equiv": m_eq})
         items.append(row)
     counts = pending_n_by_key(conn, [item.building_key for item in items])
-    if counts:
+    try:
+        label_keys = c2_fragment_keys(app="rent")
+    except Exception:  # noqa: BLE001 — 연결표가 없으면 기존 이름을 유지한다
+        label_keys = frozenset()
+    if counts or label_keys:
         items = [
-            item.model_copy(update={"pending_n": counts.get(item.building_key, 0)})
+            item.model_copy(update={
+                "pending_n": counts.get(item.building_key, 0),
+                "display_label": c2_label(
+                    item.building_key, item.display_name, item.asset_type, item.building_year, keys=label_keys,
+                ),
+            })
             for item in items
         ]
     return items, ps, pe, list(rates.values())

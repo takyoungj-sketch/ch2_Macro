@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import type { LeaseMetric, RentBuildingRow, RentConversionRate, RentRollingPoint } from "../types";
+import { rentShownName } from "../types";
 import { fetchAllRentTransactions, fetchRentRolling } from "../api/client";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
@@ -287,9 +288,9 @@ export default function BuildingDetailModal({
     app: "rent" as const,
     panel: "RentBuildingDetail",
     purpose: "statistics" as const,
-    scope: { region_label: row.display_name, asset_type: row.asset_type, filters: { window_years: windowYears } },
+    scope: { region_label: rentShownName(row), asset_type: row.asset_type, filters: { window_years: windowYears } },
     facts: {
-      display_name: row.display_name, detail_tab: panel, window_years: windowYears,
+      display_name: rentShownName(row), detail_tab: panel, window_years: windowYears,
       period: panel === "transactions" ? "보유 전체기간" : statsAsOfLabel,
       building_rate: panel === "conversion" ? focusR : undefined,
       region_rate: panel === "conversion" ? regionR : undefined,
@@ -311,7 +312,7 @@ export default function BuildingDetailModal({
       open
       onClose={onClose}
       titleId="rent-building-detail-title"
-      title={row.display_name}
+      title={rentShownName(row)}
       subtitle={
         <>
           {assetTypeLabel(row.asset_type)} · 거래 {n.toLocaleString("ko-KR")}건

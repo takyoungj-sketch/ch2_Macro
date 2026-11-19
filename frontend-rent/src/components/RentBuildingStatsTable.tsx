@@ -12,7 +12,7 @@ import {
   type RangeBound,
   type SortDir,
 } from "@ch2/stats-table-filter";
-import { assetTypeLabel, type LeaseMetric, type RentBuildingRow } from "../types";
+import { assetTypeLabel, rentShownName, type LeaseMetric, type RentBuildingRow } from "../types";
 import RentPendingNotice from "./RentPendingNotice";
 import DualHorizontalScroll from "./DualHorizontalScroll";
 
@@ -449,8 +449,8 @@ export default function RentBuildingStatsTable({
                     onClick={() => onSelect(row)}
                   >
                     <td className="text-[10px] text-center">{assetTypeLabel(row.asset_type)}</td>
-                    <td className="name" title={row.display_name}>
-                      {row.display_name}
+                    <td className="name" title={rentShownName(row)}>
+                      {rentShownName(row)}
                       <RentPendingNotice pendingN={row.pending_n} />
                     </td>
                     <td className="lease">

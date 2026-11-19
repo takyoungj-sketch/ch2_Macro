@@ -360,3 +360,41 @@ def test_migration_shaped_c2_rows_route_and_chain():
     assert r.status_code == 409 and [x["building_key"] for x in r.json()["candidates"]] == [K1, K2]
     r = c.get(f"/api/collective/buildings/{K1}/stats/rolling")
     assert r.json()["key"] == K1 and r.json()["key_split_c2"]["new_keys"] == [K1A]
+
+
+def test_rent_candidate_reads_rent_building_name(monkeypatch):
+    from app.collective import key_remap as kr
+
+    key = "e" * 64
+
+    class _Result:
+        def scalar(self):
+            return True
+
+        def mappings(self):
+            return self
+
+        def all(self):
+            return [{"building_key": key, "display_name": "한빛", "addr3": "역삼동", "addr4": "역삼", "addr5": None}]
+
+    class _Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def execute(self, stmt, params=None):
+            sql = str(stmt)
+            if "to_regclass" not in sql:
+                assert "rent_building_stats" in sql
+            return _Result()
+
+    class _Engine:
+        def connect(self):
+            return _Conn()
+
+    monkeypatch.setattr("app.rent.db.get_rent_engine", lambda: _Engine())
+    got = kr._default_details("rent", [key])
+    assert got[key]["display_name"] == "한빛"
+    assert got[key]["addr3"] == "역삼동"

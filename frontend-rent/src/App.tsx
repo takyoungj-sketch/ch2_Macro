@@ -45,6 +45,7 @@ import {
   type RentAssetType,
   type RentBuildingRow,
   type RentConversionRate,
+  rentShownName,
 } from "./types";
 import {
   formatAddr2OptionLabel,
@@ -528,7 +529,7 @@ export default function App() {
                   ? [
                       {
                         buildingKey: selected.building_key,
-                        label: selected.display_name,
+                        label: rentShownName(selected),
                         jibunAddress: selected.jibun_address || null,
                         roadAddress: selected.road_address || null,
                         addr1: scope.addr1,
@@ -541,7 +542,7 @@ export default function App() {
                 scope && buildingsQ.data
                   ? buildingsQ.data.items.slice(0, 100).map((row) => ({
                       buildingKey: row.building_key,
-                      label: row.display_name,
+                      label: rentShownName(row),
                       jibunAddress: row.jibun_address || null,
                       roadAddress: row.road_address || null,
                       addr1: scope.addr1,
@@ -661,7 +662,7 @@ export default function App() {
       {selected && scope && (
         <RentKeySplitGuard
           buildingKey={selected.building_key}
-          displayName={selected.display_name}
+          displayName={rentShownName(selected)}
           onOpenKey={(key, cand) => {
             // C-2 분리된 단지: 기존 행을 복사하지 않고 후보 키의 실제 목록 행을 다시 조회한 뒤 연다(로딩·실패 안내)
             const sel = selected;

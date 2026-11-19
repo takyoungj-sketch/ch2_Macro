@@ -86,8 +86,26 @@ def _candidate(key: str, det: dict[str, Any] | None) -> dict[str, Any]:
     return {"building_key": key, **{k: d[k] for k in CANDIDATE_FIELDS if d.get(k) not in (None, "")}}
 
 
+def _details_from(table: str, keys: list[str], engine) -> dict[str, dict[str, Any]]:
+    if engine is None or not keys:
+        return {}
+    with engine.connect() as c:
+        if not c.execute(text("SELECT to_regclass(:t) IS NOT NULL"), {"t": f"public.{table}"}).scalar():
+            return {}
+        rows = c.execute(text(f"""
+            SELECT DISTINCT ON (building_key) building_key, display_name, addr3, addr4, addr5
+            FROM {table} WHERE building_key = ANY(:k)
+            ORDER BY building_key, as_of_month DESC, window_years DESC"""), {"k": keys}).mappings().all()
+    return {r["building_key"]: {"display_name": r["display_name"], "addr3": r["addr3"], "addr4": r["addr4"],
+                                "addr5": r["addr5"]} for r in rows}
+
+
 def _default_details(app: str, keys: list[str]) -> dict[str, dict[str, Any]]:
-    """분할 후보 표시용(집합만): 최신 as_of 5년 mart 의 이름·주소(건수는 읽지 않음)."""
+    """분할 후보 표시용: 최신 as_of 5년 mart 의 이름·주소(건수는 읽지 않음)."""
+    if app == "rent":
+        from app.rent.db import get_rent_engine
+
+        return _details_from("rent_building_stats", keys, get_rent_engine())
     if app != "collective" or not keys:
         return {}
     from app.collective.db import get_collective_engine
