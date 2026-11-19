@@ -186,10 +186,49 @@ def test_dry_run_does_not_create_table(fixture_db, tmp_path: Path):
     engine.dispose()
 
 
+def test_apply_without_approval_does_not_connect(tmp_path: Path, monkeypatch):
+    path = _csv(tmp_path, _split_rows())
+
+    def _refuse(*_args, **_kwargs):
+        raise AssertionError("승인 전에 데이터베이스에 연결했다")
+
+    monkeypatch.setattr(loader, "rent_engine", _refuse)
+    code = loader.main([
+        "--rent-db", FIXTURE, "--csv", str(path), "--apply",
+        "--base-url", "postgresql://u@127.0.0.1/unused",
+    ])
+    assert code == 2
+
+
+def _refuse_connect(*_args, **_kwargs):
+    raise AssertionError("데이터베이스에 연결했다")
+
+
+def test_unapproved_bypass_rejects_rehearsal_name(tmp_path: Path, monkeypatch):
+    path = _csv(tmp_path, _split_rows())
+    monkeypatch.setattr(loader, "rent_engine", _refuse_connect)
+    code = loader.main([
+        "--rent-db", "rent_stats_rc2r", "--csv", str(path), "--apply",
+        "--test-fixture-unapproved", "--base-url", "postgresql://u@127.0.0.1/unused",
+    ])
+    assert code == 2
+
+
+def test_unapproved_bypass_rejects_remote_host(tmp_path: Path, monkeypatch):
+    path = _csv(tmp_path, _split_rows())
+    monkeypatch.setattr(loader, "rent_engine", _refuse_connect)
+    code = loader.main([
+        "--rent-db", FIXTURE, "--csv", str(path), "--apply",
+        "--test-fixture-unapproved", "--base-url", "postgresql://u@203.0.113.9/unused",
+    ])
+    assert code == 2
+
+
 def test_apply_then_same_file_inserts_once(fixture_db, tmp_path: Path):
     path = _csv(tmp_path, _split_rows())
     assert loader.main([
-        "--rent-db", FIXTURE, "--csv", str(path), "--apply", "--base-url", _db_url(fixture_db),
+        "--rent-db", FIXTURE, "--csv", str(path), "--apply", "--test-fixture-unapproved",
+        "--base-url", _db_url(fixture_db),
     ]) == 0
     engine = loader.rent_engine(FIXTURE, apply=False, base_url=fixture_db)
     with engine.connect() as conn:
@@ -199,7 +238,8 @@ def test_apply_then_same_file_inserts_once(fixture_db, tmp_path: Path):
     assert count == 3
     assert logs == 1
     assert loader.main([
-        "--rent-db", FIXTURE, "--csv", str(path), "--apply", "--base-url", _db_url(fixture_db),
+        "--rent-db", FIXTURE, "--csv", str(path), "--apply", "--test-fixture-unapproved",
+        "--base-url", _db_url(fixture_db),
     ]) == 0
     engine = loader.rent_engine(FIXTURE, apply=False, base_url=fixture_db)
     with engine.connect() as conn:
@@ -224,7 +264,8 @@ def test_value_conflict_rolls_back(fixture_db, tmp_path: Path):
         ), {"sha": SHA})
     engine.dispose()
     assert loader.main([
-        "--rent-db", FIXTURE_B, "--csv", str(path), "--apply", "--base-url", _db_url(fixture_db),
+        "--rent-db", FIXTURE_B, "--csv", str(path), "--apply", "--test-fixture-unapproved",
+        "--base-url", _db_url(fixture_db),
     ]) == 2
     engine = loader.rent_engine(FIXTURE_B, apply=False, base_url=fixture_db)
     with engine.connect() as conn:

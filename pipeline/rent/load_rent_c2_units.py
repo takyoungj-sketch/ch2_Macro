@@ -102,9 +102,12 @@ def assert_rehearsal_local(target) -> None:
     ops = str(Path(__file__).resolve().parents[2] / "scripts" / "ops" / "collective_p2_verify")
     if ops not in sys.path:
         sys.path.insert(0, ops)
-    from ops_guards import assert_local_target
+    from ops_guards import TargetError, assert_local_target
 
-    assert_local_target(target)
+    try:
+        assert_local_target(target)
+    except TargetError as exc:
+        raise GuardError(str(exc)) from None
 
 
 def assert_write_db(name: str) -> None:
@@ -315,15 +318,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--base-url", default=None)
     parser.add_argument("--approved-sha256", default=None)
     parser.add_argument("--approved-rows", type=int, default=None)
+    parser.add_argument(
+        "--test-fixture-unapproved",
+        action="store_true",
+        help="테스트 fixture 전용. 승인 파일 검사를 건너뛴다",
+    )
     args = parser.parse_args(argv)
     try:
         assert_write_db(args.rent_db)
-        if args.rent_db == REHEARSAL_DB:
-            base = make_url(args.base_url or server_url_from_env()).set(database=args.rent_db)
+        base = make_url(args.base_url or server_url_from_env()).set(database=args.rent_db)
+        if args.rent_db == REHEARSAL_DB or (args.apply and args.test_fixture_unapproved):
             assert_rehearsal_local(base)
         df = read_units(args.csv)
         validate(df)
-        if args.approved_sha256 is not None or args.approved_rows is not None:
+        if args.apply:
+            if args.test_fixture_unapproved:
+                if FIXTURE_RE.fullmatch(args.rent_db) is None:
+                    raise GuardError("테스트 우회는 로컬 fixture 데이터베이스에서만 된다")
+            else:
+                if args.approved_sha256 not in (None, APPROVED_SHA256):
+                    raise LoadError("승인 상수는 정해진 값만 쓸 수 있다")
+                if args.approved_rows is not None and args.approved_rows != APPROVED_ROWS:
+                    raise LoadError("승인 상수는 정해진 값만 쓸 수 있다")
+                check_approved_file(args.csv, df, APPROVED_SHA256, APPROVED_ROWS)
+        elif args.approved_sha256 is not None or args.approved_rows is not None:
             check_approved_file(
                 args.csv,
                 df,
