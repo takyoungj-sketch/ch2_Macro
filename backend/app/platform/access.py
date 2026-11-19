@@ -128,7 +128,7 @@ def resolve_access(db: Session | None, user: CurrentUser | None, now: datetime |
     paid_end = aware(paid[0]["current_period_end"]) if paid else None
     if paid:
         paid_end = max(aware(r["current_period_end"]) for r in paid)
-    if now < trial_end:
+    if trial_start <= now < trial_end:
         return Access("trial", None, products={"macro": True, "fieldnote": True}, paid_until=paid_end,
                       period_start=trial_start, period_end=trial_end, **base)
     if paid:

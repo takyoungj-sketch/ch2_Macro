@@ -82,6 +82,21 @@ def test_trial_uses_max_and_exact_boundary(created):
         assert not any(denied.features.values())
 
 
+@pytest.mark.parametrize("created", [START - timedelta(days=400), START, START + timedelta(days=3)])
+def test_trial_is_closed_before_start_and_opens_at_start(created):
+    trial_start = max(created, START)
+    db = ReadDB(created)
+    for now in [trial_start - timedelta(days=1), trial_start - timedelta(seconds=1)]:
+        access = resolve_access(db, USER, now)
+        assert access.state == "expired"
+        assert not any(access.features.values())
+        assert access.status()["offline_until"] == now
+    access = resolve_access(db, USER, trial_start)
+    assert access.state == "trial" and all(access.features.values())
+    assert access.period_start == trial_start
+    assert access.trial_ends_at == trial_start + timedelta(days=30)
+
+
 @pytest.mark.parametrize("cancel,billing", [(False, "scheduled"), (True, "scheduled_canceled")])
 def test_card_registration_is_not_paid_and_does_not_shorten_trial(cancel, billing):
     db = ReadDB(subs=[subscription(cancel_at_period_end=cancel)])

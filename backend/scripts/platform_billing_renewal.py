@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.platform.billing_router import PLANS, PLANS_BY_ID
+from app.platform.billing_router import PLANS, _LEGACY_PLANS
 from app.platform.db import get_platform_session_factory
 from app.platform.web_subscription import renew_due_subscriptions
 
@@ -20,9 +20,12 @@ def main() -> int:
     if factory is None:
         print("DATABASE_URL_PLATFORM not configured", file=sys.stderr)
         return 1
-    plan_prices = {p["id"]: p["price"] for p in PLANS if p["interval"] == "month"}
+    # FN-006에서 갱신 흐름을 바꿀 때까지의 임시 호환 조치.
+    # 판매 목록·prepare 허용 범위는 바꾸지 않고 기존 월 구독의 갱신 가격만 보존한다.
+    renewal_plans = _LEGACY_PLANS + PLANS
+    plan_prices = {p["id"]: p["price"] for p in renewal_plans if p["interval"] == "month"}
     plan_names = {
-        p["id"]: f"CH2 {p['product']} month" for p in PLANS if p["interval"] == "month"
+        p["id"]: f"CH2 {p['product']} month" for p in renewal_plans if p["interval"] == "month"
     }
     db = factory()
     try:
