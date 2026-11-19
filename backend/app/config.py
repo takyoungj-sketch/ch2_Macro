@@ -181,7 +181,7 @@ class Settings(BaseSettings):
     fieldnote_ai_admin_monthly_write: int = Field(default=200, validation_alias="FIELDNOTE_AI_ADMIN_MONTHLY_WRITE")
     fieldnote_ai_daily_cap_calls: int = Field(default=300, validation_alias="FIELDNOTE_AI_DAILY_CAP_CALLS")
     fieldnote_ai_daily_cap_usd: float = Field(default=5.0, validation_alias="FIELDNOTE_AI_DAILY_CAP_USD")
-    fieldnote_ai_worst_call_usd: float = Field(default=0.02, validation_alias="FIELDNOTE_AI_WORST_CALL_USD")
+    fieldnote_ai_worst_call_usd: float = Field(default=0.025, validation_alias="FIELDNOTE_AI_WORST_CALL_USD")
     fieldnote_ai_account_per_minute: int = Field(default=10, validation_alias="FIELDNOTE_AI_ACCOUNT_PER_MINUTE")
     fieldnote_ai_account_per_hour: int = Field(default=120, validation_alias="FIELDNOTE_AI_ACCOUNT_PER_HOUR")
     fieldnote_ai_ip_per_minute: int = Field(default=20, validation_alias="FIELDNOTE_AI_IP_PER_MINUTE")

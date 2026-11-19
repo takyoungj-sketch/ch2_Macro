@@ -39,6 +39,8 @@ _WRITE_SYSTEM = (
 
 _PHOTO_CAP = {"short": 4, "long": 6, "sheet": 6}
 _LEGACY_TEXT_CAP = 8000
+_LABEL_CAP = 100
+_IMAGE_CHARS = 20_000_000
 _NOTE_CAP = 2000
 _WRITE_CAP = 4000
 
@@ -66,9 +68,20 @@ def _model() -> str:
     return (settings.openai_model or "gpt-5-mini").strip() or "gpt-5-mini"
 
 
-def _output_tokens() -> int:
-    ceiling = int(getattr(settings, "ai_max_output_tokens", _OUTPUT_TOKENS) or _OUTPUT_TOKENS)
-    return min(_OUTPUT_TOKENS, ceiling)
+def _output_tokens(mode: str) -> int:
+    wanted = 8000 if mode == "sheet" else _OUTPUT_TOKENS
+    ceiling = int(getattr(settings, "ai_max_output_tokens", wanted) or wanted)
+    return min(wanted, ceiling)
+
+
+def _limit_image_chars(urls: list[str]) -> None:
+    if sum(len(url) for url in urls) > _IMAGE_CHARS:
+        _invalid()
+
+
+def _limit_user_input(*parts: str) -> None:
+    if sum(len(part) for part in parts) > _LEGACY_TEXT_CAP:
+        _invalid()
 
 
 def _data_url(url: object) -> str:
@@ -104,7 +117,6 @@ def _legacy_parts(messages) -> tuple[str, list[str]]:
     texts: list[str] = []
     images: list[str] = []
     seen: set[str] = set()
-    size = 0
     for message in messages or []:
         if not isinstance(message, dict) or message.get("role") == "system":
             continue
@@ -122,14 +134,12 @@ def _legacy_parts(messages) -> tuple[str, list[str]]:
                 if url in seen:
                     continue
                 seen.add(url)
-                size += len(url)
                 images.append(url)
             elif part.get("type") == "text":
                 texts.append(str(part.get("text", "")))
             else:
                 _invalid()
-    if size > 20_000_000:
-        _invalid()
+    _limit_image_chars(images)
     return "\n".join(texts), images
 
 
@@ -344,7 +354,13 @@ def _ordered_images(items) -> list[tuple[int, str | None, str]]:
             order, label, url = index, None, item
         elif isinstance(item, dict):
             order = int(item.get("order") or index)
-            label = str(item.get("label")).strip() if item.get("label") else None
+            raw_label = item.get("label")
+            label = None
+            if raw_label not in (None, ""):
+                label = str(raw_label)
+                if len(label) > _LABEL_CAP:
+                    _invalid()
+                label = label.strip() or None
             url = item.get("image") or item.get("url") or ""
         else:
             _invalid()
@@ -355,6 +371,7 @@ def _ordered_images(items) -> list[tuple[int, str | None, str]]:
         seen.add(url)
         rows.append((order, label, url))
     rows.sort(key=lambda row: row[0])
+    _limit_image_chars([url for _order, _label, url in rows])
     return rows
 
 
@@ -378,7 +395,7 @@ def _finish(mode: str, text: str, images: list[str], feature: str) -> PreparedCa
     temperature = 0.1 if mode == "sheet" else 0.15
     response_format = None if mode == "write" else {"type": "json_object"}
     units = len(images) if feature == PHOTO else 1
-    return PreparedCall(_messages(mode, text, images), units, _model(), temperature, _output_tokens(), response_format)
+    return PreparedCall(_messages(mode, text, images), units, _model(), temperature, _output_tokens(mode), response_format)
 
 
 def prepare_fieldnote_call(body, feature: str, kind: str) -> PreparedCall:
@@ -398,12 +415,15 @@ def _prepare_v2(body, feature: str, mode: str) -> PreparedCall:
         note = _limit_text(str(getattr(body, "note", None) or ""), _NOTE_CAP)
         hints = _hint_map(getattr(body, "ocr_hints", None))
         text = _record_prompt(mode, [(order, label) for order, label, _url in rows], note, hints)
+        _limit_user_input(note, "".join(hints.values()), "".join(label or "" for _order, label, _url in rows))
         return _finish(mode, text, [url for _order, _label, url in rows], feature)
     if feature == SHEET:
         rows = _ordered_images(getattr(body, "images", None))
         hint = _limit_text(str(getattr(body, "hint", None) or ""), _NOTE_CAP)
         hints = {1: hint} if hint else {}
         text = _sheet_prompt(len(rows), hints)
+        _limit_user_input(hint, "".join(label or "" for _order, label, _url in rows))
         return _finish(mode, text, [url for _order, _label, url in rows], feature)
     source = _limit_text(str(getattr(body, "source_text", None) or ""), _WRITE_CAP)
+    _limit_user_input(source)
     return _finish(mode, source, [], feature)
