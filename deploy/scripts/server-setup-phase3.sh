@@ -67,6 +67,8 @@ npm ci --silent
 npm run build
 
 echo "==> Nginx site"
+# OPS-006 점검 모드 조각. 사이트·랩 설정이 include 하므로 먼저 설치한다(템플릿이 없으면 여기서 멈춘다). 깃발 파일은 만들지 않는다.
+sudo install -m 644 "$REPO/deploy/templates/nginx-ch2-maintenance.snippet" /etc/nginx/snippets/ch2-maintenance.conf
 sudo cp "$REPO/deploy/templates/nginx-ch2-macro.conf" /etc/nginx/sites-available/ch2-macro
 sudo sed -i 's/dev-macro.YOURDOMAIN.com/13.209.203.178/g' /etc/nginx/sites-available/ch2-macro
 sudo ln -sf /etc/nginx/sites-available/ch2-macro /etc/nginx/sites-enabled/ch2-macro

@@ -47,6 +47,8 @@ apply_nginx() {
     echo "==> lab Basic Auth + nginx snippets"
     sed -i 's/\r$//' "$REPO/deploy/scripts/setup-ch2-lab-auth.sh" 2>/dev/null || true
     sudo bash "$REPO/deploy/scripts/setup-ch2-lab-auth.sh"
+    # OPS-006 점검 모드 조각. 사이트·랩 설정이 include 하므로 먼저 설치한다(템플릿이 없으면 여기서 멈춘다). 깃발 파일은 만들지 않는다.
+    sudo install -m 644 "$REPO/deploy/templates/nginx-ch2-maintenance.snippet" /etc/nginx/snippets/ch2-maintenance.conf
     sudo cp "$REPO/deploy/templates/nginx-ch2-lab-auth.conf" /etc/nginx/snippets/ch2-lab-auth.conf
     sudo cp "$REPO/deploy/templates/nginx-ch2-lab-locations.conf" /etc/nginx/snippets/ch2-lab-locations.conf
     sudo cp "$REPO/deploy/templates/nginx-ch2-lab-api.conf" /etc/nginx/snippets/ch2-lab-api.conf

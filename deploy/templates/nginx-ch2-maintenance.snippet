@@ -1,0 +1,8 @@
+# /etc/nginx/snippets/ch2-maintenance.conf — 점검 모드(OPS-006, 원본 docs/ops/COLLECTIVE_P2_RUNBOOK.md 6.0)
+# 깃발 파일이 있으면 503(백엔드에 넘기지 않음). 깃발이 없으면 아무 일도 하지 않는다.
+# 배포 스크립트는 이 파일을 사이트·랩 조각보다 먼저 설치한다. 깃발 파일은 어떤 스크립트도 만들지 않는다.
+# 켜기·끄기는 런북 6.0의 명령으로 운영자가 직접 한다.
+if (-f /etc/nginx/ch2_maintenance.on) {
+    add_header Retry-After 3600 always;
+    return 503 '{"detail":"점검 중입니다. 잠시 뒤 다시 시도해 주세요.","maintenance":true}';
+}
