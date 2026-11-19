@@ -52,6 +52,52 @@ def rate_alarms(before: list[dict], after: list[dict]) -> list[dict]:
     return alarms
 
 
+def _gate_state(value) -> str:
+    if value is None:
+        return "null"
+    return "true" if bool(value) else "false"
+
+
+def availability_changes(before: list[dict], after: list[dict]) -> list[dict]:
+    """한쪽에만 있는 지역, r_selected 의 NULL 변화, gate_passed 의 null/참/거짓 변화."""
+    left = {_key(r): r for r in before}
+    right = {_key(r): r for r in after}
+    changes = []
+    for key in sorted(set(left) | set(right), key=lambda item: tuple(str(part) for part in item)):
+        b = left.get(key)
+        a = right.get(key)
+        reasons = []
+        if b is None or a is None:
+            reasons.append("한쪽")
+        else:
+            if (b.get("r_selected") is None) != (a.get("r_selected") is None):
+                reasons.append("r_selected")
+            if _gate_state(b.get("gate_passed")) != _gate_state(a.get("gate_passed")):
+                reasons.append("gate_passed")
+        if not reasons:
+            continue
+        sample = a or b
+        changes.append({
+            "region": _region(sample),
+            "asset_type": sample.get("asset_type") or "",
+            "window_years": sample.get("window_years"),
+            "before": _availability(b),
+            "after": _availability(a),
+            "reason": ",".join(reasons),
+        })
+    return changes
+
+
+def _availability(row: dict | None) -> dict | None:
+    if row is None:
+        return None
+    value = row.get("r_selected")
+    return {
+        "r_selected": None if value is None else float(value),
+        "gate_passed": _gate_state(row.get("gate_passed")),
+    }
+
+
 def gate_flips(before: list[dict], after: list[dict]) -> list[dict]:
     left = {_key(r): bool(r.get("gate_passed")) for r in before}
     right = {_key(r): bool(r.get("gate_passed")) for r in after}
@@ -116,7 +162,7 @@ def snapshot(conn) -> dict:
                 "addr3": row["addr3"] or "",
                 "asset_type": row["asset_type"] or "",
                 "r_selected": None if row["r_selected"] is None else float(row["r_selected"]),
-                "gate_passed": bool(row["gate_passed"]),
+                "gate_passed": None if row["gate_passed"] is None else bool(row["gate_passed"]),
                 "n_buildings": int(row["n_buildings"] or 0),
                 "n_jeonse": int(row["n_jeonse"] or 0),
                 "n_mixed": int(row["n_mixed"] or 0),
@@ -221,6 +267,7 @@ def compare(before: dict, after: dict) -> dict:
         "region_count_after": after.get("region_count"),
         "alarms": alarms,
         "gate_flips": flips,
+        "availability_changes": availability_changes(before.get("rates") or [], after.get("rates") or []),
         "basic_buildings_before": before.get("basic_buildings"),
         "basic_buildings_after": after.get("basic_buildings"),
         "conversion_gate_passed_before": before.get("conversion_gate_passed"),
