@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -172,6 +172,9 @@ class Settings(BaseSettings):
     toss_webhook_secret: str = Field(default="", validation_alias="TOSS_WEBHOOK_SECRET")
     #: True 이면 Play purchase_token 을 Google API 없이 entitlement 부여 (로컬 테스트 전용)
     play_billing_allow_stub: bool = Field(default=False, validation_alias="PLAY_BILLING_ALLOW_STUB")
+    ch2_policy_start: Optional[datetime] = Field(default=None, validation_alias="CH2_POLICY_START")
+    ch2_entitlement_mode: Literal["legacy", "v2"] = Field(default="legacy", validation_alias="CH2_ENTITLEMENT_MODE")
+    ch2_deploy_env: Literal["production", "local", "test"] = Field(default="production", validation_alias="CH2_DEPLOY_ENV")
 
     @property
     def cors_origins_list(self) -> list[str]:

@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.platform.db import get_platform_db
-from app.platform.deps import CurrentUser, require_user
+from app.platform.deps import CurrentUser, get_optional_user, require_user
+from app.platform.access import resolve_access
 from app.platform.entitlements import activate_subscription, create_subscription, list_entitlements, apply_staff_entitlements
 from app.platform.toss_client import TossApiError, confirm_payment, toss_configured
 from app.platform.web_subscription import (
@@ -169,6 +170,14 @@ def subscription_me(
         "cancel_at_period_end": bool(sub.get("cancel_at_period_end")),
         "entitlements": ent,
     }
+
+
+@router.get("/status")
+def billing_status(
+    user: CurrentUser | None = Depends(get_optional_user),
+    db: Session = Depends(get_platform_db),
+):
+    return resolve_access(db, user).status()
 
 
 @router.post("/subscription/cancel")

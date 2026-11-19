@@ -46,6 +46,9 @@ _LOG = logging.getLogger(__name__)
 async def _lifespan(app: FastAPI):
     """앱 시작/종료 훅 (FastAPI 0.93+ 권장 방식 — 구 `@app.on_event` 대체)."""
     from app.v2_stats_windows import default_as_of_month_for_service
+    from app.platform.access import log_policy_config
+
+    log_policy_config()
 
     eff = settings.stats_v2_default_as_of_month
     if eff is None and settings.stats_v2_assumed_today is not None:
