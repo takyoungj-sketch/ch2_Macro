@@ -258,3 +258,15 @@ def test_month_filter_keeps_only_the_requested_month():
     picked = molit._limit_month(df, (2026, 10))
     assert picked["transaction_hash"].tolist() == ["a"]
     assert len(molit._limit_month(df, None)) == 3
+
+
+def test_source_label_outside_repo_keeps_the_given_path(tmp_path):
+    outside = tmp_path / "강원_전월세.csv"
+    label = molit.source_label(outside)
+    assert label.endswith("강원_전월세.csv")
+    assert label == str(outside).replace("\\", "/")
+
+
+def test_source_label_inside_repo_is_relative():
+    path = REPO / "pipeline" / "rent" / "import_molit.py"
+    assert molit.source_label(path) == "pipeline/rent/import_molit.py"

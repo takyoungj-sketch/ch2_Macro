@@ -487,6 +487,14 @@ def _limit_month(df: pd.DataFrame, year_month: tuple[int, int] | None) -> pd.Dat
     return picked.copy()
 
 
+def source_label(path: Path) -> str:
+    """원장 source_path. 저장소 안이면 상대 경로, 밖이면 받은 경로."""
+    try:
+        return str(path.relative_to(REPO)).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
 def ingest_asset(
     asset_type: RentAssetType,
     *,
@@ -519,7 +527,7 @@ def ingest_asset(
             with reader.connect() as conn:
                 unique = collective_unique_parts(conn, asset_type, split_bases_of(units))
         for path in paths:
-            rel = str(path.relative_to(REPO)).replace("\\", "/")
+            rel = source_label(path)
             log.info("read %s", rel)
             raw_df = read_rent_csv(path)
             df = refine_rent_dataframe(raw_df, asset_type, source_path=rel)
