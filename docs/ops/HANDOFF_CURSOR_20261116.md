@@ -1,3 +1,5 @@
+이력 문서. 현행 규칙은 `D:\ch2\CH2_SHARED_OPS\RULES.md`.
+
 # Cursor 인계 — 2026-11-16 (Claude Code → Cursor)
 
 규칙은 [`AGENTS.md`](../../AGENTS.md) 와 [`.cursor/rules/ch2-safety.mdc`](../../.cursor/rules/ch2-safety.mdc)(항상 적용)에 옮겼다. 이 문서는 **상태와 다음 할 일**만 적는다. 비밀값·접속 정보는 없다.
