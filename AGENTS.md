@@ -1,6 +1,7 @@
 # CH2 Macro — Cursor Agent 지침
 
 전역 Git·버전 정책: `~/.cursor/agent.md`  
+전체 협업 규칙은 `D:\ch2\CH2_SHARED_OPS\RULES.md`를 따른다.  
 **제품 헌법:** [`docs/CH2_CONSTITUTION.md`](docs/CH2_CONSTITUTION.md) · 설명: [`docs/CH2_EXPLAIN_CONSTITUTION.md`](docs/CH2_EXPLAIN_CONSTITUTION.md) · AI: [`docs/CH2_AI_CONSTITUTION.md`](docs/CH2_AI_CONSTITUTION.md)
 
 ---
@@ -8,7 +9,7 @@
 ## 안전·역할 규칙 (항상 — 상세 [`.cursor/rules/ch2-safety.mdc`](.cursor/rules/ch2-safety.mdc))
 
 - **최종 결정은 T.** 개발 에이전트는 지시 범위만, 자기 worktree·브랜치에서. 범위 밖 발견은 메모로 보고.
-- **main 병합·push·배포는 관리 역할(Codex, 이관 뒤 T 가 지정)만, T 승인 뒤.** 지시에 「push 없음」이면 push 하지 않는다. 아래 배포 절차는 관리 역할이 T 의 배포 요청을 받았을 때 쓴다.
+- **main 병합·통합 테스트·운영 배포는 Cursor가 맡는다. T 승인 뒤에만.** Codex는 승인 없이 main에 병합하거나 운영 배포하지 않는다. 지시에 「push 없음」이면 push 하지 않는다. 아래 배포 절차는 T의 배포 승인이 있을 때 Cursor가 쓴다.
 - **운영 DB 쓰기 금지.** 진짜 로컬 DB 는 읽기 전용 세션으로만 읽고, 쓰기는 런북의 `--real-apply`(5조건, `ops_guards`)로 T 지시가 있을 때만. 리허설 쓰기는 `*_p2r` 에만.
 - 비밀값(`.env`·토큰·접속 문자열·`*.pem`) 출력·커밋 금지. 지번·주소·좌표가 든 산출물은 `logs/`(gitignore)에만, **`logs/` 커밋 금지.**
 - 원천 `raw/` 정션은 필요할 때만 만들고 `rmdir` 로 해제(원본 4,176파일 확인).
@@ -17,7 +18,7 @@
 
 ---
 
-## 배포 (사용자가 「배포」「웹 반영」「VPS」 요청 시 — 관리 역할만)
+## 배포 (사용자가 「배포」「웹 반영」「VPS」 요청 시 — Cursor, T 승인 뒤)
 
 **추가 확인 없이** [deploy/AGENT_DEPLOY_RUNBOOK.md](deploy/AGENT_DEPLOY_RUNBOOK.md) 전체를 따른다.
 
@@ -29,7 +30,7 @@
 
 고정값: SSH 키 `LightsailDefaultKey-ap-northeast-2.pem`(repo 루트), VPS `ubuntu@13.209.203.178`, 경로 `/opt/ch2_Macro`.
 
-**배포 요청 = push 허용** (전역 agent.md §6 예외) — 관리 역할이 T 의 배포 요청을 받았을 때만. 개발 에이전트는 배포 요청을 받으면 관리 역할의 일임을 알린다(T 가 명시적으로 넘기면 예외).
+**T의 배포 승인이 있을 때 Cursor가 배포 절차에 따라 push한다** (전역 agent.md §6 예외). 다른 실행 AI는 배포 요청을 받으면 Cursor에 넘긴다.
 
 ---
 
