@@ -2,8 +2,9 @@
 """Multi-entry-point region-code deploy smoke (D-028).
 
 무료로 열 수 있는 경로는 그 조건(예: window_years=5)으로 기능을 확인하고,
-구독 게이트 전용 경로는 비로그인 401과 '로그인이 필요합니다.'를 통과로 본다.
-200은 게이트가 열린 것이므로 실패다. 무료 200 응답의 코드는 계속 정규 코드만 허용한다.
+구독 게이트 전용 경로는 비로그인 401과 '로그인이 필요합니다.'만 통과로 본다.
+그 외 응답(200·404·503 포함)은 실패다. 무료 경로의 기존 404·503 skip은 유지한다.
+무료 200 응답의 코드는 계속 정규 코드만 허용한다.
 
 Exit 0 = PASS, 1 = FAIL.
 
@@ -209,9 +210,6 @@ def _run_built_lookup(report: SmokeReport, base: str, token: str | None) -> None
             token=token,
             params={"code": inp, "level": "eupmyeondong"},
         )
-        if status == 503:
-            report.add(name, "skip", "built DB not configured")
-            return
         if _gate_closed(status, data):
             report.add(name, "pass", "gate 401")
             continue
@@ -231,9 +229,6 @@ def _run_built_resolve(report: SmokeReport, base: str, token: str | None) -> Non
             "asset_type": "commercial",
         },
     )
-    if status == 503:
-        report.add(name, "skip", "built DB not configured")
-        return
     if _gate_closed(status, data):
         report.add(name, "pass", "gate 401")
         return
@@ -253,9 +248,6 @@ def _run_built_scope(report: SmokeReport, base: str, token: str | None) -> None:
             "window_years": 3,
         },
     )
-    if status == 503:
-        report.add(name, "skip", "built DB not configured")
-        return
     if _gate_closed(status, data):
         report.add(name, "pass", "gate 401")
         return
@@ -295,9 +287,6 @@ def _run_profile(report: SmokeReport, base: str, token: str | None) -> None:
             "window_years": 3,
         },
     )
-    if status in (404, 503):
-        report.add(name, "skip", f"HTTP {status}")
-        return
     if _gate_closed(status, data):
         report.add(name, "pass", "gate 401")
         return
@@ -313,9 +302,6 @@ def _run_profile_twins(report: SmokeReport, base: str, token: str | None) -> Non
         token=token,
         params={"top_k": 3, "profile_version": "v2.1-national", "window_years": 3},
     )
-    if status == 404:
-        report.add(name, "skip", "no twin batch/anchor")
-        return
     if _gate_closed(status, data):
         report.add(name, "pass", "gate 401")
     else:
@@ -328,9 +314,6 @@ def _run_profile_twins(report: SmokeReport, base: str, token: str | None) -> Non
         token=token,
         params={"top_k": 3, "profile_version": "v2.1-national", "window_years": 3},
     )
-    if status == 404:
-        report.add(name_eup, "skip", "no eup twin batch")
-        return
     if _gate_closed(status, data):
         report.add(name_eup, "pass", "gate 401")
         return

@@ -149,7 +149,7 @@ cd c:\ch2\ch2_Macro\backend
 ..\.venv\Scripts\python.exe ..\pipeline\smoke_region_code_deploy.py --base-url https://macro.ch2data.com
 ```
 
-커버: health · land free/v2(`window_years=5`) · upper-stats(`window_years=5`) · collective resolve · map · region search는 무료 조건으로 기능을 확인한다. built lookup/resolve/scope · regional-profile · twin은 비로그인 **401**과 detail `로그인이 필요합니다.`를 게이트 정상으로 본다. 그 경로의 200은 실패다.  
+커버: health · land free/v2(`window_years=5`) · upper-stats(`window_years=5`) · collective resolve · map · region search는 무료 조건으로 기능을 확인한다. 이 무료 경로의 기존 404·503 skip은 유지한다. built lookup/resolve/scope · regional-profile · twin은 비로그인 **401**과 detail `로그인이 필요합니다.`만 통과다. 200·404·503을 포함한 다른 응답은 실패다. twin 하나가 404여도 나머지 twin 검사는 건너뛰지 않는다.  
 무료 200 응답의 user-facing 코드에 historical code(`43770340` 등) **금지**.
 
 ### 5.1 백엔드
