@@ -259,8 +259,15 @@ bash /opt/ch2_Macro/deploy/scripts/redeploy.sh main
 
 ## 9. 로컬 정리에서 지우면 안 되는 것 (2026-11-18)
 
-- `D:\ch2\ch2_Macro-collp2`는 `raw/` 132GiB를 품고 있으므로 삭제 금지. 체크아웃을 지우는 작업에 이 폴더를 넣지 않는다.
-- `raw/` 외장 백업은 2026-11-18에 `G:\raw`(WD SCORPIO)로 복사됐고, 0번 대조를 통과했다. 파일 4,176개, 142,118,369,568바이트가 같고, `raw addition/` 무작위 200개와 가장 큰 파일 20개의 SHA-256이 같다. 자세한 표는 [docs/ops/reports/20261118_cleanup_B1.md](../docs/ops/reports/20261118_cleanup_B1.md).
+- raw 실제 위치는 `D:\ch2\ch2_Macro\raw`(원본 폴더)다. 백업은 `G:\raw`다. 2026-11-18 대조에서 파일 4,176개, 142,118,369,568바이트가 같았고, `raw addition/` 무작위 200개와 가장 큰 파일 20개의 SHA-256이 같았다. 자세한 표는 [docs/ops/reports/20261118_cleanup_B1.md](../docs/ops/reports/20261118_cleanup_B1.md).
+- `D:\ch2\ch2_Macro-collp2\raw`는 원본 raw를 가리키는 정션이다. collp2를 지우거나 옮길 때는 먼저 `cmd /c rmdir D:\ch2\ch2_Macro-collp2\raw`로 정션만 끊는다. `/s`는 금지다.
+- collp2 삭제 금지. 체크아웃을 지우는 작업에 이 폴더를 넣지 않는다. raw는 이 폴더 안의 사본이 아니다.
+- 2026-11-19에 `dir /AL /S /B`로 다른 worktree를 봤다. 원본 폴더를 가리키는 정션은 collp2에만 있다. 폴더를 지우기 전에 `/s` 없이 `rmdir`로 끊는다.
+  - `D:\ch2\ch2_Macro-collp2\raw` → `D:\ch2\ch2_Macro\raw`
+  - `D:\ch2\ch2_Macro-collp2\frontend-built\node_modules` → `D:\ch2\ch2_Macro\frontend-built\node_modules`
+  - `D:\ch2\ch2_Macro-collp2\frontend-collective\node_modules` → `D:\ch2\ch2_Macro\frontend-collective\node_modules`
+  - `D:\ch2\ch2_Macro-collp2\frontend-rent\node_modules` → `D:\ch2\ch2_Macro\frontend-rent\node_modules`
+- 링크가 없던 worktree: `coll0`, `collp2-wip14-ro`, `deploypaths`, `landlink`, `wip1109`, Codex `workflow-rules`, Codex `p2-baseline`.
 
 ## 11. 개선 목록
 
