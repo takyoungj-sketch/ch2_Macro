@@ -36,10 +36,11 @@ class ReadDB:
 
 
 def subscription(**kwargs):
-    return dict(id=1, product="bundle", plan_id="ch2_monthly", status="pending", created_at=START,
-                current_period_end=None, next_billing_at=END, cancel_at_period_end=False,
-                has_billing_key=True, **kwargs) if not kwargs else {
-                    **subscription(), **kwargs}
+    values = dict(id=1, product="bundle", plan_id="ch2_monthly", status="pending", created_at=START,
+                  current_period_end=None, next_billing_at=END, cancel_at_period_end=False,
+                  has_billing_key=True)
+    values.update(kwargs)
+    return values
 
 
 @pytest.fixture(autouse=True)
@@ -48,8 +49,10 @@ def policy(monkeypatch):
     monkeypatch.setattr(settings, "ch2_policy_start", START)
 
 
-def test_defaults_do_not_activate_policy_or_stub():
-    config = Settings(_env_file=None, CH2_ENTITLEMENT_MODE="legacy", CH2_DEPLOY_ENV="production")
+def test_defaults_do_not_activate_policy_or_stub(monkeypatch):
+    monkeypatch.delenv("CH2_ENTITLEMENT_MODE", raising=False)
+    monkeypatch.delenv("CH2_DEPLOY_ENV", raising=False)
+    config = Settings(_env_file=None)
     assert config.ch2_entitlement_mode == "legacy"
     assert config.ch2_deploy_env == "production"
 

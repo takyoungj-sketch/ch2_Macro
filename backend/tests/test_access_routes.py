@@ -60,6 +60,15 @@ def test_scheduled_subscription_has_same_keys_but_is_not_paid(monkeypatch):
     assert value["active"] is False and not any(value["entitlements"].values())
 
 
+def test_admin_subscription_metadata_keys_remain(monkeypatch):
+    from app.platform.deps import CurrentUser
+    admin = CurrentUser(7, USER.email, USER.nickname, "admin")
+    monkeypatch.setattr(billing_router, "get_web_subscription", lambda db, uid: subscription(status="active"))
+    value = billing_router.subscription_me(admin, ReadDB())
+    assert value["active"] is True and value["plan_id"] == "ch2_monthly"
+    assert value["entitlements"] == {"macro": True, "fieldnote": True}
+
+
 def test_public_status_http_and_exact_offline_boundary(monkeypatch):
     app = FastAPI()
     app.include_router(billing_router.router, prefix="/api")
