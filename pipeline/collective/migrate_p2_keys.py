@@ -155,9 +155,70 @@ def assert_rehearsal_db(conn: Connection, expected: str) -> str:
 
 def add_real_apply_args(p) -> None:
     p.add_argument("--real-apply", action="store_true",
-                   help="실제 로컬 DB 에 적용(런북 5절). --confirm-db·--sync-result 필요")
+                   help="실제 로컬 DB 에 적용(런북 5절). --confirm-db·--sync-result 필요. "
+                        "RENT-001 반영본은 --sync-mode c2-applied")
     p.add_argument("--confirm-db", action="append", default=[], help="실제 적용 대상 DB 이름을 다시 입력(대상마다 한 번)")
     p.add_argument("--sync-result", action="append", default=[], help="prod_sync_check compare --result-out 결과(통과) 파일")
+    p.add_argument("--sync-mode", default="",
+                   help="비우면 기존 통과 조건. c2-applied 는 백업 대 운영·로컬 반영본 대 백업을 다시 잰다")
+    p.add_argument("--c2-backup-snapshot", default="", help="prod_sync_check snapshot of rent_stats_pre_c2_20261120")
+    p.add_argument("--c2-ops-snapshot", default="", help="prod_sync_check snapshot of production rent_stats")
+    p.add_argument("--c2-local-snapshot", default="", help="prod_sync_check snapshot of local rent_stats")
+    p.add_argument("--c2-result-out", default="", help="c2-applied 판정 기록. 통과 입력으로 읽지 않는다")
+
+
+def enable_c2_applied(targets: list[str], confirm: list[str], report: dict) -> set[str]:
+    """RENT-001 반영본 모드. judge 결과만 받고, 통과일 때만 rent_stats 쓰기를 연다."""
+    import sys as _sys
+
+    d = str(REPO / "scripts" / "ops" / "collective_p2_verify")
+    if d not in _sys.path:
+        _sys.path.insert(0, d)
+    import rent_c2_sync as c2
+
+    try:
+        c2.accept_report(report, [t for t in targets if t], confirm)
+    except ValueError as ex:
+        raise GuardError(str(ex)) from ex
+    _REAL_ALLOWED.update(["rent_stats"])
+    return {"rent_stats"}
+
+
+def _c2_report(a, base_url: str | None) -> dict:
+    """스냅샷과 로컬 읽기로 C-2 반영본 판정을 만든다. 결과 파일은 쓰지 않는다."""
+    import sys as _sys
+
+    d = str(REPO / "scripts" / "ops" / "collective_p2_verify")
+    if d not in _sys.path:
+        _sys.path.insert(0, d)
+    import rent_c2_sync as c2
+
+    missing = [name for name, val in (
+        ("--c2-backup-snapshot", a.c2_backup_snapshot),
+        ("--c2-ops-snapshot", a.c2_ops_snapshot),
+        ("--c2-local-snapshot", a.c2_local_snapshot),
+    ) if not val]
+    if missing:
+        raise GuardError("c2-applied 에 스냅샷이 없다: " + ", ".join(missing))
+    backup = c2.load_snap(a.c2_backup_snapshot)
+    ops = c2.load_snap(a.c2_ops_snapshot)
+    local = c2.load_snap(a.c2_local_snapshot)
+    base = base_url or server_url_from_env()
+    local_eng = engine_for("rent_stats", read_only=True, base_url=base)
+    backup_eng = engine_for(c2.BACKUP_DB, read_only=True, base_url=base)
+    try:
+        with local_eng.connect() as conn:
+            measured = c2.measure(conn, units=True)
+        with backup_eng.connect() as conn:
+            ledger_backup = c2.measure(conn, units=False)
+    finally:
+        local_eng.dispose()
+        backup_eng.dispose()
+    return c2.judge(
+        backup=backup, ops=ops, local=local,
+        ledger_local=measured, ledger_backup=ledger_backup,
+        units_rows=measured.get("units_rows"), hash_present=bool(measured.get("hash_present")),
+    )
 
 
 def check_write_targets(names: list[str], a, *, base_url: str | None = None) -> None:
@@ -170,6 +231,20 @@ def check_write_targets(names: list[str], a, *, base_url: str | None = None) -> 
                 og.assert_local_target(engine_for(n, read_only=True, base_url=base_url))
             except og.TargetError as ex:
                 raise GuardError(f"실제 적용 거부: {ex}") from ex
+        mode = getattr(a, "sync_mode", "") or ""
+        if mode == "c2-applied":
+            report = _c2_report(a, base_url)
+            if getattr(a, "c2_result_out", ""):
+                import sys as _sys
+                d = str(REPO / "scripts" / "ops" / "collective_p2_verify")
+                if d not in _sys.path:
+                    _sys.path.insert(0, d)
+                import rent_c2_sync as c2
+                c2.write_report(Path(a.c2_result_out), report)
+            enable_c2_applied(names, a.confirm_db, report)
+            return
+        if mode:
+            raise GuardError(f"알 수 없는 --sync-mode: {mode}")
         enable_real_apply(names, a.confirm_db, [Path(x) for x in a.sync_result])
         return
     for n in names:
