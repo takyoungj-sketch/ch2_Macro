@@ -143,7 +143,15 @@ def _kakao_client_id() -> str:
 
 
 def _finish_web_or_app_login(*, user_id: int, email: str, nickname: str, role: str, state: str) -> Response:
-    jwt_token = create_access_token(user_id=user_id, email=email, nickname=nickname, role=role)
+    # role is returned from the users row by _get_or_create_oauth_user at callback time.
+    # Never accept a role or lifetime requested through OAuth state/query/profile.
+    expire_minutes = None
+    if (state or "").startswith("app:") and role != "admin":
+        expire_minutes = settings.fieldnote_app_token_expire_days * 24 * 60
+    jwt_token = create_access_token(
+        user_id=user_id, email=email, nickname=nickname, role=role,
+        expire_minutes=expire_minutes,
+    )
     if (state or "").startswith("app:"):
         app_redirect = state[4:]
         sep = "&" if "?" in app_redirect else "?"
