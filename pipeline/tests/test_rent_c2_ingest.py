@@ -219,6 +219,47 @@ def test_split_lot_pending_only_for_new_rows_and_rerun_is_zero(fixture_db):
     assert loaded[(BASE, "1111010100", "12")][1] == "pending"
 
 
+def test_mixed_batch_pending_only_for_the_new_lot(fixture_db):
+    """한 배치에 이미 있는 거래와 새 거래가 같이 있으면 pending은 새 본번만."""
+    base = "c" * 64
+    raw = "apartment|서울|강남|역삼|name:다른"
+    units = {
+        (base, "1111010100", "10"): (0, "split"),
+        (base, "1111010100", "11"): (1, "split"),
+    }
+    engine = _engine(fixture_db, write=True)
+    with engine.begin() as conn:
+        conn.execute(text(
+            """
+            INSERT INTO rent_building_key_c2_units
+                (base_key, asset_type, beopjungri_code, main_lot, part, decision,
+                 evidence, source, collective_sha256)
+            VALUES
+                (:base, 'apartment', '1111010100', '10', 0, 'split', '', 'test', :sha),
+                (:base, 'apartment', '1111010100', '11', 1, 'split', '', 'test', :sha);
+            INSERT INTO rent_transactions
+                (transaction_hash, asset_type, building_key, beopjungri_code, lot_number,
+                 is_valid, needs_review)
+            VALUES (:old_hash, 'apartment', :base, '1111010100', '12', true, false);
+            """
+        ), {"base": base, "sha": "d" * 64, "old_hash": "d" * 64})
+    frame = _frame(["12", "13"], ["d" * 64, "e" * 64])
+    frame["building_key"] = base
+    assigned = apply_rent_c2_assignment(frame, "apartment", units=units, raw_of={base: raw})
+    wrote = molit.commit_rent_batch(engine, assigned, assigned.attrs["rent_c2_pending"])
+    with engine.connect() as conn:
+        lots = [str(row[0]).strip() for row in conn.execute(text(
+            """
+            SELECT main_lot FROM rent_building_key_c2_units
+            WHERE base_key = :base AND decision = 'pending'
+            ORDER BY main_lot
+            """
+        ), {"base": base})]
+    engine.dispose()
+    assert wrote == {"inserted": 1, "pending": 1}
+    assert lots == ["13"]
+
+
 def test_writable_collective_reader_is_refused(fixture_db):
     engine = _engine(fixture_db, write=True)
     with engine.connect() as conn:
