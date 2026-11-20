@@ -176,9 +176,10 @@ def test_fieldnote_bundle_photo_settlement_and_failure(ledger, monkeypatch):
     from types import SimpleNamespace
     from app.platform import fieldnote_ai_router as route
     from app.config import settings
+    from app.platform.fieldnote_ai_access import FieldnoteAiAccess
     monkeypatch.setattr(settings,"ai_subscription_quota_enabled",True)
     monkeypatch.setattr(settings,"openai_api_key","not-a-real-key")
-    monkeypatch.setattr(route,"_is_fieldnote_premium",lambda *_:True)
+    monkeypatch.setattr(route,"resolve_fieldnote_ai_access",lambda *_args, **_kwargs: FieldnoteAiAccess("paid", ledger[1].start, ledger[1].end, None))
     monkeypatch.setattr(q,"grant_for",lambda *_:ledger[1])
     replies=[{"model":"gpt-5-mini","usage":{"prompt_tokens":100,"completion_tokens":30},
               "choices":[{"message":{"content":"{\"primary_name\":\"tree\"}"},"finish_reason":"stop"}]}]
@@ -213,6 +214,7 @@ def test_fieldnote_bundle_photo_settlement_and_failure(ledger, monkeypatch):
     asyncio.run(route._proxy_openai(body,"device",db,kind="long",user=user,feature="text_writing"))
     assert q.snapshot(*ledger)["items"][2]["used"]==1
     # Old released apps have no request_id; still count server-side image units.
+    replies[0]={"model":"gpt-5-mini","choices":[{"message":{"content":"{\"primary_name\":\"tree\"}"},"finish_reason":"stop"}],"usage":{}}
     legacy = AiProxyRequest(messages=[{"role":"user","content":[image()]}])
     asyncio.run(route._proxy_openai(legacy,"device",db,kind="short",user=user))
     assert q.snapshot(*ledger)["items"][1]["used"]==3

@@ -1,4 +1,7 @@
-"""FieldNote AI 프록시 — OpenAI 키 서버 보관 + device quota (short/long/sheet)."""
+"""FieldNote AI 프록시 — 계정 접근과 OpenAI 호출.
+
+기기 ID 헤더는 받아 두기만 하고 한도 판정에 쓰지 않는다.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +12,7 @@ from contextlib import nullcontext
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -17,7 +20,15 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user
-from app.platform.entitlements import list_entitlements
+from app.platform.fieldnote_ai_access import (
+    daily_dollar_exceeds,
+    fieldnote_usage,
+    monthly_limit,
+    raise_fieldnote_deny,
+    reserve_daily_call,
+    resolve_fieldnote_ai_access,
+    warn_daily_cap,
+)
 
 router = APIRouter(prefix="/fieldnote/ai", tags=["fieldnote-ai"])
 _log = logging.getLogger(__name__)
@@ -29,13 +40,15 @@ _kind_columns_ready = False
 @router.get("/allowance")
 def fieldnote_allowance(db: Session = Depends(get_platform_db),
                         user: CurrentUser | None = Depends(get_optional_user)):
+    access = resolve_fieldnote_ai_access(db, user)
+    if access.deny_code:
+        raise_fieldnote_deny(access.deny_code)
     from app.ai import allowances as quota
-    if not settings.ai_subscription_quota_enabled or user is None:
-        return {"mode": "legacy", "items": []}
-    if user.role == "admin":
-        return {"mode": "staff", "items": []}
-    grant = quota.grant_for(db, user)
-    return quota.snapshot(db.get_bind(), grant) if grant else {"mode": "legacy", "items": []}
+    if access.tier == "paid":
+        grant = quota.grant_for(db, user)
+        if grant is not None and grant.plan == "bundle":
+            return quota.snapshot(db.get_bind(), grant)
+    return fieldnote_usage(db.get_bind(), user.id, access)
 
 
 def _uses_completion_tokens(model: str) -> bool:
@@ -46,10 +59,19 @@ def _uses_completion_tokens(model: str) -> bool:
 class AiProxyRequest(BaseModel):
     request_id: str | None = None
     model: str | None = None
-    messages: list[dict]
+    messages: list[dict] | None = None
     temperature: float = 0.15
     max_tokens: int = 900
     response_format: dict | None = None
+    format: int | None = None
+    mode: str | None = None
+    photos: list | None = None
+    note: str | None = None
+    ocr_hints: list | str | None = None
+    images: list | None = None
+    hint: str | None = None
+    kind: str | None = None
+    source_text: str | None = None
 
 
 def _usage_month() -> str:
@@ -172,6 +194,7 @@ def _refund_legacy_quota(db: Session, device_id: str, kind: str, month: str):
 @router.post("/vision")
 async def ai_vision(
     body: AiProxyRequest,
+    request: Request,
     db: Session = Depends(get_platform_db),
     user: CurrentUser | None = Depends(get_optional_user),
     x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
@@ -180,12 +203,13 @@ async def ai_vision(
     kind = _normalize_kind(x_ai_kind, endpoint_default="short")
     if kind == "sheet":
         kind = "short"
-    return await _proxy_openai(body, x_device_id, db, kind=kind, user=user, feature="photo_analysis_image")
+    return await _proxy_openai(body, x_device_id, db, kind=kind, user=user, feature="photo_analysis_image", request=request)
 
 
 @router.post("/sheet")
 async def ai_sheet(
     body: AiProxyRequest,
+    request: Request,
     db: Session = Depends(get_platform_db),
     user: CurrentUser | None = Depends(get_optional_user),
     x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
@@ -199,14 +223,15 @@ async def ai_sheet(
         max_tokens_default=3500,
         user=user,
         feature="address_sheet_job",
+        request=request,
     )
 
 
 @router.post("/write")
-async def ai_write(body: AiProxyRequest, db: Session = Depends(get_platform_db),
+async def ai_write(body: AiProxyRequest, request: Request, db: Session = Depends(get_platform_db),
                    user: CurrentUser | None = Depends(get_optional_user),
                    x_device_id: str | None = Header(default=None, alias="X-Device-Id")):
-    return await _proxy_openai(body, x_device_id, db, kind="long", user=user, feature="text_writing")
+    return await _proxy_openai(body, x_device_id, db, kind="long", user=user, feature="text_writing", request=request)
 
 
 def validated_input(body, feature):
@@ -250,15 +275,11 @@ def validated_input(body, feature):
     return len(seen) if feature == "photo_analysis_image" else 1
 
 
-def _is_fieldnote_premium(db: Session, user: CurrentUser | None) -> bool:
-    if user is None:
-        return False
-    try:
-        ent = list_entitlements(db, user.id)
-        return bool(ent.get("fieldnote"))
-    except Exception:
-        _log.exception("entitlement check failed user_id=%s", getattr(user, "id", None))
-        return False
+def _usage_body(engine, grant, access):
+    from app.ai import allowances as quota
+    if access.tier == "paid" and getattr(grant, "plan", None) == "bundle":
+        return quota.snapshot(engine, grant)
+    return fieldnote_usage(engine, grant.user_id, access)
 
 
 async def _proxy_openai(
@@ -270,56 +291,65 @@ async def _proxy_openai(
     max_tokens_default: int = 900,
     user: CurrentUser | None = None,
     feature: str = "photo_analysis_image",
+    request: Request | None = None,
 ):
+    del device_id  # 헤더는 유지한다. 한도와 프롬프트는 계정을 본다.
+    access = resolve_fieldnote_ai_access(db, user)
+    if access.deny_code:
+        raise_fieldnote_deny(access.deny_code)
+    from app.platform.fieldnote_ai_prompts import prepare_fieldnote_call
+    prepared = prepare_fieldnote_call(body, feature, kind)
     if not settings.openai_api_key:
         raise HTTPException(503, "OpenAI API 미설정")
-    did = (device_id or "").strip()
-    if not did:
-        raise HTTPException(401, detail={"code": "device_required", "message": "X-Device-Id 헤더가 필요합니다."})
-    if len(did) > 128:
-        raise HTTPException(400, detail={"code": "device_invalid", "message": "X-Device-Id가 올바르지 않습니다."})
     from app.ai import allowances as quota
-    units = validated_input(body, feature)
-    premium = _is_fieldnote_premium(db, user)
-    ticket = None
-    if settings.ai_subscription_quota_enabled and user is not None and user.role != "admin":
+    units = prepared.units
+    if access.tier == "admin":
+        grant = quota.Grant(user.id, "admin", access.period_start, access.period_end)
+    else:
         grant = quota.grant_for(db, user)
-        if grant:
-            if not premium:
-                raise HTTPException(403, "Fieldnote 구독이 필요합니다.")
-            ticket = quota.reserve(db.get_bind(), grant, feature, units, body.request_id or f"legacy-{uuid.uuid4()}",
-                quota.fingerprint({"messages": body.messages, "feature": feature, "response_format": body.response_format,
-                                   "max_tokens": body.max_tokens, "temperature": body.temperature}))
-            if ticket.replay is not None:
-                return {**ticket.replay, "ch2_usage": quota.snapshot(db.get_bind(), grant)}
-    legacy_month = None
-    if ticket is None and not (settings.ai_subscription_quota_enabled and user is not None and user.role == "admin"):
-        if feature == "text_writing":
-            raise HTTPException(403, "문구 작성은 동시 구독 AI 정책 활성화 후 이용할 수 있습니다.")
-        legacy_month = _check_and_increment_quota(db, did, kind, premium=premium)
-    # VPS OPENAI_MODEL이 우선 — 앱 body.model이 예전 gpt-4o로 고정돼 있어도 서버 업그레이드가 적용됨
-    model = (settings.openai_model or body.model or "gpt-5-mini").strip()
-    requested_tokens = min(max(1, int(body.max_tokens or max_tokens_default)), settings.ai_max_output_tokens)
-    payload: dict = {
-        "model": model,
-        "messages": body.messages,
-    }
-    if feature == "text_writing":
-        payload["messages"] = [{"role": "system", "content":
-            "사용자가 제공한 현장 메모를 이해하기 쉬운 한국어 조사 문구로 정리합니다. "
-            "제공되지 않은 사실·수치·가격 판단을 추가하지 않습니다. 정리된 문구만 답하세요."}, *body.messages]
-    # gpt-5 / o-series: max_tokens 미지원 → max_completion_tokens (+ reasoning 여유)
+        if grant is None:
+            raise_fieldnote_deny("subscription_required")
+    ticket = quota.reserve(
+        db.get_bind(),
+        grant,
+        feature,
+        units,
+        body.request_id or f"legacy-{uuid.uuid4()}",
+        quota.fingerprint({"messages": prepared.messages, "feature": feature}),
+        limit=monthly_limit(feature, access.tier),
+    )
+    if ticket.replay is not None:
+        return {**ticket.replay, "ch2_usage": _usage_body(db.get_bind(), grant, access)}
+    model = prepared.model
+    payload: dict = {"model": model, "messages": prepared.messages}
+    if prepared.response_format:
+        payload["response_format"] = prepared.response_format
     if _uses_completion_tokens(model):
-        payload["max_completion_tokens"] = min(max(requested_tokens, 4000), settings.ai_max_output_tokens)
+        payload["max_completion_tokens"] = prepared.max_tokens
         payload["reasoning_effort"] = "low"
     else:
-        payload["temperature"] = body.temperature
-        payload["max_tokens"] = requested_tokens
-    if body.response_format:
-        payload["response_format"] = body.response_format
+        payload["temperature"] = prepared.temperature
+        payload["max_tokens"] = prepared.max_tokens
+    del max_tokens_default
     provider_recorded = False
+    attempted = False
+    global_ticket = None
     try:
+        if request is not None:
+            from app.ai.rate_limit import check_fieldnote_ai_rate_limit
+            check_fieldnote_ai_rate_limit(request, user.id)
+        try:
+            global_ticket = reserve_daily_call(db.get_bind(), ticket.id)
+        except HTTPException as exc:
+            if isinstance(exc.detail, dict) and exc.detail.get("code") == "quota_exceeded":
+                warn_daily_cap()
+                raise_fieldnote_deny("daily_cap")
+            raise
+        if daily_dollar_exceeds(db.get_bind(), global_ticket.grant):
+            warn_daily_cap()
+            raise_fieldnote_deny("daily_cap")
         with quota.tracking(ticket) if ticket else nullcontext():
+            attempted = True
             async with httpx.AsyncClient(timeout=120.0) as client:
                 res = await client.post(
                     OPENAI_CHAT_URL,
@@ -344,7 +374,7 @@ async def _proxy_openai(
             content = ((data.get("choices") or [{}])[0].get("message") or {}).get("content")
             if not content or (data.get("choices") or [{}])[0].get("finish_reason") == "length":
                 raise HTTPException(502, "AI 답변이 완료되지 않았습니다. 다시 시도해 주세요.")
-            if feature == "address_sheet_job" or (body.response_format and body.response_format.get("type") == "json_object"):
+            if feature == "address_sheet_job" or (prepared.response_format and prepared.response_format.get("type") == "json_object"):
                 try:
                     parsed = json.loads(content)
                     if not isinstance(parsed, dict):
@@ -357,17 +387,16 @@ async def _proxy_openai(
                             raise ValueError()
                 except (ValueError, TypeError):
                     raise HTTPException(502, "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요.")
-            if ticket:
-                quota.finish(ticket, data)
-                data["ch2_usage"] = quota.snapshot(db.get_bind(), ticket.grant)
-                data["ch2_request_id"] = ticket.id
+            quota.finish(ticket, data)
+            quota.finish(global_ticket, {"ok": True})
+            data["ch2_usage"] = _usage_body(db.get_bind(), ticket.grant, access)
+            data["ch2_request_id"] = ticket.id
             return data
     except BaseException:
-        if ticket:
-            if not provider_recorded:
-                with quota.tracking(ticket):
-                    quota.record_provider_failure(model)
-            quota.finish(ticket, error="fieldnote_failed")
-        elif legacy_month:
-            _refund_legacy_quota(db, did, kind, legacy_month)
+        if attempted and not provider_recorded:
+            with quota.tracking(ticket):
+                quota.record_provider_failure(model)
+        quota.finish(ticket, error="fieldnote_failed")
+        if global_ticket is not None:
+            quota.finish(global_ticket, error="fieldnote_failed")
         raise

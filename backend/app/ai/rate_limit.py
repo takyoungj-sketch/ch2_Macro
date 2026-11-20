@@ -95,6 +95,33 @@ def _client_key(request: Request) -> str:
     return f"ip:{peer or 'unknown'}"
 
 
+def fieldnote_client_ip(request: Request) -> str:
+    """신뢰 프록시의 X-Real-IP만 쓴다. 클라이언트의 X-Forwarded-For는 보지 않는다."""
+    peer = request.client.host if request.client else ""
+    if peer and peer in _trusted_proxies():
+        real = (request.headers.get("x-real-ip") or "").strip()
+        if real and _valid_ip(real):
+            return real
+    return peer or "unknown"
+
+
+def check_fieldnote_ai_rate_limit(request: Request, user_id: int, now: float | None = None) -> None:
+    """계정과 IP를 각각 분·시간 창으로 센다. 기존 Macro 제한 함수는 바꾸지 않는다."""
+    from app.platform.fieldnote_ai_access import raise_fieldnote_deny
+
+    moment = time.time() if now is None else now
+    ip = fieldnote_client_ip(request)
+    checks = (
+        (f"fn-user:{user_id}:m", 60.0, settings.fieldnote_ai_account_per_minute),
+        (f"fn-user:{user_id}:h", 3600.0, settings.fieldnote_ai_account_per_hour),
+        (f"fn-ip:{ip}:m", 60.0, settings.fieldnote_ai_ip_per_minute),
+        (f"fn-ip:{ip}:h", 3600.0, settings.fieldnote_ai_ip_per_hour),
+    )
+    for key, window, limit in checks:
+        if not _store.hit(key, moment, window, max(1, int(limit))):
+            raise_fieldnote_deny("rate_limited")
+
+
 def check_ai_rate_limit(request: Request) -> None:
     """분당 요청 상한 초과 시 429."""
     limit = _limit_per_minute()
