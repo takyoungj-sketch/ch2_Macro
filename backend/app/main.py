@@ -114,6 +114,7 @@ async def _api_token_guard(request: Request, call_next):
             or path.startswith("/api/billing/")
             or path.startswith("/api/ops/")
             or path.startswith("/api/platform/fieldnote/ai/")
+            or path == "/api/platform/fieldnote/app-config"
         )
         if not platform_open:
             # nginx가 /api/ 프록시 시 X-CH2-Proxy-Token 을 주입(클라이언트 헤더 덮어씀).
@@ -205,6 +206,10 @@ if settings.ai2_lab_enabled:
     _LOG.info("AI2 랩 API 활성(관리자): /api/lab/ai2/*")
 _LOG.info("대장DB 조회 API 활성(관리자·로컬): /api/admin/parcel/status")
 _LOG.info("토지 쌍둥이 실험 API 활성(관리자): /api/admin/land-twin")
+
+from app.platform.fieldnote_app_router import router as platform_fieldnote_app_router
+
+app.include_router(platform_fieldnote_app_router, prefix="/api/platform")
 
 if (settings.platform_database_url or "").strip():
     from app.platform.auth_router import router as platform_auth_router
