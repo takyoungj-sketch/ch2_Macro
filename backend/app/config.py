@@ -1,6 +1,6 @@
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -46,12 +46,6 @@ class Settings(BaseSettings):
     secret_key: str = "change_me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-    #: FN-008: 일반 사용자 앱 로그인만 임시 7일. 관리자·웹은 기존 수명 유지.
-    fieldnote_app_token_expire_days: int = Field(default=7, gt=0, validation_alias="FIELDNOTE_APP_TOKEN_EXPIRE_DAYS")
-    fieldnote_app_min_version_code: int = Field(default=0, ge=0, validation_alias="FIELDNOTE_APP_MIN_VERSION_CODE")
-    fieldnote_app_latest_version_code: int = Field(default=0, ge=0, validation_alias="FIELDNOTE_APP_LATEST_VERSION_CODE")
-    fieldnote_app_update_message: str = Field(default="", validation_alias="FIELDNOTE_APP_UPDATE_MESSAGE")
-    fieldnote_app_blocked_features: str = Field(default="", validation_alias="FIELDNOTE_APP_BLOCKED_FEATURES")
     cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://localhost:5178,http://127.0.0.1:5173,http://127.0.0.1:5176,http://127.0.0.1:5177,http://127.0.0.1:5178"
     #: 필터 분석 percentile 정렬용 work_mem(MB). 너무 작으면 디스크 스필로 매우 느려질 수 있음.
     paid_analyze_work_mem_mb: int = 192
@@ -201,9 +195,6 @@ class Settings(BaseSettings):
     toss_webhook_secret: str = Field(default="", validation_alias="TOSS_WEBHOOK_SECRET")
     #: True 이면 Play purchase_token 을 Google API 없이 entitlement 부여 (로컬 테스트 전용)
     play_billing_allow_stub: bool = Field(default=False, validation_alias="PLAY_BILLING_ALLOW_STUB")
-    ch2_policy_start: Optional[datetime] = Field(default=None, validation_alias="CH2_POLICY_START")
-    ch2_entitlement_mode: Literal["legacy", "v2"] = Field(default="legacy", validation_alias="CH2_ENTITLEMENT_MODE")
-    ch2_deploy_env: Literal["production", "local", "test"] = Field(default="production", validation_alias="CH2_DEPLOY_ENV")
 
     @property
     def cors_origins_list(self) -> list[str]:
