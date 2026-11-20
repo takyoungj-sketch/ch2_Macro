@@ -21,6 +21,7 @@ from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user
 from app.platform.fieldnote_ai_access import (
+    FEATURES,
     daily_dollar_exceeds,
     fieldnote_usage,
     monthly_limit,
@@ -47,7 +48,7 @@ def fieldnote_allowance(db: Session = Depends(get_platform_db),
     if access.tier == "paid":
         grant = quota.grant_for(db, user)
         if grant is not None and grant.plan == "bundle":
-            return quota.snapshot(db.get_bind(), grant)
+            return _fieldnote_snapshot(db.get_bind(), grant, access)
     return fieldnote_usage(db.get_bind(), user.id, access)
 
 
@@ -275,10 +276,20 @@ def validated_input(body, feature):
     return len(seen) if feature == "photo_analysis_image" else 1
 
 
+def _fieldnote_snapshot(engine, grant, access):
+    from app.ai import allowances as quota
+
+    # Keep the bundle response (including Macro's item); only FieldNote limits
+    # come from the same tier settings used by reserve(..., limit=...).
+    limits = {**quota.LIMITS[grant.plan],
+              **{feature: monthly_limit(feature, access.tier) for feature, _ in FEATURES}}
+    return quota.snapshot(engine, grant, limits=limits)
+
+
 def _usage_body(engine, grant, access):
     from app.ai import allowances as quota
     if access.tier == "paid" and getattr(grant, "plan", None) == "bundle":
-        return quota.snapshot(engine, grant)
+        return _fieldnote_snapshot(engine, grant, access)
     return fieldnote_usage(engine, grant.user_id, access)
 
 

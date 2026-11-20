@@ -100,6 +100,19 @@ def warn_limit_invariant() -> None:
 def resolve_fieldnote_ai_access(db, user, now: datetime | None = None) -> FieldnoteAiAccess:
     """익명은 설정이 0보다 커도 기기 한도로 되돌리지 않는다."""
     now = now or datetime.now(timezone.utc)
+    from app.platform.access import policy_config, resolve_access
+
+    if policy_config()[0] == "v2":
+        access = resolve_access(db, user, now)
+        if access.state == "anonymous":
+            return FieldnoteAiAccess("none", None, None, "login_required")
+        if access.state == "admin":
+            start, end = calendar_month(now)
+            return FieldnoteAiAccess("admin", start, end, None)
+        if access.state in {"trial", "paid"}:
+            return FieldnoteAiAccess(access.state, access.period_start, access.period_end, None)
+        return FieldnoteAiAccess("expired", None, None, access.rejection_code)
+    # Preserve FN-001's deployed legacy eligibility and grant window exactly.
     if user is None:
         return FieldnoteAiAccess("none", None, None, "login_required")
     if getattr(user, "role", None) == "admin":
