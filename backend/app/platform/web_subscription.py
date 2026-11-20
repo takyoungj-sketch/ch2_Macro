@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -111,13 +112,15 @@ def ensure_toss_customer_key(db: Session, user_id: int) -> str:
 
 
 def expire_other_web_subs(db: Session, user_id: int, keep_id: int) -> None:
+    """빌링키가 없는 준비 행(R1)만 닫는다. 키 있는 행과 past_due는 남긴다."""
     db.execute(
         text(
             """
             UPDATE subscriptions
             SET status = 'expired', updated_at = now()
             WHERE user_id = :uid AND source = 'web_toss' AND id <> :keep
-              AND status IN ('active', 'pending', 'past_due')
+              AND status = 'pending'
+              AND (toss_billing_key IS NULL OR toss_billing_key = '')
             """
         ),
         {"uid": user_id, "keep": keep_id},
@@ -211,6 +214,24 @@ def activate_with_billing_key(
     if not billing_key:
         raise ValueError("billing_key_missing")
     due = trial_end if now < trial_end else now
+    db.execute(text("SELECT 1 FROM users WHERE id = :uid FOR UPDATE"), {"uid": user_id})
+    open_row = db.execute(
+        text(
+            """
+            SELECT id FROM subscriptions
+            WHERE user_id = :uid AND id <> :sid AND source = 'web_toss'
+              AND (
+                status = 'active'
+                OR (status = 'pending' AND toss_billing_key IS NOT NULL AND toss_billing_key <> '')
+              )
+            LIMIT 1
+            """
+        ),
+        {"uid": user_id, "sid": int(row["id"])},
+    ).first()
+    if open_row:
+        db.rollback()
+        raise ValueError("already_subscribed")
     saved = db.execute(
         text(
             """
@@ -218,15 +239,6 @@ def activate_with_billing_key(
             SET toss_billing_key = :bk, next_billing_at = :due, updated_at = now()
             WHERE id = :sid AND user_id = :uid AND source = 'web_toss' AND status = 'pending'
               AND (toss_billing_key IS NULL OR toss_billing_key = '')
-              AND NOT EXISTS (
-                SELECT 1 FROM subscriptions o
-                WHERE o.user_id = :uid AND o.id <> :sid AND o.source = 'web_toss'
-                  AND o.cancel_at_period_end = FALSE
-                  AND (
-                    (o.status = 'pending' AND o.toss_billing_key IS NOT NULL AND o.toss_billing_key <> '')
-                    OR o.status = 'active'
-                  )
-              )
             """
         ),
         {"bk": billing_key, "due": due, "sid": int(row["id"]), "uid": user_id},
@@ -320,14 +332,15 @@ def renew_due_subscriptions(db: Session, *, now: datetime | None = None) -> int:
 
 
 def _process_due(db: Session, sub_id: int, now: datetime) -> str:
-    if not _try_lock(db, sub_id):
+    lock = _acquire_billing_lock(_engine_of(db), sub_id)
+    if lock is None:
         return "skipped"
-    locked = True
     try:
-        row = _reread(db, sub_id)
+        loaded = _reread(db, sub_id)
         db.rollback()
-        if row is None or not _still_due(row, now):
+        if loaded is None or not _still_due(loaded, now):
             return "skipped"
+        row = dict(loaded)
         plan_id = str(row["plan_id"] or "")
         if plan_id != PLAN_ID:
             _log.warning("renew skip sub_id=%s unknown plan_id=%s", sub_id, plan_id)
@@ -372,19 +385,14 @@ def _process_due(db: Session, sub_id: int, now: datetime) -> str:
             return "unknown"
         charged = interpret_lookup(payment=payment)
         if charged == "approved":
-            fresh = _reread(db, sub_id)
-            db.rollback()
-            if fresh is None:
-                return "unknown"
-            return "approved" if _grant(db, fresh, order_id) else "unknown"
+            return "approved" if _grant(db, row, order_id) else "unknown"
         if charged == "declined":
             _mark_past_due(db, row)
             return "declined"
         _warn_if_stale(sub_id, order_id, due, now)
         return "unknown"
     finally:
-        if locked:
-            _unlock(db, sub_id)
+        _release_billing_lock(lock, sub_id)
 
 
 def _lookup(order_id: str) -> tuple[str, dict | None]:
@@ -422,21 +430,33 @@ def _reread(db: Session, sub_id: int):
     ).mappings().first()
 
 
-def _try_lock(db: Session, sub_id: int) -> bool:
-    locked = db.execute(
+def _engine_of(db: Session) -> Engine:
+    bind = db.get_bind()
+    return bind if isinstance(bind, Engine) else bind.engine
+
+
+def _acquire_billing_lock(engine: Engine, sub_id: int):
+    """잠금만 하는 연결을 풀에 돌려주지 않고 보유한다. 다른 쿼리는 하지 않는다."""
+    conn = engine.connect()
+    conn.execution_options(isolation_level="AUTOCOMMIT")
+    locked = conn.execute(
         text("SELECT pg_try_advisory_lock(:ns, CAST(:sid AS integer))"),
-        {"ns": ADVISORY_NS, "sid": sub_id},
+        {"ns": ADVISORY_NS, "sid": int(sub_id)},
     ).scalar()
-    db.commit()
-    return bool(locked)
+    if not locked:
+        conn.close()
+        return None
+    return conn
 
 
-def _unlock(db: Session, sub_id: int) -> None:
-    db.execute(
-        text("SELECT pg_advisory_unlock(:ns, CAST(:sid AS integer))"),
-        {"ns": ADVISORY_NS, "sid": sub_id},
-    )
-    db.commit()
+def _release_billing_lock(conn, sub_id: int) -> None:
+    try:
+        conn.execute(
+            text("SELECT pg_advisory_unlock(:ns, CAST(:sid AS integer))"),
+            {"ns": ADVISORY_NS, "sid": int(sub_id)},
+        )
+    finally:
+        conn.close()
 
 
 def _grant(db: Session, row, order_id: str) -> bool:
@@ -467,7 +487,7 @@ def _grant(db: Session, row, order_id: str) -> bool:
         )
         if updated.rowcount != 1:
             db.rollback()
-            _log.warning("billing grant skipped sub_id=%s row changed", row["id"])
+            _log.info("billing grant skipped sub_id=%s already applied", row["id"])
             return False
         sub_id = int(row["id"])
         user_id = int(row["user_id"])

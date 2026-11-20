@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
 import time
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -15,6 +17,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import TimeoutError as PoolTimeout
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
@@ -90,17 +93,12 @@ def test_prepare_rejects_an_open_subscription(monkeypatch):
 
 
 def _local_platform_url():
-    env_path = Path(r"D:\ch2\ch2_Macro\backend\.env")
-    if not env_path.is_file():
-        pytest.skip("로컬 DB 접속 파일이 없다")
-    from dotenv import dotenv_values
-
-    raw = str(dotenv_values(env_path).get("DATABASE_URL_PLATFORM") or "")
+    raw = os.environ.get("CH2_TEST_PG_URL", "").strip()
     if not raw:
-        pytest.skip("로컬 플랫폼 DB 주소가 없다")
+        pytest.skip("CH2_TEST_PG_URL 없음")
     url = make_url(raw)
-    if (url.host or "").lower() not in {"localhost", "127.0.0.1", "::1"}:
-        pytest.skip("플랫폼 DB가 루프백이 아니다")
+    if (url.host or "").lower() not in {"localhost", "127.0.0.1"}:
+        pytest.skip("시험 DB 호스트가 로컬이 아님")
     if url.drivername == "postgresql":
         url = url.set(drivername="postgresql+psycopg2")
     return url
@@ -109,13 +107,13 @@ def _local_platform_url():
 @pytest.fixture(scope="module")
 def platform():
     url = _local_platform_url()
-    name = "ch2_fn006_billing"
+    name = f"ch2_fn006_{uuid.uuid4().hex}"
     admin = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT", pool_pre_ping=True)
     try:
         with admin.connect() as conn:
-            conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
             conn.execute(text(f'CREATE DATABASE "{name}"'))
     except Exception as exc:  # noqa: BLE001
+        admin.dispose()
         pytest.skip(type(exc).__name__)
     target = url.set(database=name)
     engine = create_engine(target, pool_pre_ping=True)
@@ -539,3 +537,120 @@ def test_cancel_during_charge_does_not_wait_and_keeps_the_flag(db, platform, tmp
     row = _row(db, sub_id)
     assert row["status"] == "active" and row["cancel_at_period_end"] is True
     assert row["current_period_end"] is not None
+
+
+def test_pool_size_one_cannot_take_the_same_lock(platform):
+    engine = create_engine(platform["dsn"], pool_size=1, max_overflow=0, pool_timeout=1)
+    held = ws._acquire_billing_lock(engine, 900001)
+    assert held is not None
+    try:
+        with pytest.raises(PoolTimeout):
+            ws._acquire_billing_lock(engine, 900001)
+    finally:
+        ws._release_billing_lock(held, 900001)
+    again = ws._acquire_billing_lock(engine, 900001)
+    assert again is not None
+    ws._release_billing_lock(again, 900001)
+    engine.dispose()
+
+
+def test_late_approval_extends_the_original_period_once(db, platform, monkeypatch):
+    user_id = _user(db)
+    sub_id = _sub(db, user_id, ext="late-row")
+    db.commit()
+    expected = next_period_end(anchor({"created_at": START}, END), END)
+
+    def charge(billing_key, **kwargs):
+        other = sessionmaker(bind=platform["engine"])()
+        try:
+            snap = dict(ws._reread(other, sub_id))
+            other.rollback()
+            assert ws._grant(other, snap, kwargs["order_id"]) is True
+        finally:
+            other.close()
+        return {"status": "DONE", "totalAmount": 10000}
+
+    _patch(monkeypatch, _not_found, charge)
+    assert ws.renew_due_subscriptions(db, now=NOW) == 0
+    row = _row(db, sub_id)
+    assert row["status"] == "active"
+    assert row["current_period_end"] == expected
+    assert row["external_id"] == ws.order_id_for(sub_id, DUE)
+
+
+def test_same_order_done_twice_extends_once(db, monkeypatch):
+    _patch(monkeypatch, _done, lambda billing_key, **k: pytest.fail("lookup done must not charge"))
+    user_id = _user(db)
+    sub_id = _sub(db, user_id, ext="done-twice")
+    db.commit()
+    assert ws.renew_due_subscriptions(db, now=NOW) == 1
+    end = _row(db, sub_id)["current_period_end"]
+    assert ws.renew_due_subscriptions(db, now=NOW) == 0
+    assert _row(db, sub_id)["current_period_end"] == end
+
+
+def test_concurrent_activation_keeps_one_order(db, platform, monkeypatch):
+    issued = {"n": 0}
+    gate = threading.Lock()
+
+    def issue(*args, **kwargs):
+        with gate:
+            issued["n"] += 1
+            return {"billingKey": f"issued-{issued['n']}"}
+
+    monkeypatch.setattr(ws, "issue_billing_key", issue)
+    user_id = _user(db)
+    db.commit()
+    _, first = ws.create_billing_pending(db, user_id=user_id, plan_id="ch2_monthly", product="bundle")
+    _, second = ws.create_billing_pending(db, user_id=user_id, plan_id="ch2_monthly", product="bundle")
+    barrier = threading.Barrier(2)
+    results = []
+
+    def activate(external_id):
+        session = sessionmaker(bind=platform["engine"])()
+        try:
+            barrier.wait(timeout=5)
+            results.append(ws.activate_with_billing_key(
+                session, user_id=user_id, pending_external_id=external_id, auth_key="auth-key-test",
+                customer_key="customer-key-test-value", amount=10000, order_name="CH2 월 구독",
+                user_email=None, now=START + timedelta(days=1),
+            ))
+        except ValueError as exc:
+            results.append(str(exc))
+        finally:
+            session.close()
+
+    workers = [threading.Thread(target=activate, args=(ext,)) for ext in (first, second)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join(timeout=15)
+    assert sorted(
+        item if isinstance(item, str) else item["outcome"] for item in results
+    ) == ["already_subscribed", "scheduled"]
+    charged = []
+    _patch(monkeypatch, _not_found, lambda billing_key, **k: charged.append(k["order_id"]) or {"status": "DONE", "totalAmount": 10000})
+    assert ws.renew_due_subscriptions(db, now=END) == 1
+    assert len(charged) == 1
+
+
+def test_unknown_row_blocks_a_second_registration(db, monkeypatch):
+    monkeypatch.setattr(ws, "issue_billing_key", lambda *a, **k: {"billingKey": "not-stored"})
+    user_id = _user(db)
+    unknown_id = _sub(db, user_id, ext="unknown-open", key="kept-key")
+    db.commit()
+    _, external_id = ws.create_billing_pending(db, user_id=user_id, plan_id="ch2_monthly", product="bundle")
+    with pytest.raises(ValueError, match="already_subscribed"):
+        ws.activate_with_billing_key(
+            db, user_id=user_id, pending_external_id=external_id, auth_key="auth-key-test",
+            customer_key="customer-key-test-value", amount=10000, order_name="CH2 월 구독",
+            user_email=None, now=END - timedelta(days=1),
+        )
+    rows = db.execute(text(
+        "SELECT id, status, toss_billing_key, next_billing_at FROM subscriptions ORDER BY id"
+    )).mappings().all()
+    unknown = next(row for row in rows if row["id"] == unknown_id)
+    other = next(row for row in rows if row["id"] != unknown_id)
+    assert unknown["status"] == "pending" and unknown["toss_billing_key"] == "kept-key"
+    assert unknown["next_billing_at"] == DUE
+    assert other["toss_billing_key"] is None
