@@ -94,12 +94,15 @@ def test_missing_start_blocks_sales_in_all_modes(client, monkeypatch, mode):
 def test_new_plan_prepare_uses_existing_writer_without_charging(client, monkeypatch):
     monkeypatch.setattr(settings, "ch2_policy_start", START)
     monkeypatch.setattr(billing, "toss_configured", lambda: True)
+    monkeypatch.setattr(billing, "has_blocking_subscription", lambda *a, **kw: False)
     monkeypatch.setattr(billing, "ensure_toss_customer_key", lambda *a: "test-customer")
     calls = []
     monkeypatch.setattr(billing, "create_billing_pending", lambda *a, **kw: (calls.append(kw) or (1, "test-pending")))
     monkeypatch.setattr(billing, "activate_with_billing_key", lambda *a, **kw: pytest.fail("must not charge"))
     response = client.post("/api/billing/toss/billing/prepare", json={"plan_id": "ch2_monthly"})
-    assert response.status_code == 200 and response.json()["amount"] == 10000
+    assert response.status_code == 200
+    assert response.json()["amount"] == 10000
+    assert response.json()["orderName"] == "CH2 월 구독"
     assert calls == [{"user_id": USER.id, "plan_id": "ch2_monthly", "product": "bundle"}]
 
 

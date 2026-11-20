@@ -20,10 +20,12 @@ from app.platform.access import resolve_access
 from app.platform.entitlements import activate_subscription, create_subscription, list_entitlements, apply_staff_entitlements
 from app.platform.toss_client import TossApiError, confirm_payment, toss_configured
 from app.platform.web_subscription import (
+    ORDER_NAME,
     activate_with_billing_key,
     create_billing_pending,
     ensure_toss_customer_key,
     get_web_subscription,
+    has_blocking_subscription,
     set_cancel_at_period_end,
 )
 
@@ -202,8 +204,7 @@ def subscription_cancel(
     ok = set_cancel_at_period_end(db, user.id, body.cancel_at_period_end)
     if not ok:
         raise HTTPException(404, "active_subscription_not_found")
-    sub = get_web_subscription(db, user.id)
-    return {"ok": True, "cancel_at_period_end": bool(sub and sub.get("cancel_at_period_end"))}
+    return {"ok": True, "cancel_at_period_end": bool(body.cancel_at_period_end)}
 
 
 @router.post("/toss/billing/prepare")
@@ -219,6 +220,8 @@ def toss_billing_prepare(
         raise HTTPException(503, "policy_start_missing")
     if not toss_configured():
         raise HTTPException(503, "토스 결제 키가 아직 설정되지 않았습니다.")
+    if has_blocking_subscription(db, user.id):
+        raise HTTPException(409, "already_subscribed")
     customer_key = ensure_toss_customer_key(db, user.id)
     _, pending_id = create_billing_pending(
         db, user_id=user.id, plan_id=plan["id"], product=plan["product"]
@@ -229,7 +232,7 @@ def toss_billing_prepare(
         "pendingId": pending_id,
         "planId": plan["id"],
         "amount": plan["price"],
-        "orderName": f"CH2 {plan['product']} 월 구독",
+        "orderName": ORDER_NAME,
     }
 
 
@@ -259,14 +262,14 @@ def toss_billing_activate(
     if not plan:
         raise HTTPException(400, "unknown_plan")
     try:
-        sub_id = activate_with_billing_key(
+        result = activate_with_billing_key(
             db,
             user_id=user.id,
             pending_external_id=body.pending_id,
             auth_key=body.auth_key,
             customer_key=body.customer_key,
             amount=plan["price"],
-            order_name=f"CH2 {plan['product']} 월 구독",
+            order_name=ORDER_NAME,
             user_email=user.email,
         )
     except ValueError as exc:
@@ -275,12 +278,21 @@ def toss_billing_activate(
             raise HTTPException(404, code) from exc
         if code == "forbidden":
             raise HTTPException(403, code) from exc
+        if code == "already_subscribed":
+            raise HTTPException(409, code) from exc
+        if code == "policy_start_missing":
+            raise HTTPException(503, code) from exc
         raise HTTPException(400, code) from exc
     except TossApiError as exc:
-        _log.warning("billing activate failed: %s", exc.body[:500])
+        _log.warning("billing activate failed status=%s code=%s", exc.status_code, exc.code)
         raise HTTPException(400, "toss_billing_failed") from exc
     ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
-    return {"ok": True, "subscription_id": sub_id, "entitlements": ent}
+    return {
+        "ok": True,
+        "subscription_id": result["id"],
+        "outcome": result["outcome"],
+        "entitlements": ent,
+    }
 
 
 @router.post("/toss/prepare", dependencies=[Depends(_single_payment_disabled)])

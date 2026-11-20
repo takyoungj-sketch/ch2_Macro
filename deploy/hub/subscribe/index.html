@@ -95,7 +95,7 @@
       <header class="hero hero--document">
         <p class="hero__eyebrow">CH2 Pro</p>
         <h1 class="hero__title">웹 구독</h1>
-        <p class="hero__lead">로그인 후 카드로 월 구독을 시작합니다. 매월 자동 결제되며, 해지하면 이번 기간 말까지 이용할 수 있습니다.</p>
+        <p class="hero__lead">CH2 월 구독은 10,000원입니다. 이용 상태는 서버가 알려 주는 값만 표시합니다.</p>
       </header>
 
       <main class="policy-card">
@@ -148,10 +148,26 @@
       let tossEnabled = false;
       let subInfo = null;
 
-      function formatDate(iso) {
+      function formatServerDate(iso) {
         if (!iso) return "";
         const d = new Date(iso);
         return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("ko-KR");
+      }
+
+      function billingPhrase(status) {
+        const billing = status && status.billing;
+        const state = status && status.state;
+        const reason = status && status.reason;
+        const when = formatServerDate(status && status.next_billing_at);
+        if (!status || state === "anonymous" || reason === "login_required") return "로그인이 필요합니다.";
+        if (state === "admin") return "관리자";
+        if (reason === "payment_processing") return "결제 확인 중";
+        if (reason === "payment_failed" || billing === "failed") return "결제 실패. 카드를 다시 등록해 주세요.";
+        if (billing === "scheduled_canceled" || billing === "active_canceled") return "해지 예약됨";
+        if (billing === "scheduled") return when ? `체험 예약됨. ${when} 첫 결제` : "체험 예약됨";
+        if (billing === "active" || state === "paid") return when ? `유료. 다음 결제일 ${when}` : "유료";
+        if (state === "trial") return "체험 중";
+        return "만료";
       }
 
       async function refreshAuth() {
@@ -172,30 +188,15 @@
       async function loadSubscription() {
         subInfo = null;
         const box = document.getElementById("sub-status");
-        if (!me) {
-          box.hidden = true;
-          return;
-        }
-        const res = await fetch(`${BILLING}/subscription/me`, { credentials: "include" });
+        const res = await fetch(`${BILLING}/status`, { credentials: "include" });
         const data = await res.json();
-        if (!data.active) {
-          box.hidden = true;
-          return;
-        }
         subInfo = data;
         box.hidden = false;
-        const productLabel = data.product === "bundle" ? "Macro + FieldNote" : "Macro";
-        const end = formatDate(data.current_period_end);
-        const next = formatDate(data.next_billing_at);
-        let line = `${productLabel} 월 ${(data.price || 0).toLocaleString()}원 · 이용 기간 ~${end}`;
-        if (data.cancel_at_period_end) {
-          line += " · 해지 예약됨 (다음 결제 없음)";
-        } else if (next) {
-          line += ` · 다음 결제 ${next}`;
-        }
-        document.getElementById("sub-status-text").textContent = line;
-        document.getElementById("cancel-sub-btn").hidden = Boolean(data.cancel_at_period_end);
-        document.getElementById("resume-sub-btn").hidden = !data.cancel_at_period_end;
+        document.getElementById("sub-status-text").textContent = billingPhrase(data);
+        const open = data.billing === "scheduled" || data.billing === "active";
+        const canceled = data.billing === "scheduled_canceled" || data.billing === "active_canceled";
+        document.getElementById("cancel-sub-btn").hidden = !open;
+        document.getElementById("resume-sub-btn").hidden = !canceled;
       }
 
       async function loadConfig() {
@@ -213,19 +214,15 @@
         const data = await res.json();
         const grid = document.getElementById("plan-grid");
         grid.replaceChildren();
-        const hidePlans =
-          subInfo &&
-          subInfo.active &&
-          subInfo.status === "active" &&
-          !subInfo.cancel_at_period_end;
+        const hidePlans = subInfo && (subInfo.billing === "scheduled" || subInfo.billing === "active");
         if (hidePlans) {
           return;
         }
-        for (const plan of data.plans.filter((p) => (p.product === "macro" || p.product === "bundle") && p.interval === "month")) {
+        const plan = (data.plans || []).find((p) => p.id === "ch2_monthly");
+        if (plan) {
           const card = document.createElement("div");
           card.className = "plan-card";
-          const title = plan.product === "bundle" ? "Macro + FieldNote" : "Macro";
-          card.innerHTML = `<h3>${title} 월간</h3><p>${plan.price.toLocaleString()}원 / 매월 자동결제</p>`;
+          card.innerHTML = `<h3>CH2 월 구독</h3><p>${plan.price.toLocaleString()}원 / 월</p>`;
           const actions = document.createElement("div");
           actions.className = "pay-actions";
           const cardBtn = document.createElement("button");

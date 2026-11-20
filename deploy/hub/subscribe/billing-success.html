@@ -10,7 +10,7 @@
     <div class="page">
       <header class="hero hero--document">
         <h1 class="hero__title">구독 등록</h1>
-        <p class="hero__lead" id="msg">카드 등록과 첫 결제를 확인하는 중입니다…</p>
+        <p class="hero__lead" id="msg">카드 등록을 확인하는 중입니다.</p>
       </header>
       <p class="policy-meta" style="text-align: center">
         <a href="/subscribe/">구독 페이지로 돌아가기</a>
@@ -39,10 +39,16 @@
           }),
         });
         if (!res.ok) {
-          msg.textContent = "구독 등록에 실패했습니다. 통합 게시판으로 문의해 주세요.";
+          msg.textContent = "카드 등록에 실패했습니다. 구독 페이지에서 다시 시도해 주세요.";
           return;
         }
-        msg.textContent = "월 구독이 시작되었습니다. 매월 자동 결제되며, 해지 시 이번 기간 말까지 이용할 수 있습니다.";
+        const data = await res.json();
+        const outcome = data.outcome;
+        if (outcome === "scheduled") msg.textContent = "카드만 등록되었습니다. 체험이 끝나는 날에 첫 결제가 진행됩니다.";
+        else if (outcome === "approved") msg.textContent = "결제가 승인되어 이용권이 반영되었습니다.";
+        else if (outcome === "declined") msg.textContent = "결제가 승인되지 않았습니다. 카드를 다시 등록해 주세요.";
+        else if (outcome === "expired") msg.textContent = "해지 예약이 반영되어 청구하지 않았습니다.";
+        else msg.textContent = "결제 결과를 아직 확인하지 못했습니다. 구독 페이지에서 상태를 확인해 주세요.";
       }
       run();
     </script>
