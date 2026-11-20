@@ -20,7 +20,7 @@ export type KeySplitC2Note = {
   candidates: KeySplitC2Candidate[];
 };
 
-export const C2_NOTICE_TEXT = "같은 이름의 단지 중 가장 큰 단지를 보고 있습니다.";
+export const C2_NOTICE_TEXT = "같은 이름의 단지가 여러 곳으로 나뉘었습니다. 지금은 그중 대표 단지를 보고 있습니다.";
 
 export function c2CandidateLabel(c: KeySplitC2Candidate, fallbackName?: string): string {
   const where = [c.addr3, c.addr4, c.addr5].filter(Boolean).join(" ");
