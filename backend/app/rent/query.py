@@ -10,6 +10,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
 from app.collective.address import format_jibun_address
+from app.collective.display_label import c2_fragment_keys, c2_label
 from app.flat_sido_region import (
     FLAT_SIDO_ADDR2_TOKEN,
     apply_addr2_scope,
@@ -308,6 +309,38 @@ def list_addr3(
     return [(str(r[0]), int(r[1])) for r in rows]
 
 
+def pending_n_by_key(conn: Connection, keys: list[str]) -> dict[str, int]:
+    """pending 본번의 유효 거래 수. 표나 원장이 없으면 빈 결과라 목록은 지금과 같다."""
+    wanted = [k for k in keys if k]
+    if not wanted:
+        return {}
+    if not conn.execute(text("SELECT to_regclass('public.rent_building_key_c2_units')")).scalar():
+        return {}
+    if not conn.execute(text("SELECT to_regclass('public.rent_transactions')")).scalar():
+        return {}
+    rows = conn.execute(
+        text(
+            """
+            SELECT p.base_key, count(t.id)::int
+            FROM rent_building_key_c2_units p
+            JOIN rent_transactions t
+              ON rtrim(t.building_key) = p.base_key
+             AND t.asset_type = p.asset_type
+             AND left(t.beopjungri_code, 10) = left(p.beopjungri_code, 10)
+             AND CASE WHEN split_part(btrim(t.lot_number), '-', 1) ~ '^[0-9]+$'
+                      THEN coalesce(nullif(ltrim(split_part(btrim(t.lot_number), '-', 1), '0'), ''), '0')
+                      ELSE btrim(split_part(btrim(t.lot_number), '-', 1)) END = p.main_lot
+             AND t.is_valid
+            WHERE p.decision = 'pending'
+              AND p.base_key = ANY(CAST(:keys AS text[]))
+            GROUP BY p.base_key
+            """
+        ),
+        {"keys": wanted},
+    ).all()
+    return {str(key): int(n) for key, n in rows}
+
+
 def list_buildings(
     db: Session,
     *,
@@ -407,6 +440,21 @@ def list_buildings(
             j_eq, m_eq = converted[key]
             row = row.model_copy(update={"jeonse_equiv": j_eq, "monthly_equiv": m_eq})
         items.append(row)
+    counts = pending_n_by_key(conn, [item.building_key for item in items])
+    try:
+        label_keys = c2_fragment_keys(app="rent")
+    except Exception:  # noqa: BLE001 — 연결표가 없으면 기존 이름을 유지한다
+        label_keys = frozenset()
+    if counts or label_keys:
+        items = [
+            item.model_copy(update={
+                "pending_n": counts.get(item.building_key, 0),
+                "display_label": c2_label(
+                    item.building_key, item.display_name, item.asset_type, item.building_year, keys=label_keys,
+                ),
+            })
+            for item in items
+        ]
     return items, ps, pe, list(rates.values())
 
 

@@ -1,6 +1,55 @@
 """테스트 공통 설정."""
 
+import ctypes
+import threading
+from pathlib import Path
+
 import pytest
+
+_DB_FIXTURE_LIMIT_S = 30
+_DB_FIXTURE_FILES = {
+    "test_rent_c2_pending.py",
+    "test_collective_p2_key_remap.py",
+}
+
+
+class DbFixtureTimeout(AssertionError):
+    def __init__(self, *_args):
+        super().__init__(
+            "DB fixture 테스트가 30초 안에 끝나지 않았다. "
+            "로컬 PostgreSQL 사용자와 권한을 확인한다."
+        )
+
+
+def _interrupt(ident: int) -> None:
+    tid = ctypes.c_ulong(ident)
+    exc = ctypes.py_object(DbFixtureTimeout)
+    count = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, exc)
+    if count == 0:
+        return
+    if count > 1:
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_protocol(item, nextitem):
+    if Path(str(item.fspath)).name not in _DB_FIXTURE_FILES:
+        yield
+        return
+    ident = threading.get_ident()
+    done = threading.Event()
+
+    def _watch() -> None:
+        if not done.wait(_DB_FIXTURE_LIMIT_S):
+            _interrupt(ident)
+
+    watcher = threading.Thread(target=_watch, daemon=True)
+    watcher.start()
+    try:
+        yield
+    finally:
+        done.set()
+        watcher.join(timeout=1)
 
 
 @pytest.fixture(autouse=True)

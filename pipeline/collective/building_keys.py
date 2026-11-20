@@ -564,3 +564,85 @@ def apply_c2_split_from_db(engine, df: pd.DataFrame, asset_type: str) -> pd.Data
             log.warning("c2 split: 새 조각 %d개를 판정 표에 자동 등록(source=%s) — 판정 검토 대상", n, C2_AUTO_SOURCE)
         out.attrs["c2_registered"] = res
     return out
+
+
+RENT_C2_AUTO_SOURCE = "auto_ingest"
+
+
+def _rent_piece(base: str, part: int, raw: str | None) -> str:
+    if part == 0 or not raw:
+        return base
+    return c2_key(raw, f"p{int(part)}")
+
+
+def apply_rent_c2_assignment(
+    df: pd.DataFrame,
+    asset_type: str,
+    *,
+    units: dict | None = None,
+    collective_unique: dict | None = None,
+    raw_of: dict | None = None,
+) -> pd.DataFrame:
+    """임대 판정 표에 있는 본번만 기존 part로 보낸다.
+
+    units 가 없거나 비면 표를 만들지 않은 것과 같이 키를 그대로 둔다.
+    split 이 있는 (base, 법정동)에서 표에 없는 본번은 collective_unique 에 조각이
+    하나일 때만 그 part 를 쓴다. 유일 조각도 없으면 part 0 과 pending 한 행이다.
+    keep 그룹과 판정 표에 없는 base 는 옛 key 를 유지하고 pending 을 만들지 않는다.
+    새 part 번호는 만들지 않는다.
+    """
+    out = df.copy()
+    out.attrs["rent_c2_pending"] = []
+    out.attrs["rent_c2_new_parts"] = []
+    if not units or out.empty or "building_key" not in out.columns or asset_type in ("detached", _PRESALE_KEY_ASSET):
+        return out
+    split_dongs = {
+        (str(base), str(code))
+        for (base, code, _lot), (_part, decision) in units.items()
+        if str(decision) == "split"
+    }
+    codes = out["beopjungri_code"].astype(str).str.strip().str[:10] if "beopjungri_code" in out.columns else pd.Series("", index=out.index)
+    lots = (out["lot_number"] if "lot_number" in out.columns else pd.Series("", index=out.index)).map(main_lot_of)
+    if raw_of is None:
+        raw_series = building_key_raw_series(out, asset_type)
+        c01 = load_split_units()
+        recovered = []
+        for key, raw in zip(out["building_key"], raw_series):
+            recovered.append(_key_raw_for(str(raw), str(key), c01))
+    else:
+        recovered = [raw_of.get(str(key)) for key in out["building_key"]]
+    new_keys: list[str] = []
+    pending: list[dict] = []
+    seen: set[tuple] = set()
+    for key, code, lot, raw in zip(out["building_key"], codes, lots, recovered):
+        base = str(key)
+        slot = (base, str(code), lot or "")
+        hit = units.get(slot)
+        if hit is not None:
+            part = int(hit[0])
+            new_keys.append(_rent_piece(base, part, raw))
+            continue
+        if (base, str(code)) in split_dongs:
+            uniq = None if not collective_unique else collective_unique.get(slot)
+            if isinstance(uniq, int):
+                new_keys.append(_rent_piece(base, int(uniq), raw))
+                continue
+            new_keys.append(base)
+            if slot not in seen:
+                seen.add(slot)
+                pending.append({
+                    "base_key": base,
+                    "asset_type": asset_type,
+                    "beopjungri_code": str(code),
+                    "main_lot": lot or "",
+                    "part": 0,
+                    "decision": "pending",
+                    "evidence": "",
+                    "source": RENT_C2_AUTO_SOURCE,
+                })
+            continue
+        new_keys.append(base)
+    out["building_key"] = new_keys
+    out.attrs["rent_c2_pending"] = pending
+    out.attrs["rent_c2_new_parts"] = []
+    return out

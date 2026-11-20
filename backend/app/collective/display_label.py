@@ -16,16 +16,17 @@ from sqlalchemy.engine import Connection
 from .key_remap import CACHE, KeyMapCache, split_entries
 
 LABEL_ASSETS = frozenset({"apartment"})
-_memo: dict[str, Any] = {"src": None, "keys": frozenset()}
+_memo: dict[str, dict[str, Any]] = {}
 _lock = threading.Lock()
 
 
-def c2_fragment_keys(cache: KeyMapCache | None = None) -> frozenset[str]:
+def c2_fragment_keys(cache: KeyMapCache | None = None, app: str = "collective") -> frozenset[str]:
     """C-2 조각 키 집합(본 조각 옛 키 + 조각 새 키). 연결표가 바뀌기 전까지 다시 계산하지 않는다."""
-    m = (cache or CACHE).get("collective")
+    m = (cache or CACHE).get(app)
     with _lock:
-        if _memo["src"] is m:
-            return _memo["keys"]
+        slot = _memo.get(app)
+        if slot and slot["src"] is m:
+            return slot["keys"]
     keys: set[str] = set()
     for old, entries in (m or {}).items():
         _, c2 = split_entries(entries)
@@ -34,7 +35,7 @@ def c2_fragment_keys(cache: KeyMapCache | None = None) -> frozenset[str]:
             keys.update(t[0] for t in c2)
     out = frozenset(keys)
     with _lock:
-        _memo["src"], _memo["keys"] = m, out
+        _memo[app] = {"src": m, "keys": out}
     return out
 
 

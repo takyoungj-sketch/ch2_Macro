@@ -48,7 +48,13 @@ export type RentBuildingRow = {
   sale?: LeaseMetric;
   jeonse_to_sale_pct?: number | null;
   jeonse_equiv_sale_pct?: number | null;
+  pending_n?: number;
+  display_label?: string | null;
 };
+
+export function rentShownName(row: { display_name: string; display_label?: string | null }): string {
+  return row.display_label || row.display_name;
+}
 
 export type RentBuildingListResponse = {
   items: RentBuildingRow[];

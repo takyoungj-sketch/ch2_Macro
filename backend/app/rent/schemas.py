@@ -75,6 +75,8 @@ class RentBuildingRow(BaseModel):
     sale: LeaseMetric = Field(default_factory=LeaseMetric)
     jeonse_to_sale_pct: Optional[float] = None
     jeonse_equiv_sale_pct: Optional[float] = None
+    pending_n: int = 0
+    display_label: Optional[str] = None
 
 
 class RentSaleJoinResponse(BaseModel):
