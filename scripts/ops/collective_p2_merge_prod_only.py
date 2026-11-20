@@ -39,6 +39,8 @@
   … --apply                                                                     # 리허설 DB 에 합치기
   … --dst-collective collective_stats --dst-rent rent_stats --real-apply --confirm-db collective_stats \\
       --confirm-db rent_stats --sync-result … --sync-result …                    # 실제 로컬 반영본(런북 6.1)
+  … --rent-only --src-rent prod_only_rent_tmp --dst-rent rent_stats --real-apply --confirm-db rent_stats \\
+      --sync-result … --manifest … --freeze-at …                                # 임대 1표만. 집합 DB 는 열지 않는다
 """
 from __future__ import annotations
 
@@ -78,6 +80,8 @@ LEDGER = {"collective_building_geocodes": ("collective_transactions", "building_
           "collective_commercial_map_geocodes": ("collective_commercial_transactions", "cluster_key"),
           "rent_building_geocodes": ("rent_transactions", "building_key")}
 QA = "qa_audit_run"
+RENT_UNITS = "rent_building_key_c2_units"
+RENT_ONLY_ARCHIVES = {"rent_stats": frozenset({"rent_building_geocodes"})}
 REKEY, KEEP, DROP_C01, DROP_C2 = "rekey", "keep", "drop_c01", "drop_c2"
 
 
@@ -212,17 +216,17 @@ def plan_geocodes(src_rows: list[dict], keycol: str, rules: dict, local_keys,
     return ins, updates, {k: int(cnt.get(k, 0)) for k in keys}
 
 
-def _c2_bases(c: Connection) -> set[str]:
-    if not _exists(c, C2_TABLE):
+def _c2_bases(c: Connection, table: str = C2_TABLE) -> set[str]:
+    if not _exists(c, table):
         return set()
-    return {str(r[0]).strip() for r in c.execute(text(f"SELECT DISTINCT base_key FROM {C2_TABLE} WHERE decision='split'"))}
+    return {str(r[0]).strip() for r in c.execute(text(f"SELECT DISTINCT base_key FROM {table} WHERE decision='split'"))}
 
 
 DIRECTIONS = ("forward", "reverse")
 
 
 def merge_geocode(src: Connection, dst: Connection, table: str, keycol: str, map_table: str, use_c2: bool,
-                  *, apply: bool, direction: str = "forward") -> dict:
+                  *, apply: bool, direction: str = "forward", c2_table: str | None = None) -> dict:
     """direction=forward: 옛 키 운영 행 → 키 이전이 끝난 대상(연결표 필수, 재키·C-01/C-2 옛 키 버림).
     direction=reverse: 새 키 운영 행 → 되돌린 옛 DB(연결표 없음 → 재키 없음). 두 방향 모두
     **대상 DB 원장에 없는 키의 행은 버리고 drop_not_in_ledger 로 센다**(원장 표가 없으면 멈춤)."""
@@ -243,7 +247,7 @@ def merge_geocode(src: Connection, dst: Connection, table: str, keycol: str, map
     cols = [c for c in cols if c in scols]
     src_rows = [dict(r._mapping) for r in src.execute(text(f"SELECT {', '.join(cols)} FROM {table}"))]
     maps = [tuple(r) for r in dst.execute(text(f"SELECT old_key, new_key, reason FROM {map_table}"))] if has_map else []
-    rules = key_rules(maps, _c2_bases(dst) if use_c2 else set())
+    rules = key_rules(maps, _c2_bases(dst, c2_table or C2_TABLE) if use_c2 else set())
     local = {str(r[keycol]).strip(): r for r in (dict(x._mapping) for x in
                                                  dst.execute(text(f"SELECT {', '.join(cols)} FROM {table}")))}
     led = ({str(r[0]).strip() for r in dst.execute(text(f"SELECT DISTINCT {led_c} FROM {led_t} WHERE {led_c} IS NOT NULL"))}
@@ -368,8 +372,9 @@ REQUIRED_ARCHIVES: dict[str, frozenset[str]] = {
 }
 
 
-def validate_manifest_shape(m: dict) -> list[dict]:
+def validate_manifest_shape(m: dict, required: dict[str, frozenset[str]] | None = None) -> list[dict]:
     """manifest 구조 검사(파일을 읽기 전). 통과하면 archives 를 DB 이름 순으로 돌려준다. 어긋나면 MergeError."""
+    required = REQUIRED_ARCHIVES if required is None else required
     if not isinstance(m, dict):
         raise MergeError("manifest 가 JSON 객체가 아님")
     arcs = m.get("archives")
@@ -380,19 +385,19 @@ def validate_manifest_shape(m: dict) -> list[dict]:
         if not isinstance(a, dict):
             raise MergeError("manifest archives 항목이 객체가 아님")
         db = a.get("db")
-        if db not in REQUIRED_ARCHIVES:
-            raise MergeError(f"manifest 에 알 수 없는 DB: {db!r} (허용 {sorted(REQUIRED_ARCHIVES)})")
+        if db not in required:
+            raise MergeError(f"manifest 에 알 수 없는 DB: {db!r} (허용 {sorted(required)})")
         if db in seen:
             raise MergeError(f"manifest 에 같은 DB 가 두 번: {db}")
         seen[db] = a
-    missing = sorted(set(REQUIRED_ARCHIVES) - set(seen))
+    missing = sorted(set(required) - set(seen))
     if missing:
         raise MergeError(f"manifest 에 필요한 DB 가 없음: {missing}")
     for db, a in seen.items():
         rows = a.get("archive_rows")
         if not isinstance(rows, dict):
             raise MergeError(f"{db}: archive_rows(표별 행 수)가 없음")
-        want = REQUIRED_ARCHIVES[db]
+        want = required[db]
         if sorted(set(want) - set(rows)):
             raise MergeError(f"{db}: 필요한 표가 없음 {sorted(set(want) - set(rows))}")
         if sorted(set(rows) - set(want)):
@@ -425,7 +430,8 @@ def parse_kst(s: str):
     return dt.replace(tzinfo=kst) if dt.tzinfo is None else dt
 
 
-def preflight(manifest: Path, freeze_at: str, src_counts: dict[str, dict[str, int]] | None = None) -> dict:
+def preflight(manifest: Path, freeze_at: str, src_counts: dict[str, dict[str, int]] | None = None,
+              required: dict[str, frozenset[str]] | None = None) -> dict:
     """병합 전 확인(하나라도 어긋나면 MergeError — 아무것도 쓰기 전):
     ① manifest 의 각 덤프 파일 SHA-256·크기 = 실제 파일(파일은 manifest 와 같은 폴더에서 찾는다)
     ② manifest created_kst ≥ 동결 시각(--freeze-at) — 동결 전에 뜬(오래된) 덤프면 진행하지 않는다
@@ -440,7 +446,7 @@ def preflight(manifest: Path, freeze_at: str, src_counts: dict[str, dict[str, in
         m = json.loads(manifest.read_text(encoding="utf-8"))
     except ValueError as ex:
         raise MergeError("manifest 를 JSON 으로 읽을 수 없음") from ex
-    archives = validate_manifest_shape(m)
+    archives = validate_manifest_shape(m, required)
     if m.get("production_read_only") is not True:
         raise MergeError("manifest 가 운영 읽기 전용 덤프로 표시되지 않음(production_read_only)")
     created, freeze = parse_kst(str(m.get("created_kst", ""))), parse_kst(freeze_at)
@@ -492,12 +498,76 @@ def merge_side(src_eng: Engine, dst_eng: Engine, dst_name: str, side: str, *, ap
         return res
 
 
-def main(argv: list[str] | None = None) -> int:
+def _parser(rent_only: bool) -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--src-collective", required=True, help="운영 collective 4표 덤프를 복원한 임시 DB(읽기만)")
+    p.add_argument("--rent-only", action="store_true",
+                   help="임대 rent_building_geocodes 만 합친다. 집합 DB 는 열지 않는다")
+    if rent_only:
+        p.add_argument("--src-collective", default="")
+        p.add_argument("--dst-collective", default="")
+    else:
+        p.add_argument("--src-collective", required=True, help="운영 collective 4표 덤프를 복원한 임시 DB(읽기만)")
+        p.add_argument("--dst-collective", required=True)
     p.add_argument("--src-rent", default="", help="운영 rent_building_geocodes 덤프를 복원한 임시 DB(읽기만)")
-    p.add_argument("--dst-collective", required=True)
     p.add_argument("--dst-rent", default="")
+    return p
+
+
+def _run_rent_only(a) -> int:
+    """임대 좌표 1표만. 집합 엔진은 만들지 않는다. 표는 비우지 않고, 건수가 어긋나면 그 트랜잭션을 되돌린다."""
+    if a.src_collective or a.dst_collective:
+        raise GuardError("임대 1표 모드에서는 집합 인자를 받지 않는다")
+    if not a.src_rent or not a.dst_rent:
+        raise GuardError("임대 1표 모드는 --src-rent 와 --dst-rent 가 필요하다")
+    if a.src_rent == a.dst_rent:
+        raise GuardError(f"원본과 대상이 같은 DB: {a.src_rent}")
+    if bool(a.manifest) != bool(a.freeze_at):
+        raise GuardError("--manifest 와 --freeze-at 은 같이 준다")
+    if a.real_apply:
+        if a.dst_rent != "rent_stats":
+            raise GuardError("임대 1표 모드의 실제 대상은 rent_stats 이다")
+        if not a.manifest or not a.freeze_at:
+            raise GuardError("--real-apply 는 --manifest · --freeze-at 이 필요하다(동결 뒤 새 덤프 확인, 런북 6.1)")
+        a.apply = True
+    base = a.base_url or None
+    if a.apply:
+        check_write_targets([a.dst_rent], a, base_url=base)
+    report = {"apply": bool(a.apply), "real_apply": bool(a.real_apply), "applied": False, "rent_only": True,
+              "direction": a.direction, "sides": {}}
+    if a.manifest:
+        se = engine_for(a.src_rent, read_only=True, base_url=base)
+        try:
+            counts = {"rent": source_counts(se, "rent")}
+        finally:
+            se.dispose()
+        report["preflight"] = preflight(Path(a.manifest), a.freeze_at, counts, RENT_ONLY_ARCHIVES)
+    se = engine_for(a.src_rent, read_only=True, base_url=base)
+    de = engine_for(a.dst_rent, read_only=not a.apply, base_url=base)
+    try:
+        with se.connect() as s, (de.begin() if a.apply else de.connect()) as d:
+            if a.apply:
+                assert_rehearsal_db(d, a.dst_rent)
+            table = merge_geocode(
+                s, d, "rent_building_geocodes", "building_key", "rent_building_key_map", True,
+                apply=a.apply, direction=a.direction, c2_table=RENT_UNITS)
+        report["sides"]["rent"] = {"src": a.src_rent, "dst": a.dst_rent, "tables": [table]}
+    finally:
+        se.dispose()
+        de.dispose()
+    report["applied"] = bool(a.apply)
+    txt = json.dumps(report, ensure_ascii=False, indent=1, default=str)
+    Path(a.report_out).parent.mkdir(parents=True, exist_ok=True)
+    Path(a.report_out).write_text(txt, encoding="utf-8")
+    print(txt)
+    if not a.apply:
+        print("드라이런 — 쓰지 않았다. 쓰려면 --apply (리허설 DB) 또는 --real-apply (로컬 rent_stats).")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    raw = list(sys.argv[1:] if argv is None else argv)
+    rent_only = "--rent-only" in raw
+    p = _parser(rent_only)
     p.add_argument("--apply", action="store_true")
     p.add_argument("--base-url", default="", help="DB 서버 URL(기본 backend/.env)")
     p.add_argument("--remap-out", default=str(OUT / "qa_audit_id_remap.csv"))
@@ -507,7 +577,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--direction", choices=DIRECTIONS, default="forward",
                    help="forward = 옛 키 운영 행 → 키 이전 끝난 대상(연결표 필수) · reverse = 반영 뒤 운영 행 → 되돌린 옛 DB(런북 6.2)")
     add_real_apply_args(p)
-    a = p.parse_args(argv)
+    a = p.parse_args(raw)
+    if rent_only:
+        return _run_rent_only(a)
     if a.real_apply:
         if not a.manifest or not a.freeze_at:
             raise GuardError("--real-apply 는 --manifest · --freeze-at 이 필요하다(동결 뒤 새 덤프 확인, 런북 6.1)")

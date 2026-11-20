@@ -5,6 +5,8 @@
   python c29_merge_prod_only_check.py same --a after1 --b after2 # 두 스냅샷이 같은지(멱등)
   운영(런북 6.1): --dst-collective collective_stats --dst-rent rent_stats --src-collective <임시> --src-rent <임시>
      --out-dir logs/collective_p2/merge_ops  check --report <merge_prod_only.json>
+  임대 1표: --rent-only --dst-rent rent_stats --src-rent <임시> check --report <merge_prod_only.json>
+     집합 인자가 같이 오면 거부한다. 집합 DB 는 열지 않는다.
   check --report(필수) 는 병합 보고서를 엄격 판정한다(Codex 재검수 3): applied=true · collective·rent 두 쪽 · 네 표 모두 ·
   필수 카운터(정수) · 보고서의 원본/대상 DB 이름 = 이 검사의 --src-*/--dst-*. 하나라도 없으면 실패.
   그 위에 게이트(병합 고아 0 · C-2/C-01 옛 키 남은 좌표 0 · 조각 키에 운영 좌표 0). 어긋나면 종료 코드 1.
@@ -21,6 +23,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import sys
 
 from sqlalchemy import text
 
@@ -46,11 +49,17 @@ def _mpo():
     return m
 
 
-def snapshot(tag: str) -> dict:
+def _tables(rent_only: bool = False) -> dict:
+    return {"rent": list(TABLES["rent"])} if rent_only else TABLES
+
+
+def snapshot(tag: str, *, rent_only: bool = False) -> dict:
     out = {}
-    for side, db in DST.items():
+    sides = {"rent": DST["rent"]} if rent_only else DST
+    tables = _tables(rent_only)
+    for side, db in sides.items():
         with engine_db(db).connect() as c:
-            for t in TABLES[side]:
+            for t in tables[side]:
                 n, h = c.execute(text(f"SELECT count(*), md5(coalesce(string_agg(x, '' ORDER BY x), '')) "
                                       f"FROM (SELECT md5(t::text) x FROM {t} t) z")).one()
                 out[f"{db}.{t}"] = [int(n), h]
@@ -91,8 +100,9 @@ QA_COUNTERS = ("src", "dst_before", "insert_same_id", "skip_identical", "skip_al
                "seq_last_value", "max_id_after")
 
 
-def validate_report(report, dst: dict, src: dict) -> list[str]:
+def validate_report(report, dst: dict, src: dict, tables=None) -> list[str]:
     """보고서가 이 검사 대상의 「적용된」 병합 결과인지. 빠진 것·다른 것을 실패 목록으로(빈 목록 = 통과)."""
+    tables = TABLES if tables is None else tables
     if not isinstance(report, dict):
         return ["병합 보고서 없음(--report)"]
     fails = []
@@ -101,7 +111,7 @@ def validate_report(report, dst: dict, src: dict) -> list[str]:
     sides = report.get("sides")
     if not isinstance(sides, dict) or not sides:
         return fails + ["보고서에 sides 가 없거나 비었음"]
-    for side, tables in TABLES.items():
+    for side, side_tables in tables.items():
         s = sides.get(side)
         if not isinstance(s, dict):
             fails.append(f"보고서에 {side} 쪽이 없음")
@@ -111,7 +121,7 @@ def validate_report(report, dst: dict, src: dict) -> list[str]:
         if s.get("src") != src[side]:
             fails.append(f"{side}: 보고서 원본 DB {s.get('src')!r} ≠ 검사 원본 {src[side]!r}")
         got = {t.get("table"): t for t in (s.get("tables") or []) if isinstance(t, dict)}
-        for t in tables:
+        for t in side_tables:
             row = got.get(t)
             if row is None:
                 fails.append(f"{side}.{t}: 보고서에 표 없음")
@@ -123,19 +133,20 @@ def validate_report(report, dst: dict, src: dict) -> list[str]:
             miss = [k for k in need if isinstance(row.get(k), bool) or not isinstance(row.get(k), int)]
             if miss:
                 fails.append(f"{side}.{t}: 필수 카운터 없음 {miss}")
-        extra = sorted(set(got) - set(tables))
+        extra = sorted(set(got) - set(side_tables))
         if extra:
             fails.append(f"{side}: 모르는 표 {extra}")
-    extra_sides = sorted(set(sides) - set(TABLES))
+    extra_sides = sorted(set(sides) - set(tables))
     if extra_sides:
         fails.append(f"보고서에 모르는 쪽 {extra_sides}")
     return fails
 
 
-def idempotent_fails(report, snap_a: dict, snap_b: dict, dst: dict, src: dict) -> list[str]:
+def idempotent_fails(report, snap_a: dict, snap_b: dict, dst: dict, src: dict, tables=None) -> list[str]:
     """멱등(Codex 재검수 4): 두 번째 실행 보고서가 유효하고 insert 0 · update 0 · QA 새 id 0(같은 id 추가도 0),
     두 스냅샷(4표 행 수·해시 + QA 시퀀스 last_value·is_called)이 같다."""
-    fails = validate_report(report, dst, src)
+    tables = TABLES if tables is None else tables
+    fails = validate_report(report, dst, src, tables)
     for (side, t), row in _report_tables(report).items():
         if t == "qa_audit_run":
             for k in ("insert_same_id", "insert_new_id"):
@@ -145,29 +156,39 @@ def idempotent_fails(report, snap_a: dict, snap_b: dict, dst: dict, src: dict) -
             for k in ("insert", "update"):
                 if row.get(k) != 0:
                     fails.append(f"{side}.{t}: {k}={row.get(k)!r} (0 이어야 함)")
-    want = {f"{dst[s]}.{t}" for s, ts in TABLES.items() for t in ts} | {f"{dst['collective']}.qa_audit_run_id_seq"}
+    want = {f"{dst[s]}.{t}" for s, ts in tables.items() for t in ts}
+    if any(t == "qa_audit_run" for ts in tables.values() for t in ts):
+        want.add(f"{dst['collective']}.qa_audit_run_id_seq")
     for k in sorted(want):
         if k not in snap_a or k not in snap_b:
             fails.append(f"스냅샷에 {k} 없음")
         elif snap_a[k] != snap_b[k]:
             fails.append(f"스냅샷 다름: {k}")
-    if not any("is_called" in str(v[1]) for k, v in snap_a.items() if k.endswith("_id_seq")):
+    if any(t == "qa_audit_run" for ts in tables.values() for t in ts) and not any(
+            "is_called" in str(v[1]) for k, v in snap_a.items() if k.endswith("_id_seq")):
         fails.append("스냅샷에 시퀀스 is_called 없음(옛 스냅샷 — 다시 뜰 것)")
     return fails
 
 
-def check(report: dict | None = None) -> tuple[str, list[str]]:
+def check(report: dict | None = None, *, rent_only: bool = False) -> tuple[str, list[str]]:
     """(보고서 md, 게이트 실패 목록). 보고서가 없거나 엄격 판정(validate_report)을 못 넘으면 실패."""
     mpo = _mpo()
     rep = _report_tables(report)
-    fails: list[str] = list(validate_report(report, DST, SRC))
-    L = ["# Phase D 4 — 운영 전용 표 병합 검증(건수만)", "",
-         f"- 대상 {DST['collective']} · {DST['rent']} / 원본 {SRC['collective']} · {SRC['rent']}", ""]
-    for side, table, keycol, map_t, ledger, lkey, use_c2 in GEO:
+    tables = _tables(rent_only)
+    fails: list[str] = list(validate_report(report, DST, SRC, tables))
+    where = (f"임대만 대상 {DST['rent']} / 원본 {SRC['rent']}" if rent_only
+             else f"대상 {DST['collective']} · {DST['rent']} / 원본 {SRC['collective']} · {SRC['rent']}")
+    L = ["# Phase D 4 — 운영 전용 표 병합 검증(건수만)", "", f"- {where}", ""]
+    geo_rows = [g for g in GEO if g[0] == "rent"] if rent_only else GEO
+    for side, table, keycol, map_t, ledger, lkey, use_c2 in geo_rows:
         with engine_db(DST[side]).connect() as d, engine_db(SRC[side]).connect() as s:
             maps = ([tuple(r) for r in d.execute(text(f"SELECT old_key, new_key, reason FROM {map_t}"))]
                     if mpo._exists(d, map_t) else [])          # 되돌린 옛 DB(reverse)에는 연결표가 없다
-            c2b = mpo._c2_bases(d) if use_c2 else set()
+            if rent_only and side == "rent":
+                use_c2 = True
+                c2b = mpo._c2_bases(d, "rent_building_key_c2_units")
+            else:
+                c2b = mpo._c2_bases(d) if use_c2 else set()
             rules = mpo.key_rules(maps, c2b)
             c2_old = {k for k, (r, _) in rules.items() if r == mpo.DROP_C2}
             c01_old = {k for k, (r, _) in rules.items() if r == mpo.DROP_C01}
@@ -233,7 +254,7 @@ def check(report: dict | None = None) -> tuple[str, list[str]]:
                 if merged_orphan:
                     fails.append(f"{table}: 병합이 넣은 고아 {merged_orphan}")
             L += [f"## {DST[side]}.{table}", "", md_table(rows, ["항목", "기대", "실제"]), ""]
-    qa = rep.get(("collective", "qa_audit_run"))
+    qa = None if rent_only else rep.get(("collective", "qa_audit_run"))
     if qa:
         L += ["## qa_audit_run", "", md_table([(k, qa.get(k)) for k in ("src", "dst_before", "insert_same_id",
               "skip_identical", "skip_already_merged", "insert_new_id", "dst_after")], ["항목", "값"]), ""]
@@ -246,11 +267,16 @@ def check(report: dict | None = None) -> tuple[str, list[str]]:
 
 def main(argv=None) -> int:
     global OUT
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if "--rent-only" in raw and ("--src-collective" in raw or "--dst-collective" in raw):
+        print("중단: 임대 1표 검사에서는 집합 인자를 받지 않는다", file=sys.stderr)
+        return 2
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--dst-collective", default=DST["collective"])
     p.add_argument("--dst-rent", default=DST["rent"])
     p.add_argument("--src-collective", default=SRC["collective"])
     p.add_argument("--src-rent", default=SRC["rent"])
+    p.add_argument("--rent-only", action="store_true", help="임대 rent_building_geocodes 만 검사한다. 집합 DB 는 열지 않는다")
     p.add_argument("--out-dir", default=str(OUT))
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("snapshot").add_argument("--tag", required=True)
@@ -263,14 +289,14 @@ def main(argv=None) -> int:
     idm.add_argument("--report", required=True, help="두 번째 실행 보고서")
     idm.add_argument("--a", required=True, help="두 번째 실행 전 스냅샷 tag")
     idm.add_argument("--b", required=True, help="두 번째 실행 뒤 스냅샷 tag")
-    a = p.parse_args(argv)
+    a = p.parse_args(raw)
     DST.update(collective=a.dst_collective, rent=a.dst_rent)
     SRC.update(collective=a.src_collective, rent=a.src_rent)
     from pathlib import Path
 
     OUT = Path(a.out_dir)
     if a.cmd == "snapshot":
-        print(json.dumps({k: v[0] for k, v in snapshot(a.tag).items()}, ensure_ascii=False, indent=1))
+        print(json.dumps({k: v[0] for k, v in snapshot(a.tag, rent_only=a.rent_only).items()}, ensure_ascii=False, indent=1))
         return 0
     if a.cmd == "same":
         return same(a.a, a.b)
@@ -284,10 +310,10 @@ def main(argv=None) -> int:
     report = _load(a.report)
     if a.cmd == "idempotent":
         snaps = [_load(OUT / f"snap_{t}.json") or {} for t in (a.a, a.b)]
-        fails = idempotent_fails(report, snaps[0], snaps[1], DST, SRC)
+        fails = idempotent_fails(report, snaps[0], snaps[1], DST, SRC, _tables(a.rent_only) if a.rent_only else None)
         print("멱등: " + ("통과" if not fails else "실패 — " + "; ".join(fails)))
         return 1 if fails else 0
-    md, fails = check(report)
+    md, fails = check(report, rent_only=a.rent_only)
     print(md)
     return 1 if fails else 0
 

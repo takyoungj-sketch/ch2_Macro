@@ -115,6 +115,34 @@ def test_idempotent_refuses_old_snapshot_without_is_called(c29):
     assert any("is_called" in f for f in c29.idempotent_fails(_good(c29), old, old, DST, SRC))
 
 
+def test_rent_only_report_ignores_collective_and_refuses_a_collective_side(c29):
+    tables = {"rent": ["rent_building_geocodes"]}
+    report = {"applied": True, "sides": {"rent": {
+        "src": SRC["rent"], "dst": DST["rent"], "tables": [_geo(c29, "rent_building_geocodes")]}}}
+    assert c29.validate_report(report, DST, SRC, tables) == []
+    fails = c29.validate_report(_good(c29), DST, SRC, tables)
+    assert any("모르는 쪽" in f for f in fails)
+
+
+def test_rent_only_check_does_not_open_collective(c29, monkeypatch):
+    opened = []
+
+    def engine_db(name):
+        opened.append(name)
+        raise RuntimeError("stop")
+
+    monkeypatch.setattr(c29, "engine_db", engine_db)
+    report = {"applied": True, "sides": {"rent": {
+        "src": c29.SRC["rent"], "dst": c29.DST["rent"], "tables": [_geo(c29, "rent_building_geocodes")]}}}
+    with pytest.raises(RuntimeError, match="stop"):
+        c29.check(report, rent_only=True)
+    assert opened == [c29.DST["rent"]]
+
+
+def test_rent_only_cli_refuses_collective_args(c29):
+    assert c29.main(["--rent-only", "--src-collective", "collective_stats", "check", "--report", "x"]) == 2
+
+
 def test_cli_check_requires_report(c29):
     with pytest.raises(SystemExit):
         c29.main(["check"])

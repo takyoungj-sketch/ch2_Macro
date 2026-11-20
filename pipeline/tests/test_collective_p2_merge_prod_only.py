@@ -118,9 +118,11 @@ def dbs():
         admin = create_engine(make_url(base).set(database="postgres", drivername="postgresql+psycopg2"),
                               isolation_level="AUTOCOMMIT", connect_args={"connect_timeout": 3})
         with admin.connect() as c:
+            c.execute(text("SET default_transaction_read_only TO off"))
             for d in (SRC, DST, SRC_R, DST_R):
-                c.execute(text(f"DROP DATABASE IF EXISTS {d}"))
+                c.execute(text(f"DROP DATABASE IF EXISTS {d} WITH (FORCE)"))
                 c.execute(text(f"CREATE DATABASE {d}"))
+                c.execute(text(f"ALTER DATABASE {d} SET default_transaction_read_only TO off"))
     except Exception as ex:  # noqa: BLE001
         pytest.skip(f"로컬 PostgreSQL 임시 DB 생성 불가: {type(ex).__name__}")
     engs = {d: mig.engine_for(d, read_only=False, base_url=base) for d in (SRC, DST, SRC_R, DST_R)}
@@ -128,6 +130,7 @@ def dbs():
     for e in engs.values():
         e.dispose()
     with admin.connect() as c:
+        c.execute(text("SET default_transaction_read_only TO off"))
         for d in (SRC, DST, SRC_R, DST_R):
             c.execute(text(f"DROP DATABASE IF EXISTS {d} WITH (FORCE)"))
     admin.dispose()
@@ -402,9 +405,11 @@ def rev_dbs():
         admin = create_engine(make_url(base).set(database="postgres", drivername="postgresql+psycopg2"),
                               isolation_level="AUTOCOMMIT", connect_args={"connect_timeout": 3})
         with admin.connect() as c:
+            c.execute(text("SET default_transaction_read_only TO off"))
             for d in (OLD_C, OLD_R, NEW_C, NEW_R):
-                c.execute(text(f"DROP DATABASE IF EXISTS {d}"))
+                c.execute(text(f"DROP DATABASE IF EXISTS {d} WITH (FORCE)"))
                 c.execute(text(f"CREATE DATABASE {d}"))
+                c.execute(text(f"ALTER DATABASE {d} SET default_transaction_read_only TO off"))
     except Exception as ex:  # noqa: BLE001
         pytest.skip(f"로컬 PostgreSQL 임시 DB 생성 불가: {type(ex).__name__}")
     engs = {d: mig.engine_for(d, read_only=False, base_url=base) for d in (OLD_C, OLD_R, NEW_C, NEW_R)}
@@ -412,6 +417,7 @@ def rev_dbs():
     for e in engs.values():
         e.dispose()
     with admin.connect() as c:
+        c.execute(text("SET default_transaction_read_only TO off"))
         for d in (OLD_C, OLD_R, NEW_C, NEW_R):
             c.execute(text(f"DROP DATABASE IF EXISTS {d} WITH (FORCE)"))
     admin.dispose()
@@ -508,3 +514,73 @@ def test_forward_drops_rows_whose_key_is_not_in_target_ledger():
     rows = [{"k": "o1"}, {"k": "x"}, {"k": "gone"}]
     ins, upd, cnt = mpo.plan_geocodes(rows, "k", {"o1": (mpo.REKEY, "n1")}, {}, ledger={"n1", "x"})
     assert sorted(r["k"] for r in ins) == ["n1", "x"] and cnt["drop_not_in_ledger"] == 1 and cnt["insert"] == 2
+
+
+def test_rent_only_refuses_collective_args_and_wrong_target_name(monkeypatch):
+    def boom(*_a, **_k):
+        raise AssertionError("엔진을 열면 안 된다")
+
+    monkeypatch.setattr(mpo, "engine_for", boom)
+    with pytest.raises(mig.GuardError, match="집합"):
+        mpo.main(["--rent-only", "--src-rent", "src_p2r", "--dst-rent", "dst_p2r", "--src-collective", "collective_stats",
+                  "--base-url", "postgresql://u@127.0.0.1/x"])
+    with pytest.raises(mig.GuardError, match="rent_stats"):
+        mpo.main(["--rent-only", "--src-rent", "src_p2r", "--dst-rent", "collective_stats", "--real-apply",
+                  "--confirm-db", "collective_stats", "--manifest", "m.json", "--freeze-at", "2026-11-17T03:00",
+                  "--base-url", "postgresql://u@127.0.0.1/x"])
+
+
+def test_rent_only_refuses_non_local_target():
+    with pytest.raises(mig.GuardError, match="로컬"):
+        mpo.main(["--rent-only", "--src-rent", "src_p2r", "--dst-rent", "rent_stats", "--real-apply",
+                  "--confirm-db", "rent_stats", "--manifest", "m.json", "--freeze-at", "2026-11-17T03:00",
+                  "--base-url", "postgresql://u@203.0.113.5/rent_stats"])
+
+
+def test_rent_only_drops_c2_keeps_the_table_and_reapply_changes_nothing(dbs, monkeypatch, tmp_path):
+    calls = []
+    real = mpo.engine_for
+
+    def spy(name, **kw):
+        calls.append(name)
+        assert "collective" not in name
+        return real(name, **kw)
+
+    monkeypatch.setattr(mpo, "engine_for", spy)
+    old_c2, split_base, old_rekey, plain, new_key, kept = (K[n] for n in "abcief")
+    for eng, is_dst in ((dbs[SRC_R], False), (dbs[DST_R], True)):
+        with eng.begin() as c:
+            c.execute(text(
+                "DROP TABLE IF EXISTS rent_building_geocodes, rent_building_key_map, "
+                "rent_transactions, rent_building_key_c2_units"))
+            c.execute(text(GEO.format(t="rent_building_geocodes", k="building_key")))
+            if not is_dst:
+                c.execute(text("INSERT INTO rent_building_geocodes (building_key, label) VALUES "
+                               "(:a,'c2'),(:b,'base'),(:c,'rekey'),(:e,'plain')"),
+                          dict(a=old_c2, b=split_base, c=old_rekey, e=plain))
+                continue
+            c.execute(text(MAP.format(t="rent_building_key_map")))
+            c.execute(text("CREATE TABLE rent_building_key_c2_units (base_key text, decision text)"))
+            c.execute(text("CREATE TABLE rent_transactions (building_key text)"))
+            c.execute(text("INSERT INTO rent_building_key_map (old_key, new_key, asset_type, reason) VALUES "
+                           "(:a,:a,'apartment','c2_split'),(:c,:i,'apartment','honam_sido')"),
+                      dict(a=old_c2, c=old_rekey, i=new_key))
+            c.execute(text("INSERT INTO rent_building_key_c2_units VALUES (:b, 'split')"), dict(b=split_base))
+            c.execute(text("INSERT INTO rent_transactions VALUES (:i), (:e), (:f)"),
+                      dict(i=new_key, e=plain, f=kept))
+            c.execute(text("INSERT INTO rent_building_geocodes (building_key, label) VALUES (:f,'kept')"), dict(f=kept))
+    rep = tmp_path / "rent-only.json"
+    args = ["--rent-only", "--src-rent", SRC_R, "--dst-rent", DST_R, "--base-url", dbs["base"],
+            "--report-out", str(rep), "--apply"]
+    assert mpo.main(args) == 0
+    row = json.loads(rep.read_text(encoding="utf-8"))["sides"]["rent"]["tables"][0]
+    assert row["drop_c2"] == 2 and row["insert"] == 2 and row["dst_after"] == 3
+    assert "collective" not in json.loads(rep.read_text(encoding="utf-8"))["sides"]
+    with dbs[DST_R].connect() as c:
+        keys = {x[0] for x in c.execute(text("SELECT building_key FROM rent_building_geocodes"))}
+    assert keys == {new_key, plain, kept}
+    before = len(keys)
+    assert mpo.main(args) == 0
+    again = json.loads(rep.read_text(encoding="utf-8"))["sides"]["rent"]["tables"][0]
+    assert again["insert"] == 0 and again["update"] == 0 and again["dst_after"] == before
+    assert calls and all("collective" not in name for name in calls)
