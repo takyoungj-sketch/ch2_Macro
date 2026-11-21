@@ -1102,6 +1102,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="승인된 C-2 판정 파일 SHA-256(실제 DB 모드 필수 — 판정 표 적재 기록과 대조)")
     p.add_argument("--c2-approved-rows", type=int, default=None, help="승인된 C-2 판정 행 수(실제 DB 모드 필수, 이번 4,311)")
     a = p.parse_args(argv)
+    if (a.sync_mode or "") == "c2-applied":
+        raise GuardError("--sync-mode c2-applied 는 임대 좌표 병합 전용이다")
     if a.real_apply and (a.rollback or a.verify):
         raise GuardError("--real-apply 는 적용만 한다(실제 DB 되돌리기는 런북의 로컬 덤프 복원)")
     if a.real_apply:

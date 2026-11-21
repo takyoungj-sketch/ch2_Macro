@@ -578,6 +578,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="forward = 옛 키 운영 행 → 키 이전 끝난 대상(연결표 필수) · reverse = 반영 뒤 운영 행 → 되돌린 옛 DB(런북 6.2)")
     add_real_apply_args(p)
     a = p.parse_args(raw)
+    if (a.sync_mode or "") == "c2-applied" and not rent_only:
+        raise GuardError("--sync-mode c2-applied 는 임대 좌표 병합 전용이다")
     if rent_only:
         return _run_rent_only(a)
     if a.real_apply:

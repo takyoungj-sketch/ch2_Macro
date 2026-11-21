@@ -124,6 +124,106 @@ def test_hand_written_pass_without_numbers_is_rejected():
         )
 
 
+class _Conn:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+class _Engine:
+    def connect(self):
+        return _Conn()
+
+    def begin(self):
+        return _Conn()
+
+    def dispose(self):
+        return None
+
+
+def test_key_migration_cli_rejects_c2_before_connect(monkeypatch):
+    def connected(*args, **kwargs):
+        raise AssertionError("connected")
+
+    monkeypatch.setattr(mig, "engine_for", connected)
+    monkeypatch.setattr(mig, "server_url_from_env", connected)
+    with pytest.raises(mig.GuardError, match="임대 좌표 병합 전용"):
+        mig.main(["--collective-db", "collective_stats", "--rent-db", "rent_stats",
+                  "--real-apply", "--sync-mode", "c2-applied",
+                  "--confirm-db", "rent_stats", "--c2-approved-sha256", "a" * 64, "--c2-approved-rows", "6054"])
+
+
+def test_rent_only_c2_uses_rent_engines_only(monkeypatch, tmp_path):
+    ops = ROOT / "scripts" / "ops"
+    if str(ops) not in sys.path:
+        sys.path.insert(0, str(ops))
+    import collective_p2_merge_prod_only as merge
+
+    opened = []
+    checked = []
+
+    def engine(name, **kwargs):
+        opened.append(name)
+        return _Engine()
+
+    def checked_write(names, args, base_url=None):
+        checked.append(list(names))
+        mig.enable_c2_applied(names, args.confirm_db, _judge(*_case()))
+
+    monkeypatch.setattr(merge, "engine_for", engine)
+    monkeypatch.setattr(merge, "check_write_targets", checked_write)
+    monkeypatch.setattr(merge, "source_counts", lambda *args, **kwargs: {"rent_building_geocodes": 1})
+    monkeypatch.setattr(merge, "preflight", lambda *args, **kwargs: {"ok": True})
+    monkeypatch.setattr(merge, "assert_rehearsal_db", lambda conn, name: name)
+    monkeypatch.setattr(merge, "merge_geocode", lambda *args, **kwargs: {"insert": 0})
+    code = merge.main([
+        "--rent-only", "--src-rent", "rent_src_p2r", "--dst-rent", "rent_stats",
+        "--real-apply", "--sync-mode", "c2-applied", "--confirm-db", "rent_stats",
+        "--manifest", "m.json", "--freeze-at", "2026-11-20T00:00",
+        "--c2-result-out", str(tmp_path / "out.json"),
+        "--base-url", "postgresql://u:p@127.0.0.1:5432/postgres",
+    ])
+    assert code == 0
+    assert checked == [["rent_stats"]]
+    assert opened
+    assert set(opened) <= {"rent_src_p2r", "rent_stats"}
+
+
+def test_collective_args_with_c2_are_rejected(monkeypatch):
+    ops = ROOT / "scripts" / "ops"
+    if str(ops) not in sys.path:
+        sys.path.insert(0, str(ops))
+    import collective_p2_merge_prod_only as merge
+
+    def connected(*args, **kwargs):
+        raise AssertionError("connected")
+
+    monkeypatch.setattr(merge, "engine_for", connected)
+    with pytest.raises(merge.GuardError, match="집합 인자"):
+        merge.main(["--rent-only", "--src-rent", "rent_src_p2r", "--dst-rent", "rent_stats",
+                    "--src-collective", "collective_stats", "--sync-mode", "c2-applied",
+                    "--real-apply", "--confirm-db", "rent_stats"])
+    with pytest.raises(merge.GuardError, match="임대 좌표 병합 전용"):
+        merge.main(["--src-collective", "src", "--dst-collective", "collective_stats",
+                    "--src-rent", "rent_src_p2r", "--dst-rent", "rent_stats",
+                    "--sync-mode", "c2-applied", "--real-apply", "--confirm-db", "rent_stats"])
+
+
+def test_existing_mode_still_reaches_the_database_layer(monkeypatch):
+    seen = []
+
+    def engine(name, **kwargs):
+        seen.append(name)
+        raise mig.GuardError("stop-after-engine")
+
+    monkeypatch.setattr(mig, "engine_for", engine)
+    with pytest.raises(mig.GuardError, match="stop-after-engine"):
+        mig.main(["--collective-db", "collective_stats_p2r"])
+    assert seen == ["collective_stats_p2r"]
+
+
 def test_existing_mode_still_rejects_a_diff_result(tmp_path):
     ops = ROOT / "scripts" / "ops" / "collective_p2_verify"
     if str(ops) not in sys.path:
