@@ -278,6 +278,32 @@ def test_measure_sets_statement_timeout():
     assert got == {"count": 4, "id_max": 5, "id_sum": 6}
 
 
+def test_c2_real_apply_requires_a_result_path_before_connect(monkeypatch):
+    import argparse
+
+    def connected(*args, **kwargs):
+        raise AssertionError("connected")
+
+    monkeypatch.setattr(mig, "engine_for", connected)
+    monkeypatch.setattr(mig, "server_url_from_env", connected)
+    args = argparse.Namespace(
+        real_apply=True, sync_mode="c2-applied", c2_result_out="", confirm_db=["rent_stats"], sync_result=[],
+        c2_backup_snapshot="", c2_ops_snapshot="", c2_local_snapshot="",
+    )
+    with pytest.raises(mig.GuardError, match="c2-result-out"):
+        mig.check_write_targets(["rent_stats"], args, base_url="postgresql://u:p@127.0.0.1:5432/postgres")
+    ops = ROOT / "scripts" / "ops"
+    if str(ops) not in sys.path:
+        sys.path.insert(0, str(ops))
+    import collective_p2_merge_prod_only as merge
+
+    monkeypatch.setattr(merge, "engine_for", connected)
+    with pytest.raises(merge.GuardError, match="c2-result-out"):
+        merge.main(["--rent-only", "--src-rent", "rent_src_p2r", "--dst-rent", "rent_stats",
+                    "--real-apply", "--sync-mode", "c2-applied", "--confirm-db", "rent_stats",
+                    "--manifest", "m.json", "--freeze-at", "2026-11-20T00:00"])
+
+
 def test_existing_mode_still_rejects_a_diff_result(tmp_path):
     ops = ROOT / "scripts" / "ops" / "collective_p2_verify"
     if str(ops) not in sys.path:

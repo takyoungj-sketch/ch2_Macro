@@ -230,6 +230,9 @@ def check_write_targets(names: list[str], a, *, base_url: str | None = None) -> 
     """쓰기 전 이름 확인: --real-apply 면 접속 대상이 로컬 루프백인지(ops_guards.assert_local_target, libpq 최종 인자·
     PGHOST/PGHOSTADDR/PGSERVICE 포함) 먼저 보고 실제 적용 허가, 아니면 리허설 이름만."""
     if getattr(a, "real_apply", False):
+        mode = getattr(a, "sync_mode", "") or ""
+        if mode == "c2-applied" and not getattr(a, "c2_result_out", ""):
+            raise GuardError("--sync-mode c2-applied 는 --c2-result-out 이 필요하다")
         og = _ops_guards()
         for n in [x for x in names if x]:
             try:
