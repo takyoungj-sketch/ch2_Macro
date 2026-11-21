@@ -42,11 +42,18 @@ function Invoke-DeployOriginGuard {
     }
     if ($hash -ne $remote) {
       $allowed = "$AllowCommit".Trim()
-      if ($allowed -and $allowed -eq $hash) {
-        Write-Output "origin/main이 아닌 커밋을 배포한다"
-      } else {
+      if (-not $allowed -or $allowed -ne $hash) {
         throw "배포 거부: HEAD가 origin/main과 다릅니다. 승인한 커밋이면 -AllowCommit 값이 HEAD 전체 해시와 같아야 합니다."
       }
+      $published = @(git branch -r --contains HEAD)
+      if ($LASTEXITCODE -ne 0) {
+        throw "배포 거부: 원격에 없는 커밋은 배포하지 않는다"
+      }
+      $published = @($published | Where-Object { "$($_)".Trim() })
+      if ($published.Count -lt 1) {
+        throw "배포 거부: 원격에 없는 커밋은 배포하지 않는다"
+      }
+      Write-Output "origin/main이 아닌 커밋을 배포한다"
     }
   } finally {
     $env:GIT_TERMINAL_PROMPT = $previousPrompt
