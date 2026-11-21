@@ -16,6 +16,7 @@ from jose import jwt
 from app.config import Settings, settings
 from app.platform import auth_router, fieldnote_app_router, jwt_util
 from app.platform.db import get_platform_db
+from tests.test_fn011_app_bridge import html_from_response, token_from_bridge_html
 
 BASE = "e264476a977520e4ee82b91466cc2a0fc9589fe2"
 
@@ -30,7 +31,9 @@ def config(monkeypatch):
 
 
 def payload(response):
-    if response.headers["location"].startswith("ch2fieldnote://"):
+    if response.status_code == 200:
+        token = token_from_bridge_html(html_from_response(response))
+    elif response.headers.get("location", "").startswith("ch2fieldnote://"):
         token = parse_qs(urlsplit(response.headers["location"]).query)["token"][-1]
     else:
         from http.cookies import SimpleCookie
@@ -130,7 +133,7 @@ def test_callback_role_comes_from_database(monkeypatch, provider, db_role, injec
     callback = getattr(auth_router, f"{provider}_callback")
     response = callback(code="unit-code", db=OAuthDB(db_role),
         state=f"app:ch2fieldnote://oauth-callback?role={injected_role}")
-    assert response.status_code == 307
+    assert response.status_code == 200
     assert payload(response)["role"] == db_role
     assert_lifetime(response, 83 if db_role == "admin" else 7 * 24 * 60)
 
