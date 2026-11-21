@@ -62,6 +62,8 @@ cd D:\ch2\ch2_Macro-deploy
 # -AllowDrift     # 범위 밖 의존이 서버와 달라도 진행 (의도한 경우만)
 ```
 
+OPS-012보다 먼저 갈라진 브랜치(`release/rent-001` 등)에는 가드 없는 옛 배포 스크립트가 남아 있다. 그 브랜치로 배포하려면 먼저 OPS-012 병합분을 그 브랜치에 합치고, 합친 뒤의 새 전체 해시로 T 승인을 받는다. 승인 전에는 그 폴더의 옛 스크립트를 실행하지 않는다. `-AllowCommit`은 fetch 뒤 그 전체 해시가 원격 브랜치 하나 이상에 들어 있을 때만 쓴다.
+
 **배포 전 점검 (built, 2026-11-11 추가):**
 
 1. **범위 밖 의존 점검** — `deploy/scripts/deploy_import_closure.py`가 built 패키지(`built`·`recommendation`·`map`·`ai`)의 import를 따라가 scope가 올리지 않는 backend/pipeline 파일을 찾고, 서버 파일과 줄바꿈을 무시한 sha256으로 비교한다. 다르면 **scp 전에 멈춘다** → 그 파일을 scope에 추가하거나 `-Scope all`.

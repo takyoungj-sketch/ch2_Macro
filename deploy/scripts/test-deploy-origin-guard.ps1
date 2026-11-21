@@ -93,14 +93,9 @@ try {
     Invoke-DeployOriginGuard -RepoRoot $work
   } "origin/main" "head-differs"
 
-  $allowed = @(Invoke-DeployOriginGuard -RepoRoot $work -AllowCommit $head)
-  if ($allowed -contains "origin/main이 아닌 커밋을 배포한다") {
-    Write-Output "PASS allow-exact"
-    $passed++
-  } else {
-    Write-Output "FAIL allow-exact ($allowed)"
-    $failed++
-  }
+  Assert-Reject {
+    Invoke-DeployOriginGuard -RepoRoot $work -AllowCommit $head
+  } "원격에 없는 커밋" "allow-local-only"
 
   Assert-Reject {
     Invoke-DeployOriginGuard -RepoRoot $work -AllowCommit ("a" * 40)
@@ -108,6 +103,16 @@ try {
   Assert-Reject {
     Invoke-DeployOriginGuard -RepoRoot $work -AllowCommit $head.Substring(0, 12)
   } "origin/main" "allow-short"
+
+  git -C $work push origin HEAD:release/rent-001 | Out-Null
+  $published = @(Invoke-DeployOriginGuard -RepoRoot $work -AllowCommit $head)
+  if ($published -contains "origin/main이 아닌 커밋을 배포한다") {
+    Write-Output "PASS allow-pushed-release"
+    $passed++
+  } else {
+    Write-Output "FAIL allow-pushed-release ($published)"
+    $failed++
+  }
 
   $broken = Join-Path $tmp "broken"
   New-SampleRepo $broken "D:\ch2\ops012-no-such-remote.git"
