@@ -64,9 +64,15 @@ def period_end_monthly(now: datetime | None = None) -> datetime:
     return base + timedelta(days=31)
 
 
-def order_id_for(sub_id: int, due_at: datetime) -> str:
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def order_id_for(sub_id: int, due_at: datetime, created_at: datetime) -> str:
+    """구독 행의 created_at만으로 세대를 고정한다. 호출 시각이나 난수를 넣지 않는다."""
+    created = aware(created_at).astimezone(timezone.utc)
+    millis = (created - _EPOCH) // timedelta(milliseconds=1)
     day = aware(due_at).astimezone(KST).strftime("%Y%m%d")
-    return f"ch2-{int(sub_id)}-{day}"
+    return f"ch2-{int(sub_id)}-{millis}-{day}"
 
 
 def trial_end_for(created_at: datetime) -> datetime | None:
@@ -367,8 +373,11 @@ def _process_due(db: Session, sub_id: int, now: datetime) -> str:
         if not customer_key or not billing_key:
             _log.warning("renew skip sub_id=%s missing billing customer", sub_id)
             return "skipped"
+        if row.get("created_at") is None:
+            _log.warning("renew skip sub_id=%s missing created_at", sub_id)
+            return "skipped"
         due = aware(row["next_billing_at"])
-        order_id = order_id_for(sub_id, due)
+        order_id = order_id_for(sub_id, due, row["created_at"])
         kind, payment = _lookup(order_id)
         if kind == "absent" and bool(row["cancel_at_period_end"]):
             _mark_expired(db, row)
@@ -419,6 +428,9 @@ def _lookup(order_id: str) -> tuple[str, dict | None]:
         return interpret_lookup(error_code=exc.code), None
     except httpx.TransportError:
         return "unknown", None
+    echoed = payment.get("orderId") if isinstance(payment, dict) else None
+    if echoed not in (None, "") and str(echoed) != order_id:
+        return "unknown", payment
     return interpret_lookup(payment=payment), payment
 
 
