@@ -16,9 +16,8 @@ from fastapi import HTTPException
 from sqlalchemy import (MetaData, Table, Column, String, Integer, Float, Text,
                         DateTime, select, update, and_, UniqueConstraint, CheckConstraint)
 
-POLICY = "launch-2026-12-v2"
+POLICY = "launch-2026-11-v1"
 LIMITS = {
-    "trial": {"macro_question": 60},
     "macro": {"macro_question": 200},
     "bundle": {"macro_question": 250, "photo_analysis_image": 500,
                "text_writing": 100, "address_sheet_job": 100},
@@ -91,15 +90,6 @@ def grant_for(db, user, now=None) -> Grant | None:
     """
     from sqlalchemy import text
     now = now or now_utc()
-    from app.platform.access import policy_config, resolve_access
-
-    if policy_config()[0] == "v2":
-        access = resolve_access(db, user, now)
-        if access.state not in {"trial", "paid"}:
-            return None
-        return Grant(user.id, "trial" if access.state == "trial" else "bundle",
-                     access.period_start, access.period_end)
-    # Keep the deployed legacy query and upgrade-period behavior unchanged.
     rows = db.execute(text("""SELECT s.id, s.product, s.plan_id, s.source,
         s.created_at, s.current_period_end FROM subscriptions s
         WHERE s.user_id=:uid AND s.status IN ('active','canceled')
@@ -159,10 +149,10 @@ def _balance_where(grant, feature):
                 balances.c.period_start == grant.start)
 
 
-def snapshot(engine, grant, *, limits=None):
+def snapshot(engine, grant):
     items = []
     with engine.connect() as c:
-        for feature, limit in (LIMITS[grant.plan] if limits is None else limits).items():
+        for feature, limit in LIMITS[grant.plan].items():
             b = c.execute(select(balances).where(_balance_where(grant, feature))).mappings().first()
             used, reserved = (b["used"], b["reserved"]) if b else (0, 0)
             items.append({"feature": feature, "label": LABELS[feature], "limit": limit,
