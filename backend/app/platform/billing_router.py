@@ -192,7 +192,10 @@ def billing_status(
     user: CurrentUser | None = Depends(get_optional_user),
     db: Session = Depends(get_platform_db),
 ):
-    return resolve_access(db, user).status()
+    result = resolve_access(db, user).status()
+    if settings.ch2_billing_paused:
+        result["billing_paused"] = True
+    return result
 
 
 @router.post("/subscription/cancel")
@@ -213,6 +216,8 @@ def toss_billing_prepare(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
+    if settings.ch2_billing_paused:
+        raise HTTPException(503, "billing_paused")
     plan = PLANS_BY_ID.get(body.plan_id)
     if not plan:
         raise HTTPException(400, "unknown_plan")
@@ -242,6 +247,8 @@ def toss_billing_activate(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
+    if settings.ch2_billing_paused:
+        raise HTTPException(503, "billing_paused")
     if not toss_configured():
         raise HTTPException(503, "토스 결제 키가 아직 설정되지 않았습니다.")
     stored = ensure_toss_customer_key(db, user.id)

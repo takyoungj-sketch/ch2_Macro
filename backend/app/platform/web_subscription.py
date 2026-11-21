@@ -20,7 +20,13 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.platform.billing_period import KST, anchor, aware, next_period_end
 from app.platform.entitlements import grant_bundle, upsert_entitlement
-from app.platform.toss_client import TossApiError, charge_billing, get_payment_by_order, issue_billing_key
+from app.platform.toss_client import (
+    TossApiError,
+    charge_billing,
+    delete_billing_key,
+    get_payment_by_order,
+    issue_billing_key,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -213,6 +219,15 @@ def activate_with_billing_key(
     billing_key = str(issued.get("billingKey") or "")
     if not billing_key:
         raise ValueError("billing_key_missing")
+
+    def discard_issued_key() -> None:
+        try:
+            delete_billing_key(billing_key)
+        except Exception as exc:  # noqa: BLE001 - cleanup must not replace the user-facing result
+            status = exc.status_code if isinstance(exc, TossApiError) else None
+            code = exc.code if isinstance(exc, TossApiError) else None
+            _log.warning("orphan Toss billing key cleanup failed status=%s code=%s", status, code)
+
     due = trial_end if now < trial_end else now
     db.execute(text("SELECT 1 FROM users WHERE id = :uid FOR UPDATE"), {"uid": user_id})
     open_row = db.execute(
@@ -231,6 +246,7 @@ def activate_with_billing_key(
     ).first()
     if open_row:
         db.rollback()
+        discard_issued_key()
         raise ValueError("already_subscribed")
     saved = db.execute(
         text(
@@ -245,6 +261,7 @@ def activate_with_billing_key(
     )
     if saved.rowcount != 1:
         db.rollback()
+        discard_issued_key()
         raise ValueError("already_subscribed")
     db.commit()
     if now < trial_end:

@@ -10,11 +10,15 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from app.config import settings
 from app.platform.db import get_platform_session_factory
 from app.platform.web_subscription import renew_due_subscriptions
 
 
 def main() -> int:
+    if settings.ch2_billing_paused:
+        print("PAUSED")
+        return 0
     factory = get_platform_session_factory()
     if factory is None:
         print("DATABASE_URL_PLATFORM not configured", file=sys.stderr)

@@ -204,6 +204,7 @@ class Settings(BaseSettings):
     ch2_policy_start: Optional[datetime] = Field(default=None, validation_alias="CH2_POLICY_START")
     ch2_entitlement_mode: Literal["legacy", "v2"] = Field(default="legacy", validation_alias="CH2_ENTITLEMENT_MODE")
     ch2_deploy_env: Literal["production", "local", "test"] = Field(default="production", validation_alias="CH2_DEPLOY_ENV")
+    ch2_billing_paused: bool = Field(default=False, validation_alias="CH2_BILLING_PAUSED")
 
     @property
     def cors_origins_list(self) -> list[str]:

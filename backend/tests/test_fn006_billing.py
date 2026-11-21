@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import subprocess
 import sys
@@ -20,12 +21,13 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import TimeoutError as PoolTimeout
 from sqlalchemy.orm import sessionmaker
 
-from app.config import settings
+from app.config import Settings, settings
 from app.platform.billing_period import KST, anchor, next_period_end
 from app.platform.access import resolve_access
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, require_user
 from app.platform.toss_client import TossApiError
+from app.platform import toss_client
 from app.platform import billing_router as billing
 from app.platform import web_subscription as ws
 from test_access_v2 import END, START, USER, ReadDB, subscription
@@ -116,59 +118,67 @@ def platform():
         admin.dispose()
         pytest.skip(type(exc).__name__)
     target = url.set(database=name)
-    engine = create_engine(target, pool_pre_ping=True)
-    with engine.begin() as conn:
-        conn.execute(text(
-            """
-            CREATE TABLE users (
-                id BIGSERIAL PRIMARY KEY,
-                email VARCHAR(255) NOT NULL UNIQUE,
-                provider VARCHAR(32) NOT NULL DEFAULT 'google',
-                provider_sub VARCHAR(255) NOT NULL,
-                nickname VARCHAR(80) NOT NULL UNIQUE,
-                role VARCHAR(32) NOT NULL DEFAULT 'member',
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                toss_customer_key VARCHAR(50)
-            );
-            CREATE TABLE subscriptions (
-                id BIGSERIAL PRIMARY KEY,
-                user_id BIGINT NOT NULL REFERENCES users(id),
-                product VARCHAR(32) NOT NULL,
-                source VARCHAR(32) NOT NULL,
-                external_id VARCHAR(255),
-                status VARCHAR(32) NOT NULL DEFAULT 'pending',
-                current_period_end TIMESTAMPTZ,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                plan_id VARCHAR(64),
-                toss_billing_key VARCHAR(200),
-                cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
-                next_billing_at TIMESTAMPTZ,
-                CONSTRAINT subscriptions_status_chk CHECK (
-                    status IN ('active', 'canceled', 'expired', 'pending', 'past_due')
-                )
-            );
-            CREATE UNIQUE INDEX idx_subscriptions_external ON subscriptions (source, external_id)
-                WHERE external_id IS NOT NULL;
-            CREATE TABLE entitlements (
-                id BIGSERIAL PRIMARY KEY,
-                user_id BIGINT NOT NULL REFERENCES users(id),
-                product VARCHAR(32) NOT NULL,
-                active BOOLEAN NOT NULL DEFAULT TRUE,
-                expires_at TIMESTAMPTZ,
-                source_sub BIGINT REFERENCES subscriptions(id),
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                UNIQUE (user_id, product)
-            );
-            """
-        ))
-    yield {"engine": engine, "dsn": target.render_as_string(hide_password=False)}
-    engine.dispose()
-    with admin.connect() as conn:
-        conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
-    admin.dispose()
+    engine = None
+    try:
+        engine = create_engine(target, pool_pre_ping=True)
+        with engine.begin() as conn:
+            conn.execute(text(
+                """
+                CREATE TABLE users (
+                    id BIGSERIAL PRIMARY KEY,
+                    email VARCHAR(255) NOT NULL UNIQUE,
+                    provider VARCHAR(32) NOT NULL DEFAULT 'google',
+                    provider_sub VARCHAR(255) NOT NULL,
+                    nickname VARCHAR(80) NOT NULL UNIQUE,
+                    role VARCHAR(32) NOT NULL DEFAULT 'member',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    toss_customer_key VARCHAR(50)
+                );
+                CREATE TABLE subscriptions (
+                    id BIGSERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES users(id),
+                    product VARCHAR(32) NOT NULL,
+                    source VARCHAR(32) NOT NULL,
+                    external_id VARCHAR(255),
+                    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                    current_period_end TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    plan_id VARCHAR(64),
+                    toss_billing_key VARCHAR(200),
+                    cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+                    next_billing_at TIMESTAMPTZ,
+                    CONSTRAINT subscriptions_status_chk CHECK (
+                        status IN ('active', 'canceled', 'expired', 'pending', 'past_due')
+                    )
+                );
+                CREATE UNIQUE INDEX idx_subscriptions_external ON subscriptions (source, external_id)
+                    WHERE external_id IS NOT NULL;
+                CREATE TABLE entitlements (
+                    id BIGSERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES users(id),
+                    product VARCHAR(32) NOT NULL,
+                    active BOOLEAN NOT NULL DEFAULT TRUE,
+                    expires_at TIMESTAMPTZ,
+                    source_sub BIGINT REFERENCES subscriptions(id),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    UNIQUE (user_id, product)
+                );
+                """
+            ))
+        yield {"engine": engine, "dsn": target.render_as_string(hide_password=False)}
+    finally:
+        try:
+            if engine is not None:
+                engine.dispose()
+        finally:
+            try:
+                with admin.connect() as conn:
+                    conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+            finally:
+                admin.dispose()
 
 
 @pytest.fixture
@@ -237,6 +247,267 @@ def _row(db, sub_id):
         ),
         {"sid": sub_id},
     ).mappings().one()
+
+
+@pytest.mark.parametrize(
+    ("status", "period_end", "reason"),
+    [
+        ("expired", None, "trial_ended"),  # R2c -> R5, no approved charge
+        ("past_due", None, "payment_failed"),
+        ("expired", END - timedelta(days=1), "subscription_required"),  # historical paid period
+    ],
+)
+def test_expired_reason_uses_recorded_paid_period(monkeypatch, status, period_end, reason):
+    monkeypatch.setattr(settings, "ch2_entitlement_mode", "v2")
+    monkeypatch.setattr(settings, "ch2_policy_start", START)
+    access = resolve_access(
+        ReadDB(subs=[subscription(status=status, current_period_end=period_end)]), USER, END
+    )
+    assert access.state == "expired" and access.reason == reason
+    assert not any(access.features.values())
+
+
+def test_platform_fixture_drops_database_when_schema_setup_fails(monkeypatch):
+    statements = []
+
+    class Connection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def execute(self, statement):
+            statements.append(str(statement))
+
+    class AdminEngine:
+        def connect(self):
+            return Connection()
+
+        def dispose(self):
+            statements.append("ADMIN_DISPOSE")
+
+    class TargetEngine:
+        def begin(self):
+            raise RuntimeError("injected schema initialization failure")
+
+        def dispose(self):
+            statements.append("TARGET_DISPOSE")
+
+    engines = iter([AdminEngine(), TargetEngine()])
+    monkeypatch.setattr(sys.modules[__name__], "_local_platform_url", lambda: make_url("postgresql://localhost/postgres"))
+    monkeypatch.setattr(sys.modules[__name__], "create_engine", lambda *a, **k: next(engines))
+    setup = platform.__wrapped__()
+    with pytest.raises(RuntimeError, match="injected schema initialization failure"):
+        next(setup)
+    assert any("CREATE DATABASE" in sql for sql in statements)
+    assert any("DROP DATABASE IF EXISTS" in sql for sql in statements)
+    assert "TARGET_DISPOSE" in statements and "ADMIN_DISPOSE" in statements
+
+
+def test_conflicting_activation_deletes_unstored_key_and_keeps_409(caplog, monkeypatch):
+    monkeypatch.setattr(settings, "ch2_policy_start", START)
+    billing_key = "key-value-must-never-be-logged"
+    deleted = []
+
+    class Result:
+        def __init__(self, row=None):
+            self.row = row
+
+        def mappings(self):
+            return self
+
+        def first(self):
+            return self.row
+
+    class ConflictDB:
+        def execute(self, statement, params=None):
+            query = str(statement)
+            if "JOIN users" in query:
+                return Result({"id": 42, "user_id": USER.id, "product": "bundle", "plan_id": "ch2_monthly",
+                               "status": "pending", "created_at": START - timedelta(days=100)})
+            if "FROM users" in query:
+                return Result()
+            if "SELECT id FROM subscriptions" in query:
+                return Result({"id": 99})
+            raise AssertionError(query)
+
+        def rollback(self):
+            pass
+
+        def commit(self):
+            raise AssertionError("conflict path must not commit")
+
+    monkeypatch.setattr(ws, "issue_billing_key", lambda *a, **k: {"billingKey": billing_key})
+
+    def delete(key):
+        deleted.append(key)
+        raise TossApiError(503, "cleanup unavailable")
+
+    monkeypatch.setattr(ws, "delete_billing_key", delete)
+    with pytest.raises(ValueError, match="already_subscribed"):
+        ws.activate_with_billing_key(
+            ConflictDB(), user_id=USER.id, pending_external_id="pending-test", auth_key="auth-key-test",
+            customer_key="customer-key-test", amount=10000, order_name="CH2 월 구독", user_email=None,
+            now=END - timedelta(days=1),
+        )
+    assert deleted == [billing_key]
+    assert "orphan Toss billing key cleanup failed" in caplog.text
+    assert billing_key not in caplog.text
+
+
+def test_billing_activate_maps_conflict_to_http_409(monkeypatch):
+    monkeypatch.setattr(settings, "ch2_billing_paused", False)
+    monkeypatch.setattr(billing, "toss_configured", lambda: True)
+    monkeypatch.setattr(billing, "ensure_toss_customer_key", lambda *a, **k: "customer-key-test")
+    monkeypatch.setattr(billing, "activate_with_billing_key", lambda *a, **k: (_ for _ in ()).throw(ValueError("already_subscribed")))
+
+    class PendingDB:
+        def execute(self, *_a, **_k):
+            return type("PendingResult", (), {
+                "mappings": lambda self: self,
+                "first": lambda self: {"plan_id": "ch2_monthly"},
+            })()
+
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        billing.toss_billing_activate(
+            billing.TossBillingActivateRequest(
+                auth_key="auth-key-test", customer_key="customer-key-test", pending_id="pending-test"
+            ), user=USER, db=PendingDB(),
+        )
+    assert exc.value.status_code == 409 and exc.value.detail == "already_subscribed"
+
+
+def _renewal_module():
+    path = BACKEND / "scripts" / "platform_billing_renewal.py"
+    spec = importlib.util.spec_from_file_location("fn010_platform_billing_renewal", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_billing_pause_setting_defaults_off(monkeypatch):
+    monkeypatch.delenv("CH2_BILLING_PAUSED", raising=False)
+    assert Settings(_env_file=None).ch2_billing_paused is False
+
+
+def test_paused_renewal_stops_before_creating_session(monkeypatch, capsys):
+    renewal = _renewal_module()
+    monkeypatch.setattr(settings, "ch2_billing_paused", True)
+    monkeypatch.setattr(renewal, "get_platform_session_factory", lambda: pytest.fail("DB factory called"))
+    monkeypatch.setattr(renewal, "renew_due_subscriptions", lambda *_a, **_k: pytest.fail("renewal called"))
+    assert renewal.main() == 0
+    assert capsys.readouterr().out.strip() == "PAUSED"
+
+
+def test_unpaused_renewal_keeps_existing_runner_behavior(monkeypatch, capsys):
+    renewal = _renewal_module()
+    calls = []
+
+    class Session:
+        def close(self):
+            calls.append("closed")
+
+    monkeypatch.setattr(settings, "ch2_billing_paused", False)
+    monkeypatch.setattr(renewal, "get_platform_session_factory", lambda: lambda: Session())
+    monkeypatch.setattr(renewal, "renew_due_subscriptions", lambda db: calls.append("renewed") or 2)
+    assert renewal.main() == 0
+    assert calls == ["renewed", "closed"]
+    assert capsys.readouterr().out.strip() == "OK: renewed 2"
+
+
+def test_billing_pause_blocks_prepare_and_activate_before_side_effects(monkeypatch):
+    monkeypatch.setattr(settings, "ch2_billing_paused", True)
+    monkeypatch.setattr(billing, "toss_configured", lambda: pytest.fail("Toss checked while paused"))
+    monkeypatch.setattr(billing, "ensure_toss_customer_key", lambda *_a, **_k: pytest.fail("customer touched"))
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as prepared:
+        billing.toss_billing_prepare(billing.TossBillingPrepareRequest(plan_id="ch2_monthly"), USER, object())
+    with pytest.raises(HTTPException) as activated:
+        billing.toss_billing_activate(
+            billing.TossBillingActivateRequest(
+                auth_key="auth-key-test", customer_key="customer-key-test", pending_id="pending-test"
+            ), USER, object(),
+        )
+    assert (prepared.value.status_code, prepared.value.detail) == (503, "billing_paused")
+    assert (activated.value.status_code, activated.value.detail) == (503, "billing_paused")
+
+
+def test_billing_status_only_adds_pause_flag_when_enabled(monkeypatch):
+    class StableAccess:
+        def status(self):
+            return {"state": "anonymous", "features": {"macro_full": False, "map_hub": False, "ai": False}}
+
+    monkeypatch.setattr(billing, "resolve_access", lambda *_a, **_k: StableAccess())
+    monkeypatch.setattr(settings, "ch2_billing_paused", False)
+    unpaused = billing.billing_status(None, None)
+    assert "billing_paused" not in unpaused
+    monkeypatch.setattr(settings, "ch2_billing_paused", True)
+    paused = billing.billing_status(None, None)
+    assert paused["billing_paused"] is True
+    assert {key: value for key, value in paused.items() if key != "billing_paused"} == unpaused
+
+
+def test_pause_does_not_change_existing_paid_access(monkeypatch):
+    monkeypatch.setattr(settings, "ch2_entitlement_mode", "v2")
+    monkeypatch.setattr(settings, "ch2_policy_start", START)
+    monkeypatch.setattr(settings, "ch2_billing_paused", True)
+    paid_until = END + timedelta(days=30)
+    access = resolve_access(
+        ReadDB(subs=[subscription(status="active", current_period_end=paid_until, next_billing_at=paid_until)]),
+        USER, END,
+    )
+    assert access.state == "paid" and all(access.features.values())
+
+
+def test_delete_billing_key_uses_official_delete_endpoint(monkeypatch):
+    calls = []
+
+    class Response:
+        status_code = 200
+        text = ""
+
+    class Client:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def delete(self, url, headers):
+            calls.append((url, headers))
+            return Response()
+
+    monkeypatch.setattr(toss_client.httpx, "Client", lambda **_kwargs: Client())
+    toss_client.delete_billing_key("test/key")
+    assert calls[0][0] == "https://api.tosspayments.com/v1/billing/test%2Fkey"
+
+
+def test_unpaused_due_runner_processes_each_due_row_once(monkeypatch):
+    calls = []
+
+    class ScalarResult:
+        def all(self):
+            return [42]
+
+    class Result:
+        def scalars(self):
+            return ScalarResult()
+
+    class DueSession:
+        def execute(self, *_a, **_k):
+            return Result()
+
+        def rollback(self):
+            calls.append("rollback")
+
+    monkeypatch.setattr(settings, "ch2_billing_paused", False)
+    monkeypatch.setattr(ws, "_process_due", lambda db, sub_id, now: calls.append(sub_id) or "approved")
+    assert ws.renew_due_subscriptions(DueSession(), now=END) == 1
+    assert calls == ["rollback", 42]
 
 
 def _patch(monkeypatch, lookup, charge):
@@ -599,6 +870,7 @@ def test_concurrent_activation_keeps_one_order(db, platform, monkeypatch):
             return {"billingKey": f"issued-{issued['n']}"}
 
     monkeypatch.setattr(ws, "issue_billing_key", issue)
+    monkeypatch.setattr(ws, "delete_billing_key", lambda *_a, **_k: None)
     user_id = _user(db)
     db.commit()
     _, first = ws.create_billing_pending(db, user_id=user_id, plan_id="ch2_monthly", product="bundle")
@@ -636,6 +908,7 @@ def test_concurrent_activation_keeps_one_order(db, platform, monkeypatch):
 
 def test_unknown_row_blocks_a_second_registration(db, monkeypatch):
     monkeypatch.setattr(ws, "issue_billing_key", lambda *a, **k: {"billingKey": "not-stored"})
+    monkeypatch.setattr(ws, "delete_billing_key", lambda *_a, **_k: None)
     user_id = _user(db)
     unknown_id = _sub(db, user_id, ext="unknown-open", key="kept-key")
     db.commit()

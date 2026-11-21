@@ -14,6 +14,7 @@ from app.config import settings
 TOSS_CONFIRM_URL = "https://api.tosspayments.com/v1/payments/confirm"
 TOSS_ISSUE_BILLING_URL = "https://api.tosspayments.com/v1/billing/authorizations/issue"
 TOSS_ORDER_URL = "https://api.tosspayments.com/v1/payments/orders/{order_id}"
+TOSS_DELETE_BILLING_URL = "https://api.tosspayments.com/v1/billing/{billing_key}"
 _READ_TIMEOUT = 30.0
 _CHARGE_TIMEOUT = 60.0
 
@@ -44,6 +45,14 @@ def issue_billing_key(auth_key: str, customer_key: str) -> dict[str, Any]:
     if res.status_code >= 400:
         raise TossApiError(res.status_code, res.text)
     return res.json()
+
+
+def delete_billing_key(billing_key: str) -> None:
+    url = TOSS_DELETE_BILLING_URL.format(billing_key=quote(billing_key, safe=""))
+    with httpx.Client(timeout=_READ_TIMEOUT) as client:
+        res = client.delete(url, headers=_headers())
+    if res.status_code >= 400:
+        raise TossApiError(res.status_code, res.text)
 
 
 def confirm_payment(payment_key: str, order_id: str, amount: int) -> dict[str, Any]:

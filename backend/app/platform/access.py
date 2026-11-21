@@ -140,6 +140,6 @@ def resolve_access(db: Session | None, user: CurrentUser | None, now: datetime |
         reason = "payment_processing"
     elif sub and sub["status"] == "past_due":
         reason = "payment_failed"
-    elif any(r["status"] in {"active", "past_due", "expired", "canceled"} for r in rows):
+    elif any(r["current_period_end"] is not None for r in rows):
         reason = "subscription_required"
     return Access("expired", reason, **base)

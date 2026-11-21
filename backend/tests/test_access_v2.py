@@ -129,7 +129,8 @@ def test_only_active_unexpired_is_paid(cancel):
 @pytest.mark.parametrize("status,reason", [("past_due", "payment_failed"), ("expired", "subscription_required"),
                                           ("canceled", "subscription_required")])
 def test_denial_reasons_are_separate_from_compatible_code(status, reason):
-    access = resolve_access(ReadDB(subs=[subscription(status=status)]), USER, END)
+    period_end = END - timedelta(days=1) if status in {"expired", "canceled"} else None
+    access = resolve_access(ReadDB(subs=[subscription(status=status, current_period_end=period_end)]), USER, END)
     assert access.state == "expired" and access.reason == reason
     assert access.rejection_code == "subscription_required"
 
