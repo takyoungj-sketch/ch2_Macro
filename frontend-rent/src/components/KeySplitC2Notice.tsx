@@ -38,7 +38,7 @@ export const KEY_STATUS_UNKNOWN_TEXT = "단지 분리 여부를 확인할 수 �
 export function KeyStatusUnknownNotice({ reason }: { reason?: string }) {
   return (
     <div
-      className="fixed left-1/2 top-3 z-[60] w-[min(92vw,30rem)] -translate-x-1/2 rounded-lg border border-slate-300 bg-slate-50 p-2 text-xs text-slate-700 shadow dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+      className="fixed left-1/2 top-[calc(var(--ch2-macro-header-height,70px)+0.75rem)] z-[80] w-[min(92vw,30rem)] -translate-x-1/2 rounded-lg border border-slate-300 bg-slate-50 p-2 text-xs text-slate-700 shadow dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
       role="status"
       data-testid="key-status-unknown"
     >
@@ -58,7 +58,7 @@ export default function KeySplitC2Notice({
 }) {
   return (
     <div
-      className="fixed left-1/2 top-3 z-[60] w-[min(92vw,36rem)] -translate-x-1/2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 shadow-lg dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+      className="fixed left-1/2 top-[calc(var(--ch2-macro-header-height,70px)+0.75rem)] z-[80] w-[min(92vw,36rem)] -translate-x-1/2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 shadow-lg dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
       role="status"
       data-testid="key-split-c2-notice"
     >
