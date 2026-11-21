@@ -203,13 +203,14 @@
       }
 
       function payNoteText(status) {
-        if (!tossEnabled) return "토스 테스트 키가 서버에 설정되면 구독 버튼이 활성화됩니다.";
         const billing = status && status.billing;
         const state = status && status.state;
         const reason = status && status.reason;
+        if (state === "admin") return "관리자 계정은 결제 없이 이용합니다.";
+        if (!tossEnabled) return "토스 테스트 키가 서버에 설정되면 구독 버튼이 활성화됩니다.";
         if (reason === "payment_processing") return "결제 결과를 확인하는 중입니다.";
         if (reason === "payment_failed" || billing === "failed") return "카드를 다시 등록하면 결제가 진행됩니다.";
-        if (billing === "scheduled_canceled") return "첫 결제 전에 해지되어, 체험이 끝나는 날 청구하지 않습니다.";
+        if (billing === "scheduled_canceled") return "체험이 끝나는 날 첫 결제를 하지 않습니다. 해지 시점에 첫 결제가 이미 처리 중이었다면 그 결제는 진행되고, 이번 기간은 이용하며 다음 자동결제부터 멈춥니다.";
         if (billing === "active_canceled") return "다음 자동결제는 진행하지 않습니다. 이미 결제한 기간은 유지됩니다.";
         if (billing === "active" || state === "paid") return "등록된 카드로 매월 자동 결제됩니다.";
         if (billing === "scheduled" || state === "trial") return "체험이 끝나는 날 첫 결제되고, 그 뒤 매월 자동 결제됩니다.";
@@ -348,7 +349,7 @@
       document.getElementById("cancel-sub-btn").addEventListener("click", () => {
         const scheduled = subInfo && subInfo.billing === "scheduled";
         const message = scheduled
-          ? "첫 결제 전에 해지합니다. 체험이 끝나는 날 청구하지 않고, 체험은 그날까지 유지됩니다."
+          ? "체험이 끝나는 날 첫 결제를 하지 않습니다. 해지 시점에 첫 결제가 이미 처리 중이면 그 결제는 진행되고, 이번 기간은 이용하며 다음 자동결제부터 멈춥니다."
           : "다음 결제일부터 자동 결제를 멈춥니다. 이번 이용 기간까지는 계속 사용할 수 있습니다.";
         if (confirm(message)) setCancel(true);
       });
