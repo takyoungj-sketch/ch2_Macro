@@ -40,7 +40,7 @@ NOW = END
 def test_order_id_uses_kst_calendar_day():
     due = datetime(2026, 11, 30, 15, 30, tzinfo=timezone.utc)
     created = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
-    assert ws.order_id_for(12, due, created) == "ch2-12-1767323045000-20261201"
+    assert ws.order_id_for(12, due, created) == "ch2-12-1767323045000000-20261201"
 
 
 @pytest.mark.parametrize(
@@ -945,10 +945,44 @@ def test_order_id_generation_and_toss_limits():
     widest = ws.order_id_for(
         9223372036854775807,
         datetime(2026, 12, 21, tzinfo=timezone.utc),
-        datetime(9999, 12, 31, 12, 0, tzinfo=timezone.utc),
+        datetime(9999, 12, 31, 12, 0, 0, 999999, tzinfo=timezone.utc),
     )
+    assert widest == "ch2-9223372036854775807-253402257600999999-20261221"
+    assert len(widest) == 51
     assert _toss_order_ok(widest)
+    short = ws.order_id_for(
+        1,
+        datetime(1970, 1, 1, tzinfo=timezone.utc),
+        datetime(1970, 1, 1, tzinfo=timezone.utc),
+    )
+    assert short == "ch2-1-0-19700101"
+    assert len(short) == 16
+    assert _toss_order_ok(short)
     assert ws.order_id_for(1, due, first) == older
+
+
+def test_order_id_differs_for_microseconds_inside_one_second():
+    due = datetime(2026, 12, 21, tzinfo=timezone.utc)
+    earlier = datetime(2026, 11, 21, 0, 0, 1, 250000, tzinfo=timezone.utc)
+    later = datetime(2026, 11, 21, 0, 0, 1, 250001, tzinfo=timezone.utc)
+    assert earlier.replace(microsecond=0) == later.replace(microsecond=0)
+    assert earlier.microsecond // 1000 == later.microsecond // 1000
+    first = ws.order_id_for(1, due, earlier)
+    second = ws.order_id_for(1, due, later)
+    assert first != second
+    assert _toss_order_ok(first) and _toss_order_ok(second)
+
+
+def test_order_id_matches_across_timezone_forms():
+    due = datetime(2026, 12, 21, tzinfo=timezone.utc)
+    utc = datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=timezone.utc)
+    offset = utc.astimezone(timezone(timedelta(hours=9)))
+    naive = datetime(2026, 1, 2, 3, 4, 5, 123456)
+    assert offset.utcoffset() == timedelta(hours=9)
+    assert naive.tzinfo is None
+    order_id = ws.order_id_for(12, due, utc)
+    assert ws.order_id_for(12, due, offset) == order_id
+    assert ws.order_id_for(12, due, naive) == order_id
 
 
 def test_previous_generation_done_does_not_grant(db, monkeypatch):

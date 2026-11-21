@@ -70,9 +70,9 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 def order_id_for(sub_id: int, due_at: datetime, created_at: datetime) -> str:
     """구독 행의 created_at만으로 세대를 고정한다. 호출 시각이나 난수를 넣지 않는다."""
     created = aware(created_at).astimezone(timezone.utc)
-    millis = (created - _EPOCH) // timedelta(milliseconds=1)
+    micros = (created - _EPOCH) // timedelta(microseconds=1)
     day = aware(due_at).astimezone(KST).strftime("%Y%m%d")
-    return f"ch2-{int(sub_id)}-{millis}-{day}"
+    return f"ch2-{int(sub_id)}-{micros}-{day}"
 
 
 def trial_end_for(created_at: datetime) -> datetime | None:
