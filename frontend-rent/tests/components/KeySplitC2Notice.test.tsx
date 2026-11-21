@@ -22,6 +22,8 @@ const NOTE: KeySplitC2Note = {
 test("C-2 안내: 대표 단지 문구와 분리된 단지 링크", () => {
   const html = renderToStaticMarkup(<KeySplitC2Notice note={NOTE} displayName="한빛" onOpenKey={() => {}} />);
   assert.ok(html.includes(C2_NOTICE_TEXT));
+  assert.ok(html.includes("top-[calc(var(--ch2-macro-header-height,70px)+0.75rem)]"));
+  assert.ok(html.includes("z-[80]"));
   assert.equal(C2_NOTICE_TEXT, "같은 이름의 단지가 여러 곳으로 나뉘었습니다. 지금은 그중 대표 단지를 보고 있습니다.");
   assert.ok(html.includes("가동빌라 · 우암동"));
   assert.ok(!/\d+건/.test(html));                               // 건수 없음

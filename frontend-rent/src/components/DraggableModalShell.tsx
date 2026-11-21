@@ -23,6 +23,8 @@ type Props = {
   onClose: () => void;
   titleId: string;
   title: ReactNode;
+  /** 표시 이름에 준공연도가 들어가면 한 줄 말줄임으로 잘리지 않게 한다 */
+  titleWrap?: boolean;
   subtitle?: ReactNode;
   /** 제목 아래(탭 등) — 드래그 제외, 클릭 가능 */
   headerExtra?: ReactNode;
@@ -96,6 +98,7 @@ export default function DraggableModalShell({
   onClose,
   titleId,
   title,
+  titleWrap = false,
   subtitle,
   headerExtra,
   headerActions,
@@ -439,7 +442,7 @@ export default function DraggableModalShell({
             <div className="min-w-0 pointer-events-none">
               <h2
                 id={titleId}
-                className={`font-bold truncate ${
+                className={`font-bold ${titleWrap ? "whitespace-normal break-words" : "truncate"} ${
                   minimized ? "max-w-[11rem] whitespace-nowrap text-sm" : fullscreen ? "text-base" : "text-sm"
                 }`}
               >
