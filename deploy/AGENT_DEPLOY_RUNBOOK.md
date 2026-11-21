@@ -50,7 +50,9 @@ ssh -i "c:\ch2\ch2_Macro\LightsailDefaultKey-ap-northeast-2.pem" ubuntu@13.209.2
 **Windows (로컬):** 스크립트 한 방 (에이전트는 **먼저** 변경 파일만 commit)
 
 ```powershell
-cd c:\ch2\ch2_Macro
+# 배포 전용 worktree. origin/main을 추적한다. 원본 폴더 D:\ch2\ch2_Macro 에서는 배포하지 않는다.
+git -C D:\ch2\ch2_Macro-deploy pull --ff-only
+cd D:\ch2\ch2_Macro-deploy
 # 1) 관련 파일만 git commit
 # 2) 배포
 .\deploy\scripts\deploy-from-windows.ps1 -Scope built
@@ -60,6 +62,8 @@ cd c:\ch2\ch2_Macro
 # -AllowDrift     # 범위 밖 의존이 서버와 달라도 진행 (의도한 경우만)
 ```
 
+OPS-012보다 먼저 갈라진 브랜치(`release/rent-001` 등)에는 가드 없는 옛 배포 스크립트가 남아 있다. 그 브랜치로 배포하려면 먼저 OPS-012 병합분을 그 브랜치에 합치고, 합친 뒤의 새 전체 해시로 T 승인을 받는다. 승인 전에는 그 폴더의 옛 스크립트를 실행하지 않는다. `-AllowCommit`은 fetch 뒤 그 전체 해시가 원격 브랜치 하나 이상에 들어 있을 때만 쓴다.
+
 **배포 전 점검 (built, 2026-11-11 추가):**
 
 1. **범위 밖 의존 점검** — `deploy/scripts/deploy_import_closure.py`가 built 패키지(`built`·`recommendation`·`map`·`ai`)의 import를 따라가 scope가 올리지 않는 backend/pipeline 파일을 찾고, 서버 파일과 줄바꿈을 무시한 sha256으로 비교한다. 다르면 **scp 전에 멈춘다** → 그 파일을 scope에 추가하거나 `-Scope all`.
@@ -68,15 +72,16 @@ cd c:\ch2\ch2_Macro
 **수동 equivalent:**
 
 ```powershell
-$KEY = "c:\ch2\ch2_Macro\LightsailDefaultKey-ap-northeast-2.pem"
+$KEY = "D:\ch2\ch2_Macro-deploy\LightsailDefaultKey-ap-northeast-2.pem"
 $VPS = "ubuntu@13.209.203.178"
 
 # 예: 복합(built) — 백엔드 + 프론트 소스 (일부만 예시 — 전체 목록은 아래 표)
 # 공통 지역 모듈을 빼면 서버 구버전과 섞여 addr1_scope_sql import 오류가 난다.
-scp -i $KEY -r "c:\ch2\ch2_Macro\backend\app\built" "${VPS}:/opt/ch2_Macro/backend/app/"
-scp -i $KEY "c:\ch2\ch2_Macro\backend\app\region_sido.py" "c:\ch2\ch2_Macro\backend\app\region_canonical.py" "c:\ch2\ch2_Macro\backend\app\region_scope.py" "${VPS}:/opt/ch2_Macro/backend/app/"
-scp -i $KEY "c:\ch2\ch2_Macro\pipeline\region_canonical.py" "${VPS}:/opt/ch2_Macro/pipeline/"
-scp -i $KEY -r "c:\ch2\ch2_Macro\frontend-built\src" "${VPS}:/opt/ch2_Macro/frontend-built/"
+# 원본 폴더 D:\ch2\ch2_Macro 에서는 배포하지 않는다.
+scp -i $KEY -r "D:\ch2\ch2_Macro-deploy\backend\app\built" "${VPS}:/opt/ch2_Macro/backend/app/"
+scp -i $KEY "D:\ch2\ch2_Macro-deploy\backend\app\region_sido.py" "D:\ch2\ch2_Macro-deploy\backend\app\region_canonical.py" "D:\ch2\ch2_Macro-deploy\backend\app\region_scope.py" "${VPS}:/opt/ch2_Macro/backend/app/"
+scp -i $KEY "D:\ch2\ch2_Macro-deploy\pipeline\region_canonical.py" "${VPS}:/opt/ch2_Macro/pipeline/"
+scp -i $KEY -r "D:\ch2\ch2_Macro-deploy\frontend-built\src" "${VPS}:/opt/ch2_Macro/frontend-built/"
 
 # restart 전에 서버에서 import 가능한지 확인 (실패하면 여기서 멈춘다)
 ssh -i $KEY $VPS "cd /opt/ch2_Macro/backend && .venv/bin/python -c 'import app.main'"
