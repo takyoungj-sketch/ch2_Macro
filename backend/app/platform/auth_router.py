@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import logging
 import secrets
@@ -9,7 +10,7 @@ import urllib.parse
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -142,21 +143,161 @@ def _kakao_client_id() -> str:
     return (settings.kakao_client_id or settings.kakao_rest_api_key or "").strip()
 
 
-def _finish_web_or_app_login(*, user_id: int, email: str, nickname: str, role: str, state: str) -> Response:
+_APP_MARK = "app:"
+_APP_CALLBACK = "ch2fieldnote://oauth-callback"
+_APP_PACKAGE = "com.ch2data.fieldnote"
+_BRIDGE_ERROR = "로그인을 완료하지 못했습니다."
+
+
+def _js_string(value: str) -> str:
+    encoded = json.dumps(value, ensure_ascii=False)
+    return (
+        encoded.replace("&", r"\u0026")
+        .replace("<", r"\u003c")
+        .replace(">", r"\u003e")
+        .replace("\u2028", r"\u2028")
+        .replace("\u2029", r"\u2029")
+    )
+
+
+def _app_callback_parts(state: str) -> tuple[str, bool] | None:
+    """허용된 복귀 주소면 (n 값, n 키 존재). 그 외 app 주소는 None."""
+    rest = state[len(_APP_MARK):]
+    if "#" in rest:
+        return None
+    base, _, query = rest.partition("?")
+    if base != _APP_CALLBACK:
+        return None
+    found = False
+    n_value = ""
+    for key, value in urllib.parse.parse_qsl(query, keep_blank_values=True):
+        if key == "n" and not found:
+            found = True
+            n_value = value
+    return n_value, found
+
+
+def _return_query(n_value: str, has_n: bool, token: str) -> str:
+    parts: list[str] = []
+    if has_n:
+        parts.append("n=" + urllib.parse.quote(n_value, safe=""))
+    parts.append("token=" + urllib.parse.quote(token, safe=""))
+    return "&".join(parts)
+
+
+def _bridge_headers(nonce: str) -> dict[str, str]:
+    return {
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": (
+            "default-src 'none'; "
+            f"script-src 'nonce-{nonce}'; "
+            "style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        ),
+    }
+
+
+def _bridge_response(body: str, *, status_code: int, nonce: str) -> Response:
+    return Response(
+        content=body,
+        status_code=status_code,
+        media_type="text/html",
+        headers=_bridge_headers(nonce),
+    )
+
+
+def _bridge_error_page() -> str:
+    return (
+        "<!DOCTYPE html>"
+        '<html lang="ko"><head><meta charset="utf-8"><title>로그인</title></head><body>'
+        f"<p>{html.escape(_BRIDGE_ERROR, quote=True)}</p>"
+        "</body></html>"
+    )
+
+
+def _bridge_page(*, primary: str, secondary: str | None, nonce: str) -> str:
+    secondary_html = ""
+    if secondary is not None:
+        secondary_html = (
+            f'<p><a href="{html.escape(secondary, quote=True)}">버튼이 안 되면</a></p>'
+        )
+    return (
+        "<!DOCTYPE html>"
+        '<html lang="ko"><head><meta charset="utf-8"><title>로그인</title></head><body>'
+        f'<p><a href="{html.escape(primary, quote=True)}">앱으로 돌아가기</a></p>'
+        f"{secondary_html}"
+        "<p>앱이 없으면 설치한 뒤 다시 로그인해 주세요.</p>"
+        f'<script nonce="{html.escape(nonce, quote=True)}">location.href={_js_string(primary)};</script>'
+        "</body></html>"
+    )
+
+
+def _finish_app_bridge(
+    *,
+    user_id: int,
+    email: str,
+    nickname: str,
+    role: str,
+    state: str,
+    user_agent: str,
+) -> Response:
     # role is returned from the users row by _get_or_create_oauth_user at callback time.
     # Never accept a role or lifetime requested through OAuth state/query/profile.
+    nonce = secrets.token_urlsafe(16)
+    parsed = _app_callback_parts(state)
+    if parsed is None:
+        return _bridge_response(_bridge_error_page(), status_code=400, nonce=nonce)
+    n_value, has_n = parsed
     expire_minutes = None
-    if (state or "").startswith("app:") and role != "admin":
+    if role != "admin":
         expire_minutes = settings.fieldnote_app_token_expire_days * 24 * 60
     jwt_token = create_access_token(
         user_id=user_id, email=email, nickname=nickname, role=role,
         expire_minutes=expire_minutes,
     )
-    if (state or "").startswith("app:"):
-        app_redirect = state[4:]
-        sep = "&" if "?" in app_redirect else "?"
-        target = f"{app_redirect}{sep}token={urllib.parse.quote(jwt_token)}"
-        return Response(status_code=307, headers={"Location": target})
+    query = _return_query(n_value, has_n, jwt_token)
+    custom = f"{_APP_CALLBACK}?{query}"
+    if "Android" in user_agent:
+        primary = (
+            f"intent://oauth-callback?{query}"
+            f"#Intent;scheme=ch2fieldnote;package={_APP_PACKAGE};end"
+        )
+        secondary: str | None = custom
+    else:
+        primary = custom
+        secondary = None
+    return _bridge_response(
+        _bridge_page(primary=primary, secondary=secondary, nonce=nonce),
+        status_code=200,
+        nonce=nonce,
+    )
+
+
+def _finish_web_or_app_login(
+    *,
+    user_id: int,
+    email: str,
+    nickname: str,
+    role: str,
+    state: str,
+    user_agent: str = "",
+) -> Response:
+    if (state or "").startswith(_APP_MARK):
+        return _finish_app_bridge(
+            user_id=user_id,
+            email=email,
+            nickname=nickname,
+            role=role,
+            state=state,
+            user_agent=user_agent,
+        )
+    expire_minutes = None
+    jwt_token = create_access_token(
+        user_id=user_id, email=email, nickname=nickname, role=role,
+        expire_minutes=expire_minutes,
+    )
     response = Response(status_code=307, headers={"Location": state or DEFAULT_NEXT})
     _set_session_cookie(response, jwt_token)
     return response
@@ -222,6 +363,7 @@ def google_callback(
     code: str,
     state: str = DEFAULT_NEXT,
     db: Session = Depends(get_platform_db),
+    user_agent: Annotated[str, Header()] = "",
 ):
     state = safe_oauth_next(state)
     if not settings.google_client_id or not settings.google_client_secret:
@@ -263,7 +405,8 @@ def google_callback(
         db, provider="google", sub=sub, email=email, nickname_seed=email.split("@")[0]
     )
     return _finish_web_or_app_login(
-        user_id=user_id, email=email, nickname=nickname, role=role, state=state
+        user_id=user_id, email=email, nickname=nickname, role=role, state=state,
+        user_agent=user_agent,
     )
 
 
@@ -299,6 +442,7 @@ def kakao_callback(
     state: str = DEFAULT_NEXT,
     error: str | None = None,
     db: Session = Depends(get_platform_db),
+    user_agent: Annotated[str, Header()] = "",
 ):
     if error or not code:
         raise HTTPException(400, "카카오 로그인이 취소되었거나 실패했습니다.")
@@ -347,7 +491,8 @@ def kakao_callback(
         db, provider="kakao", sub=sub, email=email, nickname_seed=seed
     )
     return _finish_web_or_app_login(
-        user_id=user_id, email=email, nickname=nickname, role=role, state=state
+        user_id=user_id, email=email, nickname=nickname, role=role, state=state,
+        user_agent=user_agent,
     )
 
 
