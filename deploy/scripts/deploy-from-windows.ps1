@@ -3,6 +3,7 @@
 #   # 에이전트: 먼저 관련 파일만 commit 한 뒤
 #   .\deploy\scripts\deploy-from-windows.ps1 -Scope built
 #   .\deploy\scripts\deploy-from-windows.ps1 -Scope built -SkipPush   # push 이미 한 경우
+#   .\deploy\scripts\deploy-from-windows.ps1 -Scope rent -AllowCommit <HEAD 전체 해시>
 #
 # 배포 전 점검 (built, 2026-11-11):
 #   1) 범위 밖 의존 점검 — built 패키지가 import하는 범위 밖 backend/pipeline 파일이 서버와
@@ -16,11 +17,14 @@ param(
   [switch]$SkipPush,
   [switch]$SkipVerify,
   [switch]$SkipPreflight,
-  [switch]$AllowDrift
+  [switch]$AllowDrift,
+  [string]$AllowCommit = ""
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+. (Join-Path $PSScriptRoot "deploy-origin-guard.ps1")
+Invoke-DeployOriginGuard -RepoRoot $RepoRoot -AllowCommit $AllowCommit
 $Key = Join-Path $RepoRoot "LightsailDefaultKey-ap-northeast-2.pem"
 $VpsHost = "ubuntu@13.209.203.178"
 $SshTarget = "${VpsHost}:/opt/ch2_Macro"
