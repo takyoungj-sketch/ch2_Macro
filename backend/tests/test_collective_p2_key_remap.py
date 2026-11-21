@@ -397,4 +397,50 @@ def test_rent_candidate_reads_rent_building_name(monkeypatch):
     monkeypatch.setattr("app.rent.db.get_rent_engine", lambda: _Engine())
     got = kr._default_details("rent", [key])
     assert got[key]["display_name"] == "한빛"
+    assert "display_label" not in got[key]
+
+
+def test_rent_candidate_adds_completion_label(monkeypatch):
+    from app.collective import key_remap as kr
+
+    key = "f" * 64
+
+    class _Result:
+        def scalar(self):
+            return True
+
+        def mappings(self):
+            return self
+
+        def all(self):
+            return [{
+                "building_key": key, "display_name": "한빛", "addr3": "역삼동", "addr4": "역삼",
+                "addr5": None, "asset_type": "apartment", "building_year": 2021,
+            }]
+
+    class _Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def execute(self, stmt, params=None):
+            sql = str(stmt)
+            if "to_regclass" not in sql:
+                assert "rent_building_stats" in sql
+                assert "max(as_of_month)" in sql
+            return _Result()
+
+    class _Engine:
+        def connect(self):
+            return _Conn()
+
+    monkeypatch.setattr("app.rent.db.get_rent_engine", lambda: _Engine())
+    monkeypatch.setattr(
+        "app.collective.display_label.c2_fragment_keys", lambda app="collective": frozenset({key}),
+    )
+    got = kr._default_details("rent", [key])
+    assert got[key]["display_label"] == "한빛 (2021년 준공)"
+    assert got[key]["addr3"] == "역삼동" and got[key]["addr4"] == "역삼"
     assert got[key]["addr3"] == "역삼동"

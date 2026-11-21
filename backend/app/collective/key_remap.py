@@ -77,7 +77,7 @@ def _default_loader(app: str) -> KeyMap:
     return _load_from_engine(get_collective_engine(), "collective_building_key_map")
 
 
-CANDIDATE_FIELDS = ("display_name", "addr3", "addr4", "addr5")
+CANDIDATE_FIELDS = ("display_name", "display_label", "addr3", "addr4", "addr5")
 
 
 def _candidate(key: str, det: dict[str, Any] | None) -> dict[str, Any]:
@@ -100,12 +100,44 @@ def _details_from(table: str, keys: list[str], engine) -> dict[str, dict[str, An
                                 "addr5": r["addr5"]} for r in rows}
 
 
-def _default_details(app: str, keys: list[str]) -> dict[str, dict[str, Any]]:
-    """분할 후보 표시용: 최신 as_of 5년 mart 의 이름·주소(건수는 읽지 않음)."""
-    if app == "rent":
-        from app.rent.db import get_rent_engine
+def _rent_details(keys: list[str]) -> dict[str, dict[str, Any]]:
+    """임대 후보: 현재 as_of의 이름·주소와, 아파트 조각이면 준공 표시. 건수는 넣지 않는다."""
+    from app.rent.db import get_rent_engine
 
-        return _details_from("rent_building_stats", keys, get_rent_engine())
+    engine = get_rent_engine()
+    if engine is None or not keys:
+        return {}
+    with engine.connect() as c:
+        if not c.execute(text("SELECT to_regclass(:t) IS NOT NULL"), {"t": "public.rent_building_stats"}).scalar():
+            return {}
+        rows = c.execute(text("""
+            SELECT DISTINCT ON (building_key)
+                   building_key, display_name, addr3, addr4, addr5, asset_type, building_year
+            FROM rent_building_stats
+            WHERE building_key = ANY(:k)
+              AND as_of_month = (SELECT max(as_of_month) FROM rent_building_stats)
+            ORDER BY building_key, window_years DESC"""), {"k": keys}).mappings().all()
+    from app.collective.display_label import c2_fragment_keys, c2_label
+
+    label_keys = c2_fragment_keys(app="rent") if any(
+        (r.get("asset_type") or "") == "apartment" and r.get("building_year") not in (None, "") for r in rows
+    ) else frozenset()
+    out: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        item = {"display_name": r["display_name"], "addr3": r["addr3"], "addr4": r["addr4"], "addr5": r["addr5"]}
+        label = c2_label(
+            str(r["building_key"]), r["display_name"], r.get("asset_type"), r.get("building_year"), keys=label_keys,
+        )
+        if label:
+            item["display_label"] = label
+        out[r["building_key"]] = item
+    return out
+
+
+def _default_details(app: str, keys: list[str]) -> dict[str, dict[str, Any]]:
+    """분할 후보 표시용: 최신 as_of mart 의 이름·주소(건수는 읽지 않음)."""
+    if app == "rent":
+        return _rent_details(keys)
     if app != "collective" or not keys:
         return {}
     from app.collective.db import get_collective_engine
