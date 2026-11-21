@@ -122,7 +122,7 @@
         <div class="plan-grid" id="plan-grid"></div>
         <p id="pay-note"></p>
         <p class="policy-meta" style="margin-top: 1.5rem">
-          웹 월 구독은 카드 자동결제(토스페이먼츠)입니다. 첫 결제 시 카드 등록창이 열립니다.
+          웹 월 구독은 카드 자동결제(토스페이먼츠)입니다. 카드를 먼저 등록하고, 결제는 위 안내에 적힌 시점에 이뤄집니다.
           자세한 내용은 <a href="/subscription/">구독 정책</a>을 참고하세요.
         </p>
       </main>
@@ -195,18 +195,38 @@
         document.getElementById("sub-status-text").textContent = billingPhrase(data);
         const open = data.billing === "scheduled" || data.billing === "active";
         const canceled = data.billing === "scheduled_canceled" || data.billing === "active_canceled";
-        document.getElementById("cancel-sub-btn").hidden = !open;
+        const cancelBtn = document.getElementById("cancel-sub-btn");
+        cancelBtn.hidden = !open;
+        cancelBtn.textContent = data.billing === "scheduled" ? "첫 결제 전에 해지" : "다음 결제일부터 해지";
         document.getElementById("resume-sub-btn").hidden = !canceled;
+        applyPayNote();
+      }
+
+      function payNoteText(status) {
+        const billing = status && status.billing;
+        const state = status && status.state;
+        const reason = status && status.reason;
+        if (state === "admin") return "관리자 계정은 결제 없이 이용합니다.";
+        if (!tossEnabled) return "토스 테스트 키가 서버에 설정되면 구독 버튼이 활성화됩니다.";
+        if (reason === "payment_processing") return "결제 결과를 확인하는 중입니다.";
+        if (reason === "payment_failed" || billing === "failed") return "카드를 다시 등록하면 결제가 진행됩니다.";
+        if (billing === "scheduled_canceled") return "체험이 끝나는 날 첫 결제를 하지 않습니다. 해지 시점에 첫 결제가 이미 처리 중이었다면 그 결제는 진행되고, 이번 기간은 이용하며 다음 자동결제부터 멈춥니다.";
+        if (billing === "active_canceled") return "다음 자동결제는 진행하지 않습니다. 이미 결제한 기간은 유지됩니다.";
+        if (billing === "active" || state === "paid") return "등록된 카드로 매월 자동 결제됩니다.";
+        if (billing === "scheduled" || state === "trial") return "체험이 끝나는 날 첫 결제되고, 그 뒤 매월 자동 결제됩니다.";
+        if (state === "expired") return "등록하면 바로 첫 결제되고, 그 뒤 매월 자동 결제됩니다.";
+        return "체험 중이면 체험이 끝나는 날 첫 결제되고, 체험이 끝난 뒤 등록하면 바로 첫 결제됩니다. 그 뒤 매월 자동 결제됩니다.";
+      }
+
+      function applyPayNote() {
+        document.getElementById("pay-note").textContent = payNoteText(subInfo);
       }
 
       async function loadConfig() {
         const res = await fetch(`${BILLING}/toss/config`);
         const data = await res.json();
         tossEnabled = Boolean(data.enabled);
-        const note = document.getElementById("pay-note");
-        note.textContent = tossEnabled
-          ? "카드로 구독하기를 누르면 토스 카드 등록창이 열립니다. 등록 후 매월 자동 결제됩니다."
-          : "토스 테스트 키가 서버에 설정되면 구독 버튼이 활성화됩니다.";
+        applyPayNote();
       }
 
       async function loadPlans() {
@@ -327,9 +347,11 @@
       });
 
       document.getElementById("cancel-sub-btn").addEventListener("click", () => {
-        if (confirm("다음 결제일부터 자동 결제를 멈춥니다. 이번 이용 기간까지는 계속 사용할 수 있습니다.")) {
-          setCancel(true);
-        }
+        const scheduled = subInfo && subInfo.billing === "scheduled";
+        const message = scheduled
+          ? "체험이 끝나는 날 첫 결제를 하지 않습니다. 해지 시점에 첫 결제가 이미 처리 중이면 그 결제는 진행되고, 이번 기간은 이용하며 다음 자동결제부터 멈춥니다."
+          : "다음 결제일부터 자동 결제를 멈춥니다. 이번 이용 기간까지는 계속 사용할 수 있습니다.";
+        if (confirm(message)) setCancel(true);
       });
       document.getElementById("resume-sub-btn").addEventListener("click", () => setCancel(false));
 
