@@ -35,7 +35,7 @@ table.data td.num {
 }
 
 table.data td.name {
-  @apply text-center font-medium text-slate-800 dark:text-slate-100 truncate;
+  @apply text-center font-medium text-slate-800 dark:text-slate-100 whitespace-normal break-words;
 }
 
 table.data td.lease {

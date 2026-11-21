@@ -158,7 +158,7 @@ function RbDerivation({ row, r }: { row: RentBuildingRow; r: number | null }) {
   );
 }
 
-function PeerPicker({
+export function PeerPicker({
   peers,
   extraKeys,
   onToggle,
@@ -181,7 +181,7 @@ function PeerPicker({
               checked={extraKeys.includes(p.building_key)}
               onChange={() => onToggle(p.building_key)}
             />
-            <span className="truncate flex-1">{p.display_name}</span>
+            <span className="min-w-0 flex-1 whitespace-normal break-words">{rentShownName(p)}</span>
             <span className="tabular-nums text-slate-500 shrink-0">
               {fmtR(r)}
               {r != null && !rbInIdentBand(r) ? (
@@ -313,6 +313,7 @@ export default function BuildingDetailModal({
       onClose={onClose}
       titleId="rent-building-detail-title"
       title={rentShownName(row)}
+      titleWrap
       subtitle={
         <>
           {assetTypeLabel(row.asset_type)} · 거래 {n.toLocaleString("ko-KR")}건
