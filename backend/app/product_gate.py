@@ -16,8 +16,7 @@ from sqlalchemy import text
 
 from app.admin_auth import admin_access_status, is_admin_path
 from app.platform.db import get_platform_session_factory
-from app.platform.access import resolve_access
-from app.platform.deps import CurrentUser
+from app.platform.entitlements import apply_staff_entitlements, list_entitlements
 from app.platform.jwt_util import COOKIE_NAME, decode_access_token
 
 _LOGIN = "로그인이 필요합니다."
@@ -246,10 +245,8 @@ def caller_access(request: Request) -> str:
         ).mappings().first()
         if row is None:
             return "anonymous"
-        user = CurrentUser(user_id, "", "", str(row["role"] or ""))
-        access = resolve_access(db, user)
-        request.state.ch2_access = access
-        if access.products["macro"]:
+        ent = apply_staff_entitlements(str(row["role"] or ""), list_entitlements(db, user_id))
+        if ent.get("macro"):
             return "macro"
         return "login"
     except Exception:
@@ -311,11 +308,5 @@ async def product_gate_response(request: Request) -> JSONResponse | None:
     if access == "macro":
         return None
     if access == "login":
-        decision = getattr(request.state, "ch2_access", None)
-        return JSONResponse(status_code=403, content={
-            "detail": _SUBSCRIBE,
-            "code": decision.rejection_code if decision else "subscription_required",
-            "detail_reason": decision.reason if decision else "subscription_required",
-        })
-    return JSONResponse(status_code=401, content={"detail": _LOGIN,
-                                               "code": "login_required", "detail_reason": "login_required"})
+        return JSONResponse(status_code=403, content={"detail": _SUBSCRIBE})
+    return JSONResponse(status_code=401, content={"detail": _LOGIN})

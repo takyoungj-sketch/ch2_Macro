@@ -15,17 +15,15 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.platform.db import get_platform_db
-from app.platform.deps import CurrentUser, get_optional_user, require_user
-from app.platform.access import resolve_access
+from app.platform.deps import CurrentUser, require_user
 from app.platform.entitlements import activate_subscription, create_subscription, list_entitlements, apply_staff_entitlements
 from app.platform.toss_client import TossApiError, confirm_payment, toss_configured
 from app.platform.web_subscription import (
-    ORDER_NAME,
+    WEB_MONTH_PLAN_IDS,
     activate_with_billing_key,
     create_billing_pending,
     ensure_toss_customer_key,
     get_web_subscription,
-    has_blocking_subscription,
     set_cancel_at_period_end,
 )
 
@@ -41,7 +39,7 @@ PLAY_SKU_MAP = {
     "bundle_yearly": "bundle",
 }
 
-_LEGACY_PLANS = [
+PLANS = [
     {"id": "fieldnote_monthly", "product": "fieldnote", "price": 10000, "interval": "month"},
     {"id": "fieldnote_yearly", "product": "fieldnote", "price": 100000, "interval": "year"},
     {"id": "macro_monthly", "product": "macro", "price": 10000, "interval": "month"},
@@ -49,23 +47,7 @@ _LEGACY_PLANS = [
     {"id": "bundle_monthly", "product": "bundle", "price": 15000, "interval": "month"},
     {"id": "bundle_yearly", "product": "bundle", "price": 150000, "interval": "year"},
 ]
-PLANS = [{"id": "ch2_monthly", "product": "bundle", "price": 10000, "interval": "month"}]
 PLANS_BY_ID = {p["id"]: p for p in PLANS}
-# Historical rows keep their original price in legacy read responses. Not saleable.
-_HISTORICAL_PLANS_BY_ID = {p["id"]: p for p in _LEGACY_PLANS + PLANS}
-
-
-def _play_stub_enabled() -> bool:
-    return settings.ch2_deploy_env in {"local", "test"} and settings.play_billing_allow_stub
-
-
-def _require_play_stub() -> None:
-    if not _play_stub_enabled():
-        raise HTTPException(410, "play_billing_disabled")
-
-
-def _single_payment_disabled() -> None:
-    raise HTTPException(410, "single_payment_disabled")
 
 class PlayVerifyRequest(BaseModel):
     purchase_token: str = Field(min_length=10)
@@ -112,18 +94,22 @@ def _period_end_for_plan(plan: dict) -> datetime:
     return datetime.now(timezone.utc) + timedelta(days=31)
 
 
-@router.post("/play/verify", dependencies=[Depends(_require_play_stub)])
+@router.post("/play/verify")
 def verify_play_purchase(
     body: PlayVerifyRequest,
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    """Stub grants require both an explicit local/test environment and opt-in."""
-    _require_play_stub()
+    """Play 구매 검증. 기본은 stub 거부 — PLAY_BILLING_ALLOW_STUB=1 일 때만 부여."""
     product = PLAY_SKU_MAP.get(body.product_id)
     if not product:
         raise HTTPException(400, "unknown_product_id")
-    period_end = _period_end_for_plan(_HISTORICAL_PLANS_BY_ID.get(body.product_id, {"interval": "month"}))
+    if not settings.play_billing_allow_stub:
+        raise HTTPException(
+            503,
+            "Play Developer API 미연동. 지금은 구매를 확인할 수 없습니다.",
+        )
+    period_end = _period_end_for_plan(PLANS_BY_ID.get(body.product_id, {"interval": "month"}))
     external_id = f"{body.package_name}:{body.product_id}:{body.purchase_token[:48]}"
     sub_id = create_subscription(
         db,
@@ -159,7 +145,6 @@ def toss_config():
         "enabled": toss_configured(),
         "clientKey": key or None,
         "billing": True,
-        "play_stub": _play_stub_enabled(),
     }
 
 
@@ -168,31 +153,22 @@ def subscription_me(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    access = resolve_access(db, user)
-    sub = get_web_subscription(db, user.id) if access.mode == "legacy" or access.state == "admin" else access.subscription
-    ent = access.products
+    sub = get_web_subscription(db, user.id)
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     if not sub:
-        return {"active": access.mode == "v2" and access.state in {"trial", "paid", "admin"}, "entitlements": ent}
-    plan = _HISTORICAL_PLANS_BY_ID.get(str(sub.get("plan_id") or ""))
+        return {"active": False, "entitlements": ent}
+    plan = PLANS_BY_ID.get(str(sub.get("plan_id") or ""))
     return {
-        "active": True if access.mode == "legacy" else access.state in {"trial", "paid", "admin"},
+        "active": True,
         "product": sub.get("product"),
         "plan_id": sub.get("plan_id"),
         "price": plan["price"] if plan else None,
         "status": sub.get("status"),
-        "current_period_end": sub.get("current_period_end") if access.mode == "legacy" else access.period_end,
+        "current_period_end": sub.get("current_period_end"),
         "next_billing_at": sub.get("next_billing_at"),
         "cancel_at_period_end": bool(sub.get("cancel_at_period_end")),
         "entitlements": ent,
     }
-
-
-@router.get("/status")
-def billing_status(
-    user: CurrentUser | None = Depends(get_optional_user),
-    db: Session = Depends(get_platform_db),
-):
-    return resolve_access(db, user).status()
 
 
 @router.post("/subscription/cancel")
@@ -204,7 +180,8 @@ def subscription_cancel(
     ok = set_cancel_at_period_end(db, user.id, body.cancel_at_period_end)
     if not ok:
         raise HTTPException(404, "active_subscription_not_found")
-    return {"ok": True, "cancel_at_period_end": bool(body.cancel_at_period_end)}
+    sub = get_web_subscription(db, user.id)
+    return {"ok": True, "cancel_at_period_end": bool(sub and sub.get("cancel_at_period_end"))}
 
 
 @router.post("/toss/billing/prepare")
@@ -213,15 +190,11 @@ def toss_billing_prepare(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    plan = PLANS_BY_ID.get(body.plan_id)
-    if not plan:
-        raise HTTPException(400, "unknown_plan")
-    if settings.ch2_policy_start is None:
-        raise HTTPException(503, "policy_start_missing")
     if not toss_configured():
         raise HTTPException(503, "토스 결제 키가 아직 설정되지 않았습니다.")
-    if has_blocking_subscription(db, user.id):
-        raise HTTPException(409, "already_subscribed")
+    plan = PLANS_BY_ID.get(body.plan_id)
+    if not plan or plan["id"] not in WEB_MONTH_PLAN_IDS:
+        raise HTTPException(400, "unknown_plan")
     customer_key = ensure_toss_customer_key(db, user.id)
     _, pending_id = create_billing_pending(
         db, user_id=user.id, plan_id=plan["id"], product=plan["product"]
@@ -232,7 +205,7 @@ def toss_billing_prepare(
         "pendingId": pending_id,
         "planId": plan["id"],
         "amount": plan["price"],
-        "orderName": ORDER_NAME,
+        "orderName": f"CH2 {plan['product']} 월 구독",
     }
 
 
@@ -262,14 +235,14 @@ def toss_billing_activate(
     if not plan:
         raise HTTPException(400, "unknown_plan")
     try:
-        result = activate_with_billing_key(
+        sub_id = activate_with_billing_key(
             db,
             user_id=user.id,
             pending_external_id=body.pending_id,
             auth_key=body.auth_key,
             customer_key=body.customer_key,
             amount=plan["price"],
-            order_name=ORDER_NAME,
+            order_name=f"CH2 {plan['product']} 월 구독",
             user_email=user.email,
         )
     except ValueError as exc:
@@ -278,30 +251,20 @@ def toss_billing_activate(
             raise HTTPException(404, code) from exc
         if code == "forbidden":
             raise HTTPException(403, code) from exc
-        if code == "already_subscribed":
-            raise HTTPException(409, code) from exc
-        if code == "policy_start_missing":
-            raise HTTPException(503, code) from exc
         raise HTTPException(400, code) from exc
     except TossApiError as exc:
-        _log.warning("billing activate failed status=%s code=%s", exc.status_code, exc.code)
+        _log.warning("billing activate failed: %s", exc.body[:500])
         raise HTTPException(400, "toss_billing_failed") from exc
     ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
-    return {
-        "ok": True,
-        "subscription_id": result["id"],
-        "outcome": result["outcome"],
-        "entitlements": ent,
-    }
+    return {"ok": True, "subscription_id": sub_id, "entitlements": ent}
 
 
-@router.post("/toss/prepare", dependencies=[Depends(_single_payment_disabled)])
+@router.post("/toss/prepare")
 def toss_prepare(
     body: TossPrepareRequest,
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    _single_payment_disabled()
     if not (settings.toss_client_key or "").strip() or not (settings.toss_secret_key or "").strip():
         raise HTTPException(503, "토스 결제 키가 아직 설정되지 않았습니다.")
     plan = PLANS_BY_ID.get(body.plan_id)
@@ -327,13 +290,12 @@ def toss_prepare(
     }
 
 
-@router.post("/toss/confirm", dependencies=[Depends(_single_payment_disabled)])
+@router.post("/toss/confirm")
 def toss_confirm(
     body: TossConfirmRequest,
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    _single_payment_disabled()
     if not (settings.toss_secret_key or "").strip():
         raise HTTPException(503, "토스 시크릿 키가 없습니다.")
     row = db.execute(

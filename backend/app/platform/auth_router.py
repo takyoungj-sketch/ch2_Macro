@@ -19,7 +19,6 @@ from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user, require_user
 from app.platform.entitlements import apply_staff_entitlements, list_entitlements
-from app.platform.access import resolve_access
 from app.platform.jwt_util import COOKIE_NAME, create_access_token
 from app.platform.oauth_next import DEFAULT_NEXT, safe_oauth_next
 from app.platform.review_login import (
@@ -143,15 +142,7 @@ def _kakao_client_id() -> str:
 
 
 def _finish_web_or_app_login(*, user_id: int, email: str, nickname: str, role: str, state: str) -> Response:
-    # role is returned from the users row by _get_or_create_oauth_user at callback time.
-    # Never accept a role or lifetime requested through OAuth state/query/profile.
-    expire_minutes = None
-    if (state or "").startswith("app:") and role != "admin":
-        expire_minutes = settings.fieldnote_app_token_expire_days * 24 * 60
-    jwt_token = create_access_token(
-        user_id=user_id, email=email, nickname=nickname, role=role,
-        expire_minutes=expire_minutes,
-    )
+    jwt_token = create_access_token(user_id=user_id, email=email, nickname=nickname, role=role)
     if (state or "").startswith("app:"):
         app_redirect = state[4:]
         sep = "&" if "?" in app_redirect else "?"
@@ -365,7 +356,7 @@ def auth_entitlements(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    ent = resolve_access(db, user).products
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     return {
         "user_id": user.id,
         "products": ent,
