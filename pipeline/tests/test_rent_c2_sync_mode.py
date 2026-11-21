@@ -224,6 +224,60 @@ def test_existing_mode_still_reaches_the_database_layer(monkeypatch):
     assert seen == ["collective_stats_p2r"]
 
 
+def test_direct_read_rejects_a_remote_host_before_its_own_engine(monkeypatch):
+    from sqlalchemy import create_engine as real_create
+    from ops_guards import TargetError
+
+    opened = []
+
+    def wrapped(*args, **kwargs):
+        if kwargs.get("connect_args"):
+            opened.append(kwargs["connect_args"])
+            raise AssertionError("opened")
+        return real_create(*args, **kwargs)
+
+    monkeypatch.setattr("sqlalchemy.create_engine", wrapped)
+    with pytest.raises(TargetError, match="로컬"):
+        c2.open_local_read("postgresql://u:p@13.209.203.178:5432/postgres", "rent_stats")
+    assert opened == []
+
+
+def test_direct_read_sets_a_ten_minute_timeout(monkeypatch):
+    from sqlalchemy import create_engine as real_create
+
+    opened = []
+
+    def wrapped(*args, **kwargs):
+        if kwargs.get("connect_args"):
+            opened.append(kwargs["connect_args"]["options"])
+            raise RuntimeError("stop-before-connect")
+        return real_create(*args, **kwargs)
+
+    monkeypatch.setattr("sqlalchemy.create_engine", wrapped)
+    with pytest.raises(RuntimeError, match="stop-before-connect"):
+        c2.open_local_read("postgresql://u:p@127.0.0.1:5432/postgres", "rent_stats")
+    assert opened == [f"-c statement_timeout={c2.STATEMENT_TIMEOUT_MS} -c default_transaction_read_only=on"]
+
+
+def test_measure_sets_statement_timeout():
+    class Result:
+        def one(self):
+            return (4, 5, 6)
+
+    class Conn:
+        def __init__(self):
+            self.sql = []
+
+        def execute(self, statement, params=None):
+            self.sql.append(str(statement))
+            return Result()
+
+    conn = Conn()
+    got = c2.measure(conn, units=False)
+    assert f"statement_timeout = {c2.STATEMENT_TIMEOUT_MS}" in conn.sql[0]
+    assert got == {"count": 4, "id_max": 5, "id_sum": 6}
+
+
 def test_existing_mode_still_rejects_a_diff_result(tmp_path):
     ops = ROOT / "scripts" / "ops" / "collective_p2_verify"
     if str(ops) not in sys.path:

@@ -16,6 +16,7 @@ BACKUP_DB = "rent_stats_pre_c2_20261120"
 LOCAL_DB = "rent_stats"
 MODE = "c2-applied"
 MIN_UNITS = 6054
+STATEMENT_TIMEOUT_MS = 600_000
 APPROVED_SHA256 = "2660f8e2d75728caa06c6e7899141d8f7cbfbb7698c2bd89637b53ea22506681"
 NEW_TABLES = frozenset({
     "rent_building_key_c2_units",
@@ -172,6 +173,7 @@ def measure(conn, *, units: bool) -> dict:
     """읽기 전용 연결에서 거래 식별 값과, 로컬이면 판정 표·승인 해시를 센다."""
     from sqlalchemy import text
 
+    conn.execute(text(f"SET statement_timeout = {STATEMENT_TIMEOUT_MS}"))
     row = conn.execute(text(
         "SELECT count(*)::bigint, max(id)::bigint, sum(id)::numeric FROM rent_transactions"
     )).one()
@@ -188,6 +190,21 @@ def measure(conn, *, units: bool) -> dict:
         "WHERE step = 'load_rent_c2_units' AND detail->>'file_sha256' = :h)"
     ), {"h": APPROVED_SHA256}).scalar()) if log_exists else False
     return out
+
+
+def open_local_read(base_url: str, dbname: str):
+    """로컬 반영본·백업만 연다. 호스트 가드 뒤에 10분 제한의 읽기 전용 연결을 만든다."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.engine import make_url
+
+    from ops_guards import assert_local_target
+
+    url = make_url(base_url).set(database=dbname)
+    if url.drivername == "postgresql":
+        url = url.set(drivername="postgresql+psycopg2")
+    assert_local_target(url)
+    opts = f"-c statement_timeout={STATEMENT_TIMEOUT_MS} -c default_transaction_read_only=on"
+    return create_engine(url, pool_pre_ping=True, connect_args={"options": opts})
 
 
 def load_snap(path: Path) -> dict:
@@ -216,10 +233,15 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(__file__).resolve().parents[3]
     sys.path[:0] = [str(root / "pipeline"), str(root / "pipeline" / "collective")]
     from collective import migrate_p2_keys as mig
+    from ops_guards import TargetError
 
     base = mig.server_url_from_env()
-    local_eng = mig.engine_for(LOCAL_DB, read_only=True, base_url=base)
-    backup_eng = mig.engine_for(BACKUP_DB, read_only=True, base_url=base)
+    try:
+        local_eng = open_local_read(base, LOCAL_DB)
+        backup_eng = open_local_read(base, BACKUP_DB)
+    except TargetError as ex:
+        print(str(ex))
+        return 2
     try:
         with local_eng.connect() as conn:
             measured = measure(conn, units=True)

@@ -204,8 +204,13 @@ def _c2_report(a, base_url: str | None) -> dict:
     ops = c2.load_snap(a.c2_ops_snapshot)
     local = c2.load_snap(a.c2_local_snapshot)
     base = base_url or server_url_from_env()
-    local_eng = engine_for("rent_stats", read_only=True, base_url=base)
-    backup_eng = engine_for(c2.BACKUP_DB, read_only=True, base_url=base)
+    try:
+        local_eng = c2.open_local_read(base, "rent_stats")
+        backup_eng = c2.open_local_read(base, c2.BACKUP_DB)
+    except Exception as ex:
+        if ex.__class__.__name__ != "TargetError":
+            raise
+        raise GuardError(f"실제 적용 거부: {ex}") from ex
     try:
         with local_eng.connect() as conn:
             measured = c2.measure(conn, units=True)
