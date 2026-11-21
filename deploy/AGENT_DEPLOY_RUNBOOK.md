@@ -50,7 +50,9 @@ ssh -i "c:\ch2\ch2_Macro\LightsailDefaultKey-ap-northeast-2.pem" ubuntu@13.209.2
 **Windows (로컬):** 스크립트 한 방 (에이전트는 **먼저** 변경 파일만 commit)
 
 ```powershell
-cd c:\ch2\ch2_Macro
+# 배포 전용 worktree. origin/main을 추적한다. 원본 폴더 D:\ch2\ch2_Macro 에서는 배포하지 않는다.
+git -C D:\ch2\ch2_Macro-deploy pull --ff-only
+cd D:\ch2\ch2_Macro-deploy
 # 1) 관련 파일만 git commit
 # 2) 배포
 .\deploy\scripts\deploy-from-windows.ps1 -Scope built
@@ -68,15 +70,16 @@ cd c:\ch2\ch2_Macro
 **수동 equivalent:**
 
 ```powershell
-$KEY = "c:\ch2\ch2_Macro\LightsailDefaultKey-ap-northeast-2.pem"
+$KEY = "D:\ch2\ch2_Macro-deploy\LightsailDefaultKey-ap-northeast-2.pem"
 $VPS = "ubuntu@13.209.203.178"
 
 # 예: 복합(built) — 백엔드 + 프론트 소스 (일부만 예시 — 전체 목록은 아래 표)
 # 공통 지역 모듈을 빼면 서버 구버전과 섞여 addr1_scope_sql import 오류가 난다.
-scp -i $KEY -r "c:\ch2\ch2_Macro\backend\app\built" "${VPS}:/opt/ch2_Macro/backend/app/"
-scp -i $KEY "c:\ch2\ch2_Macro\backend\app\region_sido.py" "c:\ch2\ch2_Macro\backend\app\region_canonical.py" "c:\ch2\ch2_Macro\backend\app\region_scope.py" "${VPS}:/opt/ch2_Macro/backend/app/"
-scp -i $KEY "c:\ch2\ch2_Macro\pipeline\region_canonical.py" "${VPS}:/opt/ch2_Macro/pipeline/"
-scp -i $KEY -r "c:\ch2\ch2_Macro\frontend-built\src" "${VPS}:/opt/ch2_Macro/frontend-built/"
+# 원본 폴더 D:\ch2\ch2_Macro 에서는 배포하지 않는다.
+scp -i $KEY -r "D:\ch2\ch2_Macro-deploy\backend\app\built" "${VPS}:/opt/ch2_Macro/backend/app/"
+scp -i $KEY "D:\ch2\ch2_Macro-deploy\backend\app\region_sido.py" "D:\ch2\ch2_Macro-deploy\backend\app\region_canonical.py" "D:\ch2\ch2_Macro-deploy\backend\app\region_scope.py" "${VPS}:/opt/ch2_Macro/backend/app/"
+scp -i $KEY "D:\ch2\ch2_Macro-deploy\pipeline\region_canonical.py" "${VPS}:/opt/ch2_Macro/pipeline/"
+scp -i $KEY -r "D:\ch2\ch2_Macro-deploy\frontend-built\src" "${VPS}:/opt/ch2_Macro/frontend-built/"
 
 # restart 전에 서버에서 import 가능한지 확인 (실패하면 여기서 멈춘다)
 ssh -i $KEY $VPS "cd /opt/ch2_Macro/backend && .venv/bin/python -c 'import app.main'"
