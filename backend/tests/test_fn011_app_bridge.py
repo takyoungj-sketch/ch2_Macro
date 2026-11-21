@@ -164,7 +164,7 @@ def test_app_callback_is_bridge(monkeypatch, provider, role, minutes):
     response = callback(
         code="unit-code",
         db=OAuthDB(role),
-        state="app:ch2fieldnote://oauth-callback?n=abc",
+        state="app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz",
     )
     assert response.status_code == 200
     assert "set-cookie" not in response.headers
@@ -179,13 +179,13 @@ def test_app_callback_is_bridge(monkeypatch, provider, role, minutes):
 def test_android_and_other_links():
     android = auth_router._finish_web_or_app_login(
         **finish_args(
-            state="app:ch2fieldnote://oauth-callback?n=abc&x=1",
+            state="app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz&x=1",
             user_agent="Mozilla/5.0 (Linux; Android 14) AppleWebKit SamsungBrowser/26.0",
         )
     )
     other = auth_router._finish_web_or_app_login(
         **finish_args(
-            state="app:ch2fieldnote://oauth-callback?n=abc&x=1",
+            state="app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz&x=1",
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
         )
     )
@@ -194,15 +194,15 @@ def test_android_and_other_links():
     other_custom = custom_href(html_from_response(other))
     android_intent = intent_href(html_from_response(android))
     assert "x=" not in android_custom and "x=" not in android_intent
-    assert android_custom.startswith("ch2fieldnote://oauth-callback?n=abc&token=")
+    assert android_custom.startswith("ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz&token=")
     assert android_intent.startswith(
-        "intent://oauth-callback?n=abc&token="
+        "intent://oauth-callback?n=Abcdefghij123456_-Wxyz&token="
     )
     assert android_intent.endswith("#Intent;scheme=ch2fieldnote;package=com.ch2data.fieldnote;end")
     assert "browser_fallback_url" not in html_from_response(android)
-    assert other_custom.startswith("ch2fieldnote://oauth-callback?n=abc&token=")
+    assert other_custom.startswith("ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz&token=")
     assert "intent://" not in html_from_response(other)
-    assert parse_qs(urlsplit(android_custom).query)["n"] == ["abc"]
+    assert parse_qs(urlsplit(android_custom).query)["n"] == ["Abcdefghij123456_-Wxyz"]
     assert parse_qs(urlsplit(android_intent).query)["token"] == parse_qs(urlsplit(android_custom).query)["token"]
 
 
@@ -213,7 +213,7 @@ def test_user_agent_header_selects_android_link(monkeypatch):
     app.dependency_overrides[get_platform_db] = lambda: OAuthDB("user")
     response = TestClient(app).get(
         "/api/auth/google/callback",
-        params={"code": "unit-code", "state": "app:ch2fieldnote://oauth-callback?n=abc"},
+        params={"code": "unit-code", "state": "app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz"},
         headers={"User-Agent": "Mozilla/5.0 (Linux; Android 14) SamsungBrowser/26.0"},
         follow_redirects=False,
     )
@@ -225,7 +225,7 @@ def test_user_agent_header_selects_android_link(monkeypatch):
     "app:ch2fieldnote://other",
     "app:ch2fieldnote://oauth-callback/",
     "app:CH2FIELDNOTE://oauth-callback",
-    "app:ch2fieldnote://OAuth-Callback?n=abc",
+    "app:ch2fieldnote://OAuth-Callback?n=Abcdefghij123456_-Wxyz",
 ])
 def test_rejected_app_target_creates_no_token(monkeypatch, state):
     def banned(**kwargs):
@@ -242,32 +242,36 @@ def test_rejected_app_target_creates_no_token(monkeypatch, state):
 
 def test_extra_query_key_is_dropped_and_token_is_issued():
     response = auth_router._finish_web_or_app_login(
-        **finish_args(state="app:ch2fieldnote://oauth-callback?n=abc&x=1")
+        **finish_args(state="app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz&x=1")
     )
     href = custom_href(html_from_response(response))
     query = parse_qs(urlsplit(href).query)
     assert list(query) == ["n", "token"]
-    assert query["n"] == ["abc"]
+    assert query["n"] == ["Abcdefghij123456_-Wxyz"]
     assert query["token"][0]
 
 
-def test_query_escapes_markup_and_line_separators():
+def test_query_escapes_markup_and_line_separators(monkeypatch):
+    def banned(**kwargs):
+        raise AssertionError("token created")
+
+    monkeypatch.setattr(auth_router, "create_access_token", banned)
     raw = "\"<'" + "</script>" + "\u2028"
     response = auth_router._finish_web_or_app_login(
         **finish_args(state="app:ch2fieldnote://oauth-callback?n=" + raw)
     )
     body = html_from_response(response)
-    assert body.count("</script>") == 1
+    assert response.status_code == 400
+    assert "set-cookie" not in response.headers
+    assert "</script>" not in body
     assert "\u2028" not in body
-    assert "http://" not in body and "https://" not in body
-    href = custom_href(body)
-    assert parse_qs(urlsplit(href).query)["n"] == [raw]
-    assert 'href="' + href + '"' not in body
+    assert raw not in body
+    assert "token=" not in body
 
 
 def test_bridge_headers_and_no_external_url():
     response = auth_router._finish_web_or_app_login(
-        **finish_args(state="app:ch2fieldnote://oauth-callback?n=abc")
+        **finish_args(state="app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz")
     )
     headers = response.headers
     assert headers["cache-control"] == "no-store"
@@ -298,9 +302,140 @@ def test_bridge_log_omits_token():
     auth_router._log.addHandler(handler)
     try:
         response = auth_router._finish_web_or_app_login(
-            **finish_args(state="app:ch2fieldnote://oauth-callback?n=abc")
+            **finish_args(state="app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz")
         )
     finally:
         auth_router._log.removeHandler(handler)
     token = token_from_bridge_html(html_from_response(response))
     assert records == [] or all(token not in message for message in records)
+
+
+N22 = "Abcdefghij123456_-Wxyz"
+BAD_APP_STATES = [
+    "app:CH2FIELDNOTE://oauth-callback",
+    "app:ch2fieldnote:oauth-callback",
+    "APP:ch2fieldnote://oauth-callback",
+    "app:ch2fieldnote://other",
+    "app:https://evil",
+]
+BAD_NONCE_QUERIES = [
+    "",
+    "?n=" + ("a" * 15),
+    "?n=" + ("a" * 129),
+    "?n=" + ("a" * 10) + " " + ("b" * 10),
+    "?n=" + ("a" * 10) + "\n" + ("b" * 10),
+    "?n=" + ("a" * 10) + "%" + ("b" * 10),
+    f"?n={N22}&n={N22}",
+]
+
+
+def _route_app() -> TestClient:
+    app = FastAPI()
+    app.include_router(auth_router.router, prefix="/api")
+    app.dependency_overrides[get_platform_db] = lambda: OAuthDB("user")
+    return TestClient(app)
+
+
+@pytest.mark.parametrize("provider", ["google", "kakao"])
+@pytest.mark.parametrize("state", BAD_APP_STATES)
+def test_bad_app_login_is_not_web(monkeypatch, provider, state):
+    def banned(**kwargs):
+        raise AssertionError("token created")
+
+    monkeypatch.setattr(auth_router, "create_access_token", banned)
+    response = _route_app().get(
+        f"/api/auth/{provider}/login",
+        params={"state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "set-cookie" not in response.headers
+    assert "location" not in response.headers
+    assert response.text.count("로그인을 완료하지 못했습니다.") == 1
+    assert state not in response.text
+
+
+@pytest.mark.parametrize("provider", ["google", "kakao"])
+@pytest.mark.parametrize("state", BAD_APP_STATES)
+def test_bad_app_callback_is_not_web(monkeypatch, provider, state):
+    def banned(**kwargs):
+        raise AssertionError("token created")
+
+    monkeypatch.setattr(auth_router, "create_access_token", banned)
+
+    class Boom:
+        def __init__(self, **kwargs):
+            raise AssertionError("provider called")
+
+    monkeypatch.setattr(auth_router.httpx, "Client", Boom)
+    response = _route_app().get(
+        f"/api/auth/{provider}/callback",
+        params={"code": "unit-code", "state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "set-cookie" not in response.headers
+    assert "location" not in response.headers
+    assert response.text.count("로그인을 완료하지 못했습니다.") == 1
+
+
+@pytest.mark.parametrize("provider", ["google", "kakao"])
+@pytest.mark.parametrize("kind", ["login", "callback"])
+@pytest.mark.parametrize("query", BAD_NONCE_QUERIES)
+def test_bad_nonce_is_rejected_before_token(monkeypatch, provider, kind, query):
+    def banned(**kwargs):
+        raise AssertionError("token created")
+
+    monkeypatch.setattr(auth_router, "create_access_token", banned)
+    state = "app:ch2fieldnote://oauth-callback" + query
+    params = {"state": state}
+    if kind == "callback":
+        params["code"] = "unit-code"
+    response = _route_app().get(
+        f"/api/auth/{provider}/{kind}",
+        params=params,
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "set-cookie" not in response.headers
+    assert "location" not in response.headers
+
+
+@pytest.mark.parametrize("provider", ["google", "kakao"])
+@pytest.mark.parametrize("state", ["/", "/board/"])
+def test_web_login_state_unchanged(provider, state):
+    response = _route_app().get(
+        f"/api/auth/{provider}/login",
+        params={"state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code == 307
+    assert parse_qs(urlsplit(response.headers["location"]).query)["state"] == [state]
+    assert "set-cookie" not in response.headers
+
+
+def test_valid_nonce_login_keeps_app_state():
+    state = f"app:ch2fieldnote://oauth-callback?n={N22}"
+    response = _route_app().get(
+        "/api/auth/google/login",
+        params={"state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code == 307
+    assert parse_qs(urlsplit(response.headers["location"]).query)["state"] == [state]
+    assert "set-cookie" not in response.headers
+
+
+def test_google_login_log_omits_nonce(caplog):
+    state = f"app:ch2fieldnote://oauth-callback?n={N22}"
+    with caplog.at_level(logging.INFO, logger="app.platform.auth_router"):
+        response = _route_app().get(
+            "/api/auth/google/login",
+            params={"state": state},
+            follow_redirects=False,
+        )
+    assert response.status_code == 307
+    assert N22 not in caplog.text
+    assert "state=<redacted>" in caplog.text
+    assert "test-client" in caplog.text
+    assert N22 in response.headers["location"]

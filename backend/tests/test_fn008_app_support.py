@@ -52,7 +52,7 @@ def assert_lifetime(response, minutes):
 def test_app_lifetime_by_role(role, minutes):
     result = auth_router._finish_web_or_app_login(
         user_id=42, email="unit@example.test", nickname="unit", role=role,
-        state="app:ch2fieldnote://oauth-callback")
+        state="app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz")
     assert_lifetime(result, minutes)
     assert "set-cookie" not in result.headers
 
@@ -61,7 +61,7 @@ def test_app_lifetime_setting(monkeypatch):
     monkeypatch.setattr(settings, "fieldnote_app_token_expire_days", 2)
     result = auth_router._finish_web_or_app_login(
         user_id=42, email="unit@example.test", nickname="unit", role="user",
-        state="app:ch2fieldnote://oauth-callback")
+        state="app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz")
     assert_lifetime(result, 2 * 24 * 60)
 
 
@@ -132,14 +132,14 @@ def test_callback_role_comes_from_database(monkeypatch, provider, db_role, injec
     assert not {"role", "expire_minutes"} & {p.name for p in route.dependant.query_params}
     callback = getattr(auth_router, f"{provider}_callback")
     response = callback(code="unit-code", db=OAuthDB(db_role),
-        state=f"app:ch2fieldnote://oauth-callback?role={injected_role}")
+        state=f"app:ch2fieldnote://oauth-callback?n=Abcdefghij123456_-Wxyz&role={injected_role}")
     assert response.status_code == 200
     assert payload(response)["role"] == db_role
     assert_lifetime(response, 83 if db_role == "admin" else 7 * 24 * 60)
 
 
 @pytest.mark.parametrize("provider", ["google", "kakao"])
-@pytest.mark.parametrize("state", ["app:https://evil.example", "app:other://oauth-callback", "https://evil.example", "//evil.example"])
+@pytest.mark.parametrize("state", ["https://evil.example", "//evil.example"])
 def test_login_keeps_redirect_rejection(monkeypatch, provider, state):
     monkeypatch.setattr(settings, "google_client_id", "test-client")
     monkeypatch.setattr(settings, "kakao_client_id", "test-client")

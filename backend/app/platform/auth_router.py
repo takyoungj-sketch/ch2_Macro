@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 import logging
+import re
 import secrets
 import urllib.parse
 from typing import Annotated
@@ -63,6 +64,17 @@ def _redact_oauth_body(raw: str) -> str:
     return raw[:2000]
 
 
+def _redact_authorize_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(url)
+    parts: list[str] = []
+    for key, value in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True):
+        if key == "state":
+            parts.append("state=<redacted>")
+        else:
+            parts.append(urllib.parse.urlencode([(key, value)]))
+    return urllib.parse.urlunsplit(parsed._replace(query="&".join(parts)))
+
+
 def _log_google_authorize_url(url: str, params: dict[str, str]) -> None:
     _log.info(
         "Google OAuth authorize redirect | client_id=%s redirect_uri=%s response_type=%s scope=%s | full_url=%s",
@@ -70,7 +82,7 @@ def _log_google_authorize_url(url: str, params: dict[str, str]) -> None:
         params.get("redirect_uri"),
         params.get("response_type"),
         params.get("scope"),
-        url,
+        _redact_authorize_url(url),
     )
 
 
@@ -147,6 +159,7 @@ _APP_MARK = "app:"
 _APP_CALLBACK = "ch2fieldnote://oauth-callback"
 _APP_PACKAGE = "com.ch2data.fieldnote"
 _BRIDGE_ERROR = "로그인을 완료하지 못했습니다."
+_APP_NONCE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 
 
 def _js_string(value: str) -> str:
@@ -160,29 +173,62 @@ def _js_string(value: str) -> str:
     )
 
 
-def _app_callback_parts(state: str) -> tuple[str, bool] | None:
-    """허용된 복귀 주소면 (n 값, n 키 존재). 그 외 app 주소는 None."""
-    rest = state[len(_APP_MARK):]
+def _is_app_state(value: str | None) -> bool:
+    return (value or "").strip().lower().startswith(_APP_MARK)
+
+
+def _normalized_app_state(value: str) -> str:
+    text = value.strip()
+    return _APP_MARK + text[len(_APP_MARK):]
+
+
+def _app_callback_parts(state: str) -> str | None:
+    """허용된 복귀 주소의 n. 그 외는 None."""
+    if not _is_app_state(state):
+        return None
+    rest = _normalized_app_state(state)[len(_APP_MARK):]
     if "#" in rest:
         return None
     base, _, query = rest.partition("?")
     if base != _APP_CALLBACK:
         return None
-    found = False
-    n_value = ""
-    for key, value in urllib.parse.parse_qsl(query, keep_blank_values=True):
-        if key == "n" and not found:
-            found = True
-            n_value = value
-    return n_value, found
+    n_values = [
+        value
+        for key, value in urllib.parse.parse_qsl(query, keep_blank_values=True)
+        if key == "n"
+    ]
+    if len(n_values) != 1 or _APP_NONCE.fullmatch(n_values[0]) is None:
+        return None
+    return n_values[0]
 
 
-def _return_query(n_value: str, has_n: bool, token: str) -> str:
-    parts: list[str] = []
-    if has_n:
-        parts.append("n=" + urllib.parse.quote(n_value, safe=""))
-    parts.append("token=" + urllib.parse.quote(token, safe=""))
-    return "&".join(parts)
+def _reject_bad_app_state(value: str | None) -> Response | None:
+    """app: 로 시작하면 웹으로 보내지 않는다. 허용 규칙이 아니면 400."""
+    if not _is_app_state(value):
+        return None
+    if _app_callback_parts(value or "") is None:
+        return _bridge_response(
+            _bridge_error_page(),
+            status_code=400,
+            nonce=secrets.token_urlsafe(16),
+        )
+    return None
+
+
+def _oauth_dest(value: str | None) -> str | Response:
+    rejected = _reject_bad_app_state(value)
+    if rejected is not None:
+        return rejected
+    if _is_app_state(value):
+        return safe_oauth_next(_normalized_app_state(value or ""))
+    return safe_oauth_next(value)
+
+
+def _return_query(n_value: str, token: str) -> str:
+    return (
+        "n=" + urllib.parse.quote(n_value, safe="")
+        + "&token=" + urllib.parse.quote(token, safe="")
+    )
 
 
 def _bridge_headers(nonce: str) -> dict[str, str]:
@@ -246,10 +292,9 @@ def _finish_app_bridge(
     # role is returned from the users row by _get_or_create_oauth_user at callback time.
     # Never accept a role or lifetime requested through OAuth state/query/profile.
     nonce = secrets.token_urlsafe(16)
-    parsed = _app_callback_parts(state)
-    if parsed is None:
+    n_value = _app_callback_parts(state)
+    if n_value is None:
         return _bridge_response(_bridge_error_page(), status_code=400, nonce=nonce)
-    n_value, has_n = parsed
     expire_minutes = None
     if role != "admin":
         expire_minutes = settings.fieldnote_app_token_expire_days * 24 * 60
@@ -257,7 +302,7 @@ def _finish_app_bridge(
         user_id=user_id, email=email, nickname=nickname, role=role,
         expire_minutes=expire_minutes,
     )
-    query = _return_query(n_value, has_n, jwt_token)
+    query = _return_query(n_value, jwt_token)
     custom = f"{_APP_CALLBACK}?{query}"
     if "Android" in user_agent:
         primary = (
@@ -284,13 +329,16 @@ def _finish_web_or_app_login(
     state: str,
     user_agent: str = "",
 ) -> Response:
-    if (state or "").startswith(_APP_MARK):
+    if _is_app_state(state):
+        rejected = _reject_bad_app_state(state)
+        if rejected is not None:
+            return rejected
         return _finish_app_bridge(
             user_id=user_id,
             email=email,
             nickname=nickname,
             role=role,
-            state=state,
+            state=_normalized_app_state(state),
             user_agent=user_agent,
         )
     expire_minutes = None
@@ -342,7 +390,9 @@ def _get_or_create_oauth_user(
 def google_login(_request: Request, next: str | None = None, state: str | None = None):
     if not settings.google_client_id:
         raise HTTPException(503, "Google OAuth 미설정")
-    dest = safe_oauth_next(next or state)
+    dest = _oauth_dest(next or state)
+    if isinstance(dest, Response):
+        return dest
     redirect_uri = settings.google_oauth_redirect_uri
     params = {
         "client_id": settings.google_client_id,
@@ -365,7 +415,10 @@ def google_callback(
     db: Session = Depends(get_platform_db),
     user_agent: Annotated[str, Header()] = "",
 ):
-    state = safe_oauth_next(state)
+    dest = _oauth_dest(state)
+    if isinstance(dest, Response):
+        return dest
+    state = dest
     if not settings.google_client_id or not settings.google_client_secret:
         raise HTTPException(503, "Google OAuth 미설정")
     redirect_uri = settings.google_oauth_redirect_uri
@@ -420,7 +473,9 @@ def kakao_login(_request: Request, next: str | None = None, state: str | None = 
     client_id = _kakao_client_id()
     if not client_id or not (settings.kakao_client_secret or "").strip():
         raise HTTPException(503, "카카오 로그인을 준비 중입니다.")
-    dest = safe_oauth_next(next or state)
+    dest = _oauth_dest(next or state)
+    if isinstance(dest, Response):
+        return dest
     params = {
         "client_id": client_id,
         "redirect_uri": settings.kakao_oauth_redirect_uri,
@@ -444,9 +499,12 @@ def kakao_callback(
     db: Session = Depends(get_platform_db),
     user_agent: Annotated[str, Header()] = "",
 ):
+    dest = _oauth_dest(state)
+    if isinstance(dest, Response):
+        return dest
     if error or not code:
         raise HTTPException(400, "카카오 로그인이 취소되었거나 실패했습니다.")
-    state = safe_oauth_next(state)
+    state = dest
     client_id = _kakao_client_id()
     secret = (settings.kakao_client_secret or "").strip()
     if not client_id or not secret:
