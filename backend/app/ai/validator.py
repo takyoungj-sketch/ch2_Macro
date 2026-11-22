@@ -32,25 +32,18 @@ def numeric_claims(text: str) -> set[Decimal]:
     return out
 
 
-# 이미 퍼센트 단위인 항목. 설명력처럼 0~1 비율로 둔 값과 구분한다.
-_PERCENT_KEYS = frozenset({
-    "vacancy",
-    "rent_income_share",
-    "other_income_share",
-    "opex_share",
-    "noi_pct",
-    "income_yield",
-    "capital_yield",
-    "investment_yield",
-    "conversion",
-    "building_rate",
-    "region_rate",
-    "pool_rate",
+# 0~1 비율로 두고 퍼센트로 말할 수 있는 항목. 계수·표본수·이미 퍼센트인 값은 여기 없다.
+_RATIO_KEYS = frozenset({
+    "r_squared",
+    "adj_r_squared",
+    "adj_r2",
+    "price_adj_r_squared",
+    "model_adj_r_squared",
+    "partial_r_squared",
+    "similarity_score",
+    "count_share_by_type",
+    "amount_share_by_type",
 })
-
-
-def _is_percent_key(key: str) -> bool:
-    return key in _PERCENT_KEYS or key == "mape" or key.endswith("_mape") or key.endswith("_pct")
 
 
 def _json_value(sources: str):
@@ -64,51 +57,39 @@ def _json_value(sources: str):
     return value
 
 
-def _split_percent_values(sources: str) -> tuple[set[Decimal], set[Decimal]]:
-    """퍼센트 항목의 숫자와, 그 밖에 있는 숫자."""
-    percent_vals: set[Decimal] = set()
-    outside: set[Decimal] = set()
+def _ratio_display_bases(sources: str) -> set[Decimal]:
+    """지정한 비율 항목 가운데 절댓값이 1 이하인 값만 100배 퍼센트로 허용한다."""
+    found: set[Decimal] = set()
 
-    def add(bucket: set[Decimal], value: object) -> None:
+    def add(value: object) -> None:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             return
         try:
-            bucket.add(Decimal(str(value)))
+            number = Decimal(str(value))
         except InvalidOperation:
             return
+        if abs(number) <= 1:
+            found.add(number)
 
-    def walk(node: object, under_percent: bool) -> None:
+    def walk(node: object, under_ratio: bool) -> None:
         if isinstance(node, dict):
             for key, value in node.items():
-                walk(value, under_percent or _is_percent_key(str(key)))
+                walk(value, under_ratio or str(key) in _RATIO_KEYS)
         elif isinstance(node, list):
             for item in node:
-                walk(item, under_percent)
-        elif under_percent:
-            add(percent_vals, node)
-        else:
-            add(outside, node)
+                walk(item, under_ratio)
+        elif under_ratio:
+            add(node)
 
     root = _json_value(sources)
     if root is not None:
         walk(root, False)
-    return percent_vals, outside
-
-
-def _ratio_display_bases(sources: str) -> set[Decimal]:
-    """100을 곱해 퍼센트로 말할 수 있는 비율.
-
-    수익률·공실률·전환율·오차율처럼 이미 퍼센트인 숫자는 빼되,
-    같은 숫자가 비율 항목에도 있으면 비율 표기는 남긴다.
-    """
-    allowed = numeric_claims(sources)
-    percent_vals, outside = _split_percent_values(sources)
-    return (allowed - percent_vals) | outside
+    return found
 
 
 def numbers_grounded(candidate: str, sources: str) -> bool:
     allowed = numeric_claims(sources)
-    # 설명력 0.55를 55%로 말하는 표시 변환만 허용한다. 이미 퍼센트인 값에 100을 다시 곱하지 않는다.
+    # 설명력·유사도·비중처럼 0~1 비율만 55% 같은 표시로 허용한다.
     bases = _ratio_display_bases(sources)
 
     def checked_percent(match: re.Match) -> str:
