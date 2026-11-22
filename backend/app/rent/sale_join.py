@@ -50,6 +50,38 @@ def lookup_rent_key(conn: Connection, *, sale_building_key: str, asset_type: str
     return str(row["rent_building_key"]).strip() or None
 
 
+def lookup_sale_key(conn: Connection, *, rent_building_key: str, asset_type: str) -> Optional[str]:
+    """임대 키 → 매매 키. 여러 행이면 키 순으로 하나."""
+    if not _table_exists(conn, "public.rent_sale_building_map"):
+        return None
+    row = conn.execute(
+        text(
+            """
+            SELECT sale_building_key
+            FROM rent_sale_building_map
+            WHERE rent_building_key = :k AND asset_type = :a AND tier = 'exact'
+            ORDER BY sale_building_key
+            LIMIT 1
+            """
+        ),
+        {"k": rent_building_key, "a": asset_type},
+    ).mappings().first()
+    if not row or not row.get("sale_building_key"):
+        return None
+    return str(row["sale_building_key"]).strip() or None
+
+
+def sale_floor_link(conn: Connection, *, rent_building_key: str, asset_type: str):
+    from app.rent.schemas import RentSaleLinkResponse
+
+    if asset_type not in JOIN_ASSETS:
+        return RentSaleLinkResponse(linked=False, asset_type=asset_type)
+    sale_key = lookup_sale_key(conn, rent_building_key=rent_building_key, asset_type=asset_type)
+    if not sale_key:
+        return RentSaleLinkResponse(linked=False, asset_type=asset_type)
+    return RentSaleLinkResponse(linked=True, sale_building_key=sale_key, asset_type=asset_type)
+
+
 JEONSE_SALE_MIN_N = 3
 
 

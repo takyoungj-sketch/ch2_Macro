@@ -157,6 +157,17 @@ export function rentKeyStatusFromError(e: unknown, buildingKey: string): RentKey
 }
 
 /** 집합 2단계 — 임대 단지 키 상태. C-2 옛 키면 key_split_c2(가장 큰 그룹으로 열림). 실패는 확인 불가(화면은 막지 않음). */
+export async function fetchRentSaleLink(buildingKey: string, assetType: string) {
+  const { data } = await api.get<{
+    linked: boolean;
+    sale_building_key: string;
+    asset_type: string;
+  }>(`/buildings/${encodeURIComponent(buildingKey)}/sale-link`, {
+    params: { asset_type: assetType },
+  });
+  return data;
+}
+
 export async function fetchRentKeyStatus(buildingKey: string): Promise<RentKeyStatus> {
   try {
     const { data } = await api.get<{ key_status: "ok"; building_key: string; key_split_c2?: KeySplitC2Note }>(

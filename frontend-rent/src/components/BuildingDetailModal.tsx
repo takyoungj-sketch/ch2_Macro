@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import type { LeaseMetric, RentBuildingRow, RentConversionRate, RentRollingPoint } from "../types";
 import { rentShownName } from "../types";
-import { fetchAllRentTransactions, fetchRentRolling } from "../api/client";
+import { fetchAllRentTransactions, fetchRentRolling, fetchRentSaleLink } from "../api/client";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { assetTypeLabel } from "../types";
@@ -195,13 +195,55 @@ export function PeerPicker({
   );
 }
 
-/** D-085: 임대 회귀가 비공개일 때 탭 자리 안내. 집합 바로 열기 링크는 B2. */
-function RentRegressionHiddenNotice() {
+function saleFloorIndexHref(saleKey: string, assetType: string): string {
+  const qs = new URLSearchParams({
+    building_key: saleKey,
+    asset_type: assetType,
+    detail_tab: "floor_index",
+  });
+  return `/collective/residential/?${qs.toString()}`;
+}
+
+/** 연결이 있으면 집합 효용지수로 연다. 회귀가 비공개일 때는 안내문과 함께 둔다. */
+function SaleFloorIndexLink({
+  buildingKey,
+  assetType,
+  pending,
+}: {
+  buildingKey: string;
+  assetType: string;
+  pending: boolean;
+}) {
+  const linkQ = useQuery({
+    queryKey: ["rent-sale-link", buildingKey, assetType],
+    queryFn: () => fetchRentSaleLink(buildingKey, assetType),
+  });
+  const saleKey = linkQ.data?.linked ? linkQ.data.sale_building_key : "";
+  const href = saleKey ? saleFloorIndexHref(saleKey, linkQ.data?.asset_type || assetType) : "";
+  if (!pending && !href) return null;
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200">
-      <p>
-        층·면적·연식에 따른 가격 차이(효용지수·회귀분석)는 집합부동산(매매) 에서 제공합니다. 전월세 자료는 계약 형태가 섞여 있고 시점에 따른 변동이 커서, 이 화면에서는 전세가율·전환율·롤링 추이를 제공합니다.
-      </p>
+      {pending ? (
+        <>
+          <p className="font-semibold">전세 보증금 회귀는 준비 중입니다.</p>
+          <p className="mt-1">
+            같은 단지의 매매 거래로 본 층·면적 효용지수는 집합 분석에서 볼 수 있습니다.
+            {href ? (
+              <>
+                {" "}
+                <a className="font-semibold text-blue-700 underline dark:text-blue-300" href={href}>
+                  같은 단지 매매 효용지수 보기
+                </a>
+              </>
+            ) : null}
+          </p>
+          {linkQ.isSuccess && !href ? <p className="mt-1">이 건물은 집합 매매 자료와 연결되지 않았습니다.</p> : null}
+        </>
+      ) : href ? (
+        <a className="font-semibold text-blue-700 underline dark:text-blue-300" href={href}>
+          같은 단지 매매 효용지수 보기
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -536,6 +578,10 @@ export default function BuildingDetailModal({
         </div>
       )}
 
+      {panel === "regression" && (
+        <SaleFloorIndexLink buildingKey={row.building_key} assetType={row.asset_type} pending={!rentRegressionOn} />
+      )}
+
       {panel === "regression" && rentRegressionOn && (
         <RentRegressionPanel
           buildingKey={row.building_key}
@@ -543,7 +589,6 @@ export default function BuildingDetailModal({
           assetType={row.asset_type}
         />
       )}
-      {panel === "regression" && !rentRegressionOn && <RentRegressionHiddenNotice />}
 
     </DraggableModalShell>
     </>

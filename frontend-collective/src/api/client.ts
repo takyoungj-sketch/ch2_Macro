@@ -150,6 +150,22 @@ export async function fetchBuildings(params: {
 }
 
 /** API page_size 상한(500)을 넘는 목록을 모두 조회 */
+export async function fetchBuildingStatsRow(
+  buildingKey: string,
+  params: { window_years?: number; asset_type?: string } = {},
+) {
+  const { data } = await api.get<{
+    row: BuildingStatsRow;
+    addr1: string;
+    addr2: string;
+    sigungu_code: string;
+    period_start?: string | null;
+    period_end?: string | null;
+    stats_as_of_label?: string;
+  }>(`/buildings/${encodeURIComponent(buildingKey)}/row`, { params });
+  return data;
+}
+
 export async function fetchAllBuildings(
   params: Omit<Parameters<typeof fetchBuildings>[0], "page" | "page_size">,
 ): Promise<BuildingListResponse> {
