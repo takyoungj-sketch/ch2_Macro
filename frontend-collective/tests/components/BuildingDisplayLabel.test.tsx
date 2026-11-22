@@ -106,6 +106,43 @@ test("열린 단지 상세는 현재 탭 집계를 AI에 넘기고 거래 행은
   });
   assert.equal(tx?.panel, "TransactionsPanel");
   assert.deepEqual(tx?.facts, { total: 40, loaded: 20 });
+
+  const yearly = buildOpenBuildingDetailContext({
+    panel: "long_term",
+    regionLabel: "통합",
+    assetType: "apartment",
+    metric: "median",
+    labels: { ["a".repeat(64)]: "주공 (1986년 준공)" },
+    cohortYearly: [
+      { building_key: "a".repeat(64), display_name: "주공", points: [{ year: 2020, count: 4, mean: 100, median: 90 }] },
+      { building_key: "b".repeat(64), display_name: "래미안", points: [{ year: 2020, count: 5, mean: 200, median: 180 }] },
+    ],
+  });
+  const series = (yearly?.facts as { cohort?: boolean; series?: { label: string; points: { median?: number }[] }[] }).series;
+  assert.equal(yearly?.panel, "LongTermTrendPanel");
+  assert.equal((yearly?.facts as { cohort?: boolean }).cohort, true);
+  assert.deepEqual(series?.map((item) => item.label), ["주공 (1986년 준공)", "래미안"]);
+  assert.equal(series?.[0].points[0].median, 90);
+
+  const hist = buildOpenBuildingDetailContext({
+    panel: "histogram",
+    regionLabel: "통합",
+    assetType: "apartment",
+    histogram: { building_keys: ["a", "b"], bins: [{ lo: 1, hi: 2, count: 3 }], n: 8, data_source: "live" },
+  });
+  assert.equal(hist?.panel, "HistogramPanel");
+  assert.equal((hist?.facts as { cohort?: boolean; n?: number }).cohort, true);
+  assert.equal((hist?.facts as { n?: number }).n, 8);
+  assert.equal("items" in (hist?.facts ?? {}), false);
+
+  const cohortTx = buildOpenBuildingDetailContext({
+    panel: "transactions",
+    regionLabel: "통합",
+    assetType: "apartment",
+    transactionTotal: 12,
+    transactionLoaded: 12,
+  });
+  assert.deepEqual(cohortTx?.facts, { total: 12, loaded: 12 });
 });
 
 test("AI 회귀 문맥 이름: 단지 하나면 표시 이름, 코호트·라벨 없음이면 응답 이름", () => {

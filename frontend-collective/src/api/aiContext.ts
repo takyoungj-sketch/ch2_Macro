@@ -327,7 +327,8 @@ export function buildOpenBuildingDetailContext(opts: {
   cohortRolling?: RollingStatsResponse[] | null;
   labels?: Record<string, string | null | undefined>;
   yearly?: YearlyStatsResponse | YearlyStatPoint[] | null;
-  histogram?: HistogramResponse | null;
+  cohortYearly?: YearlyStatsResponse[] | null;
+  histogram?: HistogramResponse | CohortHistogramResponse | null;
   transactionTotal?: number | null;
   transactionLoaded?: number | null;
 }): AiContextPayload | null {
@@ -363,6 +364,28 @@ export function buildOpenBuildingDetailContext(opts: {
   if (opts.panel === "trend" && (opts.rolling?.points.length ?? 0) > 0 && opts.rolling) {
     return buildCollectiveRollingTrendContext(opts.rolling, { ...shared, metric: opts.metric });
   }
+  if (opts.panel === "long_term" && (opts.cohortYearly?.length ?? 0) > 1) {
+    return {
+      app: "collective",
+      panel: "LongTermTrendPanel",
+      purpose: "market_analysis",
+      scope: { region_label: opts.regionLabel, asset_type: opts.assetType },
+      facts: {
+        series: (opts.cohortYearly ?? []).map((item) => ({
+          label: opts.labels?.[item.building_key] || buildingDisplayName(item),
+          points: item.points.map((point) => ({
+            year: point.year,
+            count: point.count,
+            mean: point.mean,
+            median: point.median ?? point.mean,
+          })),
+        })),
+        trend_kind: "long_term",
+        trend_metric: opts.metric ?? "mean",
+        cohort: true,
+      },
+    };
+  }
   if (opts.panel === "long_term" && opts.yearly) {
     const points = Array.isArray(opts.yearly) ? opts.yearly : opts.yearly.points;
     if (points.length === 0) return null;
@@ -371,7 +394,10 @@ export function buildOpenBuildingDetailContext(opts: {
     return context;
   }
   if (opts.panel === "histogram" && opts.histogram) {
-    return buildCollectiveHistogramContext(opts.histogram, shared);
+    return buildCollectiveHistogramContext(opts.histogram, {
+      ...shared,
+      cohort: "building_keys" in opts.histogram,
+    });
   }
   if (opts.panel === "transactions" && opts.transactionTotal != null) {
     return {
