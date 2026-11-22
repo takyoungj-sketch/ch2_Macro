@@ -16,6 +16,7 @@ from run_collective_cycle_csv import (  # noqa: E402
     build_parser,
     format_gap_key_file,
     guard_existing_snapshot,
+    main,
     require_attribute_args,
 )
 
@@ -121,6 +122,11 @@ def test_parser_keeps_cycle_and_snapshot_apart():
     assert ns.cycle_id == "202611"
     assert ns.attr_snapshot_ym == "202607"
     assert ns.skip_attributes is False
+
+
+def test_empty_snapshot_stops_before_the_monthly_write():
+    src = inspect.getsource(main)
+    assert src.index("reject_empty_attribute_snapshot") < src.index("purge_collective_contract_window")
 
 
 def test_phase_runner_does_not_reread_outer_args():

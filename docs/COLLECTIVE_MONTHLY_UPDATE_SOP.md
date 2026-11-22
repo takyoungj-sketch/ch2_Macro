@@ -37,7 +37,7 @@ py scripts\monthly\run_collective_cycle_csv.py --cycle-id YYYYMM --attr-snapshot
 
 수집 연월은 `collection_yyyymm_range_from_cycle_id` (직전 12개월). 끝 월이 다르면 러너/`--v2-as-of` 규칙을 토지와 맞춘다.
 
-속성 판은 `--attr-snapshot-ym`만 쓴다. 지금 판은 `202607`이다. cycle-id나 K-apt 파일 이름에 있는 달을 속성 판으로 쓰지 않는다. 그 판에 기존 행이 있을 때만, 속성 행이 없는 아파트·연립·오피스텔 키만 K-apt와 title_fill로 넣는다. 판 전체를 다시 쓰지 않는다. 실거래만 다시 돌릴 때는 `--skip-attributes`. `vps_sync_collective_building_attributes.sh`의 `--replace`는 이 단계가 아니다.
+속성 판은 `--attr-snapshot-ym`만 쓴다. 지금 판은 `202607`이다. cycle-id나 K-apt 파일 이름에 있는 달을 속성 판으로 쓰지 않는다. 그 판에 기존 행이 없으면 실거래 적재 전에 멈춘다. 행이 있을 때만, 속성 행이 없는 아파트·연립·오피스텔 키만 K-apt와 title_fill로 넣는다. 판 전체를 다시 쓰지 않는다. 실거래만 다시 돌릴 때는 `--skip-attributes`. `vps_sync_collective_building_attributes.sh`의 `--replace`는 이 단계가 아니다.
 
 xlsx 복구:
 

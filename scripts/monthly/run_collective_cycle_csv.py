@@ -283,6 +283,22 @@ def _collective_engine():
     return create_engine(db_url(), pool_pre_ping=True)
 
 
+def reject_empty_attribute_snapshot(attr: tuple[str, Path] | None) -> None:
+    """빈 판이면 실거래 적재 전에 멈춘다."""
+    if attr is None:
+        return
+    snapshot_ym, _kapt_file = attr
+    from sqlalchemy import text
+
+    engine = _collective_engine()
+    with engine.connect() as conn:
+        row_count = conn.execute(
+            text("SELECT COUNT(*) FROM collective_building_attributes WHERE snapshot_ym = :ym"),
+            {"ym": snapshot_ym},
+        ).scalar()
+    guard_existing_snapshot(int(row_count or 0), snapshot_ym)
+
+
 def run_attribute_step(*, cycle: str, attr: tuple[str, Path] | None, dry_run: bool) -> None:
     if attr is None:
         log.info("속성 단계 생략 (--skip-attributes)")
@@ -292,11 +308,6 @@ def run_attribute_step(*, cycle: str, attr: tuple[str, Path] | None, dry_run: bo
 
     engine = _collective_engine()
     with engine.connect() as conn:
-        row_count = conn.execute(
-            text("SELECT COUNT(*) FROM collective_building_attributes WHERE snapshot_ym = :ym"),
-            {"ym": snapshot_ym},
-        ).scalar()
-        guard_existing_snapshot(int(row_count or 0), snapshot_ym)
         found = conn.execute(text(ATTRIBUTE_GAP_SQL), {"ym": snapshot_ym}).fetchall()
     keys = [str(row[0]).strip() for row in found if row[0] and str(row[0]).strip()]
     keys_path = REPO / "logs" / f"collective_cycle_{cycle}_attribute_gap_keys.txt"
@@ -341,6 +352,7 @@ def main() -> None:
         snapshot_ym=args.attr_snapshot_ym,
         kapt_file=args.kapt_file,
     )
+    reject_empty_attribute_snapshot(attr)
 
     cycle = args.cycle_id.strip()
     y_from, y_to = collection_yyyymm_range_from_cycle_id(cycle)

@@ -841,7 +841,7 @@ while :; do rem=$((deadline - SECONDS)); (( rem > 0 )) || break
 
 ## 11. 출시 전 과제 (런북 범위 밖, 기록만 — Phase D 뒤 별도 작업)
 
-- **월간 갱신의 K-apt·title_fill 단계.** `run_collective_cycle_csv.py`가 `--attr-snapshot-ym`과 `--kapt-file`을 받으면, 그 판에 속성 행이 없는 아파트·연립·오피스텔 키만 K-apt와 title_fill로 넣는다. 판은 그 인자만 쓰고, 파일 이름·cycle-id·최신 판으로 정하지 않는다. 그 판의 기존 행이 0이면 멈춘다. `--replace`와 `--refresh-t`는 이 단계에서 쓰지 않는다. 리허설 때 비어 있던 키는 2,076(아파트 828 · 연립 1,131 · 오피스텔 117, 그중 1,372는 첫 거래가 판 이후)이었다. 이 코드가 그 키를 채우지는 않았다.
+- **월간 갱신의 K-apt·title_fill 단계.** `run_collective_cycle_csv.py`가 `--attr-snapshot-ym`과 `--kapt-file`을 받으면, 그 판에 속성 행이 없는 아파트·연립·오피스텔 키만 K-apt와 title_fill로 넣는다. 판은 그 인자만 쓰고, 파일 이름·cycle-id·최신 판으로 정하지 않는다. 그 판의 기존 행이 0이면 실거래 적재 전에 멈춘다. `--replace`와 `--refresh-t`는 이 단계에서 쓰지 않는다. 리허설 때 비어 있던 키는 2,076(아파트 828 · 연립 1,131 · 오피스텔 117, 그중 1,372는 첫 거래가 판 이후)이었다. 이 코드가 그 키를 채우지는 않았다.
 - **`vps_sync_collective_building_attributes.sh`는 그대로 두었다.**
   - `--replace`로 판 전체를 다시 만든다. KB 보강값(`kb_internet_*`)을 덮을 수 있다(KB_FILL 보고 §2).
   - 월간 SOP·러너는 이 스크립트를 부르지 않는다. 키 목록 방식으로 바꾸거나 폐기하는 일은 이번 범위 밖이다.
