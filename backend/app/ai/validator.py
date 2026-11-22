@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -31,12 +32,88 @@ def numeric_claims(text: str) -> set[Decimal]:
     return out
 
 
+# 이미 퍼센트 단위인 항목. 설명력처럼 0~1 비율로 둔 값과 구분한다.
+_PERCENT_KEYS = frozenset({
+    "vacancy",
+    "rent_income_share",
+    "other_income_share",
+    "opex_share",
+    "noi_pct",
+    "income_yield",
+    "capital_yield",
+    "investment_yield",
+    "conversion",
+    "building_rate",
+    "region_rate",
+    "pool_rate",
+})
+
+
+def _is_percent_key(key: str) -> bool:
+    return key in _PERCENT_KEYS or key == "mape" or key.endswith("_mape") or key.endswith("_pct")
+
+
+def _json_value(sources: str):
+    text = sources.lstrip()
+    if not text.startswith(("{", "[")):
+        return None
+    try:
+        value, _end = json.JSONDecoder().raw_decode(text)
+    except json.JSONDecodeError:
+        return None
+    return value
+
+
+def _split_percent_values(sources: str) -> tuple[set[Decimal], set[Decimal]]:
+    """퍼센트 항목의 숫자와, 그 밖에 있는 숫자."""
+    percent_vals: set[Decimal] = set()
+    outside: set[Decimal] = set()
+
+    def add(bucket: set[Decimal], value: object) -> None:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return
+        try:
+            bucket.add(Decimal(str(value)))
+        except InvalidOperation:
+            return
+
+    def walk(node: object, under_percent: bool) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                walk(value, under_percent or _is_percent_key(str(key)))
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, under_percent)
+        elif under_percent:
+            add(percent_vals, node)
+        else:
+            add(outside, node)
+
+    root = _json_value(sources)
+    if root is not None:
+        walk(root, False)
+    return percent_vals, outside
+
+
+def _ratio_display_bases(sources: str) -> set[Decimal]:
+    """100을 곱해 퍼센트로 말할 수 있는 비율.
+
+    수익률·공실률·전환율·오차율처럼 이미 퍼센트인 숫자는 빼되,
+    같은 숫자가 비율 항목에도 있으면 비율 표기는 남긴다.
+    """
+    allowed = numeric_claims(sources)
+    percent_vals, outside = _split_percent_values(sources)
+    return (allowed - percent_vals) | outside
+
+
 def numbers_grounded(candidate: str, sources: str) -> bool:
     allowed = numeric_claims(sources)
-    # 0.55를 55%로 설명하는 표시 변환은 허용한다. 새 통계 계산은 아니다.
+    # 설명력 0.55를 55%로 말하는 표시 변환만 허용한다. 이미 퍼센트인 값에 100을 다시 곱하지 않는다.
+    bases = _ratio_display_bases(sources)
+
     def checked_percent(match: re.Match) -> str:
         value = Decimal(match.group(1).replace("−", "-"))
-        if abs(value) <= 100 and value / 100 in allowed:
+        if abs(value) <= 100 and value / 100 in bases:
             return ""
         return match.group()
     remaining = re.sub(r"(?<![A-Za-z0-9_.])([+\-−]?\d+(?:\.\d+)?)\s*%", checked_percent, candidate)
