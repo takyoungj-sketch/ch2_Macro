@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import BuildingStatsTable, { buildingMatchesQuery } from "../../src/components/BuildingStatsTable";
 import { buildingDisplayName, regressionAiName } from "../../src/utils/buildingName";
-import { buildCollectiveListContext } from "../../src/api/aiContext";
+import { buildCollectiveListContext, buildOpenBuildingDetailContext } from "../../src/api/aiContext";
 import type { BuildingStatsRow } from "../../src/types";
 
 const base = {
@@ -64,6 +64,48 @@ test("AI 코호트 추이 문맥: 시리즈 이름도 표시 이름(labels → d
     regionLabel: "부천시", assetType: "apartment", labels: { [FRAG.building_key]: "주공 (1986년 준공)" },
   } as never) as { facts: { series: { label: string }[] } };
   assert.deepEqual(ctx.facts.series.map((s) => s.label), ["주공 (1986년 준공)", "래미안", "한빛 (2001년 준공)"]);
+});
+
+test("열린 단지 상세는 현재 탭 집계를 AI에 넘기고 거래 행은 넘기지 않는다", () => {
+  const rolling = buildOpenBuildingDetailContext({
+    panel: "trend",
+    regionLabel: "주공 (1986년 준공)",
+    assetType: "apartment",
+    metric: "median",
+    rolling: {
+      building_key: "f".repeat(64),
+      display_name: "주공",
+      window_years: 5,
+      points: [{ bucket_index: 1, period_start: "2024-01-01", period_end: "2024-12-31", label: "2024", count: 12, mean: 900, median: 880 }],
+    },
+  });
+  assert.equal(rolling?.panel, "TrendCard");
+  assert.equal(rolling?.scope.region_label, "주공 (1986년 준공)");
+  assert.equal((rolling?.facts as { trend_metric?: string }).trend_metric, "median");
+  assert.equal((rolling?.facts as { rows?: { median?: number }[] }).rows?.[0].median, 880);
+
+  const hidden = buildOpenBuildingDetailContext({
+    panel: "floor_index",
+    regionLabel: "주공",
+    assetType: "apartment",
+    rolling: {
+      building_key: "f".repeat(64),
+      display_name: "주공",
+      window_years: 5,
+      points: [{ bucket_index: 1, period_start: "2024-01-01", period_end: "2024-12-31", label: "2024", count: 1, mean: 1 }],
+    },
+  });
+  assert.equal(hidden, null);
+
+  const tx = buildOpenBuildingDetailContext({
+    panel: "transactions",
+    regionLabel: "주공",
+    assetType: "apartment",
+    transactionTotal: 40,
+    transactionLoaded: 20,
+  });
+  assert.equal(tx?.panel, "TransactionsPanel");
+  assert.deepEqual(tx?.facts, { total: 40, loaded: 20 });
 });
 
 test("AI 회귀 문맥 이름: 단지 하나면 표시 이름, 코호트·라벨 없음이면 응답 이름", () => {

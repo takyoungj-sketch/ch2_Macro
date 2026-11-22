@@ -1,6 +1,6 @@
 import TargetPicker from "../../../shared/regression-ui/TargetPicker";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
-import { buildCollectiveCohortRollingTrendContext } from "../api/aiContext";
+import { buildOpenBuildingDetailContext } from "../api/aiContext";
 import { buildingDisplayName } from "../utils/buildingName";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
@@ -808,21 +808,44 @@ export default function BuildingDetailModal({
     "선택 연도 구간 거래건수가 부족하여 통계 분석을 제공하지 않습니다.";
 
   const trendCohortActive = cohortRunForPanel("trend") > 0;
-  // 코호트 추이 AI 문맥 — 시리즈 이름은 표시 이름(C-2 분할 아파트 조각은 rolling 응답의 display_label)
-  const cohortTrendAiContext = useMemo(
-    () =>
-      trendCohortActive && cohortRollingQ.data
-        ? buildCollectiveCohortRollingTrendContext(cohortRollingQ.data, {
-            regionLabel: buildingDisplayName(row),
-            assetType: effectiveAssetType,
-            labels: { [row.building_key]: row.display_label },
-          })
-        : null,
-    [trendCohortActive, cohortRollingQ.data, row, effectiveAssetType],
-  );
   const longTermCohortActive = cohortRunForPanel("long_term") > 0;
   const histCohortActive = cohortRunForPanel("histogram") > 0;
   const txCohortActive = cohortRunForPanel("transactions") > 0;
+  const detailAiContext = useMemo(
+    () =>
+      buildOpenBuildingDetailContext({
+        panel,
+        regionLabel: buildingDisplayName(row),
+        assetType: effectiveAssetType,
+        metric: panel === "long_term" ? longTermMetric : rollMetric,
+        rolling: rollingQ.data,
+        areaRolling: areaRollingQ.data,
+        rollScope,
+        cohortRolling: trendCohortActive ? cohortRollingQ.data : null,
+        labels: { [row.building_key]: row.display_label },
+        yearly: longTermYearQ.data,
+        histogram: histCohortActive ? null : histQ.data,
+        transactionTotal: txCohortActive ? null : txQ.data?.total,
+        transactionLoaded: txCohortActive ? null : txQ.data?.items.length,
+      }),
+    [
+      panel,
+      row,
+      effectiveAssetType,
+      longTermMetric,
+      rollMetric,
+      rollingQ.data,
+      areaRollingQ.data,
+      rollScope,
+      trendCohortActive,
+      cohortRollingQ.data,
+      longTermYearQ.data,
+      histCohortActive,
+      histQ.data,
+      txCohortActive,
+      txQ.data,
+    ],
+  );
   const activeTxQ = txCohortActive ? cohortTxQ : txQ;
 
   useEffect(() => {
@@ -1038,6 +1061,7 @@ export default function BuildingDetailModal({
       minHeight={360}
       bodyClassName="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4"
     >
+          {detailAiContext ? <PublishAiContext context={detailAiContext} /> : null}
           {typeSiblings.length > 0 && (
             <TypeSiblingStrip row={row} siblings={typeSiblings} onOpen={onOpenSibling} />
           )}
@@ -1054,7 +1078,6 @@ export default function BuildingDetailModal({
                   )}
                 </p>
               )}
-              {cohortTrendAiContext ? <PublishAiContext context={cohortTrendAiContext} /> : null}
               {trendCohortActive && cohortRollingQ.data && (
                 <CohortTrendPanel
                   series={cohortRollingQ.data.map(rollingToTrendSeries)}
