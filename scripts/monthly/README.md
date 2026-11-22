@@ -11,12 +11,13 @@ xlsx / `run_monthly_cycle*` 는 **복구·레거시**. 매월 아래 CSV 러너�
 ```
 py scripts/monthly/run_land_cycle_csv.py --cycle-id YYYYMM
 py scripts/monthly/run_built_cycle_csv.py --cycle-id YYYYMM
-py scripts/monthly/run_collective_cycle_csv.py --cycle-id YYYYMM
+py scripts/monthly/run_collective_cycle_csv.py --cycle-id YYYYMM --attr-snapshot-ym 202607 --kapt-file K-apt.xlsx
 ```
 
 - 토지: V2 windows **3,5,7** · §7.1 group · `analysis_cache` TRUNCATE. `--skip-jimok-group` / `--skip-cache-clear` 비권장.
 - 복합: UPSERT + stale purge + 원장 mart. skip-enrich 기본. `--enrich` 는 D-051 전 운영 적재에 쓰지 않음.
 - 집합: skip-enrich 기본. 신규 키만 `--enrich-new-keys`.
+- 집합 속성: `--attr-snapshot-ym`은 지금 `202607`. 파일 이름·cycle-id로 판을 정하지 않는다. 그 판에 행이 있는 상태에서 속성 없는 키만 넣는다. 실거래만 다시 돌릴 때는 `--skip-attributes`.
 - `cycle_id` ↔ V2 `--as-of`: `cycle_utils.py`. 수집 끝 월이 직전 달과 다르면 `--v2-as-of`.
 - `DATABASE_URL` / `BUILT_DATABASE_URL` / `COLLECTIVE_DATABASE_URL`: `pipeline/.env` · `.env.built` · `.env.collective`.
 

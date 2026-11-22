@@ -115,7 +115,7 @@ K-apt와 표제부 T등급 갱신은 각각 별도 작업이다. 비주거 집�
 # 실거래 달 — 신규 대장 공급 기본
 py scripts/monthly/run_land_cycle_csv.py --cycle-id YYYYMM
 py scripts/monthly/run_built_cycle_csv.py --cycle-id YYYYMM
-py scripts/monthly/run_collective_cycle_csv.py --cycle-id YYYYMM
+py scripts/monthly/run_collective_cycle_csv.py --cycle-id YYYYMM --attr-snapshot-ym 202607 --kapt-file K-apt.xlsx
 
 # 대장 달 미상(복합) · T 갱신(집합)
 # python -m built.recover_from_parcel --sido all --min-year 2019 --retry-unmatched

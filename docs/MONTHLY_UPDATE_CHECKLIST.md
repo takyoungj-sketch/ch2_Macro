@@ -64,7 +64,7 @@ py scripts/monthly/verify_monthly_checklist_ready.py
 
 | # | 단계 | 메모 | ✓ |
 |---|------|------|---|
-| 3.1 | Collective CSV cycle | `run_collective_cycle_csv.py --cycle-id {cycle}` | |
+| 3.1 | Collective CSV cycle | `run_collective_cycle_csv.py --cycle-id {cycle} --attr-snapshot-ym 202607 --kapt-file {K-apt xlsx}`. 속성 판은 파일 이름·cycle로 정하지 않는다. 실거래만 다시 돌릴 때 `--skip-attributes` | |
 | 3.2 | 분양권 building_key | 분열 단지 스모크 | |
 | 3.3 | Dump · Promote | `collective_stats` | |
 | 3.4 | Smoke | building/cluster 목록 · 회귀 1건 | |

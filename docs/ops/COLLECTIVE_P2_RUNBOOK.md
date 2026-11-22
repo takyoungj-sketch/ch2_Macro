@@ -841,13 +841,10 @@ while :; do rem=$((deadline - SECONDS)); (( rem > 0 )) || break
 
 ## 11. 출시 전 과제 (런북 범위 밖, 기록만 — Phase D 뒤 별도 작업)
 
-- **월간 갱신에 K-apt·title_fill 단계가 없다.**
-  - 202607 이후 새 단지와 분할과 무관한 새 키는 속성이 비어 있다(리허설 기준 **2,076키**: 아파트 828 · 연립 1,131 · 오피스텔 117, 그중 1,372키는 첫 거래가 판 이후).
-  - 월간 러너에 「속성 없는 키만, 판 명시, 키 목록」 단계를 넣는다.
-- **`vps_sync_collective_building_attributes.sh`:**
-  - `--replace` 로 판 전체를 다시 만든다. KB 보강값(`kb_internet_*`)을 덮을 수 있다(KB_FILL 보고 §2).
-  - 월간 SOP·체크리스트는 이 스크립트를 부르지 않는다. 언급은 `docs/NEW_APARTMENT_REGRESSION_DESIGN.md`(「VPS K-apt 공통 전제」)와 KB_FILL 보고뿐이다.
-  - 월간 속성 단계를 만들 때 이 스크립트를 키 목록·추가 전용 방식으로 바꾸거나 폐기할지 같이 정한다.
+- **월간 갱신의 K-apt·title_fill 단계.** `run_collective_cycle_csv.py`가 `--attr-snapshot-ym`과 `--kapt-file`을 받으면, 그 판에 속성 행이 없는 아파트·연립·오피스텔 키만 K-apt와 title_fill로 넣는다. 판은 그 인자만 쓰고, 파일 이름·cycle-id·최신 판으로 정하지 않는다. 그 판의 기존 행이 0이면 멈춘다. `--replace`와 `--refresh-t`는 이 단계에서 쓰지 않는다. 리허설 때 비어 있던 키는 2,076(아파트 828 · 연립 1,131 · 오피스텔 117, 그중 1,372는 첫 거래가 판 이후)이었다. 이 코드가 그 키를 채우지는 않았다.
+- **`vps_sync_collective_building_attributes.sh`는 그대로 두었다.**
+  - `--replace`로 판 전체를 다시 만든다. KB 보강값(`kb_internet_*`)을 덮을 수 있다(KB_FILL 보고 §2).
+  - 월간 SOP·러너는 이 스크립트를 부르지 않는다. 키 목록 방식으로 바꾸거나 폐기하는 일은 이번 범위 밖이다.
 - `vps_promote_collective_pg18.sh`(반영 전 덤프 없음)·`vps_promote_7y_marts.sh`(속성 TRUNCATE)의 정리 여부.
 - **`vps_promote_db_sql.sh` 줄바꿈 — 저장소는 LF.** `.gitattributes`의 `*.sh text eol=lf`로 blob는 LF다. 2026-11-18 서버에 처음 올린 파일은 작업 폴더의 CRLF 사본이라 `set -o pipefail`이 거절됐다. 서버 파일은 LF로 다시 썼고, CR을 뺀 해시는 저장소 blob과 같다. 다음 배포도 LF 내용을 올린다.
 - **4절 디스크 조건 — 단계별 최저 여유로 반영함.** 2.5배 문장을 뺐다. 모든 단계의 최저 여유 ≥ 그 단계 복원 대상 DB × 1.5. 2026-11-18에는 업로드 뒤 여유가 rent의 2.5배보다 약 3.78GiB 작았고, T가 그 미달을 받은 뒤 단계 계산을 통과해 promote했다. 계산은 `logs/collective_p2/promote_disk_plan.txt`.

@@ -417,7 +417,7 @@ sudo cp -a -- "$ENV_BACKUP" /opt/ch2_Macro/backend/.env
 |------|------|
 | **월간 토지 (SSOT)** | `py scripts\monthly\run_land_cycle_csv.py --cycle-id YYYYMM` |
 | 복합 (토지 이후) | `py scripts\monthly\run_built_cycle_csv.py --cycle-id YYYYMM` |
-| 집합 (토지 이후) | `py scripts\monthly\run_collective_cycle_csv.py --cycle-id YYYYMM` |
+| 집합 (토지 이후) | `py scripts\monthly\run_collective_cycle_csv.py --cycle-id YYYYMM --attr-snapshot-ym 202607 --kapt-file K-apt.xlsx` |
 | 지목군만 재실행 | `py pipeline\build_stats_v2.py --as-of YYYY-MM-01 --windows 3,5,7 --col-axis group` |
 | 지목군 upper | `py pipeline\build_upper_stats_v2.py --as-of YYYY-MM-01 --windows 3,5,7 --col-axis group` |
 | annual 당해연도 both | `py pipeline\build_annual_stats.py --years YYYY --full --col-axis both --with-upper` |

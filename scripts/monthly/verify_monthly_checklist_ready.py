@@ -60,7 +60,14 @@ def main() -> int:
         csrc = coll.read_text(encoding="utf-8")
         c_ok = "skip-enrich" in csrc and "ledger_step" in csrc
         print(f"[{'OK' if c_ok else 'FAIL'}] collective CSV residential new-key supply default")
-        if not c_ok:
+        attr_ok = (
+            "--attr-snapshot-ym" in csrc
+            and "--new-keys-only" in csrc
+            and "guard_existing_snapshot" in csrc
+            and "vps_sync_collective_building_attributes" not in csrc
+        )
+        print(f"[{'OK' if attr_ok else 'FAIL'}] collective attribute step is explicit snapshot, new keys only")
+        if not c_ok or not attr_ok:
             ok = False
     if land.is_file():
         src = land.read_text(encoding="utf-8")

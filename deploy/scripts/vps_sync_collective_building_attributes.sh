@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # VPS: K-apt 단지 속성(collective_building_attributes) 적재 + 사전 적용
+# 월간 갱신은 이 스크립트를 부르지 않는다. --replace 는 판 전체를 지우고
+# KB 보강(kb_internet_*)을 덮을 수 있다. 속성 없는 키만 넣을 때는
+# run_collective_cycle_csv.py --attr-snapshot-ym --kapt-file 을 쓴다.
 # Usage:
 #   bash deploy/scripts/vps_sync_collective_building_attributes.sh
 #   bash deploy/scripts/vps_sync_collective_building_attributes.sh --kapt-file /path/to/kapt.xlsx
