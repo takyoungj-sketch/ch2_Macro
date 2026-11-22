@@ -7,7 +7,9 @@ from app.ai.llm import numbers_preserved
 from app.ai.orchestrator import _finalize_response, _handle_chat, handle_explain
 from app.ai.schemas import AiChatRequest, AiContext, AiScope, AiExplainRequest
 from app.ai.sessions import AiSession, get_or_create
-from app.ai.validator import numbers_grounded
+from decimal import Decimal
+
+from app.ai.validator import _ratio_display_bases, numbers_grounded
 
 
 def context(coef=1, period="2025"):
@@ -29,9 +31,9 @@ def test_numeric_guard_allows_labels_not_fabrication():
     assert not numbers_grounded("표본 999건입니다.", '{"n":73}')
     assert not numbers_grounded("표본999건입니다.", '{"n":73}')
     assert not numbers_grounded("계수는-0.55입니다.", '{"coef":0.55}')
-    assert numbers_grounded("설명력은 55%입니다.", '{"adj":0.55}')
-    assert not numbers_grounded("설명력은 99%입니다.", '{"adj":0.55}')
-    assert not numbers_grounded("설명력 55%, 표본 55건입니다.", '{"adj":0.55}')
+    assert numbers_grounded("설명력은 55%입니다.", '{"adj_r_squared":0.55}')
+    assert not numbers_grounded("설명력은 99%입니다.", '{"adj_r_squared":0.55}')
+    assert not numbers_grounded("설명력 55%, 표본 55건입니다.", '{"adj_r_squared":0.55}')
 
 
 def test_percent_fields_are_not_scaled_again():
@@ -47,6 +49,14 @@ def test_percent_fields_are_not_scaled_again():
     assert numbers_grounded("설명력은 55%입니다.", '{"adj_r_squared":0.55}')
     both = '{"adj_r_squared":0.5,"capital_yield":0.5}'
     assert numbers_grounded("설명력은 50%입니다.", both)
+    assert not numbers_grounded("회귀계수는 55%입니다.", '{"coef":0.55}')
+    assert not numbers_grounded("표본수는 55%입니다.", '{"n":0.55}')
+    assert numbers_grounded("유사도는 91%입니다.", '{"similarity_score":0.91}')
+    assert numbers_grounded("아파트 비중은 12%입니다.", '{"count_share_by_type":{"아파트":0.12}}')
+    assert not numbers_grounded("설명력은 150%입니다.", '{"adj_r_squared":1.5}')
+    assert _ratio_display_bases('{"adj_r_squared":0.55}') == {Decimal("0.55")}
+    assert _ratio_display_bases('{"adj_r_squared":1.5}') == set()
+    assert _ratio_display_bases('{"coef":0.55,"n":0.55}') == set()
 
 
 def test_commercial_regression_does_not_route_to_reb():
