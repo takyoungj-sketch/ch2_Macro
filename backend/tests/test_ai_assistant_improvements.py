@@ -34,6 +34,21 @@ def test_numeric_guard_allows_labels_not_fabrication():
     assert not numbers_grounded("설명력 55%, 표본 55건입니다.", '{"adj":0.55}')
 
 
+def test_percent_fields_are_not_scaled_again():
+    yield_src = '{"annual":{"capital_yield":{"오피스":0.5},"vacancy":{"오피스":8}}}'
+    assert not numbers_grounded("자본수익률은 50%입니다.", yield_src)
+    assert numbers_grounded("자본수익률은 0.5%입니다.", yield_src)
+    assert numbers_grounded("공실률은 8%입니다.", yield_src)
+    assert not numbers_grounded("공실률은 800%입니다.", yield_src)
+    assert not numbers_grounded("전환율은 420%입니다.", '{"building_rate":4.2}')
+    assert numbers_grounded("전환율은 4.2%입니다.", '{"building_rate":4.2}')
+    assert not numbers_grounded("오차는 40%입니다.", '{"mape":0.4}')
+    assert numbers_grounded("오차는 0.4%입니다.", '{"mape":0.4}')
+    assert numbers_grounded("설명력은 55%입니다.", '{"adj_r_squared":0.55}')
+    both = '{"adj_r_squared":0.5,"capital_yield":0.5}'
+    assert numbers_grounded("설명력은 50%입니다.", both)
+
+
 def test_commercial_regression_does_not_route_to_reb():
     knowledge = product_knowledge_excerpt(app="built", panel="RegressionCard", message="상업용 부동산 회귀 결과는 어떻게 해석하나요?")
     assert "complete-case" in knowledge
