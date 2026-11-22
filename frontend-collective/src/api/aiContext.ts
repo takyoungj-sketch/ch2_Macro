@@ -10,6 +10,7 @@ import type {
   CohortRegressionResponse,
   FloorIndexResponse,
   HistogramResponse,
+  AreaRollingResponse,
   CohortFloorIndexResponse,
   CohortHistogramResponse,
   RollingStatPoint,
@@ -29,6 +30,9 @@ function rollingPointsToRows(points: RollingStatPoint[]) {
     bucket_index: p.bucket_index,
     count: p.count,
     mean: p.mean,
+    median: p.median,
+    p25: p.p25,
+    p75: p.p75,
     mean_unit_price_per_sqm: p.mean,
   }));
 }
@@ -290,6 +294,7 @@ export function buildCollectiveRollingTrendContext(
     assetType: AssetType;
     cohort?: boolean;
     purpose?: AiPurpose;
+    metric?: "mean" | "median";
   },
 ): AiContextPayload {
   return {
@@ -304,9 +309,83 @@ export function buildCollectiveRollingTrendContext(
       rows: rollingPointsToRows(data.points),
       window_years: data.window_years,
       trend_kind: "rolling",
+      trend_metric: opts.metric ?? "mean",
       cohort: opts.cohort ?? false,
     },
   };
+}
+
+/** 열린 단지 상세의 현재 탭. 효용지수·회귀는 각 패널이 따로 등록한다. */
+export function buildOpenBuildingDetailContext(opts: {
+  panel: string;
+  regionLabel: string;
+  assetType: AssetType;
+  metric?: "mean" | "median";
+  rolling?: RollingStatsResponse | null;
+  areaRolling?: AreaRollingResponse | null;
+  rollScope?: "all" | "area";
+  cohortRolling?: RollingStatsResponse[] | null;
+  labels?: Record<string, string | null | undefined>;
+  yearly?: YearlyStatsResponse | YearlyStatPoint[] | null;
+  histogram?: HistogramResponse | null;
+  transactionTotal?: number | null;
+  transactionLoaded?: number | null;
+}): AiContextPayload | null {
+  const shared = { regionLabel: opts.regionLabel, assetType: opts.assetType };
+  if (opts.panel === "trend" && (opts.cohortRolling?.length ?? 0) > 1) {
+    return buildCollectiveCohortRollingTrendContext(opts.cohortRolling ?? [], { ...shared, labels: opts.labels });
+  }
+  if (opts.panel === "trend" && opts.rollScope === "area" && (opts.areaRolling?.series.length ?? 0) > 0) {
+    const area = opts.areaRolling;
+    if (!area) return null;
+    return {
+      app: "collective",
+      panel: "TrendCard",
+      purpose: "market_analysis",
+      scope: { region_label: opts.regionLabel, asset_type: opts.assetType },
+      facts: {
+        series: area.series.slice(0, 6).map((series) => ({
+          label: series.area_label,
+          points: series.points.map((point) => ({
+            year: point.label,
+            count: point.count,
+            mean: point.mean,
+            median: point.median,
+          })),
+        })),
+        window_years: area.window_years,
+        trend_kind: "rolling",
+        trend_metric: opts.metric ?? "mean",
+        cohort: false,
+      },
+    };
+  }
+  if (opts.panel === "trend" && (opts.rolling?.points.length ?? 0) > 0 && opts.rolling) {
+    return buildCollectiveRollingTrendContext(opts.rolling, { ...shared, metric: opts.metric });
+  }
+  if (opts.panel === "long_term" && opts.yearly) {
+    const points = Array.isArray(opts.yearly) ? opts.yearly : opts.yearly.points;
+    if (points.length === 0) return null;
+    const context = buildCollectiveYearlyTrendContext(opts.yearly, shared);
+    context.facts = { ...context.facts, trend_metric: opts.metric ?? "mean" };
+    return context;
+  }
+  if (opts.panel === "histogram" && opts.histogram) {
+    return buildCollectiveHistogramContext(opts.histogram, shared);
+  }
+  if (opts.panel === "transactions" && opts.transactionTotal != null) {
+    return {
+      app: "collective",
+      panel: "TransactionsPanel",
+      purpose: "statistics",
+      scope: { region_label: opts.regionLabel, asset_type: opts.assetType },
+      facts: {
+        total: opts.transactionTotal,
+        loaded: opts.transactionLoaded ?? 0,
+      },
+    };
+  }
+  return null;
 }
 
 export function buildCollectiveCohortRollingTrendContext(
