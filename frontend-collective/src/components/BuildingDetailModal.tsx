@@ -514,6 +514,7 @@ export default function BuildingDetailModal({
   peerBuildings = [],
   onClose,
   onOpenSibling,
+  initialPanel,
 }: {
   row: BuildingStatsRow;
   assetType: AssetSelectorType;
@@ -526,6 +527,7 @@ export default function BuildingDetailModal({
   peerBuildings?: BuildingStatsRow[];
   onClose: () => void;
   onOpenSibling?: (row: BuildingStatsRow) => void;
+  initialPanel?: PanelMode;
 }) {
   const effectiveAssetType = (row.asset_type || (
     assetType === "all" || String(assetType).includes(",") ? row.asset_type : assetType
@@ -538,7 +540,7 @@ export default function BuildingDetailModal({
   const periodLabel = formatPeriodLabel(periodStart, periodEnd);
   const usesMartPeriod = Boolean(analysisPeriod.contract_date_from && analysisPeriod.contract_date_to);
   const { entitled, narrow, requestPaid } = useProductAccess();
-  const [panel, setPanel] = useState<PanelMode>("trend");
+  const [panel, setPanel] = useState<PanelMode>(initialPanel ?? "trend");
   useEffect(() => {
     if (narrow) setPanel("trend");
   }, [narrow]);

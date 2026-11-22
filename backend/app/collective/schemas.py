@@ -94,6 +94,18 @@ class BuildingStatsRow(BaseModel):
     scale_scope: Optional[Literal["complex"]] = None
 
 
+class BuildingStatsRowLink(BaseModel):
+    """단지 한 곳의 목록 행과, 그 단지가 있는 지역. 임대 효용지수 바로 열기용."""
+
+    row: BuildingStatsRow
+    addr1: str = ""
+    addr2: str = ""
+    sigungu_code: str = ""
+    period_start: Optional[date] = None
+    period_end: Optional[date] = None
+    stats_as_of_label: str = ""
+
+
 class CollectiveBuildingGeocodeRequest(BaseModel):
     """선택 건물 지번 → 지도 라벨용 좌표."""
 

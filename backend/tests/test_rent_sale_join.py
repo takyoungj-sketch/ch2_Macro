@@ -1,4 +1,4 @@
-from app.rent.sale_join import JOIN_ASSETS, apply_sale_metrics, jeonse_to_sale_pct, sale_join
+from app.rent.sale_join import JOIN_ASSETS, apply_sale_metrics, jeonse_to_sale_pct, sale_floor_link, sale_join
 
 
 class _Conn:
@@ -72,6 +72,30 @@ def test_no_join_when_map_empty():
     out = sale_join(_Db(conn), sale_building_key="a" * 64, asset_type="apartment", window_years=5)
     assert out.joined is False
     assert out.reason == "no_join"
+
+
+def test_sale_floor_link_uses_exact_sale_key():
+    sale = "b" * 64
+    conn = _Conn(
+        {"public.rent_sale_building_map"},
+        map_row={"sale_building_key": sale, "rent_building_key": "a" * 64},
+    )
+    out = sale_floor_link(conn, rent_building_key="a" * 64, asset_type="apartment")
+    assert out.linked is True
+    assert out.sale_building_key == sale
+    assert out.asset_type == "apartment"
+
+
+def test_sale_floor_link_without_map_or_outside_assets():
+    missing = sale_floor_link(_Conn(set()), rent_building_key="a" * 64, asset_type="apartment")
+    assert missing.linked is False
+    assert missing.sale_building_key == ""
+    detached = sale_floor_link(
+        _Conn({"public.rent_sale_building_map"}, map_row={"sale_building_key": "b" * 64}),
+        rent_building_key="a" * 64,
+        asset_type="detached",
+    )
+    assert detached.linked is False
 
 
 def test_join_assets():
