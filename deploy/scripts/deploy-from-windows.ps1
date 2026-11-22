@@ -259,9 +259,33 @@ curl -sf "${HDR[@]}" http://127.0.0.1:8000/api/collective/commercial/meta/filter
 echo
 
 echo "==> built regression gate (anonymous 401)"
-BODY='{"asset_type":"commercial","addr1":"충청북도","addr2":"청주시","addr4_list":["가경동"],"leaf_level":"addr4","window_years":5,"variables":{"gross_area":true,"land_area":true,"building_age":true,"road_width_dummy":true,"zone_type_dummy":true,"building_use_dummy":true,"structure_dummy":true},"exclude_outliers_iqr":false}'
+# ASCII only. PowerShell 5.1 reads a BOM-less UTF-8 ps1 as cp949, then pipes
+# this here-string to ssh. A raw Hangul literal becomes the wrong expected phrase.
+python3 - <<'PY'
+import json
+body = {
+    "asset_type": "commercial",
+    "addr1": "\ucda9\uccad\ubd81\ub3c4",
+    "addr2": "\uccad\uc8fc\uc2dc",
+    "addr4_list": ["\uac00\uacbd\ub3d9"],
+    "leaf_level": "addr4",
+    "window_years": 5,
+    "variables": {
+        "gross_area": True,
+        "land_area": True,
+        "building_age": True,
+        "road_width_dummy": True,
+        "zone_type_dummy": True,
+        "building_use_dummy": True,
+        "structure_dummy": True,
+    },
+    "exclude_outliers_iqr": False,
+}
+with open("/tmp/built_reg_body.json", "w", encoding="utf-8") as fh:
+    json.dump(body, fh, ensure_ascii=False)
+PY
 CODE=$(curl -sS -o /tmp/built_reg_smoke.json -w '%{http_code}' --max-time 20 "${HDR[@]}" -H "Content-Type: application/json" \
-  -d "$BODY" http://127.0.0.1:8000/api/built/regression/run)
+  -d @/tmp/built_reg_body.json http://127.0.0.1:8000/api/built/regression/run)
 python3 - "$CODE" <<'PY'
 import json, sys
 code = sys.argv[1]
@@ -271,10 +295,11 @@ try:
 except json.JSONDecodeError:
     data = {}
 detail = data.get("detail") if isinstance(data, dict) else None
-if code == "401" and detail == "로그인이 필요합니다.":
+expected = "\ub85c\uadf8\uc778\uc774 \ud544\uc694\ud569\ub2c8\ub2e4."
+if code == "401" and detail == expected:
     print("OK: built regression gate 401")
     raise SystemExit(0)
-raise SystemExit(f"FAIL: expected 401 로그인이 필요합니다., got {code} detail={detail!r}")
+raise SystemExit(f"FAIL: expected 401 {expected!r}, got {code} detail={detail!r}")
 PY
 '@
     $verifyBash | & ssh -i $Key $VpsHost "tr -d '\r' | bash"
