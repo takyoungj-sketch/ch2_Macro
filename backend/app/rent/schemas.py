@@ -79,6 +79,14 @@ class RentBuildingRow(BaseModel):
     display_label: Optional[str] = None
 
 
+class RentSaleLinkResponse(BaseModel):
+    """임대 단지 → 같은 단지 매매 효용지수 링크."""
+
+    linked: bool
+    sale_building_key: str = ""
+    asset_type: str = ""
+
+
 class RentSaleJoinResponse(BaseModel):
     joined: bool
     reason: str

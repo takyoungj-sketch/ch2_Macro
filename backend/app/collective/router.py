@@ -35,6 +35,7 @@ from app.collective.building_stats_query import (
     building_rolling_live,
     building_yearly_from_mart,
     building_yearly_resolved,
+    fetch_building_stats_row,
     latest_mart_snapshot,
     list_buildings_from_mart,
     list_buildings_live,
@@ -71,6 +72,7 @@ from app.collective.schemas import (
     AnalysisExplain,
     AnalysisFeatures,
     BuildingListResponse,
+    BuildingStatsRowLink,
     CollectiveBuildingGeocodeRequest,
     CollectiveBuildingGeocodeResponse,
     CollectiveBuildingMapPointsRequest,
@@ -673,6 +675,25 @@ def _get_building_meta(db: Session, building_key: str) -> tuple[str, str]:
     if not meta:
         raise HTTPException(404, "건물을 찾을 수 없습니다")
     return str(meta["display_name"] or ""), str(meta["asset_type"] or "")
+
+
+@router.get("/buildings/{building_key}/row", response_model=BuildingStatsRowLink)
+def building_stats_row(
+    building_key: str,
+    window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
+    asset_type: Optional[str] = Query(None),
+    db: Session = Depends(get_collective_db),
+):
+    """단지 한 곳의 목록 행. 임대 화면이 효용지수 탭을 바로 열 때 쓴다."""
+    found = fetch_building_stats_row(
+        db.connection(),
+        building_key=building_key,
+        window_years=window_years,
+        asset_type=asset_type,
+    )
+    if not found:
+        raise HTTPException(404, "건물을 찾을 수 없습니다")
+    return BuildingStatsRowLink(**found)
 
 
 @router.get("/buildings/{building_key}/key-status")

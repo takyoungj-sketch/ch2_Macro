@@ -8,6 +8,7 @@ import {
   fetchAddr2,
   fetchAddr3WithCounts,
   fetchAllBuildings,
+  fetchBuildingStatsRow,
   fetchFilterMeta,
   fetchLeafRegions,
   fetchRegionStructure,
@@ -156,6 +157,13 @@ export default function App() {
   }, [narrow]);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
+  const [floorLinkKey, setFloorLinkKey] = useState<string | null>(null);
+  const [floorLinkNote, setFloorLinkNote] = useState<string | null>(null);
+  const [floorLinkMeta, setFloorLinkMeta] = useState<{
+    period_start?: string | null;
+    period_end?: string | null;
+    stats_as_of_label?: string;
+  } | null>(null);
   const [candSwitch, setCandSwitch] = useState<CandidateSwitchState>({ status: "idle" });
   const [regionalOpen, setRegionalOpen] = useState(false);
   const [aiHint, setAiHint] = useState<string | null>(null);
@@ -298,6 +306,38 @@ export default function App() {
       return next;
     });
   }, [hasIntermediate, visibleLeafOptions]);
+
+  useEffect(() => {
+    const qs = new URLSearchParams(window.location.search);
+    const buildingKey = (qs.get("building_key") || "").trim();
+    if (!buildingKey) return;
+    const assetType = (qs.get("asset_type") || "").trim();
+    const detailTab = (qs.get("detail_tab") || "").trim();
+    setFloorLinkKey(buildingKey);
+    void fetchBuildingStatsRow(buildingKey, {
+      window_years: 5,
+      ...(assetType ? { asset_type: assetType } : {}),
+    })
+      .then((data) => {
+        if (data.addr1) setAddr1(data.addr1);
+        if (data.addr2) setAddr2(data.addr2);
+        setFloorLinkMeta({
+          period_start: data.period_start,
+          period_end: data.period_end,
+          stats_as_of_label: data.stats_as_of_label,
+        });
+        setSelected(data.row);
+        if (detailTab !== "floor_index") setFloorLinkKey(null);
+      })
+      .catch((error: { response?: { status?: number } }) => {
+        setFloorLinkKey(null);
+        setFloorLinkNote(
+          error?.response?.status === 409
+            ? "이 단지는 여러 단지로 나뉘어 있습니다. 목록에서 해당 단지를 선택해 주세요."
+            : "같은 단지의 매매 효용지수를 열지 못했습니다.",
+        );
+      });
+  }, [setAddr1, setAddr2]);
 
   useCollectiveDeepLink({
     addr1,
@@ -861,12 +901,18 @@ export default function App() {
           onClose={() => setRegionalOpen(false)}
         />
       )}
-      {selected && scope && (
+      {floorLinkNote ? (
+        <p role="status" className="mx-4 mt-2 text-sm text-slate-600 dark:text-slate-300">
+          {floorLinkNote}
+        </p>
+      ) : null}
+      {selected && (scope || floorLinkMeta) && (
         <BuildingKeySplitGuard
           buildingKey={selected.building_key}
           displayName={selected.display_name}
           onClose={() => setSelected(null)}
           onOpenKey={(key, cand) => {
+            if (!scope) return;
             // C-2 분리된 단지: 기존 행을 복사하지 않고 후보 키의 실제 목록 행을 다시 조회한 뒤 연다(로딩·실패 안내)
             const sel = selected;
             void switchToCandidate<BuildingStatsRow>(key, cand, {
@@ -889,14 +935,15 @@ export default function App() {
         >
         <BuildingDetailModal
           key={selected.building_key}
+          initialPanel={selected.building_key === floorLinkKey ? "floor_index" : undefined}
           row={selected}
-          assetType={scope.assetType}
-          windowYears={scope.windowYears}
-          yearFrom={scope.yearFrom === "" ? undefined : scope.yearFrom}
-          yearTo={scope.yearTo === "" ? undefined : scope.yearTo}
-          periodStart={buildingsQ.data?.period_start}
-          periodEnd={buildingsQ.data?.period_end}
-          statsAsOfLabel={buildingsQ.data?.stats_as_of_label}
+          assetType={scope?.assetType ?? (selected.asset_type as AssetSelectorType)}
+          windowYears={scope?.windowYears ?? 5}
+          yearFrom={scope && scope.yearFrom !== "" ? scope.yearFrom : undefined}
+          yearTo={scope && scope.yearTo !== "" ? scope.yearTo : undefined}
+          periodStart={buildingsQ.data?.period_start ?? floorLinkMeta?.period_start}
+          periodEnd={buildingsQ.data?.period_end ?? floorLinkMeta?.period_end}
+          statsAsOfLabel={buildingsQ.data?.stats_as_of_label ?? floorLinkMeta?.stats_as_of_label}
           peerBuildings={buildingsQ.data?.items ?? []}
           onClose={() => setSelected(null)}
           onOpenSibling={setSelected}

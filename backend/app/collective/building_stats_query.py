@@ -428,6 +428,70 @@ def list_buildings_from_mart(
     return items, meta
 
 
+def fetch_building_stats_row(
+    conn: Connection,
+    *,
+    building_key: str,
+    window_years: int = 5,
+    asset_type: Optional[str] = None,
+) -> dict[str, Any] | None:
+    """마트에서 단지 한 곳. 없으면 None. 지역 필터 없이 키로만 찾는다."""
+    key = building_key.strip()
+    if not key:
+        return None
+    as_of_month, _ = latest_mart_snapshot(conn)
+    if as_of_month is None or not _table_exists(conn, "public.collective_building_stats"):
+        return None
+    addr5_col = "m.addr5" if _mart_has_addr5(conn) else "NULL::varchar AS addr5"
+    params: dict[str, Any] = {"as_of": as_of_month, "window_years": window_years, "bk": key}
+    asset_sql = ""
+    if asset_type:
+        asset_sql = "AND m.asset_type = :asset_type"
+        params["asset_type"] = asset_type
+    row = conn.execute(
+        text(
+            f"""
+            SELECT m.building_key, m.display_name, m.asset_type,
+                   m.addr1, m.addr2, m.addr3, m.addr4, {addr5_col},
+                   m.lot_number, m.road_name, m.building_year, m.sigungu_code,
+                   m.count, m.mean, m.median, m.ci_lower, m.ci_upper
+            FROM collective_building_stats m
+            WHERE m.as_of_month = :as_of
+              AND m.window_years = :window_years
+              AND m.building_key = :bk
+              {asset_sql}
+            """
+        ),
+        params,
+    ).mappings().first()
+    if not row:
+        return None
+    years = _fetch_annual_years(conn, [row["building_key"]]).get(row["building_key"], [])
+    cnt_recent = count_recent_transactions(years)
+    gates = evaluate_analysis_gates(int(row["count"] or 0), cnt_recent)
+    item = _stats_row_from_parts(
+        dict(row),
+        asset_type=row["asset_type"] or asset_type,
+        gates=AnalysisFeatures(
+            floor_index=gates.floor_index_eligible,
+            regression=gates.regression_eligible,
+            count_total=gates.count_total,
+            count_recent=gates.count_recent,
+            messages=gates.messages,
+        ),
+    )
+    ps, pe = period_bounds_for_window(as_of_month, window_years)
+    return {
+        "row": item,
+        "addr1": str(row.get("addr1") or ""),
+        "addr2": str(row.get("addr2") or ""),
+        "sigungu_code": str(row.get("sigungu_code") or "").strip(),
+        "period_start": ps,
+        "period_end": pe,
+        "stats_as_of_label": stats_as_of_label(as_of_month) or "",
+    }
+
+
 def building_yearly_from_mart(
     conn: Connection,
     building_key: str,

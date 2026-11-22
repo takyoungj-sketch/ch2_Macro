@@ -65,6 +65,7 @@ from app.rent.schemas import (
     RentRegionOption,
     RentRegionStructure,
     RentSaleJoinResponse,
+    RentSaleLinkResponse,
     RentRollingResponse,
     RentTransactionListResponse,
     RentTransactionRow,
@@ -280,6 +281,22 @@ def rent_sale_join(
         sale_building_key=sale_building_key.strip(),
         asset_type=asset_type,
         window_years=window_years,
+    )
+
+
+@router.get("/buildings/{building_key}/sale-link", response_model=RentSaleLinkResponse)
+def rent_building_sale_link(
+    building_key: str,
+    asset_type: str = Query(...),
+    db: Session = Depends(get_rent_db),
+):
+    """같은 단지의 매매 키. 연결이 없으면 linked=false. 집합 화면 주소는 클라이언트가 만든다."""
+    from app.rent.sale_join import sale_floor_link
+
+    return sale_floor_link(
+        db.connection(),
+        rent_building_key=building_key.strip(),
+        asset_type=asset_type.strip(),
     )
 
 
