@@ -542,8 +542,8 @@ export default function BuildingDetailModal({
   const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>(initialPanel ?? "trend");
   useEffect(() => {
-    if (narrow) setPanel("trend");
-  }, [narrow]);
+    if (narrow && !initialPanel) setPanel("trend");
+  }, [narrow, initialPanel]);
   useEffect(() => {
     setApiScreen(`residential-detail/${panel}`);
     return () => setApiScreen(null);
@@ -757,7 +757,7 @@ export default function BuildingDetailModal({
   });
 
   useEffect(() => {
-    setPanel("trend");
+    setPanel(initialPanel ?? "trend");
     setTxExportError(null);
     setHistScope("all");
     setCohortExtra([]);
@@ -768,7 +768,7 @@ export default function BuildingDetailModal({
     setRollQuartiles(false);
     setPresaleOverlay([]);
     setShowPresalePicker(false);
-  }, [row.building_key]);
+  }, [row.building_key, initialPanel]);
 
   const runCohortAnalysis = () => {
     if (!canRunCohort) return;
@@ -958,7 +958,7 @@ export default function BuildingDetailModal({
           </div>
           )}
           {(() => {
-            const help = collectiveModalPanelHelp(narrow ? "trend" : panel);
+            const help = collectiveModalPanelHelp(panel);
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
           {!narrow && peerBuildings.length > 0 && panel !== "danji" && (
