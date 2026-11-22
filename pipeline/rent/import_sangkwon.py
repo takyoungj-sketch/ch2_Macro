@@ -37,8 +37,8 @@ from rent.db_utils import get_rent_engine  # noqa: E402
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-DEFAULT_XLSX_DIR = REPO / "임대시장" / "B.상업용"
-DEFAULT_SHP = DEFAULT_XLSX_DIR / "상권구획도(업로드용)" / "상권구획도2024.shp"
+RETAIL_ASSETS = frozenset({"mid_retail", "small_retail", "strata", "retail_all"})
+LOCAL_DB_HOSTS = frozenset({"localhost", "127.0.0.1"})
 MERCATOR_R = 6378137.0
 
 
@@ -159,7 +159,10 @@ def _header_roles(cells: list[Any]) -> Optional[tuple[dict[str, int], list[tuple
     return roles, quarters
 
 
-def parse_workbook(xlsx_path: Path) -> list[dict[str, Any]]:
+def parse_workbook(
+    xlsx_path: Path,
+    allowed_assets: Optional[set[str] | frozenset[str]] = None,
+) -> list[dict[str, Any]]:
     wb = load_workbook(xlsx_path, read_only=True, data_only=True)
     rows_out: list[dict[str, Any]] = []
     try:
@@ -167,6 +170,8 @@ def parse_workbook(xlsx_path: Path) -> list[dict[str, Any]]:
             if sheet_name in SKIP_SHEETS or sheet_name not in SHEET_ASSET:
                 continue
             asset = SHEET_ASSET[sheet_name]
+            if allowed_assets is not None and asset not in allowed_assets:
+                continue
             floor_band = SHEET_FLOOR_BAND.get(sheet_name, "all")
             ws = wb[sheet_name]
             roles = None
@@ -216,6 +221,87 @@ def parse_workbook(xlsx_path: Path) -> list[dict[str, Any]]:
     finally:
         wb.close()
     return rows_out
+
+
+class ImportValidationError(ValueError):
+    """DB 연결 전에 입력 파일의 일관성이 깨졌음을 알리는 오류."""
+
+
+def _quarter_keys(facts: list[dict[str, Any]]) -> set[tuple[int, int]]:
+    return {(int(r["year"]), int(r["quarter"])) for r in facts}
+
+
+def _quarter_keys_by_asset(facts: list[dict[str, Any]]) -> dict[str, set[tuple[int, int]]]:
+    out: dict[str, set[tuple[int, int]]] = {}
+    for r in facts:
+        out.setdefault(str(r["asset_kind"]), set()).add((int(r["year"]), int(r["quarter"])))
+    return out
+
+
+def _code_lengths_by_name(facts: list[dict[str, Any]]) -> dict[str, set[int]]:
+    out: dict[str, set[int]] = {}
+    for r in facts:
+        name = str(r["sec_nm"])
+        code = str(r.get("reb_code") or "").strip()
+        if code:
+            out.setdefault(name, set()).add(len(code))
+    return out
+
+
+def validate_facts(
+    office_history: list[dict[str, Any]],
+    office_latest: list[dict[str, Any]],
+    retail_history: list[dict[str, Any]],
+    retail_latest: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """분기·코드 검증을 수행하고 통과할 때만 최종 facts를 반환한다."""
+    errors: list[str] = []
+    office_history_quarters = _quarter_keys(office_history)
+    office_latest_quarters = _quarter_keys(office_latest)
+    if (2026, 2) not in office_history_quarters:
+        errors.append("오피스 2분기 누적 파일에 2026.2Q가 없습니다")
+    if (2026, 3) not in office_latest_quarters:
+        errors.append("오피스 3분기 파일에 2026.3Q가 없습니다")
+
+    retail_history_by_asset = _quarter_keys_by_asset(retail_history)
+    retail_latest_by_asset = _quarter_keys_by_asset(retail_latest)
+    missing_assets = RETAIL_ASSETS - retail_latest_by_asset.keys()
+    if missing_assets:
+        errors.append(f"3분기 상가 파일에 유형이 없습니다: {sorted(missing_assets)}")
+    if (2026, 3) not in _quarter_keys(retail_latest):
+        errors.append("상가 3분기 파일에 2026.3Q가 없습니다")
+    for asset in sorted(RETAIL_ASSETS):
+        previous = retail_history_by_asset.get(asset, set())
+        current = retail_latest_by_asset.get(asset, set())
+        if len(current) < len(previous) or not previous.issubset(current):
+            errors.append(
+                f"{asset}의 2분기 누적 과거 분기가 줄었습니다 "
+                f"(previous={len(previous)}, current={len(current)})"
+            )
+
+    history_codes = _code_lengths_by_name(office_history)
+    latest_codes = _code_lengths_by_name(office_latest)
+    mismatches = [
+        f"{name}={sorted(history_codes[name])}/{sorted(latest_codes[name])}"
+        for name in sorted(history_codes.keys() & latest_codes.keys())
+        if history_codes[name] != latest_codes[name]
+    ]
+    if mismatches:
+        errors.append("오피스 지역 코드 자릿수가 다릅니다: " + ", ".join(mismatches[:10]))
+
+    if errors:
+        raise ImportValidationError("; ".join(errors))
+
+    latest_office = [r for r in office_latest if (r["year"], r["quarter"]) == (2026, 3)]
+    return office_history + latest_office + retail_latest
+
+
+def _is_local_engine(engine: Any) -> bool:
+    host = str(getattr(engine.url, "host", "") or "").strip().lower()
+    if host in LOCAL_DB_HOSTS:
+        return True
+    log.error("refusing non-local rent database host=%s", host or "<empty>")
+    return False
 
 
 def _sido_by_name(facts: list[dict[str, Any]]) -> dict[str, str]:
@@ -325,41 +411,82 @@ def replace_tables(engine, polygons: list[dict[str, Any]], facts: list[dict[str,
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--xlsx", type=Path, default=None)
-    ap.add_argument("--shp", type=Path, default=DEFAULT_SHP)
+    ap.add_argument(
+        "--history-xlsx",
+        "--q2-xlsx",
+        dest="history_xlsx",
+        type=Path,
+        required=True,
+        help="2분기 누적 오피스·상가 통계표",
+    )
+    ap.add_argument(
+        "--office-xlsx",
+        "--office-q3-xlsx",
+        dest="office_xlsx",
+        type=Path,
+        required=True,
+        help="3분기 오피스 통계표",
+    )
+    ap.add_argument(
+        "--retail-xlsx",
+        "--retail-q3-xlsx",
+        dest="retail_xlsx",
+        type=Path,
+        required=True,
+        help="3분기 상가 통계표",
+    )
+    ap.add_argument("--shp", type=Path, required=True)
     args = ap.parse_args()
-    files: list[Path]
-    if args.xlsx is not None:
-        files = [args.xlsx]
-    else:
-        found = list(DEFAULT_XLSX_DIR.glob("*.xlsx"))
-        if not found:
-            log.error("xlsx not found in %s", DEFAULT_XLSX_DIR)
-            return 1
-        files = [max(found, key=lambda p: p.stat().st_mtime)]
-    if not args.shp.exists():
-        log.error("shp not found: %s", args.shp)
+
+    input_paths = (args.history_xlsx, args.office_xlsx, args.retail_xlsx, args.shp)
+    missing = [str(path) for path in input_paths if not path.is_file()]
+    if missing:
+        log.error("input file not found: %s", ", ".join(missing))
         return 1
 
     log.info("polygons %s", args.shp)
     polygons = load_polygons(args.shp)
     log.info("polygons n=%s", len(polygons))
-    facts: list[dict[str, Any]] = []
-    for xlsx in files:
-        log.info("xlsx %s", xlsx)
-        part = parse_workbook(xlsx)
-        log.info("  quarterly rows %s", len(part))
-        facts.extend(part)
-    log.info("quarterly rows total %s", len(facts))
+    log.info("history xlsx %s", args.history_xlsx)
+    history = parse_workbook(args.history_xlsx)
+    log.info("  quarterly rows %s", len(history))
+    log.info("office Q3 xlsx %s", args.office_xlsx)
+    office_latest = parse_workbook(args.office_xlsx, {"office"})
+    log.info("  quarterly rows %s", len(office_latest))
+    log.info("retail Q3 xlsx %s", args.retail_xlsx)
+    retail_latest = parse_workbook(args.retail_xlsx, RETAIL_ASSETS)
+    log.info("  quarterly rows %s", len(retail_latest))
+
+    office_history = [r for r in history if r["asset_kind"] == "office"]
+    retail_history = [r for r in history if r["asset_kind"] in RETAIL_ASSETS]
+    try:
+        facts = validate_facts(office_history, office_latest, retail_history, retail_latest)
+    except ImportValidationError as exc:
+        log.error("preflight validation failed; database was not opened: %s", exc)
+        return 2
+    log.info(
+        "preflight counts: polygons=%s, office_history=%s, office_q3=%s, "
+        "retail_q3=%s, quarterly_total=%s",
+        len(polygons),
+        len(office_history),
+        len([r for r in facts if r["asset_kind"] == "office" and (r["year"], r["quarter"]) == (2026, 3)]),
+        len(retail_latest),
+        len(facts),
+    )
     if not polygons or not facts:
-        log.error("empty import")
+        log.error("empty import; database was not opened")
         return 1
 
     ddl = REPO / "db" / "059_rent_sangkwon.sql"
     engine = get_rent_engine()
+    if not _is_local_engine(engine):
+        engine.dispose()
+        return 2
     with engine.begin() as conn:
         conn.execute(text(ddl.read_text(encoding="utf-8")))
-    source_name = " + ".join(p.name for p in files)
+    source_name = " + ".join(
+        p.name for p in (args.history_xlsx, args.office_xlsx, args.retail_xlsx)
+    )
     replace_tables(engine, polygons, facts, source_name)
     log.info("imported %s polygons, %s quarterly", len(polygons), len(facts))
     return 0
