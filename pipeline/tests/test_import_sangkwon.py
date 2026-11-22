@@ -6,6 +6,7 @@ from pipeline.rent.import_sangkwon import (
     ImportValidationError,
     RETAIL_ASSETS,
     _is_local_engine,
+    align_office_codes,
     validate_facts,
 )
 
@@ -47,6 +48,16 @@ def test_validate_facts_rejects_office_code_length_change() -> None:
             _retail_facts((2026, 2)),
             _retail_facts((2026, 2), (2026, 3)),
         )
+
+
+def test_align_office_codes_uses_q3_code_for_same_region() -> None:
+    history = [_fact("office", 2026, 2, name="공덕역", code="1114024")]
+    latest = [_fact("office", 2026, 3, name="공덕역", code="11114120")]
+
+    aligned, remapped = align_office_codes(history, latest)
+
+    assert remapped == 1
+    assert aligned[0]["reb_code"] == "11114120"
 
 
 def test_validate_facts_rejects_retail_history_shrink() -> None:

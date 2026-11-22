@@ -238,14 +238,48 @@ def _quarter_keys_by_asset(facts: list[dict[str, Any]]) -> dict[str, set[tuple[i
     return out
 
 
-def _code_lengths_by_name(facts: list[dict[str, Any]]) -> dict[str, set[int]]:
-    out: dict[str, set[int]] = {}
+def _code_lengths_by_region(facts: list[dict[str, Any]]) -> dict[tuple[str, str], set[int]]:
+    out: dict[tuple[str, str], set[int]] = {}
     for r in facts:
-        name = str(r["sec_nm"])
+        region = (str(r.get("sido") or ""), str(r["sec_nm"]))
         code = str(r.get("reb_code") or "").strip()
         if code:
-            out.setdefault(name, set()).add(len(code))
+            out.setdefault(region, set()).add(len(code))
     return out
+
+
+def align_office_codes(
+    office_history: list[dict[str, Any]],
+    office_latest: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], int]:
+    """3분기 오피스 코드로 같은 시도·상권의 과거 오피스 코드를 맞춘다."""
+    latest_codes: dict[tuple[str, str], set[str]] = {}
+    for row in office_latest:
+        if (row["year"], row["quarter"]) != (2026, 3):
+            continue
+        code = str(row.get("reb_code") or "").strip()
+        if code:
+            region = (str(row.get("sido") or ""), str(row["sec_nm"]))
+            latest_codes.setdefault(region, set()).add(code)
+
+    ambiguous = {
+        region: codes for region, codes in latest_codes.items() if len(codes) != 1
+    }
+    if ambiguous:
+        sample = ", ".join(f"{name}={sorted(codes)}" for (_, name), codes in sorted(ambiguous.items())[:10])
+        raise ImportValidationError(f"3분기 오피스 코드가 지역별로 하나로 정해지지 않습니다: {sample}")
+
+    aligned: list[dict[str, Any]] = []
+    remapped = 0
+    for row in office_history:
+        region = (str(row.get("sido") or ""), str(row["sec_nm"]))
+        replacement = next(iter(latest_codes.get(region, set())), None)
+        if replacement and replacement != str(row.get("reb_code") or "").strip():
+            row = dict(row)
+            row["reb_code"] = replacement
+            remapped += 1
+        aligned.append(row)
+    return aligned, remapped
 
 
 def validate_facts(
@@ -279,12 +313,12 @@ def validate_facts(
                 f"(previous={len(previous)}, current={len(current)})"
             )
 
-    history_codes = _code_lengths_by_name(office_history)
-    latest_codes = _code_lengths_by_name(office_latest)
+    history_codes = _code_lengths_by_region(office_history)
+    latest_codes = _code_lengths_by_region(office_latest)
     mismatches = [
-        f"{name}={sorted(history_codes[name])}/{sorted(latest_codes[name])}"
-        for name in sorted(history_codes.keys() & latest_codes.keys())
-        if history_codes[name] != latest_codes[name]
+        f"{sido}/{name}={sorted(history_codes[(sido, name)])}/{sorted(latest_codes[(sido, name)])}"
+        for sido, name in sorted(history_codes.keys() & latest_codes.keys())
+        if history_codes[(sido, name)] != latest_codes[(sido, name)]
     ]
     if mismatches:
         errors.append("오피스 지역 코드 자릿수가 다릅니다: " + ", ".join(mismatches[:10]))
@@ -460,6 +494,7 @@ def main() -> int:
     office_history = [r for r in history if r["asset_kind"] == "office"]
     retail_history = [r for r in history if r["asset_kind"] in RETAIL_ASSETS]
     try:
+        office_history, remapped_codes = align_office_codes(office_history, office_latest)
         facts = validate_facts(office_history, office_latest, retail_history, retail_latest)
     except ImportValidationError as exc:
         log.error("preflight validation failed; database was not opened: %s", exc)
@@ -473,6 +508,7 @@ def main() -> int:
         len(retail_latest),
         len(facts),
     )
+    log.info("office code remapped rows=%s", remapped_codes)
     if not polygons or not facts:
         log.error("empty import; database was not opened")
         return 1
