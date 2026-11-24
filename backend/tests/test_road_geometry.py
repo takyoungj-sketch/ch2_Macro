@@ -1,5 +1,9 @@
 """도로명 정규화·매칭 (VWorld LT_L_SPRD 속성)."""
 
+import pytest
+from shapely.geometry import Point, shape
+
+from app.collective_commercial import road_geometry
 from app.collective_commercial.road_geometry import (
     clip_linestring_to_box,
     filter_road_features,
@@ -96,3 +100,44 @@ def test_clip_linestring_keeps_interior():
     assert min(xs) >= 0.0 - 1e-9
     assert max(xs) <= 1.0 + 1e-9
     assert len(parts[0]) >= 2
+
+
+def test_admin_road_line_clips_to_polygon_and_places_label_on_line(monkeypatch):
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [[[0, 0], [3, 0], [3, 1], [1, 1], [1, 3], [0, 3], [0, 0]]],
+    }
+    monkeypatch.setattr(road_geometry, "fetch_named_layer_features", lambda **_: {
+        "features": [{"geometry": boundary, "properties": {"emd_cd": "43150123"}}],
+    })
+    monkeypatch.setattr(road_geometry, "fetch_road_line_collection", lambda **_: {
+        "features": [
+            {"geometry": {"type": "LineString", "coordinates": [[0, 2], [3, 2]]}, "properties": {"rn_cd": "1"}},
+            {"geometry": {"type": "LineString", "coordinates": [[2, 2], [3, 2]]}, "properties": {"rn_cd": "2"}},
+        ],
+    })
+    lines, anchor = road_geometry.fetch_admin_road_line(
+        api_key="", domain="", road_name="중앙로", admin_level="eupmyeondong", admin_code="43150123",
+    )
+    assert len(lines["features"]) == 1
+    line = shape(lines["features"][0]["geometry"])
+    assert shape(boundary).covers(line)
+    assert anchor == (0.5, 2)
+    assert line.covers(Point(anchor))
+
+
+def test_admin_road_line_rejects_multiple_matching_road_codes(monkeypatch):
+    boundary = {"type": "Polygon", "coordinates": [[[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]]]}
+    monkeypatch.setattr(road_geometry, "fetch_named_layer_features", lambda **_: {
+        "features": [{"geometry": boundary, "properties": {"sig_cd": "43150"}}],
+    })
+    monkeypatch.setattr(road_geometry, "fetch_road_line_collection", lambda **_: {
+        "features": [
+            {"geometry": {"type": "LineString", "coordinates": [[0, 1], [3, 1]]}, "properties": {"rn_cd": "1"}},
+            {"geometry": {"type": "LineString", "coordinates": [[0, 2], [3, 2]]}, "properties": {"rn_cd": "2"}},
+        ],
+    })
+    with pytest.raises(ValueError, match="ambiguous_road_name"):
+        road_geometry.fetch_admin_road_line(
+            api_key="", domain="", road_name="중앙로", admin_level="sigungu", admin_code="43150",
+        )

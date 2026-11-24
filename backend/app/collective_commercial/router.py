@@ -45,6 +45,7 @@ from app.collective_commercial.road_geocode import (
     resolve_commercial_map_points,
 )
 from app.collective_commercial.road_geometry import (
+    fetch_admin_road_line,
     VWORLD_ROAD_LAYER,
     fetch_road_line_collection,
 )
@@ -450,18 +451,27 @@ def road_line_for_map(body: CommercialRoadLineRequest):
             detail="VWORLD_API_KEY가 설정되지 않았습니다.",
         )
     domain = (settings.vworld_api_domain or "localhost").strip()
+    label_point = None
     try:
-        fc = fetch_road_line_collection(
-            api_key=key,
-            domain=domain,
-            road_name=body.road_name,
-            west=body.west,
-            south=body.south,
-            east=body.east,
-            north=body.north,
-            longitude=body.longitude,
-            latitude=body.latitude,
-        )
+        if body.admin_level is not None or body.admin_code is not None:
+            if not body.admin_level or not body.admin_code:
+                raise ValueError("admin_boundary_required")
+            fc, label_point = fetch_admin_road_line(
+                api_key=key, domain=domain, road_name=body.road_name,
+                admin_level=body.admin_level, admin_code=body.admin_code,
+            )
+        else:
+            fc = fetch_road_line_collection(
+                api_key=key,
+                domain=domain,
+                road_name=body.road_name,
+                west=body.west,
+                south=body.south,
+                east=body.east,
+                north=body.north,
+                longitude=body.longitude,
+                latitude=body.latitude,
+            )
     except ValueError as exc:
         return CommercialRoadLineResponse(
             ok=False,
@@ -479,6 +489,7 @@ def road_line_for_map(body: CommercialRoadLineRequest):
         feature_collection=fc,
         matched_count=len(feats),
         error=None if feats else "not_found",
+        label_point=label_point,
     )
 
 

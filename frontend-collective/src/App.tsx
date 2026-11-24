@@ -98,7 +98,13 @@ async function combinedRegionOptions(residential: Promise<RegionOption[]>, comme
   const options = new Map<string, RegionOption>();
   for (const row of [...buildings, ...shops]) {
     const key = `${row.parent ?? ""}|${row.name}`;
-    options.set(key, { ...row, count: (options.get(key)?.count ?? 0) + row.count });
+    const previous = options.get(key);
+    const count = (previous?.count ?? 0) + row.count;
+    const min = row.min_reliable_count ?? previous?.min_reliable_count;
+    options.set(key, {
+      ...row, count, min_reliable_count: min,
+      disabled: min === undefined ? row.disabled && (previous?.disabled ?? true) : count < min,
+    });
   }
   return [...options.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));
 }
@@ -173,6 +179,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
   const [selectedShop, setSelectedShop] = useState<CommercialClusterRow | null>(null);
+  const [mappedShop, setMappedShop] = useState<CommercialClusterRow | null>(null);
   const [candSwitch, setCandSwitch] = useState<CandidateSwitchState>({ status: "idle" });
   const [regionalOpen, setRegionalOpen] = useState(false);
   const [aiHint, setAiHint] = useState<string | null>(null);
@@ -393,8 +400,17 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
   });
   const periodsDiffer = Boolean(buildingsQ.data?.period_start && shopsQ.data?.period_start &&
     (buildingsQ.data.period_start !== shopsQ.data.period_start || buildingsQ.data.period_end !== shopsQ.data.period_end));
-  const openBuilding = (row: BuildingStatsRow) => { setSelectedShop(null); setSelected(row); };
-  const openShop = (row: CommercialClusterRow) => { setSelected(null); setSelectedShop(row); };
+  const openBuilding = (row: BuildingStatsRow) => {
+    setMappedShop(null);
+    setSelectedShop(null);
+    setSelected(row);
+  };
+  const openShop = (row: CommercialClusterRow) => {
+    setSelected(null);
+    setSelectedShop(row);
+    setMappedShop(row);
+    if (mapPanelMode === "collapsed") setMapPanelMode("normal");
+  };
 
   const profileResolveQ = useQuery({
     queryKey: ["coll-profile-resolve", scope],
@@ -520,6 +536,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
     });
     setSelected(null);
     setSelectedShop(null);
+    setMappedShop(null);
   };
 
   const resetRegion = () => {
@@ -529,6 +546,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
     setScope(null);
     setSelected(null);
     setSelectedShop(null);
+    setMappedShop(null);
   };
 
   return (
@@ -836,6 +854,10 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                 clusterKey: row.cluster_key, label: row.road_name, roadName: row.road_name,
                 addr1: scope.addr1, addr2: scope.addr2, addr3: row.addr3, addr4: row.addr4, mean: row.mean,
               }] : []).slice(0, 100) : []}
+              selectedRoads={scope && mappedShop?.road_name ? [{
+                clusterKey: mappedShop.cluster_key, label: mappedShop.road_name, roadName: mappedShop.road_name,
+                addr1: scope.addr1, addr2: scope.addr2, addr3: mappedShop.addr3, addr4: mappedShop.addr4, mean: mappedShop.mean,
+              }] : []}
               combinedLabels={combinedPreview ? {
                 onBuilding: (key) => {
                   const row = buildingsQ.data?.items.find((item) => item.building_key === key);
@@ -857,9 +879,14 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
             {combinedPreview && scope && (
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                 흰색은 건물·단지, 하늘색은 상가 도로입니다. 지도를 확대하면 이름과 평균 거래단가가 표시됩니다.
-                지도에는 유형별 거래수 상위 100개 중 좌표가 있는 항목이 표시됩니다.
+                기본 라벨은 유형별 거래수 상위 100개 중 위치가 저장된 항목을 표시합니다. 상가 행을 선택하면 해당 도로를 강조합니다.
                 단가 면적 기준은 주거 전용면적, 상가 원천 전용·연면적입니다.
               </p>
+            )}
+            {mappedShop && (
+              <button type="button" className="mt-1 text-xs underline" onClick={() => setMappedShop(null)}>
+                도로 강조 해제
+              </button>
             )}
           </section>
           )}

@@ -6,7 +6,10 @@ import logging
 import re
 from typing import Any, Optional
 
-from app.map.vworld_client import fetch_named_layer_features
+from shapely import get_parts, make_valid, union_all
+from shapely.geometry import mapping, shape
+
+from app.map.vworld_client import LAYER_BY_LEVEL, fetch_named_layer_features
 
 _LOG = logging.getLogger(__name__)
 
@@ -286,3 +289,48 @@ def fetch_road_line_collection(
         if matched["features"]:
             break
     return clip_feature_collection_to_box(matched, box)
+
+
+def fetch_admin_road_line(
+    *, api_key: str, domain: str, road_name: str, admin_level: str, admin_code: str,
+) -> tuple[dict[str, Any], tuple[float, float] | None]:
+    """Find named road segments inside one verified administrative polygon."""
+    expected_length = {"sigungu": 5, "eupmyeondong": 8}.get(admin_level)
+    if len(admin_code) != expected_length or not admin_code.isascii() or not admin_code.isdigit():
+        raise ValueError("invalid_admin_code")
+
+    layer, field = LAYER_BY_LEVEL[admin_level]
+    boundary = fetch_named_layer_features(
+        api_key=api_key, domain=domain, data=layer, attr_filter=f"{field}:=:{admin_code}", size=10,
+    )
+    polygons = [
+        make_valid(shape(feature["geometry"]))
+        for feature in boundary["features"]
+        if str(feature["properties"].get(field, "")).strip() == admin_code
+        and feature["geometry"]["type"] in {"Polygon", "MultiPolygon"}
+    ]
+    area = union_all([part for polygon in polygons for part in get_parts(polygon) if part.geom_type == "Polygon"])
+    if area.is_empty:
+        raise ValueError("admin_boundary_not_found")
+    west, south, east, north = area.bounds
+    roads = fetch_road_line_collection(
+        api_key=api_key, domain=domain, road_name=road_name, west=west, south=south, east=east, north=north,
+    )
+    features = []
+    longest = None
+    road_codes = set()
+    for feature in roads["features"]:
+        line = shape(feature["geometry"]).intersection(area)
+        for part in get_parts(line):
+            if part.geom_type != "LineString" or part.is_empty or not part.length:
+                continue
+            features.append({"type": "Feature", "geometry": mapping(part), "properties": feature["properties"]})
+            code = str(feature["properties"].get("rn_cd") or "").strip()
+            if code:
+                road_codes.add(code)
+            if longest is None or part.length > longest.length:
+                longest = part
+    if len(road_codes) > 1:
+        raise ValueError("ambiguous_road_name")
+    point = longest.interpolate(0.5, normalized=True) if longest is not None else None
+    return {"type": "FeatureCollection", "features": features}, (point.x, point.y) if point is not None else None

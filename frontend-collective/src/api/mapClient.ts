@@ -218,6 +218,8 @@ export type CommercialRoadLineRequest = CommercialRoadGeocodeRequest & {
   south?: number | null;
   east?: number | null;
   north?: number | null;
+  admin_level?: "sigungu" | "eupmyeondong";
+  admin_code?: string;
 };
 
 export type CommercialRoadLineResponse = {
@@ -227,6 +229,7 @@ export type CommercialRoadLineResponse = {
   feature_collection: GeoJSON.FeatureCollection;
   matched_count: number;
   error: string | null;
+  label_point?: [number, number] | null;
 };
 
 export async function fetchCommercialRoadLine(
@@ -248,6 +251,8 @@ export async function fetchCommercialRoadLine(
       south: body.south ?? undefined,
       east: body.east ?? undefined,
       north: body.north ?? undefined,
+      admin_level: body.admin_level,
+      admin_code: body.admin_code,
     },
   );
   return data;
