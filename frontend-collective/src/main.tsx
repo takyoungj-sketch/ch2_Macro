@@ -23,6 +23,10 @@ function Root() {
   const mobile = useMobileScreen();
   const view = new URLSearchParams(window.location.search).get("view");
 
+  if (getCollectiveSegment() === "combined-preview") {
+    return <App combinedPreview />;
+  }
+
   if (getCollectiveSegment() === "preview") {
     return <React.Suspense fallback={<p role="status">시험 지도를 불러오는 중입니다.</p>}><CollectiveMapPreview /></React.Suspense>;
   }
