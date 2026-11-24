@@ -17,10 +17,15 @@ import "./index.css";
 applyColorScheme(readStoredColorScheme());
 
 const qc = new QueryClient();
+const CollectiveMapPreview = React.lazy(() => import("./pages/CollectiveMapPreview"));
 
 function Root() {
   const mobile = useMobileScreen();
   const view = new URLSearchParams(window.location.search).get("view");
+
+  if (getCollectiveSegment() === "preview") {
+    return <React.Suspense fallback={<p role="status">시험 지도를 불러오는 중입니다.</p>}><CollectiveMapPreview /></React.Suspense>;
+  }
 
   if (mobile) {
     const commercial = getCollectiveSegment() === "commercial" || view === "commercial";

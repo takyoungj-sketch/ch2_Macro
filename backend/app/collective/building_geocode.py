@@ -84,11 +84,12 @@ def resolve_building_map_points(
     api_key: str,
     buildings: list[dict[str, Any]],
     table_name: str = "collective_building_geocodes",
+    cached_only: bool = False,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """주소를 지오코딩하고 결과를 DB에 캐시한다.
 
     지도 최초 조회에서만 VWorld를 호출하고, 이후에는 building_key 캐시를
-    사용한다. 호출량을 제한하기 위해 API 스키마에서 최대 100건을 받는다.
+    사용한다. cached_only 조회는 좌표의 신규 조회와 저장을 건너뛴다.
     """
     if table_name not in _GEOCODE_TABLES:
         raise RuntimeError(f"unsupported geocode table: {table_name}")
@@ -136,6 +137,10 @@ def resolve_building_map_points(
                     "latitude": float(row["latitude"]),
                 }
             )
+            continue
+
+        if cached_only:
+            unresolved.append(key)
             continue
 
         result = geocode_collective_building(
@@ -206,5 +211,6 @@ def resolve_building_map_points(
         else:
             unresolved.append(key)
 
-    conn.commit()
+    if not cached_only:
+        conn.commit()
     return points, unresolved

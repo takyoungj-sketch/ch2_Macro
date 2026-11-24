@@ -420,18 +420,20 @@ def geocode_road_for_map(body: CommercialRoadGeocodeRequest):
 def map_points_for_roads(
     body: CommercialRoadMapPointsRequest,
     db: Session = Depends(get_collective_db),
+    cached_only: bool = False,
 ):
     """선택 지역 도로명 cluster 대표점 — 지오코딩 결과는 DB에 캐시."""
     if db is None:
         raise HTTPException(503, "collective_stats DB 미연결")
     key = (settings.vworld_api_key or "").strip()
-    if not key:
+    if not key and not cached_only:
         raise HTTPException(503, "VWORLD_API_KEY가 설정되지 않았습니다.")
     try:
         points, unresolved = resolve_commercial_map_points(
             db.connection(),
             api_key=key,
             roads=[item.model_dump() for item in body.roads],
+            cached_only=cached_only,
         )
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc

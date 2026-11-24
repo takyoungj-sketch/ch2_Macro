@@ -255,10 +255,12 @@ export async function fetchCommercialRoadLine(
 
 export async function fetchCommercialRoadMapPoints(
   roads: CommercialRoadMapPointInput[],
+  cachedOnly = false,
 ): Promise<CommercialRoadMapPointsResponse> {
   const { data } = await commercialApi.post<CommercialRoadMapPointsResponse>(
     "/roads/map-points",
     { roads: roads.slice(0, 100) },
+    cachedOnly ? { params: { cached_only: true } } : undefined,
   );
   return data;
 }
@@ -305,10 +307,12 @@ export type CollectiveBuildingMapPointsResponse = {
 
 export async function fetchCollectiveBuildingMapPoints(
   buildings: CollectiveBuildingMapPointInput[],
+  cachedOnly = false,
 ): Promise<CollectiveBuildingMapPointsResponse> {
   const { data } = await collectiveApi.post<CollectiveBuildingMapPointsResponse>(
     "/buildings/map-points",
     { buildings: buildings.slice(0, 100) },
+    cachedOnly ? { params: { cached_only: true } } : undefined,
   );
   return data;
 }
