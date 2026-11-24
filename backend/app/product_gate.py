@@ -175,6 +175,7 @@ def _collective_open(method: str, path: str, query: Mapping[str, str]) -> bool:
         "/api/collective/commercial/roads/geocode",
         "/api/collective/commercial/roads/map-points",
         "/api/collective/commercial/roads/line",
+        "/api/collective/commercial/roads/viewport-lines",
     }:
         return True
     return False

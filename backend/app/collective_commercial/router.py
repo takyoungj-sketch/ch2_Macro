@@ -46,6 +46,7 @@ from app.collective_commercial.road_geocode import (
 )
 from app.collective_commercial.road_geometry import (
     fetch_admin_road_line,
+    fetch_viewport_road_lines,
     VWORLD_ROAD_LAYER,
     fetch_road_line_collection,
 )
@@ -68,6 +69,7 @@ from app.collective_commercial.schemas import (
     CommercialRoadLineResponse,
     CommercialRoadMapPointsRequest,
     CommercialRoadMapPointsResponse,
+    CommercialViewportRoadRequest,
     CommercialRollingStatPoint,
     CommercialRollingStatsResponse,
     CommercialTransactionListResponse,
@@ -491,6 +493,34 @@ def road_line_for_map(body: CommercialRoadLineRequest):
         error=None if feats else "not_found",
         label_point=label_point,
     )
+
+
+@router.post("/roads/viewport-lines")
+def roads_in_viewport(body: CommercialViewportRoadRequest, db: Session = Depends(get_collective_db)):
+    west, south, east, north = body.bounds
+    if not (-180 <= west < east <= 180 and -90 <= south < north <= 90 and
+            east - west <= 0.2 and north - south <= 0.2):
+        raise HTTPException(400, "지도 확대 범위를 확인해 주세요.")
+    key = (settings.vworld_api_key or "").strip()
+    if not key:
+        raise HTTPException(503, "VWorld에 연결할 수 없습니다.")
+    rows = db.execute(text("""
+        SELECT btrim(cluster_key::text) AS cluster_key, road_name,
+               NULLIF(btrim(eupmyeondong_code::text), '') AS emd,
+               NULLIF(btrim(sigungu_code::text), '') AS sigungu
+        FROM commercial_clusters
+        WHERE asset_type = 'collective_shop' AND cluster_key = ANY(CAST(:keys AS char(64)[]))
+          AND road_name IS NOT NULL AND btrim(road_name) <> ''
+    """), {"keys": list(dict.fromkeys(body.cluster_keys))}).mappings().all()
+    if not rows:
+        return {"lines": [], "truncated": False, "unavailable": 0}
+    try:
+        return fetch_viewport_road_lines(
+            api_key=key, domain=(settings.vworld_api_domain or "localhost").strip(),
+            bounds=body.bounds, rows=rows,
+        )
+    except ValueError as exc:
+        raise HTTPException(502, "VWorld 도로선을 조회하지 못했습니다.") from exc
 
 
 @router.get("/clusters", response_model=CommercialClusterListResponse)

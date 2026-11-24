@@ -480,3 +480,8 @@ class CommercialRoadLineResponse(BaseModel):
     matched_count: int
     error: Optional[str] = None
     label_point: Optional[tuple[float, float]] = None
+
+
+class CommercialViewportRoadRequest(BaseModel):
+    cluster_keys: list[str] = Field(min_length=1, max_length=2000)
+    bounds: tuple[float, float, float, float]

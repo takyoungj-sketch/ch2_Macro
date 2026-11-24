@@ -843,6 +843,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                       buildingKey: row.building_key,
                       label: buildingDisplayName(row),
                       mean: row.mean,
+                      count: row.count,
                       jibunAddress: row.jibun_address || row.address || null,
                       roadAddress: row.road_address || null,
                       addr1: scope.addr1,
@@ -852,11 +853,11 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
               }
               roadCandidates={scope && shopsQ.data ? shopsQ.data.items.flatMap((row) => row.road_name ? [{
                 clusterKey: row.cluster_key, label: row.road_name, roadName: row.road_name,
-                addr1: scope.addr1, addr2: scope.addr2, addr3: row.addr3, addr4: row.addr4, mean: row.mean,
-              }] : []).slice(0, 100) : []}
+                addr1: scope.addr1, addr2: scope.addr2, addr3: row.addr3, addr4: row.addr4, mean: row.mean, count: row.count,
+              }] : []) : []}
               selectedRoads={scope && mappedShop?.road_name ? [{
                 clusterKey: mappedShop.cluster_key, label: mappedShop.road_name, roadName: mappedShop.road_name,
-                addr1: scope.addr1, addr2: scope.addr2, addr3: mappedShop.addr3, addr4: mappedShop.addr4, mean: mappedShop.mean,
+                addr1: scope.addr1, addr2: scope.addr2, addr3: mappedShop.addr3, addr4: mappedShop.addr4, mean: mappedShop.mean, count: mappedShop.count,
               }] : []}
               combinedLabels={combinedPreview ? {
                 onBuilding: (key) => {
@@ -878,8 +879,8 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
             />
             {combinedPreview && scope && (
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                흰색은 건물·단지, 하늘색은 상가 도로입니다. 지도를 확대하면 이름과 평균 거래단가가 표시됩니다.
-                기본 라벨은 유형별 거래수 상위 100개 중 위치가 저장된 항목을 표시합니다. 상가 행을 선택하면 해당 도로를 강조합니다.
+                지도를 확대하면 상가 거래 도로선을 표시합니다. n은 거래수, m은 평균 거래단가(만원/㎡)입니다.
+                건물 라벨은 거래수 상위 100개 중 좌표가 있는 단지를 표시합니다.
                 단가 면적 기준은 주거 전용면적, 상가 원천 전용·연면적입니다.
               </p>
             )}

@@ -21,12 +21,14 @@ import {
   fetchCollectiveMapResolveCodes,
   fetchCommercialRoadLine,
   fetchCommercialRoadMapPoints,
+  fetchCommercialViewportRoads,
   fetchMapBoundaries,
   fetchMapConfig,
   fetchMapNeighbors,
   geocodeCollectiveBuilding,
   geocodeCommercialRoad,
   vworldSatelliteTileUrl,
+  type RoadViewport,
 } from "../api/mapClient";
 import { applySelectionFitBounds, boundsFromGeoJson } from "../utils/mapFitBounds";
 import { canonAdminCode, featureAdminCode, type MapAdminLevel } from "../utils/mapRegionScope";
@@ -51,6 +53,7 @@ export type CommercialRoadLabelInput = {
   addr3?: string | null;
   addr4?: string | null;
   mean?: number | null;
+  count?: number;
 };
 
 export type CommercialRoadMapInput = CommercialRoadLabelInput;
@@ -65,7 +68,7 @@ export type CollectiveBuildingLabelInput = {
   addr2: string;
 };
 
-export type CollectiveBuildingMapInput = CollectiveBuildingLabelInput & { mean?: number | null };
+export type CollectiveBuildingMapInput = CollectiveBuildingLabelInput & { mean?: number | null; count?: number };
 
 export type CollectiveMapScopeInput = {
   assetType: string;
@@ -116,6 +119,13 @@ type ContextMenuState = {
 };
 
 const VWORLD_KEY = (import.meta.env.VITE_VWORLD_API_KEY ?? "").trim();
+const PREVIEW_LABEL_ZOOM = 14.5;
+
+function priceLabel(count?: number, mean?: number | null) {
+  const transactions = count?.toLocaleString("ko-KR") ?? "—";
+  const average = mean?.toLocaleString("ko-KR", { maximumFractionDigits: 0 }) ?? "—";
+  return `n=${transactions}, m=${average}`;
+}
 
 function shortRegionLabel(props: Record<string, unknown> | null | undefined): string {
   if (!props) return "";
@@ -389,6 +399,7 @@ export default function CollectiveRegionMapHub({
   );
   const lastFitKeyRef = useRef("");
   const [mapReady, setMapReady] = useState(false);
+  const [roadViewport, setRoadViewport] = useState<RoadViewport | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -609,6 +620,44 @@ export default function CollectiveRegionMapHub({
   });
 
   const combinedMap = Boolean(combinedLabels);
+  const updateRoadViewport = useCallback(() => {
+    if (!combinedMap) return;
+    const map = mapRef.current?.getMap();
+    const bounds = map?.getBounds();
+    if (!map || !bounds || map.getZoom() < PREVIEW_LABEL_ZOOM) {
+      setRoadViewport(null);
+      return;
+    }
+    const down = (v: number) => Math.floor(v * 1000) / 1000;
+    const up = (v: number) => Math.ceil(v * 1000) / 1000;
+    setRoadViewport([down(bounds.getWest()), down(bounds.getSouth()), up(bounds.getEast()), up(bounds.getNorth())]);
+  }, [combinedMap]);
+  const viewportKeys = useMemo(() => combinedMap ? [...new Set(roadCandidates.map((road) => road.clusterKey))].sort() : [],
+    [combinedMap, roadCandidates]);
+  const viewportRoadsQ = useQuery({
+    queryKey: ["collective-road-viewport", roadViewport, viewportKeys],
+    enabled: Boolean(roadViewport && viewportKeys.length && mapPanelMode !== "collapsed"),
+    queryFn: async ({ signal }) => {
+      if (!roadViewport) return null;
+      const result: Awaited<ReturnType<typeof fetchCommercialViewportRoads>> = { lines: [], truncated: false, unavailable: 0 };
+      for (let start = 0; start < viewportKeys.length; start += 2000) {
+        const batch = await fetchCommercialViewportRoads(viewportKeys.slice(start, start + 2000), roadViewport, signal);
+        result.lines.push(...batch.lines);
+        result.truncated ||= batch.truncated;
+        result.unavailable += batch.unavailable;
+      }
+      return result;
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+  const viewportLines = viewportRoadsQ.data?.lines;
+  const viewportRoadsFc = useMemo<GeoJSON.FeatureCollection | null>(() => viewportLines?.length ? ({
+    type: "FeatureCollection",
+    features: viewportLines.flatMap((line) => line.geometry.features.map((feature) => ({
+      ...feature, properties: { cluster_key: line.cluster_key },
+    }))),
+  }) : null, [viewportLines]);
 
   const placeGeocodeQ = commercial ? roadGeocodeQ : buildingGeocodeQ;
   const placeLabel = commercial
@@ -908,7 +957,7 @@ export default function CollectiveRegionMapHub({
 
     const addLabel = (
       key: string, label: string, lng: number, lat: number, road: boolean,
-      mean?: number | null, onOpen?: () => void,
+      mean?: number | null, onOpen?: () => void, count?: number,
     ) => {
       const el = onOpen ? document.createElement("button") : document.createElement("span");
       el.textContent = label;
@@ -921,29 +970,41 @@ export default function CollectiveRegionMapHub({
         if (road) el.classList.add("!bg-cyan-950", "!ring-cyan-300");
         const price = document.createElement("span");
         price.className = "mt-0.5 block text-[10px] text-slate-100";
-        price.textContent = mean == null ? "평균 —" : `평균 ${mean.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}만원/㎡`;
+        price.textContent = priceLabel(count, mean);
         el.setAttribute("aria-label", `${road ? "도로명" : "단지"} ${label}, ${price.textContent}, 상세 열기`);
         el.appendChild(price);
         el.addEventListener("pointerdown", (event) => event.stopPropagation());
         el.addEventListener("click", (event) => { event.stopPropagation(); onOpen(); });
       }
       layer.appendChild(el);
-      nodes.set(key, { el, lng, lat, minZoom: 14.5 });
+      nodes.set(key, { el, lng, lat, minZoom: PREVIEW_LABEL_ZOOM });
     };
 
     for (const point of buildingMapPointsQ.data?.points ?? []) {
       const candidate = combinedLabels && buildingCandidates.find((row) => row.buildingKey === point.building_key);
       addLabel(`building:${point.building_key}`, candidate ? candidate.label : point.label,
         point.longitude, point.latitude, false, candidate ? candidate.mean : null,
-        combinedLabels ? () => combinedLabels.onBuilding(point.building_key) : undefined);
+        combinedLabels ? () => combinedLabels.onBuilding(point.building_key) : undefined,
+        candidate ? candidate.count : undefined);
     }
 
+    const roadsByKey = new Map(roadCandidates.map((road) => [road.clusterKey, road]));
+    const roadsWithLine = new Set<string>();
+    for (const line of viewportLines ?? []) {
+      roadsWithLine.add(line.cluster_key);
+      const candidate = roadsByKey.get(line.cluster_key);
+      if (!candidate || !combinedLabels || (roadLinePoint && line.cluster_key === primaryRoad?.clusterKey)) continue;
+      addLabel(`road:${line.cluster_key}`, candidate.roadName, line.label_point[0], line.label_point[1],
+        true, candidate.mean, () => combinedLabels.onRoad(line.cluster_key), candidate.count);
+    }
     for (const point of roadMapPointsQ.data?.points ?? []) {
+      if (roadsWithLine.has(point.cluster_key)) continue;
       if (roadLinePoint && point.cluster_key === primaryRoad?.clusterKey) continue;
       const candidate = combinedLabels && roadCandidates.find((row) => row.clusterKey === point.cluster_key);
       addLabel(`road:${point.cluster_key}`, candidate ? candidate.label : point.label,
         point.longitude, point.latitude, true, candidate ? candidate.mean : null,
-        combinedLabels ? () => combinedLabels.onRoad(point.cluster_key) : undefined);
+        combinedLabels ? () => combinedLabels.onRoad(point.cluster_key) : undefined,
+        candidate ? candidate.count : undefined);
     }
 
     const syncPositions = () => {
@@ -975,7 +1036,7 @@ export default function CollectiveRegionMapHub({
       layer.replaceChildren();
     };
   }, [buildingCandidates, buildingMapPointsQ.data?.points, combinedLabels, labelGeoJson, mapReady,
-    primaryRoad?.clusterKey, roadCandidates, roadLinePoint, roadMapPointsQ.data?.points]);
+    primaryRoad?.clusterKey, roadCandidates, roadLinePoint, roadMapPointsQ.data?.points, viewportLines]);
 
   const tileUrl = useMemo(() => {
     if (VWORLD_KEY) return vworldSatelliteTileUrl(VWORLD_KEY);
@@ -1129,6 +1190,11 @@ export default function CollectiveRegionMapHub({
 
   const handleMapClick = useCallback(
     (evt: MapLayerMouseEvent) => {
+      const road = evt.features?.find((feature) => feature.layer.id === "commercial-viewport-roads");
+      if (combinedLabels && road?.properties?.cluster_key) {
+        combinedLabels.onRoad(String(road.properties.cluster_key));
+        return;
+      }
       const fromEvent = evt.features?.[0]
         ? ({
             type: "Feature" as const,
@@ -1138,7 +1204,7 @@ export default function CollectiveRegionMapHub({
         : null;
       offerAddRegionAt(evt.point, fromEvent);
     },
-    [offerAddRegionAt],
+    [combinedLabels, offerAddRegionAt],
   );
 
   const confirmAddRegion = useCallback(() => {
@@ -1252,10 +1318,15 @@ export default function CollectiveRegionMapHub({
               map?.dragRotate.disable();
               map?.touchPitch.disable();
               setMapReady(true);
+              updateRoadViewport();
             }}
             onContextMenu={handleContextMenu}
             onClick={handleMapClick}
-            interactiveLayerIds={fillGeoJson ? ["region-fill", "region-outline"] : []}
+            onMoveEnd={updateRoadViewport}
+            interactiveLayerIds={[
+              ...(fillGeoJson ? ["region-fill", "region-outline"] : []),
+              ...(viewportRoadsFc ? ["commercial-viewport-roads"] : []),
+            ]}
           >
             <NavigationControl position="top-right" showCompass={false} />
             {fillGeoJson ? (
@@ -1322,6 +1393,12 @@ export default function CollectiveRegionMapHub({
                 />
               </Source>
             ) : null}
+            {viewportRoadsFc && (
+              <Source id="commercial-viewport-roads" type="geojson" data={viewportRoadsFc}>
+                <Layer id="commercial-viewport-roads" type="line"
+                  paint={{ "line-color": "#38bdf8", "line-width": 4, "line-opacity": 0.8 }} />
+              </Source>
+            )}
             {roadLineFc ? (
               <Source id="commercial-road-line" type="geojson" data={roadLineFc}>
                 <Layer
@@ -1353,7 +1430,7 @@ export default function CollectiveRegionMapHub({
                   onClick={(event) => { event.stopPropagation(); combinedLabels.onRoad(primaryRoad.clusterKey); }}>
                   {primaryRoad.roadName}
                   <span className="block text-[10px]">
-                    평균 {primaryRoad.mean == null ? "—" : `${primaryRoad.mean.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}만원/㎡`}
+                    {priceLabel(primaryRoad.count, primaryRoad.mean)}
                   </span>
                 </button>
               </Marker>
@@ -1382,6 +1459,11 @@ export default function CollectiveRegionMapHub({
             경계 불러오는 중…
           </div>
         ) : null}
+        {roadViewport && viewportKeys.length > 0 && (viewportRoadsQ.isError || viewportRoadsQ.data?.truncated || !!viewportRoadsQ.data?.unavailable) && (
+          <p role="status" className="absolute bottom-14 right-3 z-10 rounded bg-slate-950/90 px-2 py-1 text-xs text-white">
+            일부 도로선을 확인할 수 없습니다
+          </p>
+        )}
         {placePending ? (
           <div className="absolute top-2 left-2 z-10 text-[11px] bg-white/90 px-2 py-1 rounded shadow">
             {commercial ? "도로 위치 찾는 중…" : "건물 위치 찾는 중…"}

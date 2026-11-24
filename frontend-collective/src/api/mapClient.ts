@@ -258,6 +258,22 @@ export async function fetchCommercialRoadLine(
   return data;
 }
 
+export type RoadViewport = [number, number, number, number];
+export type CommercialViewportRoads = {
+  lines: Array<{ cluster_key: string; geometry: GeoJSON.FeatureCollection; label_point: [number, number] }>;
+  truncated: boolean;
+  unavailable: number;
+};
+
+export async function fetchCommercialViewportRoads(
+  clusterKeys: string[], bounds: RoadViewport, signal?: AbortSignal,
+): Promise<CommercialViewportRoads> {
+  const { data } = await commercialApi.post<CommercialViewportRoads>(
+    "/roads/viewport-lines", { cluster_keys: clusterKeys, bounds }, { signal },
+  );
+  return data;
+}
+
 export async function fetchCommercialRoadMapPoints(
   roads: CommercialRoadMapPointInput[],
   cachedOnly = false,

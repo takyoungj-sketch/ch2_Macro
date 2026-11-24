@@ -1,7 +1,7 @@
 """도로명 정규화·매칭 (VWorld LT_L_SPRD 속성)."""
 
 import pytest
-from shapely.geometry import Point, shape
+from shapely.geometry import Point, box, shape
 
 from app.collective_commercial import road_geometry
 from app.collective_commercial.road_geometry import (
@@ -141,3 +141,24 @@ def test_admin_road_line_rejects_multiple_matching_road_codes(monkeypatch):
         road_geometry.fetch_admin_road_line(
             api_key="", domain="", road_name="중앙로", admin_level="sigungu", admin_code="43150",
         )
+
+
+def test_viewport_road_lines_keep_cluster_regions_and_exact_road_names(monkeypatch):
+    features = [{
+        "geometry": {"type": "LineString", "coordinates": [[0, index], [4, index]]},
+        "properties": {"rn": name},
+    } for index, name in enumerate(("중앙로", "서현중로", "중앙로2길"))]
+    monkeypatch.setattr(road_geometry, "_viewport_roads", lambda *_: (features, False))
+    monkeypatch.setattr(road_geometry, "_admin_area", lambda *args: (
+        box(0, -1, 2, 2) if args[3] == "11111111" else box(2, -1, 4, 2)
+    ))
+    result = road_geometry.fetch_viewport_road_lines(
+        api_key="", domain="", bounds=(0.5, -0.5, 3.5, 2.5),
+        rows=[
+            {"cluster_key": "first", "road_name": "중앙로", "emd": "11111111", "sigungu": None},
+            {"cluster_key": "second", "road_name": "서현중로", "emd": "22222222", "sigungu": None},
+        ],
+    )
+    assert [line["cluster_key"] for line in result["lines"]] == ["first", "second"]
+    assert [line["label_point"] for line in result["lines"]] == [(1.25, 0.0), (2.75, 1.0)]
+    assert all(len(line["geometry"]["features"]) == 1 for line in result["lines"])
