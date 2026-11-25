@@ -533,6 +533,7 @@ def list_clusters(
     if mart is not None:
         items, meta = mart
     else:
+        year_override = contract_year_from is not None or contract_year_to is not None
         where, params = _tx_where(
             conn=conn,
             asset_type=asset_type,
@@ -542,6 +543,7 @@ def list_clusters(
             addr4_list=addr4_list or None,
             contract_year_from=contract_year_from,
             contract_year_to=contract_year_to,
+            window_years=None if year_override else window_years,
             col_prefix="t",
             **region_kw,
         )
