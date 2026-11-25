@@ -104,10 +104,9 @@ type Props = {
   selectedBuildings?: CollectiveBuildingLabelInput[];
   /** 주거: 현재 목록 건물 — 확대 시 건물명 라벨 */
   buildingCandidates?: CollectiveBuildingMapInput[];
-  combinedLabels?: {
-    onBuilding: (key: string) => void;
-    onRoad: (key: string) => void;
-  };
+  combinedMap?: boolean;
+  onOpenBuilding?: (key: string) => void;
+  onOpenRoad?: (key: string) => void;
 };
 
 type ContextMenuState = {
@@ -119,9 +118,12 @@ type ContextMenuState = {
 };
 
 const VWORLD_KEY = (import.meta.env.VITE_VWORLD_API_KEY ?? "").trim();
-const PREVIEW_LABEL_ZOOM = 14.5;
-const PREVIEW_SMALL_SAMPLE_ZOOM = 15.5;
-const PREVIEW_ROAD_NAME_ZOOM = 16.5;
+export const MAP_LABEL_LIMIT = 100;
+const PRICE_LABEL_ZOOM = 14.5;
+const SMALL_SAMPLE_LABEL_ZOOM = 15.5;
+const NAME_ONLY_LABEL_ZOOM = 16.5;
+const BUILDING_LABEL_COLOR = "text-amber-200";
+const ROAD_LABEL_COLOR = "text-cyan-200";
 
 type MapLabelNode = {
   el: HTMLElement;
@@ -129,7 +131,6 @@ type MapLabelNode = {
   lat: number;
   minZoom: number;
   count?: number;
-  road?: boolean;
 };
 
 function priceLabel(count?: number, mean?: number | null) {
@@ -398,7 +399,9 @@ export default function CollectiveRegionMapHub({
   selectedBuildings = [],
   buildingCandidates = [],
   roadCandidates = [],
-  combinedLabels,
+  combinedMap = false,
+  onOpenBuilding,
+  onOpenRoad,
 }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -552,7 +555,7 @@ export default function CollectiveRegionMapHub({
   const roadMapPointsQ = useQuery({
     queryKey: [
       "collective-commercial-road-map-points",
-      Boolean(combinedLabels),
+      combinedMap,
       roadCandidates.map((road) => road.clusterKey).join(","),
     ],
     queryFn: () =>
@@ -566,9 +569,9 @@ export default function CollectiveRegionMapHub({
           addr3: road.addr3,
           addr4: road.addr4,
         })),
-        Boolean(combinedLabels),
+        combinedMap,
       ),
-    enabled: roadCandidates.length > 0 && (Boolean(combinedLabels) || (commercial && Boolean(configQ.data?.vworld_configured))),
+    enabled: roadCandidates.length > 0 && (combinedMap || (commercial && Boolean(configQ.data?.vworld_configured))),
     staleTime: 30 * 60_000,
     retry: 1,
   });
@@ -605,7 +608,7 @@ export default function CollectiveRegionMapHub({
   const buildingMapPointsQ = useQuery({
     queryKey: [
       "collective-building-map-points",
-      Boolean(combinedLabels),
+      combinedMap,
       buildingCandidates.map((b) => b.buildingKey).join(","),
     ],
     queryFn: () =>
@@ -618,19 +621,18 @@ export default function CollectiveRegionMapHub({
           jibun_address: b.jibunAddress,
           road_address: b.roadAddress,
         })),
-        Boolean(combinedLabels),
+        combinedMap,
       ),
-    enabled: buildingCandidates.length > 0 && (Boolean(combinedLabels) || (!commercial && Boolean(configQ.data?.vworld_configured))),
+    enabled: buildingCandidates.length > 0 && (combinedMap || (!commercial && Boolean(configQ.data?.vworld_configured))),
     staleTime: 30 * 60_000,
     retry: 1,
   });
 
-  const combinedMap = Boolean(combinedLabels);
   const updateRoadViewport = useCallback(() => {
     if (!combinedMap) return;
     const map = mapRef.current?.getMap();
     const bounds = map?.getBounds();
-    if (!map || !bounds || map.getZoom() < PREVIEW_LABEL_ZOOM) {
+    if (!map || !bounds || map.getZoom() < PRICE_LABEL_ZOOM) {
       setRoadViewport(null);
       return;
     }
@@ -967,61 +969,62 @@ export default function CollectiveRegionMapHub({
       key: string, label: string, lng: number, lat: number, road: boolean,
       mean?: number | null, onOpen?: () => void, count?: number,
     ) => {
-      const smallSample = Boolean(onOpen && road && (count ?? 0) < 10);
-      const nameOnly = smallSample && (count ?? 0) < 3;
+      const smallSample = count !== undefined && count < 10;
+      const nameOnly = count !== undefined && count < 3;
       const el = onOpen ? document.createElement("button") : document.createElement("span");
       el.textContent = label;
-      el.className = "absolute left-0 top-0 z-10 whitespace-nowrap rounded bg-slate-950/85 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white shadow-md ring-1 ring-white/80";
+      el.className = "absolute left-0 top-0 z-10 whitespace-nowrap rounded px-1.5 py-0.5 text-[12px] font-bold leading-none shadow-md ring-1";
+      el.classList.add(...(road ? ["bg-cyan-950", ROAD_LABEL_COLOR, "ring-cyan-300"]
+        : ["bg-slate-950/85", BUILDING_LABEL_COLOR, "ring-white/80"]));
+      el.dataset.collectiveMapLabel = road ? "road" : "building";
       el.style.textShadow = "0 1px 2px rgba(0,0,0,0.95)";
+      const prices = priceLabel(count, mean);
+      if (count !== undefined && !nameOnly) {
+        const price = document.createElement("span");
+        price.className = "mt-0.5 block text-[10px]";
+        price.textContent = `${prices}${smallSample ? " · 소표본" : ""}`;
+        el.appendChild(price);
+      }
       if (onOpen) {
         el.setAttribute("type", "button");
-        el.dataset.collectiveMapLabel = road ? "road" : "building";
         el.classList.add("pointer-events-auto", "cursor-pointer", "focus-visible:ring-2", "focus-visible:ring-yellow-300");
-        if (road) el.classList.add("!bg-cyan-950", "!ring-cyan-300");
-        const price = document.createElement("span");
-        price.className = "mt-0.5 block text-[10px] text-slate-100";
-        price.textContent = `${priceLabel(count, mean)}${smallSample ? " · 소표본" : ""}`;
-        const detail = nameOnly ? "거래 정보" : price.textContent;
+        const detail = nameOnly || count === undefined ? "거래 정보" : prices;
         el.setAttribute("aria-label", `${road ? "도로명" : "단지"} ${label}, ${detail}, 상세 열기`);
-        if (!nameOnly) el.appendChild(price);
         el.addEventListener("pointerdown", (event) => event.stopPropagation());
         el.addEventListener("click", (event) => { event.stopPropagation(); onOpen(); });
       }
       layer.appendChild(el);
-      const minZoom = nameOnly ? PREVIEW_ROAD_NAME_ZOOM
-        : smallSample ? PREVIEW_SMALL_SAMPLE_ZOOM : PREVIEW_LABEL_ZOOM;
-      nodes.set(key, { el, lng, lat, minZoom, count, road });
+      const minZoom = nameOnly ? NAME_ONLY_LABEL_ZOOM
+        : smallSample ? SMALL_SAMPLE_LABEL_ZOOM : PRICE_LABEL_ZOOM;
+      nodes.set(key, { el, lng, lat, minZoom, count });
     };
 
+    const buildingsByKey = new Map(buildingCandidates.map((building) => [building.buildingKey, building]));
     for (const point of buildingMapPointsQ.data?.points ?? []) {
-      const candidate = combinedLabels && buildingCandidates.find((row) => row.buildingKey === point.building_key);
-      addLabel(`building:${point.building_key}`, candidate ? candidate.label : point.label,
-        point.longitude, point.latitude, false, candidate ? candidate.mean : null,
-        combinedLabels ? () => combinedLabels.onBuilding(point.building_key) : undefined,
-        candidate ? candidate.count : undefined);
+      const candidate = buildingsByKey.get(point.building_key);
+      addLabel(`building:${point.building_key}`, candidate?.label ?? point.label,
+        point.longitude, point.latitude, false, candidate?.mean,
+        onOpenBuilding ? () => onOpenBuilding(point.building_key) : undefined, candidate?.count);
     }
 
-    const roadsByKey = new Map(roadCandidates.map((road) => [road.clusterKey, road]));
+    const roadsByKey = new Map(roadCandidates.slice(0, MAP_LABEL_LIMIT).map((road) => [road.clusterKey, road]));
     for (const line of viewportLines ?? []) {
       const candidate = roadsByKey.get(line.cluster_key);
-      if (!line.label_point || !candidate || !combinedLabels || (roadLinePoint && line.cluster_key === primaryRoad?.clusterKey)) continue;
+      if (!line.label_point || !candidate || (roadLinePoint && line.cluster_key === primaryRoad?.clusterKey)) continue;
       addLabel(`road:${line.cluster_key}`, candidate.roadName, line.label_point[0], line.label_point[1],
-        true, candidate.mean, () => combinedLabels.onRoad(line.cluster_key), candidate.count);
+        true, candidate.mean, onOpenRoad ? () => onOpenRoad(line.cluster_key) : undefined, candidate.count);
     }
-    for (const point of combinedLabels ? [] : roadMapPointsQ.data?.points ?? []) {
-      if (roadLinePoint && point.cluster_key === primaryRoad?.clusterKey) continue;
-      addLabel(`road:${point.cluster_key}`, point.label, point.longitude, point.latitude, true);
+    for (const point of combinedMap ? [] : roadMapPointsQ.data?.points ?? []) {
+      const candidate = roadsByKey.get(point.cluster_key);
+      addLabel(`road:${point.cluster_key}`, candidate?.label ?? point.label, point.longitude, point.latitude,
+        true, candidate?.mean, onOpenRoad ? () => onOpenRoad(point.cluster_key) : undefined, candidate?.count);
     }
 
     const ordered = [...nodes.entries()];
-    if (combinedLabels) {
-      ordered.sort(([leftKey, left], [rightKey, right]) =>
-        Number(left.minZoom > 0) - Number(right.minZoom > 0) ||
-        Number(Boolean(left.road && (left.count ?? 0) < 10)) -
-          Number(Boolean(right.road && (right.count ?? 0) < 10)) ||
-        (right.count ?? 0) - (left.count ?? 0) ||
-        leftKey.localeCompare(rightKey));
-    }
+    ordered.sort(([leftKey, left], [rightKey, right]) =>
+      Number(left.minZoom > 0) - Number(right.minZoom > 0) ||
+      (right.count ?? 0) - (left.count ?? 0) ||
+      leftKey.localeCompare(rightKey));
     const labels = ordered.map(([, node]) => ({
       ...node, halfWidth: node.el.offsetWidth / 2 + 3, halfHeight: node.el.offsetHeight / 2 + 3,
     }));
@@ -1033,7 +1036,7 @@ export default function CollectiveRegionMapHub({
       const h = map.getCanvas().clientHeight;
       const zoom = map.getZoom();
       const occupied: Array<{ left: number; top: number; right: number; bottom: number }> = [];
-      if (combinedLabels && roadLinePoint && selectedWidth && selectedHeight) {
+      if (roadLinePoint && selectedWidth && selectedHeight) {
         const p = map.project(roadLinePoint);
         occupied.push({ left: p.x - selectedWidth / 2 - 3, right: p.x + selectedWidth / 2 + 3,
           top: p.y - selectedHeight - 3, bottom: p.y + 3 });
@@ -1045,7 +1048,7 @@ export default function CollectiveRegionMapHub({
         }
         const p = map.project([lng, lat]);
         let visible = p.x >= -48 && p.y >= -24 && p.x <= w + 48 && p.y <= h + 24;
-        if (combinedLabels && visible) {
+        if (visible) {
           const box = { left: p.x - halfWidth, right: p.x + halfWidth, top: p.y - halfHeight, bottom: p.y + halfHeight };
           if (minZoom > 0) {
             visible = p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h &&
@@ -1070,7 +1073,7 @@ export default function CollectiveRegionMapHub({
       map.off("resize", syncPositions);
       layer.replaceChildren();
     };
-  }, [buildingCandidates, buildingMapPointsQ.data?.points, combinedLabels, labelGeoJson, mapReady,
+  }, [buildingCandidates, buildingMapPointsQ.data?.points, combinedMap, labelGeoJson, mapReady, onOpenBuilding, onOpenRoad,
     primaryRoad?.clusterKey, roadCandidates, roadLinePoint, roadMapPointsQ.data?.points, viewportLines]);
 
   const tileUrl = useMemo(() => {
@@ -1226,8 +1229,8 @@ export default function CollectiveRegionMapHub({
   const handleMapClick = useCallback(
     (evt: MapLayerMouseEvent) => {
       const road = evt.features?.find((feature) => feature.layer.id === "commercial-viewport-roads");
-      if (combinedLabels && road?.properties?.cluster_key) {
-        combinedLabels.onRoad(String(road.properties.cluster_key));
+      if (onOpenRoad && road?.properties?.cluster_key) {
+        onOpenRoad(String(road.properties.cluster_key));
         return;
       }
       const fromEvent = evt.features?.[0]
@@ -1239,7 +1242,7 @@ export default function CollectiveRegionMapHub({
         : null;
       offerAddRegionAt(evt.point, fromEvent);
     },
-    [combinedLabels, offerAddRegionAt],
+    [onOpenRoad, offerAddRegionAt],
   );
 
   const confirmAddRegion = useCallback(() => {
@@ -1458,11 +1461,11 @@ export default function CollectiveRegionMapHub({
                 />
               </Source>
             ) : null}
-            {roadLinePoint && primaryRoad && combinedLabels && (
+            {roadLinePoint && primaryRoad && onOpenRoad && (
               <Marker longitude={roadLinePoint[0]} latitude={roadLinePoint[1]} anchor="bottom">
                 <button type="button" data-collective-selected-road="1"
-                  className="rounded border border-cyan-300 bg-cyan-950 px-2 py-1 text-xs font-bold text-white shadow-md"
-                  onClick={(event) => { event.stopPropagation(); combinedLabels.onRoad(primaryRoad.clusterKey); }}>
+                  className={`rounded border border-cyan-300 bg-cyan-950 px-2 py-1 text-xs font-bold shadow-md ${ROAD_LABEL_COLOR}`}
+                  onClick={(event) => { event.stopPropagation(); onOpenRoad(primaryRoad.clusterKey); }}>
                   {primaryRoad.roadName}
                   <span className="block text-[10px]">
                     {priceLabel(primaryRoad.count, primaryRoad.mean)}
@@ -1473,10 +1476,12 @@ export default function CollectiveRegionMapHub({
             {placeMarker ? (
               <Marker longitude={placeMarker.lng} latitude={placeMarker.lat} anchor="bottom">
                 <div className="flex flex-col items-center pointer-events-none">
-                  <div className="rounded-md bg-amber-500 text-white text-[11px] font-semibold px-2 py-1 shadow max-w-[12rem] truncate">
+                  <div className={`rounded-md text-[11px] font-semibold px-2 py-1 shadow max-w-[12rem] truncate ${commercial
+                    ? `bg-cyan-950 ${ROAD_LABEL_COLOR}` : `bg-slate-950 ${BUILDING_LABEL_COLOR}`}`}>
                     {placeMarker.label}
                   </div>
-                  <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-amber-500" />
+                  <div className={`w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent
+                    ${commercial ? "border-t-cyan-950" : "border-t-slate-950"}`} />
                 </div>
               </Marker>
             ) : null}
@@ -1486,7 +1491,7 @@ export default function CollectiveRegionMapHub({
         <div
           ref={labelLayerRef}
           className="pointer-events-none absolute inset-0 z-[5] overflow-hidden"
-          aria-hidden={combinedLabels ? undefined : true}
+          aria-hidden={onOpenBuilding || onOpenRoad ? undefined : true}
         />
 
         {(resolveQ.isFetching || boundariesQ.isFetching) && hasAddr ? (

@@ -24,7 +24,7 @@ import BuildingDetailModal from "./components/BuildingDetailModal";
 import BuildingKeySplitGuard from "./components/BuildingKeySplitGuard";
 import { CandidateSwitchStatus, switchToCandidate, type CandidateSwitchState } from "./components/candidateSwitch";
 import RegionalRegressionModal from "./components/RegionalRegressionModal";
-import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
+import CollectiveRegionMapHub, { MAP_LABEL_LIMIT, type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import CollectiveAnalysisGuide from "./components/CollectiveAnalysisGuide";
@@ -839,7 +839,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
               }
               buildingCandidates={
                 scope && buildingsQ.data
-                  ? buildingsQ.data.items.slice(0, 100).map((row) => ({
+                  ? buildingsQ.data.items.slice(0, MAP_LABEL_LIMIT).map((row) => ({
                       buildingKey: row.building_key,
                       label: buildingDisplayName(row),
                       mean: row.mean,
@@ -859,15 +859,14 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                 clusterKey: mappedShop.cluster_key, label: mappedShop.road_name, roadName: mappedShop.road_name,
                 addr1: scope.addr1, addr2: scope.addr2, addr3: mappedShop.addr3, addr4: mappedShop.addr4, mean: mappedShop.mean, count: mappedShop.count,
               }] : []}
-              combinedLabels={combinedPreview ? {
-                onBuilding: (key) => {
-                  const row = buildingsQ.data?.items.find((item) => item.building_key === key);
-                  if (row) openBuilding(row);
-                },
-                onRoad: (key) => {
-                  const row = shopsQ.data?.items.find((item) => item.cluster_key === key);
-                  if (row) openShop(row);
-                },
+              combinedMap={combinedPreview}
+              onOpenBuilding={(key) => {
+                const row = buildingsQ.data?.items.find((item) => item.building_key === key);
+                if (row) openBuilding(row);
+              }}
+              onOpenRoad={combinedPreview ? (key) => {
+                const row = shopsQ.data?.items.find((item) => item.cluster_key === key);
+                if (row) openShop(row);
               } : undefined}
               fillHeight={mapPanelMode === "expanded"}
               mapPanelMode={mapPanelMode}
@@ -881,8 +880,10 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                 n은 거래수, m은 평균 거래단가(만원/㎡)입니다. 상가 m은 선택 지역·기간의 도로명별 평균이며,
                 도로선은 위치를 표시합니다.
-                도로선을 선택하면 라벨에 생략된 거래단가도 볼 수 있습니다.
-                건물 라벨은 거래수 상위 100개 중 좌표가 있는 단지가 표시 대상입니다.
+                <span className="mr-1 rounded bg-slate-950 px-1 text-amber-200">주거용</span>
+                <span className="mr-1 rounded bg-cyan-950 px-1 text-cyan-200">비주거용</span>
+                이름 라벨은 유형별 거래수 상위 {MAP_LABEL_LIMIT}개가 표시 대상입니다.
+                라벨이나 도로선을 선택하면 상세 거래 정보를 볼 수 있습니다.
                 단가 면적 기준은 주거 전용면적, 상가 원천 전용·연면적입니다.
               </p>
             )}

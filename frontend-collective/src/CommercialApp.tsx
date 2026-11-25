@@ -16,7 +16,7 @@ import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiAc
 import CommercialClusterTable, { clusterMatchesQuery } from "./components/CommercialClusterTable";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
-import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
+import CollectiveRegionMapHub, { MAP_LABEL_LIMIT, type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import CollectiveAnalysisGuide from "./components/CollectiveAnalysisGuide";
@@ -725,7 +725,7 @@ export default function CommercialApp() {
               }
               roadCandidates={
                 scope && clustersQ.data
-                  ? clustersQ.data.items.slice(0, 100).map((cluster) => ({
+                  ? clustersQ.data.items.slice(0, MAP_LABEL_LIMIT).map((cluster) => ({
                       clusterKey: cluster.cluster_key,
                       roadName: cluster.road_name || cluster.display_label,
                       label: cluster.road_name || cluster.display_label,
@@ -733,9 +733,15 @@ export default function CommercialApp() {
                       addr2: scope.addr2,
                       addr3: cluster.addr3,
                       addr4: cluster.addr4,
+                      count: cluster.count,
+                      mean: cluster.mean,
                     }))
                   : []
               }
+              onOpenRoad={(key) => {
+                const cluster = clustersQ.data?.items.find((item) => item.cluster_key === key);
+                if (cluster) setSelected(cluster);
+              }}
               fillHeight={mapPanelMode === "expanded"}
               mapPanelMode={mapPanelMode}
               onExpand={() => setMapPanelMode("expanded")}
