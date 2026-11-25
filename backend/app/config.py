@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     feature_rent_regression: str = Field(default="", validation_alias="FEATURE_RENT_REGRESSION")
     feature_land_regression: str = Field(default="", validation_alias="FEATURE_LAND_REGRESSION")
     feature_land_ledger_link: str = Field(default="", validation_alias="FEATURE_LAND_LEDGER_LINK")
+    feature_collective_next: str = Field(default="", validation_alias="FEATURE_COLLECTIVE_NEXT")
     #: 관리자 API(`/api/admin/*`, `/api/lab/*`)의 대체 인증 토큰.
     #: 관리자 세션이 없을 때 `X-Qa-Audit-Token` 이 이 값과 같아야 한다. 비어 있으면 토큰 경로는 거부.
     qa_audit_token: str = Field(default="", validation_alias="QA_AUDIT_TOKEN")

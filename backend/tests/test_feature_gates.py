@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app import admin_auth, feature_gates
 from app.feature_gates import (
+    COLLECTIVE_NEXT,
     FEATURES,
     HIDDEN_DETAIL,
     LAND_LEDGER_LINK,
@@ -90,7 +91,12 @@ def _client_with_probes(rent_probe=None, land_probe=None) -> TestClient:
 # ── 레지스트리 ───────────────────────────────────────────────
 
 def test_registry_defaults_are_admin():
-    assert FEATURES == {RENT_REGRESSION: "admin", LAND_REGRESSION: "admin", LAND_LEDGER_LINK: "admin"}
+    assert FEATURES == {
+        RENT_REGRESSION: "admin",
+        LAND_REGRESSION: "admin",
+        LAND_LEDGER_LINK: "admin",
+        COLLECTIVE_NEXT: "admin",
+    }
     for name in FEATURES:
         assert feature_mode(name) == "admin"
 

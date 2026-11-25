@@ -18,7 +18,17 @@ applyColorScheme(readStoredColorScheme());
 
 const qc = new QueryClient();
 
+const Collective2App = React.lazy(() => import("./collective2/Collective2App"));
+
 function Root() {
+  if (getCollectiveSegment() === "next") {
+    return (
+      <React.Suspense fallback={<p role="status">집합2를 확인하는 중입니다.</p>}>
+        <Collective2App />
+      </React.Suspense>
+    );
+  }
+
   const mobile = useMobileScreen();
   const view = new URLSearchParams(window.location.search).get("view");
 
