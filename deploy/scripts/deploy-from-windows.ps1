@@ -154,7 +154,7 @@ try {
       Invoke-Scp @("frontend/tsconfig.json", "frontend/vite.config.ts", "frontend/src") "frontend/"
     }
     "collective" {
-      Invoke-Scp @("backend/app/collective", "backend/app/collective_commercial", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("backend/app/collective", "backend/app/collective_commercial", "backend/app/collective2", "backend/app/ai", "backend/app/config.py", "backend/app/main.py", "backend/app/feature_gates.py", "backend/app/product_gate.py") "backend/app/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-collective/tsconfig.json", "frontend-collective/vite.config.ts", "frontend-collective/src") "frontend-collective/"
     }
