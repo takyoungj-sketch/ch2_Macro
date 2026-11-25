@@ -183,9 +183,15 @@ def _mart_region_where(
     region_code_level: str | None = None,
     region_addrs: list[str] | None = None,
     emd_code_col: str | None = None,
+    mart_period: tuple[date, int] | None = None,
 ) -> tuple[str, dict]:
     clauses = ["1=1"]
     params: dict[str, Any] = {}
+    # Region-code lookup must use the same indexed snapshot as the result list.
+    period_sql = None
+    if mart_period is not None:
+        month, years = mart_period
+        period_sql = f"t.as_of_month = DATE '{month.isoformat()}' AND t.window_years = {int(years)}"
     apply_region_filters(
         clauses,
         params,
@@ -198,7 +204,7 @@ def _mart_region_where(
         addr4_list=addr4_list,
         asset_type=None,
         col_prefix=col_prefix,
-        valid_sql=None,
+        valid_sql=period_sql,
         region_codes=region_codes,
         region_code_level=region_code_level,
         region_addrs=region_addrs,
@@ -370,6 +376,7 @@ def list_buildings_from_mart(
         region_code_level=region_code_level,
         region_addrs=region_addrs,
         emd_code_col=None,
+        mart_period=(as_of_month, window_years),
     )
     params["as_of"] = as_of_month
     params["window_years"] = window_years
