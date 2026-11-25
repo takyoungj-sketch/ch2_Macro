@@ -879,8 +879,10 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
             />
             {combinedPreview && scope && (
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                지도를 확대하면 상가 거래 도로선을 표시합니다. n은 거래수, m은 평균 거래단가(만원/㎡)입니다.
-                건물 라벨은 거래수 상위 100개 중 좌표가 있는 단지를 표시합니다.
+                n은 거래수, m은 평균 거래단가(만원/㎡)입니다. 상가 m은 선택 지역·기간의 도로명별 평균이며,
+                도로선은 위치를 표시합니다.
+                도로선을 선택하면 라벨에 생략된 거래단가도 볼 수 있습니다.
+                건물 라벨은 거래수 상위 100개 중 좌표가 있는 단지가 표시 대상입니다.
                 단가 면적 기준은 주거 전용면적, 상가 원천 전용·연면적입니다.
               </p>
             )}

@@ -260,7 +260,7 @@ export async function fetchCommercialRoadLine(
 
 export type RoadViewport = [number, number, number, number];
 export type CommercialViewportRoads = {
-  lines: Array<{ cluster_key: string; geometry: GeoJSON.FeatureCollection; label_point: [number, number] }>;
+  lines: Array<{ cluster_key: string; geometry: GeoJSON.FeatureCollection; label_point: [number, number] | null }>;
   truncated: boolean;
   unavailable: number;
 };

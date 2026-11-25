@@ -332,7 +332,7 @@ def _clip_road_parts(roads, area):
             code = str(feature["properties"].get("rn_cd") or "").strip()
             if code:
                 road_codes.add(code)
-            if longest is None or part.length > longest.length:
+            if longest is None or (part.length, part.bounds) > (longest.length, longest.bounds):
                 longest = part
     if len(road_codes) > 1:
         raise ValueError("ambiguous_road_name")
@@ -371,19 +371,43 @@ def _viewport_roads(api_key: str, domain: str, bounds: tuple[float, ...], cache_
     return features, True
 
 
-def fetch_viewport_road_lines(*, api_key, domain, bounds, rows):
-    """Fetch VWorld road segments in batches and clip them by each cluster's region."""
-    cache_window = int(monotonic() // 900)
-    data, truncated = _viewport_roads(api_key, domain, bounds, cache_window)
+def _roads_by_name(features):
     by_name = defaultdict(list)
-    for feature in data:
+    for feature in features:
         if feature["geometry"]["type"] in {"LineString", "MultiLineString"}:
             by_name[normalize_road_name(road_name_from_props(feature["properties"]))].append(feature)
+    return by_name
+
+
+@lru_cache(maxsize=48)
+def _admin_road_anchors(api_key, domain, level, code, cache_window):
+    area = _admin_area(api_key, domain, level, code, cache_window)
+    features, truncated = _viewport_roads(api_key, domain, area.bounds, cache_window)
+    if truncated:
+        return {}
+    anchors = {}
+    for name, matches in _roads_by_name(features).items():
+        try:
+            _, point = _clip_road_parts(matches, area)
+        except ValueError:
+            continue
+        if point is not None:
+            anchors[name] = point
+    return anchors
+
+
+def fetch_viewport_road_lines(*, api_key, domain, bounds, rows):
+    """Clip visible lines to the viewport and place labels using the full cluster region."""
+    cache_window = int(monotonic() // 900)
+    data, truncated = _viewport_roads(api_key, domain, bounds, cache_window)
+    by_name = _roads_by_name(data)
     view_area = polygon_box(*bounds)
     lines = []
     unavailable = 0
+    anchors_by_region = {}
     for row in rows:
-        matches = by_name.get(normalize_road_name(row["road_name"]))
+        name = normalize_road_name(row["road_name"])
+        matches = by_name.get(name)
         if not matches:
             continue
         try:
@@ -394,6 +418,16 @@ def fetch_viewport_road_lines(*, api_key, domain, bounds, rows):
         except ValueError:
             unavailable += 1
             continue
-        if point:
-            lines.append({"cluster_key": row["cluster_key"], "geometry": result, "label_point": point})
+        if point is None:
+            continue
+        region = (level, code)
+        if region not in anchors_by_region:
+            try:
+                anchors_by_region[region] = _admin_road_anchors(api_key, domain, level, code, cache_window)
+            except ValueError:
+                anchors_by_region[region] = {}
+        lines.append({
+            "cluster_key": row["cluster_key"], "geometry": result,
+            "label_point": anchors_by_region[region].get(name),
+        })
     return {"lines": lines, "truncated": truncated, "unavailable": unavailable}

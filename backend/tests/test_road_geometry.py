@@ -152,13 +152,18 @@ def test_viewport_road_lines_keep_cluster_regions_and_exact_road_names(monkeypat
     monkeypatch.setattr(road_geometry, "_admin_area", lambda *args: (
         box(0, -1, 2, 2) if args[3] == "11111111" else box(2, -1, 4, 2)
     ))
+    rows = [
+        {"cluster_key": "first", "road_name": "중앙로", "emd": "11111111", "sigungu": None},
+        {"cluster_key": "second", "road_name": "서현중로", "emd": "22222222", "sigungu": None},
+    ]
     result = road_geometry.fetch_viewport_road_lines(
-        api_key="", domain="", bounds=(0.5, -0.5, 3.5, 2.5),
-        rows=[
-            {"cluster_key": "first", "road_name": "중앙로", "emd": "11111111", "sigungu": None},
-            {"cluster_key": "second", "road_name": "서현중로", "emd": "22222222", "sigungu": None},
-        ],
+        api_key="", domain="", bounds=(0.5, -0.5, 3.5, 2.5), rows=rows,
+    )
+    panned = road_geometry.fetch_viewport_road_lines(
+        api_key="", domain="", bounds=(0.8, -0.5, 3.8, 2.5), rows=rows,
     )
     assert [line["cluster_key"] for line in result["lines"]] == ["first", "second"]
-    assert [line["label_point"] for line in result["lines"]] == [(1.25, 0.0), (2.75, 1.0)]
+    assert [line["label_point"] for line in result["lines"]] == [(1.0, 0.0), (3.0, 1.0)]
+    assert [line["label_point"] for line in panned["lines"]] == [(1.0, 0.0), (3.0, 1.0)]
     assert all(len(line["geometry"]["features"]) == 1 for line in result["lines"])
+    assert panned["lines"][0]["geometry"] != result["lines"][0]["geometry"]

@@ -120,6 +120,17 @@ type ContextMenuState = {
 
 const VWORLD_KEY = (import.meta.env.VITE_VWORLD_API_KEY ?? "").trim();
 const PREVIEW_LABEL_ZOOM = 14.5;
+const PREVIEW_SMALL_SAMPLE_ZOOM = 15.5;
+const PREVIEW_ROAD_NAME_ZOOM = 16.5;
+
+type MapLabelNode = {
+  el: HTMLElement;
+  lng: number;
+  lat: number;
+  minZoom: number;
+  count?: number;
+  road?: boolean;
+};
 
 function priceLabel(count?: number, mean?: number | null) {
   const transactions = count?.toLocaleString("ko-KR") ?? "—";
@@ -392,11 +403,6 @@ export default function CollectiveRegionMapHub({
   const mapRef = useRef<MapRef | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const labelLayerRef = useRef<HTMLDivElement | null>(null);
-  const labelNodesRef = useRef<
-    Map<string, { el: HTMLElement; lng: number; lat: number; minZoom: number }>
-  >(
-    new Map(),
-  );
   const lastFitKeyRef = useRef("");
   const [mapReady, setMapReady] = useState(false);
   const [roadViewport, setRoadViewport] = useState<RoadViewport | null>(null);
@@ -650,6 +656,9 @@ export default function CollectiveRegionMapHub({
     },
     staleTime: 60_000,
     retry: false,
+    placeholderData: (previous, previousQuery) =>
+      roadViewport && JSON.stringify(previousQuery?.queryKey[2]) === JSON.stringify(viewportKeys)
+        ? previous : undefined,
   });
   const viewportLines = viewportRoadsQ.data?.lines;
   const viewportRoadsFc = useMemo<GeoJSON.FeatureCollection | null>(() => viewportLines?.length ? ({
@@ -928,8 +937,7 @@ export default function CollectiveRegionMapHub({
     const layer = labelLayerRef.current;
     if (!map || !layer) return;
 
-    const nodes = labelNodesRef.current;
-    nodes.clear();
+    const nodes = new Map<string, MapLabelNode>();
     layer.replaceChildren();
 
     for (const feat of labelGeoJson?.features ?? []) {
@@ -959,6 +967,8 @@ export default function CollectiveRegionMapHub({
       key: string, label: string, lng: number, lat: number, road: boolean,
       mean?: number | null, onOpen?: () => void, count?: number,
     ) => {
+      const smallSample = Boolean(onOpen && road && (count ?? 0) < 10);
+      const nameOnly = smallSample && (count ?? 0) < 3;
       const el = onOpen ? document.createElement("button") : document.createElement("span");
       el.textContent = label;
       el.className = "absolute left-0 top-0 z-10 whitespace-nowrap rounded bg-slate-950/85 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white shadow-md ring-1 ring-white/80";
@@ -970,14 +980,17 @@ export default function CollectiveRegionMapHub({
         if (road) el.classList.add("!bg-cyan-950", "!ring-cyan-300");
         const price = document.createElement("span");
         price.className = "mt-0.5 block text-[10px] text-slate-100";
-        price.textContent = priceLabel(count, mean);
-        el.setAttribute("aria-label", `${road ? "도로명" : "단지"} ${label}, ${price.textContent}, 상세 열기`);
-        el.appendChild(price);
+        price.textContent = `${priceLabel(count, mean)}${smallSample ? " · 소표본" : ""}`;
+        const detail = nameOnly ? "거래 정보" : price.textContent;
+        el.setAttribute("aria-label", `${road ? "도로명" : "단지"} ${label}, ${detail}, 상세 열기`);
+        if (!nameOnly) el.appendChild(price);
         el.addEventListener("pointerdown", (event) => event.stopPropagation());
         el.addEventListener("click", (event) => { event.stopPropagation(); onOpen(); });
       }
       layer.appendChild(el);
-      nodes.set(key, { el, lng, lat, minZoom: PREVIEW_LABEL_ZOOM });
+      const minZoom = nameOnly ? PREVIEW_ROAD_NAME_ZOOM
+        : smallSample ? PREVIEW_SMALL_SAMPLE_ZOOM : PREVIEW_LABEL_ZOOM;
+      nodes.set(key, { el, lng, lat, minZoom, count, road });
     };
 
     for (const point of buildingMapPointsQ.data?.points ?? []) {
@@ -989,35 +1002,58 @@ export default function CollectiveRegionMapHub({
     }
 
     const roadsByKey = new Map(roadCandidates.map((road) => [road.clusterKey, road]));
-    const roadsWithLine = new Set<string>();
     for (const line of viewportLines ?? []) {
-      roadsWithLine.add(line.cluster_key);
       const candidate = roadsByKey.get(line.cluster_key);
-      if (!candidate || !combinedLabels || (roadLinePoint && line.cluster_key === primaryRoad?.clusterKey)) continue;
+      if (!line.label_point || !candidate || !combinedLabels || (roadLinePoint && line.cluster_key === primaryRoad?.clusterKey)) continue;
       addLabel(`road:${line.cluster_key}`, candidate.roadName, line.label_point[0], line.label_point[1],
         true, candidate.mean, () => combinedLabels.onRoad(line.cluster_key), candidate.count);
     }
-    for (const point of roadMapPointsQ.data?.points ?? []) {
-      if (roadsWithLine.has(point.cluster_key)) continue;
+    for (const point of combinedLabels ? [] : roadMapPointsQ.data?.points ?? []) {
       if (roadLinePoint && point.cluster_key === primaryRoad?.clusterKey) continue;
-      const candidate = combinedLabels && roadCandidates.find((row) => row.clusterKey === point.cluster_key);
-      addLabel(`road:${point.cluster_key}`, candidate ? candidate.label : point.label,
-        point.longitude, point.latitude, true, candidate ? candidate.mean : null,
-        combinedLabels ? () => combinedLabels.onRoad(point.cluster_key) : undefined,
-        candidate ? candidate.count : undefined);
+      addLabel(`road:${point.cluster_key}`, point.label, point.longitude, point.latitude, true);
     }
 
+    const ordered = [...nodes.entries()];
+    if (combinedLabels) {
+      ordered.sort(([leftKey, left], [rightKey, right]) =>
+        Number(left.minZoom > 0) - Number(right.minZoom > 0) ||
+        Number(Boolean(left.road && (left.count ?? 0) < 10)) -
+          Number(Boolean(right.road && (right.count ?? 0) < 10)) ||
+        (right.count ?? 0) - (left.count ?? 0) ||
+        leftKey.localeCompare(rightKey));
+    }
+    const labels = ordered.map(([, node]) => ({
+      ...node, halfWidth: node.el.offsetWidth / 2 + 3, halfHeight: node.el.offsetHeight / 2 + 3,
+    }));
+    const selectedLabel = layer.parentElement?.querySelector<HTMLElement>("[data-collective-selected-road]");
+    const selectedWidth = selectedLabel?.offsetWidth ?? 0;
+    const selectedHeight = selectedLabel?.offsetHeight ?? 0;
     const syncPositions = () => {
       const w = map.getCanvas().clientWidth;
       const h = map.getCanvas().clientHeight;
       const zoom = map.getZoom();
-      for (const { el, lng, lat, minZoom } of nodes.values()) {
+      const occupied: Array<{ left: number; top: number; right: number; bottom: number }> = [];
+      if (combinedLabels && roadLinePoint && selectedWidth && selectedHeight) {
+        const p = map.project(roadLinePoint);
+        occupied.push({ left: p.x - selectedWidth / 2 - 3, right: p.x + selectedWidth / 2 + 3,
+          top: p.y - selectedHeight - 3, bottom: p.y + 3 });
+      }
+      for (const { el, lng, lat, minZoom, halfWidth, halfHeight } of labels) {
         if (zoom < minZoom) {
           el.style.display = "none";
           continue;
         }
         const p = map.project([lng, lat]);
-        const visible = p.x >= -48 && p.y >= -24 && p.x <= w + 48 && p.y <= h + 24;
+        let visible = p.x >= -48 && p.y >= -24 && p.x <= w + 48 && p.y <= h + 24;
+        if (combinedLabels && visible) {
+          const box = { left: p.x - halfWidth, right: p.x + halfWidth, top: p.y - halfHeight, bottom: p.y + halfHeight };
+          if (minZoom > 0) {
+            visible = p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h &&
+              !occupied.some((other) => box.left < other.right && box.right > other.left &&
+                box.top < other.bottom && box.bottom > other.top);
+          }
+          if (visible) occupied.push(box);
+        }
         el.style.display = visible ? "" : "none";
         if (!visible) continue;
         el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`;
@@ -1032,7 +1068,6 @@ export default function CollectiveRegionMapHub({
       map.off("move", syncPositions);
       map.off("zoom", syncPositions);
       map.off("resize", syncPositions);
-      nodes.clear();
       layer.replaceChildren();
     };
   }, [buildingCandidates, buildingMapPointsQ.data?.points, combinedLabels, labelGeoJson, mapReady,
