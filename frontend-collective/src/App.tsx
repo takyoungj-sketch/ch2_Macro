@@ -128,6 +128,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
   const includeShops = commercialKinds.length > 0;
   const commercialType = includeShops ? encodeCommercialAssetKinds(commercialKinds) : "";
   const assetType = useMemo(() => encodeResidentialAssetKinds(assetKinds), [assetKinds]);
+  const mapUsesCommercial = combinedPreview && assetKinds.length === 0 && includeShops;
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
@@ -141,12 +142,13 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
     addUnit,
     clearUnits,
   } = useCollectiveAnalysisUnits({
-    assetType,
+    assetType: mapUsesCommercial ? commercialType : assetType,
     addr1,
     addr2,
     guList,
     leafList,
     setLeafList,
+    commercial: mapUsesCommercial,
   });
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
@@ -260,12 +262,20 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
       setAddr2(opts[0]!);
     }
   }, [addr1, addr2, addr2Q.data]);
-  const commercialStructureOnly = combinedPreview && assetKinds.length === 0 && includeShops;
+  const areaBasisParts = [
+    assetKinds.length ? "주거 전용면적" : "",
+    commercialKinds.includes("collective_shop")
+      ? "상가 연면적(35㎡ 미만, 35~50㎡, 50~100㎡, 100~300㎡, 300㎡ 이상)"
+      : "",
+    commercialKinds.includes("collective_factory")
+      ? "공장 연면적(100㎡ 미만, 100~300㎡, 300~1000㎡, 1000㎡ 이상)"
+      : "",
+  ].filter(Boolean);
   const structureQ = useQuery({
-    queryKey: commercialStructureOnly
+    queryKey: mapUsesCommercial
       ? ["coll-structure", "commercial", addr1, addr2, commercialType]
       : ["coll-structure", addr1, addr2, assetType],
-    queryFn: () => commercialStructureOnly
+    queryFn: () => mapUsesCommercial
       ? fetchCommercialRegionStructure(addr1, addr2, commercialType)
       : fetchRegionStructure(addr1, addr2, assetType),
     enabled: !!addr1 && !!addr2 && (!combinedPreview || assetKinds.length > 0 || includeShops),
@@ -926,13 +936,14 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
             )}
             <CollectiveRegionMapHub
               scope={{
-                assetType,
+                assetType: mapUsesCommercial ? commercialType : assetType,
                 addr1,
                 addr2,
                 guList,
                 leafList,
                 riPick: [],
               }}
+              commercial={mapUsesCommercial}
               selectedBuildings={
                 selected && scope && !combinedPreview
                   ? [
@@ -996,7 +1007,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                 <span className="mr-1 rounded bg-cyan-950 px-1 text-cyan-200">비주거용</span>
                 이름 라벨은 유형별 거래수 상위 {MAP_LABEL_LIMIT}개가 표시 대상입니다.
                 라벨이나 도로선을 선택하면 상세 거래 정보를 볼 수 있습니다.
-                단가 면적 기준은 주거 전용면적, 상가 원천 전용·연면적입니다.
+                {areaBasisParts.length ? ` 단가 면적 기준은 ${areaBasisParts.join(", ")}입니다.` : ""}
               </p>
             )}
             {mappedShop && (
