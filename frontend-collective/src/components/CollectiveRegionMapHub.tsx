@@ -130,7 +130,47 @@ const VIEWPORT_ROAD_LAYER_IDS = [
   "commercial-viewport-roads",
   "commercial-viewport-roads-shop",
   "commercial-viewport-roads-factory",
+  "commercial-viewport-roads-shop-hit",
+  "commercial-viewport-roads-factory-hit",
 ];
+const ROAD_HIT_OFFSET: Record<string, number> = {
+  "commercial-viewport-roads-shop": -3,
+  "commercial-viewport-roads-shop-hit": -3,
+  "commercial-viewport-roads-factory": 3,
+  "commercial-viewport-roads-factory-hit": 3,
+};
+
+function distanceToOffsetLine(
+  project: (lngLat: [number, number]) => { x: number; y: number },
+  point: { x: number; y: number },
+  feature: { geometry?: GeoJSON.Geometry },
+  offsetPx: number,
+): number {
+  const geometry = feature.geometry;
+  if (!geometry || geometry.type !== "LineString") return Number.POSITIVE_INFINITY;
+  const coords = geometry.coordinates;
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < coords.length - 1; i += 1) {
+    const a = project(coords[i] as [number, number]);
+    const b = project(coords[i + 1] as [number, number]);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const px = -dy / len;
+    const py = dx / len;
+    const ax = a.x + px * offsetPx;
+    const ay = a.y + py * offsetPx;
+    const wx = b.x + px * offsetPx - ax;
+    const wy = b.y + py * offsetPx - ay;
+    const vx = point.x - ax;
+    const vy = point.y - ay;
+    const seg = wx * wx + wy * wy || 1;
+    const t = Math.max(0, Math.min(1, (vx * wx + vy * wy) / seg));
+    const dist = Math.hypot(vx - wx * t, vy - wy * t);
+    if (dist < best) best = dist;
+  }
+  return best;
+}
 const SMALL_SAMPLE_LABEL_ZOOM = 15.5;
 const NAME_ONLY_LABEL_ZOOM = 16.5;
 const BUILDING_LABEL_COLOR = "text-amber-200";
@@ -1259,7 +1299,19 @@ export default function CollectiveRegionMapHub({
 
   const handleMapClick = useCallback(
     (evt: MapLayerMouseEvent) => {
-      const road = evt.features?.find((feature) => VIEWPORT_ROAD_LAYER_IDS.includes(feature.layer.id));
+      const roads = (evt.features ?? []).filter((feature) => VIEWPORT_ROAD_LAYER_IDS.includes(feature.layer.id));
+      const map = mapRef.current?.getMap();
+      const road = roads.length <= 1 || !map
+        ? roads[0]
+        : roads.reduce((best, feature) => {
+            const dist = distanceToOffsetLine(
+              (lngLat) => map.project(lngLat),
+              evt.point,
+              feature,
+              ROAD_HIT_OFFSET[feature.layer.id] ?? 0,
+            );
+            return dist < best.dist ? { feature, dist } : best;
+          }, { feature: roads[0], dist: Number.POSITIVE_INFINITY }).feature;
       if (onOpenRoad && road?.properties?.cluster_key) {
         onOpenRoad(String(road.properties.cluster_key));
         return;
@@ -1396,7 +1448,12 @@ export default function CollectiveRegionMapHub({
               ...(fillGeoJson ? ["region-fill", "region-outline"] : []),
               ...(viewportRoadsFc
                 ? (combinedMap
-                  ? ["commercial-viewport-roads-shop", "commercial-viewport-roads-factory"]
+                  ? [
+                      "commercial-viewport-roads-shop",
+                      "commercial-viewport-roads-factory",
+                      "commercial-viewport-roads-shop-hit",
+                      "commercial-viewport-roads-factory-hit",
+                    ]
                   : ["commercial-viewport-roads"])
                 : []),
             ]}
@@ -1493,6 +1550,28 @@ export default function CollectiveRegionMapHub({
                       "line-width": 4,
                       "line-opacity": 0.9,
                       "line-dasharray": [2, 1.5],
+                      "line-offset": 3,
+                    }} />
+                )}
+                {combinedMap && (
+                  <Layer id="commercial-viewport-roads-shop-hit" type="line"
+                    filter={["==", ["get", "asset_type"], "collective_shop"]}
+                    layout={{ "line-cap": "round", "line-join": "round" }}
+                    paint={{
+                      "line-color": "#000000",
+                      "line-width": 14,
+                      "line-opacity": 0,
+                      "line-offset": -3,
+                    }} />
+                )}
+                {combinedMap && (
+                  <Layer id="commercial-viewport-roads-factory-hit" type="line"
+                    filter={["==", ["get", "asset_type"], "collective_factory"]}
+                    layout={{ "line-cap": "round", "line-join": "round" }}
+                    paint={{
+                      "line-color": "#000000",
+                      "line-width": 14,
+                      "line-opacity": 0,
                       "line-offset": 3,
                     }} />
                 )}
