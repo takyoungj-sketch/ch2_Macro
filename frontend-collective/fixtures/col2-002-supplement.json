@@ -78,16 +78,81 @@
       "is_reliable": true
     }
   ],
+  "resolve": {
+    "level": "eupmyeondong",
+    "selected_codes": ["11110101"],
+    "context_sido_code": "11",
+    "context_sigungu_code": "11110",
+    "labels": {"11110101": "같은동", "11110102": "이웃동"},
+    "has_selection": true
+  },
+  "boundaries": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "emd_cd": "11110101",
+          "emd_kor_nm": "같은동",
+          "sig_kor_nm": "같은구",
+          "ctp_kor_nm": "시험시",
+          "full_nm": "시험시 같은구 같은동"
+        },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [127.785, 36.198],
+            [127.815, 36.198],
+            [127.815, 36.208],
+            [127.785, 36.208],
+            [127.785, 36.198]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "emd_cd": "11110102",
+          "emd_kor_nm": "이웃동",
+          "sig_kor_nm": "같은구",
+          "ctp_kor_nm": "시험시",
+          "full_nm": "시험시 같은구 이웃동"
+        },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [127.815, 36.198],
+            [127.845, 36.198],
+            [127.845, 36.208],
+            [127.815, 36.208],
+            [127.815, 36.198]
+          ]]
+        }
+      }
+    ]
+  },
   "viewport_lines": [
     {
       "cluster_key": "shop-same",
       "asset_type": "collective_shop",
-      "coordinates": [[127.79, 36.2012], [127.81, 36.2012]]
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [[127.79, 36.21], [127.81, 36.21]],
+          [[127.79, 36.2012], [127.81, 36.2012]]
+        ]
+      }
     },
     {
       "cluster_key": "factory-same",
       "asset_type": "collective_factory",
-      "coordinates": [[127.79, 36.1988], [127.81, 36.1988]]
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [[127.79, 36.19], [127.81, 36.19]],
+          [[127.79, 36.2012], [127.81, 36.2012]]
+        ]
+      }
     },
     {
       "cluster_key": "factory-only",

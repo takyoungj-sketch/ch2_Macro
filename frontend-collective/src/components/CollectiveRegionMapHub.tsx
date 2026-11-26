@@ -139,37 +139,66 @@ const ROAD_HIT_OFFSET: Record<string, number> = {
   "commercial-viewport-roads-factory": 3,
   "commercial-viewport-roads-factory-hit": 3,
 };
+/** 집합2에서 오프셋된 보이는 선까지 이 거리(px) 안일 때만 도로 상세를 연다. */
+const ROAD_CLICK_MAX_PX = 7;
+/** 이 차이(px) 안이면 같은 거리로 보고 집합상가를 먼저 고른다. */
+const ROAD_TIE_EPS_PX = 0.05;
+
+function isShopRoad(feature: { layer: { id: string }; properties?: { asset_type?: unknown } | null }): boolean {
+  if (feature.layer.id.includes("-shop")) return true;
+  return String(feature.properties?.asset_type ?? "") === "collective_shop";
+}
+
+function offsetLineParts(geometry: GeoJSON.Geometry | undefined, includeMulti: boolean): [number, number][][] {
+  if (!geometry) return [];
+  if (geometry.type === "LineString") return [geometry.coordinates as [number, number][]];
+  if (includeMulti && geometry.type === "MultiLineString") return geometry.coordinates as [number, number][][];
+  return [];
+}
 
 function distanceToOffsetLine(
   project: (lngLat: [number, number]) => { x: number; y: number },
   point: { x: number; y: number },
   feature: { geometry?: GeoJSON.Geometry },
   offsetPx: number,
+  includeMulti: boolean,
 ): number {
-  const geometry = feature.geometry;
-  if (!geometry || geometry.type !== "LineString") return Number.POSITIVE_INFINITY;
-  const coords = geometry.coordinates;
+  const parts = offsetLineParts(feature.geometry, includeMulti);
   let best = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < coords.length - 1; i += 1) {
-    const a = project(coords[i] as [number, number]);
-    const b = project(coords[i + 1] as [number, number]);
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const px = -dy / len;
-    const py = dx / len;
-    const ax = a.x + px * offsetPx;
-    const ay = a.y + py * offsetPx;
-    const wx = b.x + px * offsetPx - ax;
-    const wy = b.y + py * offsetPx - ay;
-    const vx = point.x - ax;
-    const vy = point.y - ay;
-    const seg = wx * wx + wy * wy || 1;
-    const t = Math.max(0, Math.min(1, (vx * wx + vy * wy) / seg));
-    const dist = Math.hypot(vx - wx * t, vy - wy * t);
-    if (dist < best) best = dist;
+  for (const coords of parts) {
+    for (let i = 0; i < coords.length - 1; i += 1) {
+      const a = project(coords[i] as [number, number]);
+      const b = project(coords[i + 1] as [number, number]);
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const px = -dy / len;
+      const py = dx / len;
+      const ax = a.x + px * offsetPx;
+      const ay = a.y + py * offsetPx;
+      const wx = b.x + px * offsetPx - ax;
+      const wy = b.y + py * offsetPx - ay;
+      const vx = point.x - ax;
+      const vy = point.y - ay;
+      const seg = wx * wx + wy * wy || 1;
+      const t = Math.max(0, Math.min(1, (vx * wx + vy * wy) / seg));
+      const dist = Math.hypot(vx - wx * t, vy - wy * t);
+      if (dist < best) best = dist;
+    }
   }
   return best;
+}
+
+function preferShopOnTie(
+  candidate: { feature: { layer: { id: string }; properties?: { asset_type?: unknown } | null }; dist: number },
+  best: { feature: { layer: { id: string }; properties?: { asset_type?: unknown } | null }; dist: number },
+): boolean {
+  if (candidate.dist + ROAD_TIE_EPS_PX < best.dist) return true;
+  if (best.dist + ROAD_TIE_EPS_PX < candidate.dist) return false;
+  const candidateShop = isShopRoad(candidate.feature);
+  const bestShop = isShopRoad(best.feature);
+  if (candidateShop !== bestShop) return candidateShop;
+  return false;
 }
 const SMALL_SAMPLE_LABEL_ZOOM = 15.5;
 const NAME_ONLY_LABEL_ZOOM = 16.5;
@@ -1301,31 +1330,67 @@ export default function CollectiveRegionMapHub({
     (evt: MapLayerMouseEvent) => {
       const roads = (evt.features ?? []).filter((feature) => VIEWPORT_ROAD_LAYER_IDS.includes(feature.layer.id));
       const map = mapRef.current?.getMap();
-      const road = roads.length <= 1 || !map
-        ? roads[0]
-        : roads.reduce((best, feature) => {
-            const dist = distanceToOffsetLine(
+      if (!combinedMap) {
+        const road = roads.length <= 1 || !map
+          ? roads[0]
+          : roads.reduce((best, feature) => {
+              const dist = distanceToOffsetLine(
+                (lngLat) => map.project(lngLat),
+                evt.point,
+                feature,
+                ROAD_HIT_OFFSET[feature.layer.id] ?? 0,
+                false,
+              );
+              return dist < best.dist ? { feature, dist } : best;
+            }, { feature: roads[0], dist: Number.POSITIVE_INFINITY }).feature;
+        if (onOpenRoad && road?.properties?.cluster_key) {
+          onOpenRoad(String(road.properties.cluster_key));
+          return;
+        }
+        const fromEvent = evt.features?.[0]
+          ? ({
+              type: "Feature" as const,
+              geometry: evt.features[0].geometry as GeoJSON.Geometry,
+              properties: (evt.features[0].properties ?? {}) as Record<string, unknown>,
+            } satisfies GeoJSON.Feature)
+          : null;
+        offerAddRegionAt(evt.point, fromEvent);
+        return;
+      }
+      const ranked = map
+        ? roads.map((feature) => ({
+            feature,
+            dist: distanceToOffsetLine(
               (lngLat) => map.project(lngLat),
               evt.point,
               feature,
               ROAD_HIT_OFFSET[feature.layer.id] ?? 0,
-            );
-            return dist < best.dist ? { feature, dist } : best;
-          }, { feature: roads[0], dist: Number.POSITIVE_INFINITY }).feature;
-      if (onOpenRoad && road?.properties?.cluster_key) {
-        onOpenRoad(String(road.properties.cluster_key));
+              true,
+            ),
+          }))
+        : [];
+      const chosen = ranked.reduce<typeof ranked[number] | null>((best, item) => {
+        if (item.dist > ROAD_CLICK_MAX_PX) return best;
+        if (!best || preferShopOnTie(item, best)) return item;
+        return best;
+      }, null);
+      if (onOpenRoad && chosen?.feature.properties?.cluster_key) {
+        onOpenRoad(String(chosen.feature.properties.cluster_key));
         return;
       }
-      const fromEvent = evt.features?.[0]
+      const regionHit = (evt.features ?? []).find(
+        (feature) => feature.layer.id === "region-fill" || feature.layer.id === "region-outline",
+      );
+      const regionEvent = regionHit
         ? ({
             type: "Feature" as const,
-            geometry: evt.features[0].geometry as GeoJSON.Geometry,
-            properties: (evt.features[0].properties ?? {}) as Record<string, unknown>,
+            geometry: regionHit.geometry as GeoJSON.Geometry,
+            properties: (regionHit.properties ?? {}) as Record<string, unknown>,
           } satisfies GeoJSON.Feature)
         : null;
-      offerAddRegionAt(evt.point, fromEvent);
+      offerAddRegionAt(evt.point, regionEvent);
     },
-    [onOpenRoad, offerAddRegionAt],
+    [combinedMap, onOpenRoad, offerAddRegionAt],
   );
 
   const confirmAddRegion = useCallback(() => {

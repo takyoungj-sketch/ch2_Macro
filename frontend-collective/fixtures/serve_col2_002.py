@@ -16,15 +16,21 @@ def _addr2(query: dict[str, list[str]]) -> str:
 
 
 def _line(item: dict) -> dict:
+    geometry = item.get("geometry")
+    if geometry is None:
+        geometry = {"type": "LineString", "coordinates": item["coordinates"]}
+    point = geometry["coordinates"][0]
+    if geometry["type"] == "MultiLineString":
+        point = point[0]
     return {
         "cluster_key": item["cluster_key"],
-        "label_point": item["coordinates"][0],
+        "label_point": point,
         "geometry": {
             "type": "FeatureCollection",
             "features": [{
                 "type": "Feature",
                 "properties": {"cluster_key": item["cluster_key"], "asset_type": item["asset_type"]},
-                "geometry": {"type": "LineString", "coordinates": item["coordinates"]},
+                "geometry": geometry,
             }],
         },
     }
@@ -51,7 +57,27 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"logged_in": False})
             return
         if path == "/api/map/config":
-            self._send(200, {"vworld_configured": False})
+            self._send(200, {"vworld_configured": True, "neighbor_graph_ready": False})
+            return
+        if path == "/api/map/boundaries":
+            self._send(200, {
+                "level": (query.get("level") or ["eupmyeondong"])[0],
+                "selected": query.get("selected") or [],
+                "feature_collection": DATA["boundaries"],
+            })
+            return
+        if path == "/api/map/neighbors":
+            self._send(200, {
+                "level": (query.get("level") or ["eupmyeondong"])[0],
+                "codes": query.get("codes") or [],
+                "neighbors_by_code": {},
+                "neighbor_codes": [],
+                "graph_ready": False,
+                "edge_count": 0,
+            })
+            return
+        if path in ("/api/collective/regions/resolve-codes", "/api/collective/commercial/regions/resolve-codes"):
+            self._send(200, DATA["resolve"])
             return
         if path == "/api/collective/regions/addr1":
             self._send(200, DATA["addr1"])
