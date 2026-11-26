@@ -1,12 +1,15 @@
 import { useLayoutEffect, useRef, type ReactNode, type UIEvent } from "react";
+import clsx from "clsx";
 
 /** 넓은 표의 가로 스크롤을 위·아래에 두고 같이 움직이게 한다. */
 export default function DualHorizontalScroll({
   children,
   className,
+  fill = false,
 }: {
   children: ReactNode;
   className?: string;
+  fill?: boolean;
 }) {
   const topRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -38,7 +41,7 @@ export default function DualHorizontalScroll({
   }
 
   return (
-    <div className={className}>
+    <div className={clsx(fill && "flex min-h-0 flex-1 flex-col", className)}>
       <div
         ref={topRef}
         className="dual-h-scroll-top overflow-x-scroll overflow-y-hidden"
@@ -49,7 +52,7 @@ export default function DualHorizontalScroll({
       </div>
       <div
         ref={bodyRef}
-        className="max-h-[min(72vh,56rem)] overflow-auto overscroll-contain"
+        className={fill ? "min-h-0 flex-1 overflow-auto overscroll-contain" : "max-h-[min(72vh,56rem)] overflow-auto overscroll-contain"}
         onScroll={(e: UIEvent<HTMLDivElement>) => mirror(e.currentTarget, topRef.current)}
       >
         <div ref={contentRef}>{children}</div>

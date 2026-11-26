@@ -1,0 +1,46 @@
+.cmp { min-height: 100vh; background: #f5f5ef; color: #1b2c2c; padding: 32px clamp(16px, 4vw, 64px); font-family: inherit; }
+.cmp-header, .cmp-controls, .cmp-content, .cmp > footer, .cmp-status { max-width: 1420px; margin-inline: auto; }
+.cmp-header { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 18px; margin-bottom: 26px; }
+.cmp-brand { color: #457167; font-size: .75rem; font-weight: 750; letter-spacing: .08em; }
+.cmp h1 { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 780; letter-spacing: -.055em; line-height: 1.1; margin: 8px 0 10px; }
+.cmp-header p:not(.cmp-brand), .cmp-period, .cmp > footer { color: #536561; font-size: .86rem; }
+.cmp-header nav { display: flex; gap: 14px; flex-wrap: wrap; }
+.cmp-header nav a { font-size: .88rem; text-decoration: underline; text-underline-offset: .25em; color: #31564d; }
+.cmp-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; padding: 12px 14px; background: #fff; border: 1px solid #dce2da; border-radius: 12px 12px 0 0; font-size: .84rem; }
+.cmp-controls p { color: #536561; }
+.cmp-controls label { display: flex; align-items: center; gap: 7px; font-weight: 650; }
+.cmp-controls select { border: 1px solid #c8d6ce; border-radius: 7px; padding: 5px 8px; background: #fff; }
+.cmp-switch { background: #eef1eb; border-radius: 8px; padding: 3px; display: flex; }
+.cmp-switch button { padding: 6px 10px; border-radius: 6px; }
+.cmp-switch button[aria-pressed="true"] { background: #203e36; color: #fff; }
+.cmp-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(235px, 315px); background: #fff; border: 1px solid #dce2da; border-top: 0; border-radius: 0 0 12px 12px; overflow: hidden; }
+.cmp-map { position: relative; height: clamp(440px, 62vh, 760px); background: #e8edf0; }
+.cmp-legend, .cmp-selection { position: absolute; background: #fff; border: 1px solid #d6ded7; border-radius: 9px; color: #1b2c2c; }
+.cmp-legend { left: 12px; top: 12px; display: grid; gap: 7px; padding: 10px 12px; font-size: .8rem; }
+.cmp-legend label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.cmp-legend small { color: #536561; }
+.cmp-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.cmp-dot.apartment, .cmp-pin.apartment { background: #066a66; }
+.cmp-dot.shop, .cmp-pin.shop { background: #974325; }
+.cmp-pin { color: white; border: 2px solid #fff; border-radius: 999px; padding: 4px 9px; font-size: .8rem; font-weight: 750; line-height: 1.15; white-space: nowrap; cursor: pointer; }
+.cmp-pin[aria-pressed="true"] { outline: 2px solid #1b2c2c; }
+.cmp-selection { bottom: 14px; left: 12px; display: grid; gap: 3px; padding: 10px 35px 10px 12px; max-width: calc(100% - 76px); font-size: .85rem; }
+.cmp-selection button { position: absolute; right: 9px; top: 4px; font-size: 1.3rem; }
+.cmp-results { max-height: clamp(440px, 62vh, 760px); overflow: auto; border-left: 1px solid #dce2da; padding: 6px 14px 16px; }
+.cmp-results section { padding-top: 12px; }
+.cmp-results h2 { display: flex; align-items: center; gap: 8px; font-size: .94rem; font-weight: 750; }
+.cmp-results ul { margin-top: 2px; }
+.cmp-results li { border-bottom: 1px solid #e9ede7; }
+.cmp-results li button { width: 100%; display: flex; justify-content: space-between; gap: 8px; text-align: left; padding: 7px 4px; font-size: .82rem; }
+.cmp-results li button[aria-pressed="true"], .cmp-results li button:hover { background: #edf4ec; }
+.cmp-results li small { display: block; color: #536561; font-size: .72rem; }
+.cmp-results b { font-variant-numeric: tabular-nums; }
+.cmp-status { padding: 8px 14px; background: #fff5df; font-size: .85rem; }
+.cmp > footer { padding-top: 14px; }
+.cmp button:focus-visible, .cmp a:focus-visible, .cmp input:focus-visible, .cmp select:focus-visible { outline: 2px solid #2559a3; outline-offset: 2px; }
+@media (max-width: 760px) {
+  .cmp { padding-top: 20px; }
+  .cmp-content { grid-template-columns: 1fr; }
+  .cmp-map { height: min(62vh, 510px); min-height: 330px; }
+  .cmp-results { max-height: none; border-left: 0; border-top: 1px solid #dce2da; }
+}

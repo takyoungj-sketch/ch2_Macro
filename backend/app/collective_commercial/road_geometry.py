@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import logging
 import re
+from functools import lru_cache
+from time import monotonic
+from collections import defaultdict
 from typing import Any, Optional
 
-from app.map.vworld_client import fetch_named_layer_features
+from shapely import get_parts, make_valid, union_all
+from shapely.geometry import box as polygon_box, mapping, shape
+
+from app.map.vworld_client import LAYER_BY_LEVEL, fetch_named_layer_features
 
 _LOG = logging.getLogger(__name__)
 
@@ -286,3 +292,142 @@ def fetch_road_line_collection(
         if matched["features"]:
             break
     return clip_feature_collection_to_box(matched, box)
+
+
+@lru_cache(maxsize=256)
+def _admin_area(api_key: str, domain: str, admin_level: str, admin_code: str, cache_window: int):
+    expected_length = {"sigungu": 5, "eupmyeondong": 8}.get(admin_level)
+    if len(admin_code) != expected_length or not admin_code.isascii() or not admin_code.isdigit():
+        raise ValueError("invalid_admin_code")
+
+    layer, field = LAYER_BY_LEVEL[admin_level]
+    boundary = fetch_named_layer_features(
+        api_key=api_key, domain=domain, data=layer, attr_filter=f"{field}:=:{admin_code}", size=10,
+    )
+    polygons = [
+        make_valid(shape(feature["geometry"]))
+        for feature in boundary["features"]
+        if str(feature["properties"].get(field, "")).strip() == admin_code
+        and feature["geometry"]["type"] in {"Polygon", "MultiPolygon"}
+    ]
+    area = union_all([
+        part for polygon in polygons for part in get_parts(polygon)
+        if part.geom_type in {"Polygon", "MultiPolygon"}
+    ])
+    if area.is_empty:
+        raise ValueError("admin_boundary_not_found")
+    return area
+
+
+def _clip_road_parts(roads, area):
+    features = []
+    longest = None
+    road_codes = set()
+    for feature in roads:
+        line = shape(feature["geometry"]).intersection(area)
+        for part in get_parts(line):
+            if part.geom_type != "LineString" or part.is_empty or not part.length:
+                continue
+            features.append({"type": "Feature", "geometry": mapping(part), "properties": feature["properties"]})
+            code = str(feature["properties"].get("rn_cd") or "").strip()
+            if code:
+                road_codes.add(code)
+            if longest is None or (part.length, part.bounds) > (longest.length, longest.bounds):
+                longest = part
+    if len(road_codes) > 1:
+        raise ValueError("ambiguous_road_name")
+    point = longest.interpolate(0.5, normalized=True) if longest is not None else None
+    return {"type": "FeatureCollection", "features": features}, (point.x, point.y) if point is not None else None
+
+
+def fetch_admin_road_line(
+    *, api_key: str, domain: str, road_name: str, admin_level: str, admin_code: str,
+) -> tuple[dict[str, Any], tuple[float, float] | None]:
+    area = _admin_area(api_key, domain, admin_level, admin_code, int(monotonic() // 900))
+    west, south, east, north = area.bounds
+    roads = fetch_road_line_collection(
+        api_key=api_key, domain=domain, road_name=road_name, west=west, south=south, east=east, north=north,
+    )
+    return _clip_road_parts(roads["features"], area)
+
+
+@lru_cache(maxsize=64)
+def _viewport_roads(api_key: str, domain: str, bounds: tuple[float, ...], cache_window: int):
+    features = []
+    for page in range(1, 5):
+        try:
+            result = fetch_named_layer_features(
+                api_key=api_key, domain=domain, data=VWORLD_ROAD_LAYER,
+                geom_filter=_box(*bounds), size=1000, page=page,
+            )
+        except ValueError as exc:
+            if "NOT_FOUND" in str(exc):
+                return features, False
+            raise
+        part = result["features"]
+        features.extend(part)
+        if len(part) < 1000:
+            return features, False
+    return features, True
+
+
+def _roads_by_name(features):
+    by_name = defaultdict(list)
+    for feature in features:
+        if feature["geometry"]["type"] in {"LineString", "MultiLineString"}:
+            by_name[normalize_road_name(road_name_from_props(feature["properties"]))].append(feature)
+    return by_name
+
+
+@lru_cache(maxsize=48)
+def _admin_road_anchors(api_key, domain, level, code, cache_window):
+    area = _admin_area(api_key, domain, level, code, cache_window)
+    features, truncated = _viewport_roads(api_key, domain, area.bounds, cache_window)
+    if truncated:
+        return {}
+    anchors = {}
+    for name, matches in _roads_by_name(features).items():
+        try:
+            _, point = _clip_road_parts(matches, area)
+        except ValueError:
+            continue
+        if point is not None:
+            anchors[name] = point
+    return anchors
+
+
+def fetch_viewport_road_lines(*, api_key, domain, bounds, rows):
+    """Clip visible lines to the viewport and place labels using the full cluster region."""
+    cache_window = int(monotonic() // 900)
+    data, truncated = _viewport_roads(api_key, domain, bounds, cache_window)
+    by_name = _roads_by_name(data)
+    view_area = polygon_box(*bounds)
+    lines = []
+    unavailable = 0
+    anchors_by_region = {}
+    for row in rows:
+        name = normalize_road_name(row["road_name"])
+        matches = by_name.get(name)
+        if not matches:
+            continue
+        try:
+            code = row["emd"] or row["sigungu"] or ""
+            level = "eupmyeondong" if row["emd"] else "sigungu"
+            area = _admin_area(api_key, domain, level, code, cache_window).intersection(view_area)
+            result, point = _clip_road_parts(matches, area)
+        except ValueError:
+            unavailable += 1
+            continue
+        if point is None:
+            continue
+        region = (level, code)
+        if region not in anchors_by_region:
+            try:
+                anchors_by_region[region] = _admin_road_anchors(api_key, domain, level, code, cache_window)
+            except ValueError:
+                anchors_by_region[region] = {}
+        lines.append({
+            "cluster_key": row["cluster_key"], "geometry": result,
+            "label_point": anchors_by_region[region].get(name),
+        })
+    return {"lines": lines, "truncated": truncated, "unavailable": unavailable}

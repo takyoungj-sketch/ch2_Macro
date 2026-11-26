@@ -114,6 +114,7 @@ def fetch_named_layer_features(
     attr_filter: str | None = None,
     geom_filter: str | None = None,
     size: int = 1000,
+    page: int | None = None,
 ) -> dict[str, Any]:
     """VWorld Data API GetFeature — 임의 레이어 ID (`LT_L_SPRD` 등)."""
     layer = (data or "").strip()
@@ -134,6 +135,8 @@ def fetch_named_layer_features(
         params["attrFilter"] = attr_filter
     if geom_filter:
         params["geomFilter"] = geom_filter
+    if page is not None:
+        params["page"] = str(page)
 
     url = f"{VWORLD_DATA_URL}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"User-Agent": "ch2-macro-map/1.0"})

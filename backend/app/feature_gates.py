@@ -21,6 +21,7 @@ from fastapi import HTTPException, Request
 RENT_REGRESSION = "rent_regression"
 LAND_REGRESSION = "land_regression"
 LAND_LEDGER_LINK = "land_ledger_link"
+COLLECTIVE_NEXT = "collective_next"
 
 MODES = ("public", "admin", "off")
 
@@ -29,6 +30,7 @@ FEATURES: dict[str, str] = {
     RENT_REGRESSION: "admin",
     LAND_REGRESSION: "admin",
     LAND_LEDGER_LINK: "admin",
+    COLLECTIVE_NEXT: "admin",
 }
 
 HIDDEN_DETAIL = "아직 공개하지 않은 기능입니다."

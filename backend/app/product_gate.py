@@ -261,6 +261,13 @@ def caller_access(request: Request) -> str:
 async def product_gate_response(request: Request) -> JSONResponse | None:
     body: object = None
     path = request.url.path
+    if path.startswith("/api/collective2/") or path == "/api/collective/commercial/roads/viewport-lines":
+        from app.collective2.access import collective_next_allowed
+        from app.feature_gates import HIDDEN_DETAIL
+
+        if not collective_next_allowed(request):
+            return JSONResponse(status_code=403, content={"detail": HIDDEN_DETAIL})
+        return None
     if request.method != "OPTIONS" and is_admin_path(path):
         # 관리자·랩 API: 구독 여부와 무관하게 관리자 세션 또는 QA 토큰만 연다.
         status = admin_access_status(request)

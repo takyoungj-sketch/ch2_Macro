@@ -218,6 +218,8 @@ export type CommercialRoadLineRequest = CommercialRoadGeocodeRequest & {
   south?: number | null;
   east?: number | null;
   north?: number | null;
+  admin_level?: "sigungu" | "eupmyeondong";
+  admin_code?: string;
 };
 
 export type CommercialRoadLineResponse = {
@@ -227,6 +229,7 @@ export type CommercialRoadLineResponse = {
   feature_collection: GeoJSON.FeatureCollection;
   matched_count: number;
   error: string | null;
+  label_point?: [number, number] | null;
 };
 
 export async function fetchCommercialRoadLine(
@@ -248,17 +251,37 @@ export async function fetchCommercialRoadLine(
       south: body.south ?? undefined,
       east: body.east ?? undefined,
       north: body.north ?? undefined,
+      admin_level: body.admin_level,
+      admin_code: body.admin_code,
     },
+  );
+  return data;
+}
+
+export type RoadViewport = [number, number, number, number];
+export type CommercialViewportRoads = {
+  lines: Array<{ cluster_key: string; geometry: GeoJSON.FeatureCollection; label_point: [number, number] | null }>;
+  truncated: boolean;
+  unavailable: number;
+};
+
+export async function fetchCommercialViewportRoads(
+  clusterKeys: string[], bounds: RoadViewport, signal?: AbortSignal,
+): Promise<CommercialViewportRoads> {
+  const { data } = await commercialApi.post<CommercialViewportRoads>(
+    "/roads/viewport-lines", { cluster_keys: clusterKeys, bounds }, { signal },
   );
   return data;
 }
 
 export async function fetchCommercialRoadMapPoints(
   roads: CommercialRoadMapPointInput[],
+  cachedOnly = false,
 ): Promise<CommercialRoadMapPointsResponse> {
   const { data } = await commercialApi.post<CommercialRoadMapPointsResponse>(
     "/roads/map-points",
     { roads: roads.slice(0, 100) },
+    cachedOnly ? { params: { cached_only: true } } : undefined,
   );
   return data;
 }
@@ -305,10 +328,12 @@ export type CollectiveBuildingMapPointsResponse = {
 
 export async function fetchCollectiveBuildingMapPoints(
   buildings: CollectiveBuildingMapPointInput[],
+  cachedOnly = false,
 ): Promise<CollectiveBuildingMapPointsResponse> {
   const { data } = await collectiveApi.post<CollectiveBuildingMapPointsResponse>(
     "/buildings/map-points",
     { buildings: buildings.slice(0, 100) },
+    cachedOnly ? { params: { cached_only: true } } : undefined,
   );
   return data;
 }

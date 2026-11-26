@@ -193,8 +193,9 @@ def resolve_commercial_map_points(
     *,
     api_key: str,
     roads: list[dict[str, Any]],
+    cached_only: bool = False,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """도로명 cluster 대표점을 지오코딩하고 DB에 캐시한다."""
+    """도로명 cluster 대표점을 캐시한다. cached_only 조회는 기존 좌표만 읽는다."""
     table = conn.execute(
         text("SELECT to_regclass('public.collective_commercial_map_geocodes')::text")
     ).scalar()
@@ -234,6 +235,10 @@ def resolve_commercial_map_points(
                     "latitude": float(row["latitude"]),
                 }
             )
+            continue
+
+        if cached_only:
+            unresolved.append(key)
             continue
 
         query = build_road_query(
@@ -301,5 +306,6 @@ def resolve_commercial_map_points(
         else:
             unresolved.append(key)
 
-    conn.commit()
+    if not cached_only:
+        conn.commit()
     return points, unresolved

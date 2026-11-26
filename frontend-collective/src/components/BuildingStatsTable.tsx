@@ -15,7 +15,7 @@ import {
 } from "@ch2/stats-table-filter";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { BuildingStatsRow } from "../api/client";
-import { assetTypeLabel } from "../types";
+import { assetTypeLabel, commercialAssetTypeLabel, type CommercialClusterRow } from "../types";
 import { collectiveMatchBadge } from "../utils/matchBadge";
 import { rowFromTypeSibling } from "../utils/typeSibling";
 import DualHorizontalScroll from "./DualHorizontalScroll";
@@ -35,6 +35,8 @@ type ColKey =
   | "land_price";
 
 type FilterKind = "select" | "text" | "range";
+type StatsRow = BuildingStatsRow | CommercialClusterRow;
+const EMPTY_ROADS: CommercialClusterRow[] = [];
 
 type ColDef = {
   key: ColKey;
@@ -102,7 +104,13 @@ export function buildingMatchesQuery(row: BuildingStatsRow, q: string): boolean 
   return hay.includes(q);
 }
 
-function textValue(row: BuildingStatsRow, key: ColKey): string {
+function textValue(row: StatsRow, key: ColKey): string {
+  if ("cluster_key" in row) {
+    if (key === "asset_type") return commercialAssetTypeLabel(row.asset_type);
+    if (key === "display_name") return row.road_name || row.display_label;
+    if (key === "road") return [row.addr3, row.addr4, row.road_name].filter(Boolean).join(" ") || "—";
+    return "—";
+  }
   switch (key) {
     case "asset_type":
       return assetTypeLabel(row.asset_type);
@@ -119,7 +127,7 @@ function textValue(row: BuildingStatsRow, key: ColKey): string {
   }
 }
 
-function numberValue(row: BuildingStatsRow, key: ColKey): number | null {
+function numberValue(row: StatsRow, key: ColKey): number | null {
   switch (key) {
     case "count":
       return row.count;
@@ -132,17 +140,17 @@ function numberValue(row: BuildingStatsRow, key: ColKey): number | null {
       return (row.ci_lower + row.ci_upper) / 2;
     }
     case "building_year":
-      return row.building_year ?? null;
+      return "building_key" in row ? row.building_year ?? null : null;
     case "households":
-      return row.households ?? null;
+      return "building_key" in row ? row.households ?? null : null;
     case "land_price":
-      return row.assessed_land_price ?? null;
+      return "building_key" in row ? row.assessed_land_price ?? null : null;
     default:
       return null;
   }
 }
 
-function sortValue(row: BuildingStatsRow, key: ColKey): string | number | null {
+function sortValue(row: StatsRow, key: ColKey): string | number | null {
   if (key === "asset_type" || key === "display_name" || key === "builder" || key === "jibun" || key === "road") {
     const text = textValue(row, key);
     return text === "—" ? null : text;
@@ -241,16 +249,27 @@ function BuildingTableRow({
 
 export default function BuildingStatsTable({
   items,
+  roadItems = EMPTY_ROADS,
+  combined = false,
+  fill = false,
   wide,
   highlightQuery,
   onSelect,
+  onSelectRoad,
 }: {
   items: BuildingStatsRow[];
+  roadItems?: CommercialClusterRow[];
+  combined?: boolean;
+  fill?: boolean;
   wide: boolean;
   highlightQuery: string;
   onSelect: (row: BuildingStatsRow) => void;
+  onSelectRoad?: (row: CommercialClusterRow) => void;
 }) {
-  const cols = useMemo(() => COLS.filter((c) => wide || !c.wideOnly), [wide]);
+  const rows = useMemo<StatsRow[]>(() => [...items, ...roadItems], [items, roadItems]);
+  const cols = useMemo(() => COLS.filter((c) => wide || !c.wideOnly).map((c) =>
+    combined && c.key === "display_name" ? { ...c, label: "건물·도로명" } : c
+  ), [combined, wide]);
   const [sortKey, setSortKey] = useState<ColKey>("count");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [texts, setTexts] = useState<Partial<Record<ColKey, string>>>({});
@@ -263,7 +282,7 @@ export default function BuildingStatsTable({
     setTexts({});
     setRanges({});
     setSelects({});
-  }, [items]);
+  }, [rows]);
 
   useEffect(() => {
     if (!cols.some((c) => c.key === sortKey)) {
@@ -273,13 +292,13 @@ export default function BuildingStatsTable({
   }, [cols, sortKey]);
 
   const typeValues = useMemo(() => {
-    const set = new Set(items.map((row) => textValue(row, "asset_type")));
+    const set = new Set(rows.map((row) => textValue(row, "asset_type")));
     return [...set].sort((a, b) => a.localeCompare(b, "ko"));
-  }, [items]);
+  }, [rows]);
 
   const shown = useMemo(() => {
     const visible = new Set(cols.map((c) => c.key));
-    const rows = items.filter((row) => {
+    const filtered = rows.filter((row) => {
       for (const col of cols) {
         if (!visible.has(col.key)) continue;
         if (col.kind === "text") {
@@ -296,9 +315,9 @@ export default function BuildingStatsTable({
     });
     const key = visible.has(sortKey) ? sortKey : "count";
     const dir = visible.has(sortKey) ? sortDir : "desc";
-    rows.sort((a, b) => compareValues(sortValue(a, key), sortValue(b, key), dir));
-    return rows;
-  }, [items, cols, texts, ranges, selects, sortKey, sortDir]);
+    filtered.sort((a, b) => compareValues(sortValue(a, key), sortValue(b, key), dir));
+    return filtered;
+  }, [rows, cols, texts, ranges, selects, sortKey, sortDir]);
 
   const filterCount =
     cols.filter((c) => {
@@ -316,10 +335,10 @@ export default function BuildingStatsTable({
   const sortDirty = sortKey !== "count" || sortDir !== "desc";
 
   return (
-    <div className="card p-0 w-full">
+    <div className={clsx("card w-full p-0", fill && "flex h-full min-h-0 flex-col")}>
       <FilterStatusBar
         shown={shown.length}
-        total={items.length}
+        total={rows.length}
         filterCount={filterCount}
         onClear={clearFilters}
         sortDirty={sortDirty}
@@ -328,8 +347,8 @@ export default function BuildingStatsTable({
           setSortDir("desc");
         }}
       />
-      <DualHorizontalScroll key={wide ? "wide" : "compact"}>
-        <table className={clsx("data buildings-table", wide && "is-wide")}>
+      <DualHorizontalScroll key={wide ? "wide" : "compact"} fill={fill}>
+        <table className={clsx("data buildings-table", wide && "is-wide", fill && "border-separate border-spacing-0")}>
           <colgroup>
             <col className="col-type" />
             <col className="col-name" />
@@ -428,11 +447,41 @@ export default function BuildingStatsTable({
             {shown.length === 0 ? (
               <tr>
                 <td colSpan={cols.length} className="py-6 text-slate-400">
-                  표시할 건물이 없습니다. 필터를 조정하거나 초기화하세요.
+                  {combined ? "표시할 결과가 없습니다." : "표시할 건물이 없습니다."} 필터를 조정하거나 초기화하세요.
                 </td>
               </tr>
             ) : (
-              shown.map((row) => (
+              shown.map((row) => "cluster_key" in row ? (
+                <tr key={`road|${row.cluster_key}|${row.asset_type}`}
+                  data-building-highlight={highlightQuery && [row.road_name, row.display_label, row.addr3, row.addr4]
+                    .filter(Boolean).join(" ").toLowerCase().includes(highlightQuery) ? "1" : undefined}
+                  className={clsx("cursor-pointer hover:bg-cyan-50 dark:hover:bg-cyan-950/40",
+                    highlightQuery && [row.road_name, row.display_label, row.addr3, row.addr4]
+                      .filter(Boolean).join(" ").toLowerCase().includes(highlightQuery) &&
+                    "!bg-yellow-200 dark:!bg-yellow-700/50")}
+                  onClick={() => onSelectRoad?.(row)}>
+                  <td className="text-[10px] whitespace-nowrap text-center">{commercialAssetTypeLabel(row.asset_type)}</td>
+                  <td className="name">
+                    <button type="button" onClick={(event) => { event.stopPropagation(); onSelectRoad?.(row); }}>
+                      {textValue(row, "display_name")}
+                    </button>
+                    {[row.addr3, row.addr4].some(Boolean) && (
+                      <small className="ml-1 text-slate-500 dark:text-slate-300">{[row.addr3, row.addr4].filter(Boolean).join(" · ")}</small>
+                    )}
+                    {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
+                  </td>
+                  <td className="num">{row.count}</td>
+                  <td className="num">{fmtPrice(row.median)}</td>
+                  <td className="num">{fmtPrice(row.mean)}</td>
+                  {wide && <td className="num text-[10px]">{fmtCiCompact(row.ci_lower, row.ci_upper)}</td>}
+                  <td className="num">—</td>
+                  <td className="num">—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  {wide && <td className="addr truncate">{textValue(row, "road")}</td>}
+                  {wide && <td className="num">—</td>}
+                </tr>
+              ) : (
                 <BuildingTableRow
                   key={`${row.building_key}|${row.asset_type}`}
                   row={row}

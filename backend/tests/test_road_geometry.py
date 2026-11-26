@@ -1,5 +1,9 @@
 """도로명 정규화·매칭 (VWorld LT_L_SPRD 속성)."""
 
+import pytest
+from shapely.geometry import Point, box, shape
+
+from app.collective_commercial import road_geometry
 from app.collective_commercial.road_geometry import (
     clip_linestring_to_box,
     filter_road_features,
@@ -96,3 +100,70 @@ def test_clip_linestring_keeps_interior():
     assert min(xs) >= 0.0 - 1e-9
     assert max(xs) <= 1.0 + 1e-9
     assert len(parts[0]) >= 2
+
+
+def test_admin_road_line_clips_to_polygon_and_places_label_on_line(monkeypatch):
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [[[0, 0], [3, 0], [3, 1], [1, 1], [1, 3], [0, 3], [0, 0]]],
+    }
+    monkeypatch.setattr(road_geometry, "fetch_named_layer_features", lambda **_: {
+        "features": [{"geometry": boundary, "properties": {"emd_cd": "43150123"}}],
+    })
+    monkeypatch.setattr(road_geometry, "fetch_road_line_collection", lambda **_: {
+        "features": [
+            {"geometry": {"type": "LineString", "coordinates": [[0, 2], [3, 2]]}, "properties": {"rn_cd": "1"}},
+            {"geometry": {"type": "LineString", "coordinates": [[2, 2], [3, 2]]}, "properties": {"rn_cd": "2"}},
+        ],
+    })
+    lines, anchor = road_geometry.fetch_admin_road_line(
+        api_key="", domain="", road_name="중앙로", admin_level="eupmyeondong", admin_code="43150123",
+    )
+    assert len(lines["features"]) == 1
+    line = shape(lines["features"][0]["geometry"])
+    assert shape(boundary).covers(line)
+    assert anchor == (0.5, 2)
+    assert line.covers(Point(anchor))
+
+
+def test_admin_road_line_rejects_multiple_matching_road_codes(monkeypatch):
+    boundary = {"type": "Polygon", "coordinates": [[[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]]]}
+    monkeypatch.setattr(road_geometry, "fetch_named_layer_features", lambda **_: {
+        "features": [{"geometry": boundary, "properties": {"sig_cd": "43150"}}],
+    })
+    monkeypatch.setattr(road_geometry, "fetch_road_line_collection", lambda **_: {
+        "features": [
+            {"geometry": {"type": "LineString", "coordinates": [[0, 1], [3, 1]]}, "properties": {"rn_cd": "1"}},
+            {"geometry": {"type": "LineString", "coordinates": [[0, 2], [3, 2]]}, "properties": {"rn_cd": "2"}},
+        ],
+    })
+    with pytest.raises(ValueError, match="ambiguous_road_name"):
+        road_geometry.fetch_admin_road_line(
+            api_key="", domain="", road_name="중앙로", admin_level="sigungu", admin_code="43150",
+        )
+
+
+def test_viewport_road_lines_keep_cluster_regions_and_exact_road_names(monkeypatch):
+    features = [{
+        "geometry": {"type": "LineString", "coordinates": [[0, index], [4, index]]},
+        "properties": {"rn": name},
+    } for index, name in enumerate(("중앙로", "서현중로", "중앙로2길"))]
+    monkeypatch.setattr(road_geometry, "_viewport_roads", lambda *_: (features, False))
+    monkeypatch.setattr(road_geometry, "_admin_area", lambda *args: (
+        box(0, -1, 2, 2) if args[3] == "11111111" else box(2, -1, 4, 2)
+    ))
+    rows = [
+        {"cluster_key": "first", "road_name": "중앙로", "emd": "11111111", "sigungu": None},
+        {"cluster_key": "second", "road_name": "서현중로", "emd": "22222222", "sigungu": None},
+    ]
+    result = road_geometry.fetch_viewport_road_lines(
+        api_key="", domain="", bounds=(0.5, -0.5, 3.5, 2.5), rows=rows,
+    )
+    panned = road_geometry.fetch_viewport_road_lines(
+        api_key="", domain="", bounds=(0.8, -0.5, 3.8, 2.5), rows=rows,
+    )
+    assert [line["cluster_key"] for line in result["lines"]] == ["first", "second"]
+    assert [line["label_point"] for line in result["lines"]] == [(1.0, 0.0), (3.0, 1.0)]
+    assert [line["label_point"] for line in panned["lines"]] == [(1.0, 0.0), (3.0, 1.0)]
+    assert all(len(line["geometry"]["features"]) == 1 for line in result["lines"])
+    assert panned["lines"][0]["geometry"] != result["lines"][0]["geometry"]
