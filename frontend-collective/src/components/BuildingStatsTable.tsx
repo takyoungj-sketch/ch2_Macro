@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildingDisplayName } from "../utils/buildingName";
+import { assetColorVars } from "../collective2/assetAppearance";
 import clsx from "clsx";
 import {
   FilterStatusBar,
@@ -163,11 +164,13 @@ function BuildingTableRow({
   highlighted,
   wide,
   onSelect,
+  colored,
 }: {
   row: BuildingStatsRow;
   highlighted?: boolean;
   wide: boolean;
   onSelect: (row: BuildingStatsRow) => void;
+  colored?: boolean;
 }) {
   return (
     <tr
@@ -180,7 +183,8 @@ function BuildingTableRow({
       data-building-highlight={highlighted ? "1" : undefined}
     >
       <td className="text-[10px] whitespace-nowrap text-center">{assetTypeLabel(row.asset_type)}</td>
-      <td className="name">
+      <td className={clsx("name", colored && "text-[color:var(--asset-ink)] dark:text-[color:var(--asset-glow)]")}
+        style={colored ? assetColorVars(row.asset_type) : undefined}>
         {buildingDisplayName(row)}
         {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
         {row.asset_type !== "presale" &&
@@ -461,7 +465,8 @@ export default function BuildingStatsTable({
                     "!bg-yellow-200 dark:!bg-yellow-700/50")}
                   onClick={() => onSelectRoad?.(row)}>
                   <td className="text-[10px] whitespace-nowrap text-center">{commercialAssetTypeLabel(row.asset_type)}</td>
-                  <td className="name">
+                  <td className={clsx("name", combined && "text-[color:var(--asset-ink)] dark:text-[color:var(--asset-glow)]")}
+                    style={combined ? assetColorVars(row.asset_type) : undefined}>
                     <button type="button" onClick={(event) => { event.stopPropagation(); onSelectRoad?.(row); }}>
                       {textValue(row, "display_name")}
                     </button>
@@ -486,6 +491,7 @@ export default function BuildingStatsTable({
                   key={`${row.building_key}|${row.asset_type}`}
                   row={row}
                   wide={wide}
+                  colored={combined}
                   highlighted={buildingMatchesQuery(row, highlightQuery)}
                   onSelect={onSelect}
                 />

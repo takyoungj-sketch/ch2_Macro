@@ -71,6 +71,7 @@ import {
   encodeCommercialAssetKinds,
   type CommercialAssetKind,
 } from "./utils/commercialAssetTypes";
+import { assetColorVars } from "./collective2/assetAppearance";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
 import { buildCollectiveListContext } from "./api/aiContext";
@@ -672,10 +673,15 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                       type="button"
                       className={clsx(
                         "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900",
-                        on
-                          ? "border-indigo-500 bg-indigo-600 text-white shadow-sm dark:border-indigo-300 dark:bg-indigo-500 dark:text-white"
-                          : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-400 dark:hover:bg-slate-700",
+                        combinedPreview
+                          ? (on
+                            ? "bg-[color:var(--asset-ink)] text-white border-[color:var(--asset-ink)]"
+                            : "bg-white text-[color:var(--asset-ink)] border-[color:var(--asset-ink)] dark:bg-slate-800")
+                          : (on
+                            ? "border-indigo-500 bg-indigo-600 text-white shadow-sm dark:border-indigo-300 dark:bg-indigo-500 dark:text-white"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-400 dark:hover:bg-slate-700"),
                       )}
+                      style={combinedPreview ? assetColorVars(kind) : undefined}
                       onClick={() => {
                         setAssetKinds((prev) => combinedPreview
                           ? (prev.includes(kind)
@@ -686,7 +692,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                       }}
                       aria-pressed={on}
                     >
-                      {RESIDENTIAL_KIND_LABELS[kind]}
+                      {combinedPreview && on ? "✓ " : ""}{RESIDENTIAL_KIND_LABELS[kind]}
                     </button>
                   );
                 })}
@@ -698,9 +704,12 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                       type="button"
                       aria-pressed={on}
                       className={clsx(
-                        "rounded-md border px-2.5 py-1.5 text-xs font-semibold",
-                        on ? "border-cyan-500 bg-cyan-800 text-white" : "border-slate-400 dark:text-white",
+                        "rounded-md border px-2.5 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+                        on
+                          ? "bg-[color:var(--asset-ink)] text-white border-[color:var(--asset-ink)]"
+                          : "bg-white text-[color:var(--asset-ink)] border-[color:var(--asset-ink)] dark:bg-slate-800",
                       )}
+                      style={assetColorVars(kind)}
                       onClick={() => {
                         setCommercialKinds((prev) => prev.includes(kind)
                           ? prev.filter((item) => item !== kind)
@@ -708,7 +717,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                         resetRegion();
                       }}
                     >
-                      {COMMERCIAL_KIND_LABELS[kind]}
+                      {on ? "✓ " : ""}{COMMERCIAL_KIND_LABELS[kind]}
                     </button>
                   );
                 })}
@@ -938,6 +947,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                   ? buildingsQ.data.items.slice(0, MAP_LABEL_LIMIT).map((row) => ({
                       buildingKey: row.building_key,
                       label: buildingDisplayName(row),
+                      assetType: row.asset_type,
                       ...(combinedPreview ? { mean: row.mean, count: row.count } : {}),
                       jibunAddress: row.jibun_address || row.address || null,
                       roadAddress: row.road_address || null,

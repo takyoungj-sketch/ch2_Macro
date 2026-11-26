@@ -37,6 +37,7 @@ import {
   MAX_COLLECTIVE_ANALYSIS_UNITS,
   type CollectiveAnalysisUnit,
 } from "../utils/collectiveAnalysisUnits";
+import { appearanceFor, ASSET_APPEARANCE } from "../collective2/assetAppearance";
 import { resolveUnitAddr2 } from "../utils/flatSidoRegion";
 
 export type MapPanelMode = "normal" | "expanded" | "collapsed";
@@ -69,7 +70,11 @@ export type CollectiveBuildingLabelInput = {
   addr2: string;
 };
 
-export type CollectiveBuildingMapInput = CollectiveBuildingLabelInput & { mean?: number | null; count?: number };
+export type CollectiveBuildingMapInput = CollectiveBuildingLabelInput & {
+  mean?: number | null;
+  count?: number;
+  assetType?: string;
+};
 
 export type CollectiveMapScopeInput = {
   assetType: string;
@@ -664,12 +669,20 @@ export default function CollectiveRegionMapHub({
         ? previous : undefined,
   });
   const viewportLines = viewportRoadsQ.data?.lines;
-  const viewportRoadsFc = useMemo<GeoJSON.FeatureCollection | null>(() => viewportLines?.length ? ({
-    type: "FeatureCollection",
-    features: viewportLines.flatMap((line) => line.geometry.features.map((feature) => ({
-      ...feature, properties: { cluster_key: line.cluster_key },
-    }))),
-  }) : null, [viewportLines]);
+  const viewportRoadsFc = useMemo<GeoJSON.FeatureCollection | null>(() => {
+    if (!viewportLines?.length) return null;
+    const roadsByType = new Map(roadCandidates.map((road) => [road.clusterKey, road.assetType]));
+    return {
+      type: "FeatureCollection",
+      features: viewportLines.flatMap((line) => line.geometry.features.map((feature) => ({
+        ...feature,
+        properties: {
+          cluster_key: line.cluster_key,
+          asset_type: roadsByType.get(line.cluster_key) ?? "collective_shop",
+        },
+      }))),
+    };
+  }, [roadCandidates, viewportLines]);
 
   const placeGeocodeQ = commercial ? roadGeocodeQ : buildingGeocodeQ;
   const placeLabel = commercial
@@ -721,6 +734,7 @@ export default function CollectiveRegionMapHub({
         addr2: primaryRoad.addr2,
         addr3: primaryRoad.addr3,
         addr4: primaryRoad.addr4,
+        assetType: primaryRoad.assetType,
       };
       if (combinedMap) {
         const leaf = road.addr4 || road.addr3;
@@ -968,15 +982,22 @@ export default function CollectiveRegionMapHub({
 
     const addLabel = (
       key: string, label: string, lng: number, lat: number, road: boolean,
-      mean?: number | null, onOpen?: () => void, count?: number,
+      mean?: number | null, onOpen?: () => void, count?: number, assetType?: string,
     ) => {
       const smallSample = count !== undefined && count < 10;
       const nameOnly = count !== undefined && count < 3;
       const el = onOpen ? document.createElement("button") : document.createElement("span");
       el.textContent = label;
+      const look = combinedMap ? appearanceFor(assetType) : undefined;
       el.className = "absolute left-0 top-0 z-10 whitespace-nowrap rounded px-1.5 py-0.5 text-[12px] font-bold leading-none shadow-md ring-1";
-      el.classList.add(...(road ? ["bg-cyan-950", ROAD_LABEL_COLOR, "ring-cyan-300"]
-        : ["bg-slate-950/85", BUILDING_LABEL_COLOR, "ring-white/80"]));
+      if (look) {
+        el.style.background = "#0F172A";
+        el.style.color = look.glow;
+        el.style.border = `2px solid ${look.glow}`;
+      } else {
+        el.classList.add(...(road ? ["bg-cyan-950", ROAD_LABEL_COLOR, "ring-cyan-300"]
+          : ["bg-slate-950/85", BUILDING_LABEL_COLOR, "ring-white/80"]));
+      }
       el.dataset.collectiveMapLabel = road ? "road" : "building";
       el.style.textShadow = "0 1px 2px rgba(0,0,0,0.95)";
       const prices = priceLabel(count, mean);
@@ -990,7 +1011,8 @@ export default function CollectiveRegionMapHub({
         el.setAttribute("type", "button");
         el.classList.add("pointer-events-auto", "cursor-pointer", "focus-visible:ring-2", "focus-visible:ring-yellow-300");
         const detail = nameOnly || count === undefined ? "거래 정보" : prices;
-        el.setAttribute("aria-label", `${road ? "도로명" : "단지"} ${label}, ${detail}, 상세 열기`);
+        const kind = look ? `${look.label} ` : (road ? "도로명 " : "단지 ");
+        el.setAttribute("aria-label", `${kind}${label}, ${detail}, 상세 열기`);
         el.addEventListener("pointerdown", (event) => event.stopPropagation());
         el.addEventListener("click", (event) => { event.stopPropagation(); onOpen(); });
       }
@@ -1005,7 +1027,8 @@ export default function CollectiveRegionMapHub({
       const candidate = buildingsByKey.get(point.building_key);
       addLabel(`building:${point.building_key}`, candidate?.label ?? point.label,
         point.longitude, point.latitude, false, candidate?.mean,
-        onOpenBuilding ? () => onOpenBuilding(point.building_key) : undefined, candidate?.count);
+        onOpenBuilding ? () => onOpenBuilding(point.building_key) : undefined, candidate?.count,
+        candidate?.assetType);
     }
 
     const roadsByKey = new Map(roadCandidates.slice(0, MAP_LABEL_LIMIT).map((road) => [road.clusterKey, road]));
@@ -1013,12 +1036,14 @@ export default function CollectiveRegionMapHub({
       const candidate = roadsByKey.get(line.cluster_key);
       if (!line.label_point || !candidate || (roadLinePoint && line.cluster_key === primaryRoad?.clusterKey)) continue;
       addLabel(`road:${line.cluster_key}`, candidate.roadName, line.label_point[0], line.label_point[1],
-        true, candidate.mean, onOpenRoad ? () => onOpenRoad(line.cluster_key) : undefined, candidate.count);
+        true, candidate.mean, onOpenRoad ? () => onOpenRoad(line.cluster_key) : undefined, candidate.count,
+        candidate.assetType);
     }
     for (const point of combinedMap ? [] : roadMapPointsQ.data?.points ?? []) {
       const candidate = roadsByKey.get(point.cluster_key);
       addLabel(`road:${point.cluster_key}`, candidate?.label ?? point.label, point.longitude, point.latitude,
-        true, candidate?.mean, onOpenRoad ? () => onOpenRoad(point.cluster_key) : undefined, candidate?.count);
+        true, candidate?.mean, onOpenRoad ? () => onOpenRoad(point.cluster_key) : undefined, candidate?.count,
+        candidate?.assetType);
     }
 
     const ordered = [...nodes.entries()];
@@ -1434,8 +1459,25 @@ export default function CollectiveRegionMapHub({
             ) : null}
             {viewportRoadsFc && (
               <Source id="commercial-viewport-roads" type="geojson" data={viewportRoadsFc}>
-                <Layer id="commercial-viewport-roads" type="line"
-                  paint={{ "line-color": "#38bdf8", "line-width": 4, "line-opacity": 0.8 }} />
+                {combinedMap ? (
+                  <>
+                    <Layer id="commercial-viewport-roads-shop" type="line"
+                      filter={["==", ["get", "asset_type"], "collective_shop"]}
+                      paint={{ "line-color": ASSET_APPEARANCE.collective_shop.glow, "line-width": 4, "line-opacity": 0.9 }} />
+                    <Layer id="commercial-viewport-roads-factory" type="line"
+                      filter={["==", ["get", "asset_type"], "collective_factory"]}
+                      layout={{ "line-cap": "round", "line-join": "round" }}
+                      paint={{
+                        "line-color": ASSET_APPEARANCE.collective_factory.glow,
+                        "line-width": 4,
+                        "line-opacity": 0.9,
+                        "line-dasharray": [2, 1.5],
+                      }} />
+                  </>
+                ) : (
+                  <Layer id="commercial-viewport-roads" type="line"
+                    paint={{ "line-color": "#38bdf8", "line-width": 4, "line-opacity": 0.8 }} />
+                )}
               </Source>
             )}
             {roadLineFc ? (
@@ -1455,9 +1497,14 @@ export default function CollectiveRegionMapHub({
                   type="line"
                   layout={{ "line-cap": "round", "line-join": "round" }}
                   paint={{
-                    "line-color": "#38bdf8",
+                    "line-color": combinedMap
+                      ? (appearanceFor(primaryRoad?.assetType)?.glow ?? ASSET_APPEARANCE.collective_shop.glow)
+                      : "#38bdf8",
                     "line-width": 5,
                     "line-opacity": 1,
+                    ...(combinedMap && primaryRoad?.assetType === "collective_factory"
+                      ? { "line-dasharray": [2, 1.5] }
+                      : {}),
                   }}
                 />
               </Source>
@@ -1465,7 +1512,14 @@ export default function CollectiveRegionMapHub({
             {roadLinePoint && primaryRoad && onOpenRoad && (
               <Marker longitude={roadLinePoint[0]} latitude={roadLinePoint[1]} anchor="bottom">
                 <button type="button" data-collective-selected-road="1"
-                  className={`rounded border border-cyan-300 bg-cyan-950 px-2 py-1 text-xs font-bold shadow-md ${ROAD_LABEL_COLOR}`}
+                  className={combinedMap && appearanceFor(primaryRoad.assetType)
+                    ? "rounded border-2 px-2 py-1 text-xs font-bold shadow-md"
+                    : `rounded border border-cyan-300 bg-cyan-950 px-2 py-1 text-xs font-bold shadow-md ${ROAD_LABEL_COLOR}`}
+                  style={combinedMap && appearanceFor(primaryRoad.assetType) ? {
+                    background: "#0F172A",
+                    color: appearanceFor(primaryRoad.assetType)?.glow,
+                    borderColor: appearanceFor(primaryRoad.assetType)?.glow,
+                  } : undefined}
                   onClick={(event) => { event.stopPropagation(); onOpenRoad(primaryRoad.clusterKey); }}>
                   {primaryRoad.roadName}
                   <span className="block text-[10px]">
