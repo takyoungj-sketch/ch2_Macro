@@ -54,6 +54,7 @@ export type CommercialRoadLabelInput = {
   addr4?: string | null;
   mean?: number | null;
   count?: number;
+  assetType?: string;
 };
 
 export type CommercialRoadMapInput = CommercialRoadLabelInput;
@@ -724,7 +725,7 @@ export default function CollectiveRegionMapHub({
       if (combinedMap) {
         const leaf = road.addr4 || road.addr3;
         const resolved = await fetchCollectiveMapResolveCodes({
-          assetType: "collective_shop", addr1: road.addr1, addr2: road.addr2,
+          assetType: road.assetType || "collective_shop", addr1: road.addr1, addr2: road.addr2,
           gu: road.addr4 && road.addr3 ? [road.addr3] : [],
           leaf: leaf ? [leaf] : [], commercial: true,
         });

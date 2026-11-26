@@ -511,7 +511,8 @@ def roads_in_viewport(body: CommercialViewportRoadRequest, db: Session = Depends
                NULLIF(btrim(eupmyeondong_code::text), '') AS emd,
                NULLIF(btrim(sigungu_code::text), '') AS sigungu
         FROM commercial_clusters
-        WHERE asset_type = 'collective_shop' AND cluster_key = ANY(CAST(:keys AS char(64)[]))
+        WHERE asset_type IN ('collective_shop', 'collective_factory')
+          AND cluster_key = ANY(CAST(:keys AS char(64)[]))
           AND road_name IS NOT NULL AND btrim(road_name) <> ''
     """), {"keys": list(dict.fromkeys(body.cluster_keys))}).mappings().all()
     if not rows:

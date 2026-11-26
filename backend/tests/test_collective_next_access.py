@@ -46,6 +46,36 @@ def test_viewport_lines_are_closed_without_access(monkeypatch):
     assert denied.status_code == 403
 
 
+def test_viewport_lines_query_only_shop_and_factory(monkeypatch):
+    from app.collective_commercial.router import roads_in_viewport
+    from app.collective_commercial.schemas import CommercialViewportRoadRequest
+
+    captured: dict[str, str] = {}
+
+    class Rows:
+        def mappings(self):
+            return self
+
+        def all(self):
+            return []
+
+    class FakeDB:
+        def execute(self, sql, _params=None):
+            captured["sql"] = str(sql)
+            return Rows()
+
+    monkeypatch.setattr(settings, "vworld_api_key", "test-key")
+    body = CommercialViewportRoadRequest(
+        cluster_keys=["shop-key"], bounds=(127.0, 37.4, 127.05, 37.45),
+    )
+    result = roads_in_viewport(body, FakeDB())
+    assert result == {"lines": [], "truncated": False, "unavailable": 0}
+    sql = captured["sql"]
+    assert "collective_shop" in sql
+    assert "collective_factory" in sql
+    assert "apartment" not in sql
+
+
 def test_access_route_is_403_then_200(monkeypatch):
     from app.main import app
 

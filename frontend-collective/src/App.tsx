@@ -65,6 +65,12 @@ import {
   toggleResidentialAssetKind,
   type ResidentialAssetKind,
 } from "./utils/residentialAssetTypes";
+import {
+  COMMERCIAL_ASSET_KINDS,
+  COMMERCIAL_KIND_LABELS,
+  encodeCommercialAssetKinds,
+  type CommercialAssetKind,
+} from "./utils/commercialAssetTypes";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
 import { buildCollectiveListContext } from "./api/aiContext";
@@ -77,6 +83,8 @@ import {
 type AnalysisScope = {
   assetType: AssetSelectorType;
   includeShops?: boolean;
+  commercialAssetType?: string;
+  residentialOn?: boolean;
   addr1: string;
   addr2: string;
   guList: string[];
@@ -115,7 +123,9 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
   const { entitled, narrow, requestPaid } = useProductAccess();
   const restoredRegion = useRef(false);
   const [assetKinds, setAssetKinds] = useState<ResidentialAssetKind[]>(["apartment"]);
-  const [includeShops, setIncludeShops] = useState(combinedPreview);
+  const [commercialKinds, setCommercialKinds] = useState<CommercialAssetKind[]>([]);
+  const includeShops = commercialKinds.length > 0;
+  const commercialType = includeShops ? encodeCommercialAssetKinds(commercialKinds) : "";
   const assetType = useMemo(() => encodeResidentialAssetKinds(assetKinds), [assetKinds]);
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
@@ -210,11 +220,14 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
     placeholderData: (prev) => prev,
   });
   const addr2Q = useQuery({
-    queryKey: includeShops ? ["coll-addr2-with-shops", addr1, assetType] : ["coll-addr2", addr1, assetType],
+    queryKey: includeShops ? ["coll-addr2-with-shops", addr1, assetType, commercialType] : ["coll-addr2", addr1, assetType],
     queryFn: async () => {
-      if (!includeShops) return fetchAddr2(addr1, assetType);
-      const [residential, shops] = await Promise.all([fetchAddr2(addr1, assetType), fetchCommercialAddr2(addr1, "collective_shop")]);
-      return [...new Set([...residential, ...shops])].sort((a, b) => a.localeCompare(b, "ko"));
+      if (!assetKinds.length && !includeShops) return [];
+      const parts: Promise<string[]>[] = [];
+      if (assetKinds.length) parts.push(fetchAddr2(addr1, assetType));
+      if (includeShops) parts.push(fetchCommercialAddr2(addr1, commercialType));
+      const lists = await Promise.all(parts);
+      return [...new Set(lists.flat())].sort((a, b) => a.localeCompare(b, "ko"));
     },
     enabled: !!addr1,
     staleTime: REGION_LIST_STALE_MS,
@@ -265,27 +278,37 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
 
   const addr3Options = (namesOnly: boolean) => {
     const period = namesOnly ? undefined : regionPeriod;
-    const residential = fetchAddr3WithCounts(addr1, addr2, assetType, period, namesOnly);
-    return includeShops
-      ? combinedRegionOptions(residential, fetchCommercialAddr3(addr1, addr2, "collective_shop", period, namesOnly))
-      : residential;
+    if (!assetKinds.length && !includeShops) return Promise.resolve([]);
+    const residential = assetKinds.length
+      ? fetchAddr3WithCounts(addr1, addr2, assetType, period, namesOnly)
+      : null;
+    const commercial = includeShops
+      ? fetchCommercialAddr3(addr1, addr2, commercialType, period, namesOnly)
+      : null;
+    if (residential && commercial) return combinedRegionOptions(residential, commercial);
+    return residential ?? commercial ?? Promise.resolve([]);
   };
   const leafOptions = (namesOnly: boolean) => {
     const period = namesOnly ? undefined : regionPeriod;
-    const residential = fetchLeafRegions(addr1, addr2, guList, assetType, period, namesOnly);
-    return includeShops
-      ? combinedRegionOptions(residential, fetchCommercialLeafRegions(addr1, addr2, guList, "collective_shop", period, namesOnly))
-      : residential;
+    if (!assetKinds.length && !includeShops) return Promise.resolve([]);
+    const residential = assetKinds.length
+      ? fetchLeafRegions(addr1, addr2, guList, assetType, period, namesOnly)
+      : null;
+    const commercial = includeShops
+      ? fetchCommercialLeafRegions(addr1, addr2, guList, commercialType, period, namesOnly)
+      : null;
+    if (residential && commercial) return combinedRegionOptions(residential, commercial);
+    return residential ?? commercial ?? Promise.resolve([]);
   };
 
   const guNamesQ = useQuery({
-    queryKey: ["coll-gu-names", addr1, addr2, assetType, includeShops],
+    queryKey: ["coll-gu-names", addr1, addr2, assetType, includeShops, commercialType],
     queryFn: () => addr3Options(true),
     enabled: chipsReady && hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
   const guCountsQ = useQuery({
-    queryKey: ["coll-gu", addr1, addr2, assetType, includeShops, regionPeriod],
+    queryKey: ["coll-gu", addr1, addr2, assetType, includeShops, commercialType, regionPeriod],
     queryFn: () => addr3Options(false),
     enabled: chipsReady && hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
@@ -296,25 +319,25 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
   );
 
   const flatLeafNamesQ = useQuery({
-    queryKey: ["coll-flat-leaf-names", addr1, addr2, assetType, includeShops],
+    queryKey: ["coll-flat-leaf-names", addr1, addr2, assetType, includeShops, commercialType],
     queryFn: () => addr3Options(true),
     enabled: chipsReady && !hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
   const flatLeafCountsQ = useQuery({
-    queryKey: ["coll-flat-leaf", addr1, addr2, assetType, includeShops, regionPeriod],
+    queryKey: ["coll-flat-leaf", addr1, addr2, assetType, includeShops, commercialType, regionPeriod],
     queryFn: () => addr3Options(false),
     enabled: chipsReady && !hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
   const leafNamesQ = useQuery({
-    queryKey: ["coll-leaf-names", addr1, addr2, assetType, includeShops, guList],
+    queryKey: ["coll-leaf-names", addr1, addr2, assetType, includeShops, commercialType, guList],
     queryFn: () => leafOptions(true),
     enabled: chipsReady && hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
   const leafCountsQ = useQuery({
-    queryKey: ["coll-leaf", addr1, addr2, assetType, includeShops, guList, regionPeriod],
+    queryKey: ["coll-leaf", addr1, addr2, assetType, includeShops, commercialType, guList, regionPeriod],
     queryFn: () => leafOptions(false),
     enabled: chipsReady && hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
@@ -419,16 +442,16 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
         sort: "count",
       });
     },
-    enabled: scope !== null && !!scope.addr2,
+    enabled: scope !== null && !!scope.addr2 && scope.residentialOn !== false,
   });
 
   const shopsQ = useQuery({
     queryKey: ["collective-preview-shops", scope],
-    enabled: combinedPreview && !!scope?.includeShops && !!scope.addr2,
+    enabled: combinedPreview && !!scope?.includeShops && !!scope.commercialAssetType && !!scope.addr2,
     queryFn: () => {
-      if (!scope) throw new Error("no scope");
+      if (!scope?.commercialAssetType) throw new Error("no scope");
       return fetchAllCommercialClusters({
-        asset_type: "collective_shop", addr1: scope.addr1, addr2: scope.addr2,
+        asset_type: scope.commercialAssetType, addr1: scope.addr1, addr2: scope.addr2,
         addr3_list: scope.hasIntermediate ? scope.guList : scope.leafList,
         addr4_list: scope.hasIntermediate ? scope.leafList : undefined,
         region_codes: scope.region_codes, region_code_level: scope.region_code_level, region_addrs: scope.region_addrs,
@@ -522,7 +545,10 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
     liveFilters,
     regionCodeScope,
   );
-  const scopeStale = regionScopeStale || Boolean(scope && combinedPreview && scope.includeShops !== includeShops);
+  const scopeStale = regionScopeStale || Boolean(scope && combinedPreview && (
+    scope.includeShops !== includeShops || (scope.commercialAssetType ?? "") !== commercialType
+    || (scope.residentialOn !== false) !== (assetKinds.length > 0)
+  ));
 
   const isApartment = assetKinds.includes("apartment");
   const regionalReady = Boolean(scope) && !scopeStale && isApartment;
@@ -559,10 +585,13 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
 
   const runAnalysis = () => {
     if (!addr2 || !structureQ.isSuccess) return;
+    if (!assetKinds.length && !includeShops) return;
     markRegionScopeCaptured(regionCodeScope);
     setScope({
       assetType,
       includeShops,
+      commercialAssetType: commercialType,
+      residentialOn: assetKinds.length > 0,
       addr1,
       addr2,
       guList: [...guList],
@@ -630,7 +659,9 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
             <div className="space-y-1">
               <span className="text-xs text-slate-500 dark:text-slate-400">유형</span>
               <p className="text-[10px] text-slate-400 leading-snug">
-                기본은 아파트. 필요 시 유형을 추가해 함께 조회합니다.
+                {combinedPreview
+                  ? "기본은 아파트만 켜져 있습니다. 다른 유형은 필요할 때 켭니다."
+                  : "기본은 아파트. 필요 시 유형을 추가해 함께 조회합니다."}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {RESIDENTIAL_ASSET_KINDS.map((kind) => {
@@ -646,7 +677,11 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                           : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-400 dark:hover:bg-slate-700",
                       )}
                       onClick={() => {
-                        setAssetKinds((prev) => toggleResidentialAssetKind(prev, kind));
+                        setAssetKinds((prev) => combinedPreview
+                          ? (prev.includes(kind)
+                            ? prev.filter((item) => item !== kind)
+                            : RESIDENTIAL_ASSET_KINDS.filter((item) => item === kind || prev.includes(item)))
+                          : toggleResidentialAssetKind(prev, kind));
                         resetRegion();
                       }}
                       aria-pressed={on}
@@ -655,15 +690,35 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                     </button>
                   );
                 })}
-                {combinedPreview && (
-                  <button type="button" aria-pressed={includeShops}
-                    className={clsx("rounded-md border px-2.5 py-1.5 text-xs font-semibold",
-                      includeShops ? "border-cyan-500 bg-cyan-800 text-white" : "border-slate-400 dark:text-white")}
-                    onClick={() => setIncludeShops((value) => !value)}>
-                    집합상가
-                  </button>
-                )}
+                {combinedPreview && COMMERCIAL_ASSET_KINDS.map((kind) => {
+                  const on = commercialKinds.includes(kind);
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      aria-pressed={on}
+                      className={clsx(
+                        "rounded-md border px-2.5 py-1.5 text-xs font-semibold",
+                        on ? "border-cyan-500 bg-cyan-800 text-white" : "border-slate-400 dark:text-white",
+                      )}
+                      onClick={() => {
+                        setCommercialKinds((prev) => prev.includes(kind)
+                          ? prev.filter((item) => item !== kind)
+                          : COMMERCIAL_ASSET_KINDS.filter((item) => item === kind || prev.includes(item)));
+                        resetRegion();
+                      }}
+                    >
+                      {COMMERCIAL_KIND_LABELS[kind]}
+                    </button>
+                  );
+                })}
               </div>
+              {combinedPreview && assetKinds.length === 0 && commercialKinds.length > 0 && (
+                <p className="text-xs text-slate-500">선택한 주거 유형이 없습니다.</p>
+              )}
+              {combinedPreview && assetKinds.length === 0 && commercialKinds.length === 0 && (
+                <p className="text-xs text-slate-500">선택한 유형이 없습니다. 유형을 하나 이상 켜 주세요.</p>
+              )}
             </div>
 
             {narrow ? (
@@ -894,10 +949,12 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
               roadCandidates={scope && shopsQ.data ? shopsQ.data.items.flatMap((row) => row.road_name ? [{
                 clusterKey: row.cluster_key, label: row.road_name, roadName: row.road_name,
                 addr1: scope.addr1, addr2: scope.addr2, addr3: row.addr3, addr4: row.addr4, mean: row.mean, count: row.count,
+                assetType: row.asset_type,
               }] : []) : []}
               selectedRoads={scope && mappedShop?.road_name ? [{
                 clusterKey: mappedShop.cluster_key, label: mappedShop.road_name, roadName: mappedShop.road_name,
                 addr1: scope.addr1, addr2: scope.addr2, addr3: mappedShop.addr3, addr4: mappedShop.addr4, mean: mappedShop.mean, count: mappedShop.count,
+                assetType: mappedShop.asset_type,
               }] : []}
               combinedMap={combinedPreview}
               onOpenBuilding={combinedPreview ? (key) => {
@@ -950,8 +1007,8 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
           )}
           {scope && buildingsQ.isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>}
           {scope && buildingsQ.isError && <p className="text-sm text-red-600">건물 목록을 불러오지 못했습니다.</p>}
-          {scope?.includeShops && shopsQ.isLoading && <p role="status" className="text-sm text-slate-500">상가 도로 목록을 불러오는 중입니다…</p>}
-          {scope?.includeShops && shopsQ.isError && <p role="alert" className="text-sm text-red-600">상가 도로 목록을 불러오지 못했습니다.</p>}
+          {scope?.includeShops && shopsQ.isLoading && <p role="status" className="text-sm text-slate-500">비주거 도로 목록을 불러오는 중입니다…</p>}
+          {scope?.includeShops && shopsQ.isError && <p role="alert" className="text-sm text-red-600">비주거 도로 목록을 불러오지 못했습니다.</p>}
           {periodsDiffer && <p role="status" className="text-xs text-amber-700 dark:text-amber-300">주거와 상가의 실제 집계기간이 다릅니다. 각각의 상세에서 기간을 확인하세요.</p>}
           {scope && (buildingsQ.data || shopsQ.data) && (
             <>
@@ -959,7 +1016,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                 <p className="text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-[12rem]">
                   {scope.addr1}
                   {!isFlatSidoAddr2(scope.addr2) && scope.addr2 ? ` ${scope.addr2}` : ""} · 건물 {buildingsQ.data?.total ?? "—"}개
-                  {scope.includeShops && ` · 상가 도로 ${shopsQ.data?.total ?? "—"}개`}
+                  {scope.includeShops && ` · 비주거 도로 ${shopsQ.data?.total ?? "—"}개`}
                   {buildingsQ.data?.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
                     <span className="ml-2 text-indigo-600 dark:text-indigo-400">
                       · {buildingsQ.data.stats_as_of_label}
@@ -1039,12 +1096,12 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
         <CommercialClusterDetailModal
           key={selectedShop.cluster_key}
           row={selectedShop}
-          scope={{ ...scope, assetType: "collective_shop" }}
+          scope={{ ...scope, assetType: selectedShop.asset_type }}
           windowYears={scope.windowYears}
           periodStart={shopsQ.data?.period_start}
           periodEnd={shopsQ.data?.period_end}
           statsAsOfLabel={shopsQ.data?.stats_as_of_label}
-          peerClusters={shopsQ.data?.items}
+          peerClusters={shopsQ.data?.items.filter((item) => item.asset_type === selectedShop.asset_type)}
           onClose={() => setSelectedShop(null)}
         />
       )}
