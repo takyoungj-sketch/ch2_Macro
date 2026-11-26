@@ -40,13 +40,16 @@ from app.collective_commercial.tx_rows import apply_commercial_tx_period, commer
 from app.collective.region_structure import detect_region_structure
 from app.collective.resolve_codes import resolve_collective_map_codes
 from app.collective.schemas import CollectiveMapResolveCodesResponse, RegionOption, RegionStructureResponse
+from app.collective2.access import require_collective_next
 from app.collective_commercial.road_geocode import (
     geocode_commercial_road,
     resolve_commercial_map_points,
 )
 from app.collective_commercial.road_geometry import (
     VWORLD_ROAD_LAYER,
+    fetch_admin_road_line,
     fetch_road_line_collection,
+    fetch_viewport_road_lines,
 )
 from app.collective_commercial.schemas import (
     CommercialAddressListResponse,
@@ -67,6 +70,7 @@ from app.collective_commercial.schemas import (
     CommercialRoadLineResponse,
     CommercialRoadMapPointsRequest,
     CommercialRoadMapPointsResponse,
+    CommercialViewportRoadRequest,
     CommercialRollingStatPoint,
     CommercialRollingStatsResponse,
     CommercialTransactionListResponse,
@@ -420,18 +424,20 @@ def geocode_road_for_map(body: CommercialRoadGeocodeRequest):
 def map_points_for_roads(
     body: CommercialRoadMapPointsRequest,
     db: Session = Depends(get_collective_db),
+    cached_only: bool = False,
 ):
     """선택 지역 도로명 cluster 대표점 — 지오코딩 결과는 DB에 캐시."""
     if db is None:
         raise HTTPException(503, "collective_stats DB 미연결")
     key = (settings.vworld_api_key or "").strip()
-    if not key:
+    if not key and not cached_only:
         raise HTTPException(503, "VWORLD_API_KEY가 설정되지 않았습니다.")
     try:
         points, unresolved = resolve_commercial_map_points(
             db.connection(),
             api_key=key,
             roads=[item.model_dump() for item in body.roads],
+            cached_only=cached_only,
         )
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
@@ -448,18 +454,27 @@ def road_line_for_map(body: CommercialRoadLineRequest):
             detail="VWORLD_API_KEY가 설정되지 않았습니다.",
         )
     domain = (settings.vworld_api_domain or "localhost").strip()
+    label_point = None
     try:
-        fc = fetch_road_line_collection(
-            api_key=key,
-            domain=domain,
-            road_name=body.road_name,
-            west=body.west,
-            south=body.south,
-            east=body.east,
-            north=body.north,
-            longitude=body.longitude,
-            latitude=body.latitude,
-        )
+        if body.admin_level is not None or body.admin_code is not None:
+            if not body.admin_level or not body.admin_code:
+                raise ValueError("admin_boundary_required")
+            fc, label_point = fetch_admin_road_line(
+                api_key=key, domain=domain, road_name=body.road_name,
+                admin_level=body.admin_level, admin_code=body.admin_code,
+            )
+        else:
+            fc = fetch_road_line_collection(
+                api_key=key,
+                domain=domain,
+                road_name=body.road_name,
+                west=body.west,
+                south=body.south,
+                east=body.east,
+                north=body.north,
+                longitude=body.longitude,
+                latitude=body.latitude,
+            )
     except ValueError as exc:
         return CommercialRoadLineResponse(
             ok=False,
@@ -477,7 +492,37 @@ def road_line_for_map(body: CommercialRoadLineRequest):
         feature_collection=fc,
         matched_count=len(feats),
         error=None if feats else "not_found",
+        label_point=label_point,
     )
+
+
+@router.post("/roads/viewport-lines", dependencies=[Depends(require_collective_next)])
+def roads_in_viewport(body: CommercialViewportRoadRequest, db: Session = Depends(get_collective_db)):
+    """집합2 통합 지도의 확대 도로선. 기존 집합 목록의 응답 규칙은 바꾸지 않는다."""
+    west, south, east, north = body.bounds
+    if not (-180 <= west < east <= 180 and -90 <= south < north <= 90 and
+            east - west <= 0.2 and north - south <= 0.2):
+        raise HTTPException(400, "지도 확대 범위를 확인해 주세요.")
+    key = (settings.vworld_api_key or "").strip()
+    if not key:
+        raise HTTPException(503, "VWorld에 연결할 수 없습니다.")
+    rows = db.execute(text("""
+        SELECT btrim(cluster_key::text) AS cluster_key, road_name,
+               NULLIF(btrim(eupmyeondong_code::text), '') AS emd,
+               NULLIF(btrim(sigungu_code::text), '') AS sigungu
+        FROM commercial_clusters
+        WHERE asset_type = 'collective_shop' AND cluster_key = ANY(CAST(:keys AS char(64)[]))
+          AND road_name IS NOT NULL AND btrim(road_name) <> ''
+    """), {"keys": list(dict.fromkeys(body.cluster_keys))}).mappings().all()
+    if not rows:
+        return {"lines": [], "truncated": False, "unavailable": 0}
+    try:
+        return fetch_viewport_road_lines(
+            api_key=key, domain=(settings.vworld_api_domain or "localhost").strip(),
+            bounds=body.bounds, rows=rows,
+        )
+    except ValueError as exc:
+        raise HTTPException(502, "VWorld 도로선을 조회하지 못했습니다.") from exc
 
 
 @router.get("/clusters", response_model=CommercialClusterListResponse)

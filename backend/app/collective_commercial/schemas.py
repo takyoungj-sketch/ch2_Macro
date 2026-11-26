@@ -468,6 +468,8 @@ class CommercialRoadLineRequest(BaseModel):
     south: Optional[float] = None
     east: Optional[float] = None
     north: Optional[float] = None
+    admin_level: Optional[Literal["sigungu", "eupmyeondong"]] = None
+    admin_code: Optional[str] = Field(default=None, pattern=r"^(?:[0-9]{5}|[0-9]{8})$")
 
 
 class CommercialRoadLineResponse(BaseModel):
@@ -477,3 +479,9 @@ class CommercialRoadLineResponse(BaseModel):
     feature_collection: dict
     matched_count: int
     error: Optional[str] = None
+    label_point: Optional[tuple[float, float]] = None
+
+
+class CommercialViewportRoadRequest(BaseModel):
+    cluster_keys: list[str] = Field(min_length=1, max_length=2000)
+    bounds: tuple[float, float, float, float]

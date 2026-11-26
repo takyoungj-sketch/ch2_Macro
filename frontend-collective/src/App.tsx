@@ -16,13 +16,16 @@ import {
 } from "./api/client";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
+import { fetchAllCommercialClusters, fetchCommercialAddr2, fetchCommercialAddr3, fetchCommercialLeafRegions } from "./api/commercialClient";
+import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
+import { clusterMatchesQuery } from "./components/CommercialClusterTable";
 import BuildingStatsTable, { buildingMatchesQuery } from "./components/BuildingStatsTable";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import BuildingKeySplitGuard from "./components/BuildingKeySplitGuard";
 import { CandidateSwitchStatus, switchToCandidate, type CandidateSwitchState } from "./components/candidateSwitch";
 import RegionalRegressionModal from "./components/RegionalRegressionModal";
-import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
+import CollectiveRegionMapHub, { MAP_LABEL_LIMIT, type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import CollectiveAnalysisGuide from "./components/CollectiveAnalysisGuide";
@@ -41,7 +44,7 @@ import StatsWindowToggle, {
   normalizeStatsWindowYears,
   type StatsWindowYears,
 } from "./components/StatsWindowToggle";
-import type { AssetSelectorType, RegionOption } from "./types";
+import type { AssetSelectorType, CommercialClusterRow, RegionOption } from "./types";
 import {
   hasYearFilter,
 } from "./utils/contractYearRange";
@@ -73,6 +76,7 @@ import {
 } from "./utils/collectiveAnalysisUnits";
 type AnalysisScope = {
   assetType: AssetSelectorType;
+  includeShops?: boolean;
   addr1: string;
   addr2: string;
   guList: string[];
@@ -88,12 +92,30 @@ type AnalysisScope = {
 };
 
 const RESIDENTIAL_REGION_KEY = "ch2.collective.residential.region";
+const EMPTY_BUILDINGS: BuildingStatsRow[] = [];
 
-export default function App() {
+async function combinedRegionOptions(residential: Promise<RegionOption[]>, commercial: Promise<RegionOption[]>) {
+  const [buildings, shops] = await Promise.all([residential, commercial]);
+  const options = new Map<string, RegionOption>();
+  for (const row of [...buildings, ...shops]) {
+    const key = `${row.parent ?? ""}|${row.name}`;
+    const previous = options.get(key);
+    const count = (previous?.count ?? 0) + row.count;
+    const min = row.min_reliable_count ?? previous?.min_reliable_count;
+    options.set(key, {
+      ...row, count, min_reliable_count: min,
+      disabled: min === undefined ? row.disabled && (previous?.disabled ?? true) : count < min,
+    });
+  }
+  return [...options.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));
+}
+
+export default function App({ combinedPreview = false }: { combinedPreview?: boolean }) {
   const qc = useQueryClient();
   const { entitled, narrow, requestPaid } = useProductAccess();
   const restoredRegion = useRef(false);
   const [assetKinds, setAssetKinds] = useState<ResidentialAssetKind[]>(["apartment"]);
+  const [includeShops, setIncludeShops] = useState(combinedPreview);
   const assetType = useMemo(() => encodeResidentialAssetKinds(assetKinds), [assetKinds]);
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
@@ -164,6 +186,8 @@ export default function App() {
     period_end?: string | null;
     stats_as_of_label?: string;
   } | null>(null);
+  const [selectedShop, setSelectedShop] = useState<CommercialClusterRow | null>(null);
+  const [mappedShop, setMappedShop] = useState<CommercialClusterRow | null>(null);
   const [candSwitch, setCandSwitch] = useState<CandidateSwitchState>({ status: "idle" });
   const [regionalOpen, setRegionalOpen] = useState(false);
   const [aiHint, setAiHint] = useState<string | null>(null);
@@ -186,8 +210,12 @@ export default function App() {
     placeholderData: (prev) => prev,
   });
   const addr2Q = useQuery({
-    queryKey: ["coll-addr2", addr1, assetType],
-    queryFn: () => fetchAddr2(addr1, assetType),
+    queryKey: includeShops ? ["coll-addr2-with-shops", addr1, assetType] : ["coll-addr2", addr1, assetType],
+    queryFn: async () => {
+      if (!includeShops) return fetchAddr2(addr1, assetType);
+      const [residential, shops] = await Promise.all([fetchAddr2(addr1, assetType), fetchCommercialAddr2(addr1, "collective_shop")]);
+      return [...new Set([...residential, ...shops])].sort((a, b) => a.localeCompare(b, "ko"));
+    },
     enabled: !!addr1,
     staleTime: REGION_LIST_STALE_MS,
   });
@@ -235,15 +263,30 @@ export default function App() {
       }
     : undefined;
 
+  const addr3Options = (namesOnly: boolean) => {
+    const period = namesOnly ? undefined : regionPeriod;
+    const residential = fetchAddr3WithCounts(addr1, addr2, assetType, period, namesOnly);
+    return includeShops
+      ? combinedRegionOptions(residential, fetchCommercialAddr3(addr1, addr2, "collective_shop", period, namesOnly))
+      : residential;
+  };
+  const leafOptions = (namesOnly: boolean) => {
+    const period = namesOnly ? undefined : regionPeriod;
+    const residential = fetchLeafRegions(addr1, addr2, guList, assetType, period, namesOnly);
+    return includeShops
+      ? combinedRegionOptions(residential, fetchCommercialLeafRegions(addr1, addr2, guList, "collective_shop", period, namesOnly))
+      : residential;
+  };
+
   const guNamesQ = useQuery({
-    queryKey: ["coll-gu-names", addr1, addr2, assetType],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, undefined, true),
+    queryKey: ["coll-gu-names", addr1, addr2, assetType, includeShops],
+    queryFn: () => addr3Options(true),
     enabled: chipsReady && hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
   const guCountsQ = useQuery({
-    queryKey: ["coll-gu", addr1, addr2, assetType, regionPeriod],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionPeriod),
+    queryKey: ["coll-gu", addr1, addr2, assetType, includeShops, regionPeriod],
+    queryFn: () => addr3Options(false),
     enabled: chipsReady && hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
@@ -253,26 +296,26 @@ export default function App() {
   );
 
   const flatLeafNamesQ = useQuery({
-    queryKey: ["coll-flat-leaf-names", addr1, addr2, assetType],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, undefined, true),
+    queryKey: ["coll-flat-leaf-names", addr1, addr2, assetType, includeShops],
+    queryFn: () => addr3Options(true),
     enabled: chipsReady && !hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
   const flatLeafCountsQ = useQuery({
-    queryKey: ["coll-flat-leaf", addr1, addr2, assetType, regionPeriod],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionPeriod),
+    queryKey: ["coll-flat-leaf", addr1, addr2, assetType, includeShops, regionPeriod],
+    queryFn: () => addr3Options(false),
     enabled: chipsReady && !hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
   const leafNamesQ = useQuery({
-    queryKey: ["coll-leaf-names", addr1, addr2, assetType, guList],
-    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType, undefined, true),
+    queryKey: ["coll-leaf-names", addr1, addr2, assetType, includeShops, guList],
+    queryFn: () => leafOptions(true),
     enabled: chipsReady && hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
   const leafCountsQ = useQuery({
-    queryKey: ["coll-leaf", addr1, addr2, assetType, guList, regionPeriod],
-    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType, regionPeriod),
+    queryKey: ["coll-leaf", addr1, addr2, assetType, includeShops, guList, regionPeriod],
+    queryFn: () => leafOptions(false),
     enabled: chipsReady && hasIntermediate,
     staleTime: REGION_LIST_STALE_MS,
   });
@@ -379,6 +422,36 @@ export default function App() {
     enabled: scope !== null && !!scope.addr2,
   });
 
+  const shopsQ = useQuery({
+    queryKey: ["collective-preview-shops", scope],
+    enabled: combinedPreview && !!scope?.includeShops && !!scope.addr2,
+    queryFn: () => {
+      if (!scope) throw new Error("no scope");
+      return fetchAllCommercialClusters({
+        asset_type: "collective_shop", addr1: scope.addr1, addr2: scope.addr2,
+        addr3_list: scope.hasIntermediate ? scope.guList : scope.leafList,
+        addr4_list: scope.hasIntermediate ? scope.leafList : undefined,
+        region_codes: scope.region_codes, region_code_level: scope.region_code_level, region_addrs: scope.region_addrs,
+        contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
+        contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
+        window_years: scope.windowYears, sort: "count",
+      });
+    },
+  });
+  const periodsDiffer = Boolean(buildingsQ.data?.period_start && shopsQ.data?.period_start &&
+    (buildingsQ.data.period_start !== shopsQ.data.period_start || buildingsQ.data.period_end !== shopsQ.data.period_end));
+  const openBuilding = (row: BuildingStatsRow) => {
+    setMappedShop(null);
+    setSelectedShop(null);
+    setSelected(row);
+  };
+  const openShop = (row: CommercialClusterRow) => {
+    setSelected(null);
+    setSelectedShop(row);
+    setMappedShop(row);
+    if (mapPanelMode === "collapsed") setMapPanelMode("normal");
+  };
+
   const profileResolveQ = useQuery({
     queryKey: ["coll-profile-resolve", scope],
     queryFn: () =>
@@ -415,9 +488,10 @@ export default function App() {
 
   const buildingSearchQ = buildingSearch.trim().toLowerCase();
   const buildingMatchCount = useMemo(() => {
-    if (!buildingSearchQ || !buildingsQ.data?.items.length) return 0;
-    return buildingsQ.data.items.filter((row) => buildingMatchesQuery(row, buildingSearchQ)).length;
-  }, [buildingsQ.data?.items, buildingSearchQ]);
+    if (!buildingSearchQ) return 0;
+    return (buildingsQ.data?.items.filter((row) => buildingMatchesQuery(row, buildingSearchQ)).length ?? 0)
+      + (shopsQ.data?.items.filter((row) => clusterMatchesQuery(row, buildingSearchQ)).length ?? 0);
+  }, [buildingsQ.data?.items, shopsQ.data?.items, buildingSearchQ]);
 
   useEffect(() => {
     setBuildingSearch("");
@@ -427,7 +501,7 @@ export default function App() {
     if (!buildingSearchQ || buildingMatchCount === 0) return;
     const el = document.querySelector<HTMLElement>("[data-building-highlight='1']");
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [buildingSearchQ, buildingMatchCount, buildingsQ.data?.items]);
+  }, [buildingSearchQ, buildingMatchCount, buildingsQ.data?.items, shopsQ.data?.items]);
 
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
@@ -443,11 +517,12 @@ export default function App() {
     windowYears,
     sort: "count",
   };
-  const { scopeStale, markRegionScopeCaptured } = useCollectiveScopeStale(
+  const { scopeStale: regionScopeStale, markRegionScopeCaptured } = useCollectiveScopeStale(
     scope,
     liveFilters,
     regionCodeScope,
   );
+  const scopeStale = regionScopeStale || Boolean(scope && combinedPreview && scope.includeShops !== includeShops);
 
   const isApartment = assetKinds.includes("apartment");
   const regionalReady = Boolean(scope) && !scopeStale && isApartment;
@@ -487,6 +562,7 @@ export default function App() {
     markRegionScopeCaptured(regionCodeScope);
     setScope({
       assetType,
+      includeShops,
       addr1,
       addr2,
       guList: [...guList],
@@ -499,6 +575,8 @@ export default function App() {
       ...regionCodeScope,
     });
     setSelected(null);
+    setSelectedShop(null);
+    setMappedShop(null);
   };
 
   const resetRegion = () => {
@@ -507,6 +585,8 @@ export default function App() {
     setAnalysisUnits([]);
     setScope(null);
     setSelected(null);
+    setSelectedShop(null);
+    setMappedShop(null);
   };
 
   return (
@@ -514,7 +594,7 @@ export default function App() {
     <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
       <MacroStatsHeader
         currentApp="collective"
-        title="주거형 집합부동산"
+        title={combinedPreview ? "집합부동산 통합 시험" : "주거형 집합부동산"}
         titleAction={!narrow ? <CollectiveAnalysisGuide kind="residential" /> : null}
         fontPct={fontPct}
         fontStepMin={fontStepMin}
@@ -574,6 +654,14 @@ export default function App() {
                     </button>
                   );
                 })}
+                {combinedPreview && (
+                  <button type="button" aria-pressed={includeShops}
+                    className={clsx("rounded-md border px-2.5 py-1.5 text-xs font-semibold",
+                      includeShops ? "border-cyan-500 bg-cyan-800 text-white" : "border-slate-400 dark:text-white")}
+                    onClick={() => setIncludeShops((value) => !value)}>
+                    집합상가
+                  </button>
+                )}
               </div>
             </div>
 
@@ -730,7 +818,7 @@ export default function App() {
         </div>
 
         <div className={narrow ? "min-h-0 flex-1 overflow-auto bg-slate-100 dark:bg-slate-900" : "layout-main"}>
-          {narrow ? null : (
+          {narrow && !combinedPreview ? null : (
           <section className="px-4 pt-4 shrink-0">
             {analysisUnits.length > 0 && (
               <div className="mb-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
@@ -776,7 +864,7 @@ export default function App() {
                 riPick: [],
               }}
               selectedBuildings={
-                selected && scope
+                selected && scope && !combinedPreview
                   ? [
                       {
                         buildingKey: selected.building_key,
@@ -791,9 +879,10 @@ export default function App() {
               }
               buildingCandidates={
                 scope && buildingsQ.data
-                  ? buildingsQ.data.items.slice(0, 100).map((row) => ({
+                  ? buildingsQ.data.items.slice(0, MAP_LABEL_LIMIT).map((row) => ({
                       buildingKey: row.building_key,
                       label: buildingDisplayName(row),
+                      ...(combinedPreview ? { mean: row.mean, count: row.count } : {}),
                       jibunAddress: row.jibun_address || row.address || null,
                       roadAddress: row.road_address || null,
                       addr1: scope.addr1,
@@ -801,6 +890,23 @@ export default function App() {
                     }))
                   : []
               }
+              roadCandidates={scope && shopsQ.data ? shopsQ.data.items.flatMap((row) => row.road_name ? [{
+                clusterKey: row.cluster_key, label: row.road_name, roadName: row.road_name,
+                addr1: scope.addr1, addr2: scope.addr2, addr3: row.addr3, addr4: row.addr4, mean: row.mean, count: row.count,
+              }] : []) : []}
+              selectedRoads={scope && mappedShop?.road_name ? [{
+                clusterKey: mappedShop.cluster_key, label: mappedShop.road_name, roadName: mappedShop.road_name,
+                addr1: scope.addr1, addr2: scope.addr2, addr3: mappedShop.addr3, addr4: mappedShop.addr4, mean: mappedShop.mean, count: mappedShop.count,
+              }] : []}
+              combinedMap={combinedPreview}
+              onOpenBuilding={combinedPreview ? (key) => {
+                const row = buildingsQ.data?.items.find((item) => item.building_key === key);
+                if (row) openBuilding(row);
+              } : undefined}
+              onOpenRoad={combinedPreview ? (key) => {
+                const row = shopsQ.data?.items.find((item) => item.cluster_key === key);
+                if (row) openShop(row);
+              } : undefined}
               fillHeight={mapPanelMode === "expanded"}
               mapPanelMode={mapPanelMode}
               onExpand={() => setMapPanelMode("expanded")}
@@ -809,6 +915,22 @@ export default function App() {
               analysisUnits={analysisUnits}
               onAddUnit={addUnit}
             />
+            {combinedPreview && scope && (
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                n은 거래수, m은 평균 거래단가(만원/㎡)입니다. 상가 m은 선택 지역·기간의 도로명별 평균이며,
+                도로선은 위치를 표시합니다.
+                <span className="mr-1 rounded bg-slate-950 px-1 text-amber-200">주거용</span>
+                <span className="mr-1 rounded bg-cyan-950 px-1 text-cyan-200">비주거용</span>
+                이름 라벨은 유형별 거래수 상위 {MAP_LABEL_LIMIT}개가 표시 대상입니다.
+                라벨이나 도로선을 선택하면 상세 거래 정보를 볼 수 있습니다.
+                단가 면적 기준은 주거 전용면적, 상가 원천 전용·연면적입니다.
+              </p>
+            )}
+            {mappedShop && (
+              <button type="button" className="mt-1 text-xs underline" onClick={() => setMappedShop(null)}>
+                도로 강조 해제
+              </button>
+            )}
           </section>
           )}
           <div className="p-4 pt-2 pb-8">
@@ -827,13 +949,17 @@ export default function App() {
           )}
           {scope && buildingsQ.isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>}
           {scope && buildingsQ.isError && <p className="text-sm text-red-600">건물 목록을 불러오지 못했습니다.</p>}
-          {scope && buildingsQ.data && (
+          {scope?.includeShops && shopsQ.isLoading && <p role="status" className="text-sm text-slate-500">상가 도로 목록을 불러오는 중입니다…</p>}
+          {scope?.includeShops && shopsQ.isError && <p role="alert" className="text-sm text-red-600">상가 도로 목록을 불러오지 못했습니다.</p>}
+          {periodsDiffer && <p role="status" className="text-xs text-amber-700 dark:text-amber-300">주거와 상가의 실제 집계기간이 다릅니다. 각각의 상세에서 기간을 확인하세요.</p>}
+          {scope && (buildingsQ.data || shopsQ.data) && (
             <>
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <p className="text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-[12rem]">
                   {scope.addr1}
-                  {!isFlatSidoAddr2(scope.addr2) && scope.addr2 ? ` ${scope.addr2}` : ""} · 건물 {buildingsQ.data.total}개
-                  {buildingsQ.data.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
+                  {!isFlatSidoAddr2(scope.addr2) && scope.addr2 ? ` ${scope.addr2}` : ""} · 건물 {buildingsQ.data?.total ?? "—"}개
+                  {scope.includeShops && ` · 상가 도로 ${shopsQ.data?.total ?? "—"}개`}
+                  {buildingsQ.data?.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
                     <span className="ml-2 text-indigo-600 dark:text-indigo-400">
                       · {buildingsQ.data.stats_as_of_label}
                       {buildingsQ.data.window_years ? ` (${buildingsQ.data.window_years}년 창)` : ""}
@@ -844,7 +970,7 @@ export default function App() {
                       · 연도 {scope.yearFrom || "…"}–{scope.yearTo || "…"}
                     </span>
                   )}
-                  {buildingsQ.data.data_source === "live" && (
+                  {buildingsQ.data?.data_source === "live" && (
                     <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
                   )}
                 </p>
@@ -868,16 +994,19 @@ export default function App() {
                     className="input py-1 text-xs w-44 sm:w-56"
                     value={buildingSearch}
                     onChange={(e) => setBuildingSearch(e.target.value)}
-                    placeholder="건물명·주소·시공사…"
+                    placeholder={combinedPreview ? "건물·도로명·주소…" : "건물명·주소·시공사…"}
                     aria-label="검색"
                   />
                 </label>
               </div>
               <BuildingStatsTable
-                items={buildingsQ.data.items}
+                items={buildingsQ.data?.items ?? EMPTY_BUILDINGS}
+                roadItems={shopsQ.data?.items}
+                combined={combinedPreview}
                 wide={tableWide}
                 highlightQuery={buildingSearchQ}
-                onSelect={setSelected}
+                onSelect={openBuilding}
+                onSelectRoad={openShop}
               />
             </>
           )}
@@ -899,6 +1028,19 @@ export default function App() {
           windowYears={scope.windowYears}
           assetType={scope.assetType}
           onClose={() => setRegionalOpen(false)}
+        />
+      )}
+      {selectedShop && scope && (
+        <CommercialClusterDetailModal
+          key={selectedShop.cluster_key}
+          row={selectedShop}
+          scope={{ ...scope, assetType: "collective_shop" }}
+          windowYears={scope.windowYears}
+          periodStart={shopsQ.data?.period_start}
+          periodEnd={shopsQ.data?.period_end}
+          statsAsOfLabel={shopsQ.data?.stats_as_of_label}
+          peerClusters={shopsQ.data?.items}
+          onClose={() => setSelectedShop(null)}
         />
       )}
       {floorLinkNote ? (

@@ -33,6 +33,19 @@ def test_off_blocks_admin(monkeypatch):
     assert collective_next_allowed(MagicMock()) is False
 
 
+def test_viewport_lines_are_closed_without_access(monkeypatch):
+    from app.main import app
+
+    monkeypatch.setattr(settings, "api_token", "")
+    monkeypatch.setattr("app.collective2.access.collective_next_allowed", lambda _request: False)
+    client = TestClient(app)
+    denied = client.post(
+        "/api/collective/commercial/roads/viewport-lines",
+        json={"cluster_keys": ["abc"], "bounds": [127.0, 37.4, 127.05, 37.45]},
+    )
+    assert denied.status_code == 403
+
+
 def test_access_route_is_403_then_200(monkeypatch):
     from app.main import app
 

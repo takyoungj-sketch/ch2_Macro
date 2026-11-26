@@ -258,7 +258,7 @@ def caller_access(request: Request) -> str:
 async def product_gate_response(request: Request) -> JSONResponse | None:
     body: object = None
     path = request.url.path
-    if path.startswith("/api/collective2/"):
+    if path.startswith("/api/collective2/") or path == "/api/collective/commercial/roads/viewport-lines":
         from app.collective2.access import collective_next_allowed
         from app.feature_gates import HIDDEN_DETAIL
 
