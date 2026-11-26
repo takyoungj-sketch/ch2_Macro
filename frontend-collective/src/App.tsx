@@ -620,7 +620,8 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
       />
       {listAiContext ? <PublishAiContext context={listAiContext} role="base" /> : null}
 
-      <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
+      <div className="relative min-h-0 flex-1">
+      <div className="absolute inset-0 isolate flex min-h-0 flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className={narrow ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "flex min-h-0 flex-1 overflow-hidden"}>
         <div className={narrow ? "ch2-mobile-region" : "contents"}>
         <CollapsibleLeftSidebar storageKey="collective" pinned={narrow} className={narrow ? "w-full max-h-[46vh] overflow-y-auto border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800" : "layout-sidebar p-4"}>
@@ -817,7 +818,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
         </CollapsibleLeftSidebar>
         </div>
 
-        <div className={narrow ? "min-h-0 flex-1 overflow-auto bg-slate-100 dark:bg-slate-900" : "layout-main"}>
+        <div className={narrow ? "min-h-0 flex-1 overflow-auto bg-slate-100 dark:bg-slate-900" : combinedPreview ? "layout-main flex min-h-0 flex-col" : "layout-main"}>
           {narrow && !combinedPreview ? null : (
           <section className="px-4 pt-4 shrink-0">
             {analysisUnits.length > 0 && (
@@ -933,7 +934,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
             )}
           </section>
           )}
-          <div className="p-4 pt-2 pb-8">
+          <div className={combinedPreview && !narrow ? "flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-2 pb-3" : "p-4 pt-2 pb-8"}>
           {!scope && (
             <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 건물 목록이 표시됩니다.</p>
           )}
@@ -999,20 +1000,24 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                   />
                 </label>
               </div>
+              <div className={combinedPreview && !narrow ? "min-h-0 flex-1" : undefined}>
               <BuildingStatsTable
                 items={buildingsQ.data?.items ?? EMPTY_BUILDINGS}
                 roadItems={shopsQ.data?.items}
                 combined={combinedPreview}
+                fill={combinedPreview && !narrow}
                 wide={tableWide}
                 highlightQuery={buildingSearchQ}
                 onSelect={openBuilding}
                 onSelectRoad={openShop}
               />
+              </div>
             </>
           )}
           </div>
         </div>
       </main>
+      </div>
       </div>
 
       {regionalOpen && scope && (

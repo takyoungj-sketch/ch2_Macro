@@ -251,6 +251,7 @@ export default function BuildingStatsTable({
   items,
   roadItems = EMPTY_ROADS,
   combined = false,
+  fill = false,
   wide,
   highlightQuery,
   onSelect,
@@ -259,6 +260,7 @@ export default function BuildingStatsTable({
   items: BuildingStatsRow[];
   roadItems?: CommercialClusterRow[];
   combined?: boolean;
+  fill?: boolean;
   wide: boolean;
   highlightQuery: string;
   onSelect: (row: BuildingStatsRow) => void;
@@ -333,7 +335,7 @@ export default function BuildingStatsTable({
   const sortDirty = sortKey !== "count" || sortDir !== "desc";
 
   return (
-    <div className="card p-0 w-full">
+    <div className={clsx("card w-full p-0", fill && "flex h-full min-h-0 flex-col")}>
       <FilterStatusBar
         shown={shown.length}
         total={rows.length}
@@ -345,8 +347,8 @@ export default function BuildingStatsTable({
           setSortDir("desc");
         }}
       />
-      <DualHorizontalScroll key={wide ? "wide" : "compact"}>
-        <table className={clsx("data buildings-table", wide && "is-wide")}>
+      <DualHorizontalScroll key={wide ? "wide" : "compact"} fill={fill}>
+        <table className={clsx("data buildings-table", wide && "is-wide", fill && "border-separate border-spacing-0")}>
           <colgroup>
             <col className="col-type" />
             <col className="col-name" />

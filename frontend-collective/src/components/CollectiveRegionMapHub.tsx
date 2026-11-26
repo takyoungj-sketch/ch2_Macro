@@ -1323,8 +1323,8 @@ export default function CollectiveRegionMapHub({
           mapPanelMode === "collapsed"
             ? undefined
             : fillHeight
-              ? { height: "min(82vh, 52rem)" }
-              : { height: "min(52vh, 28rem)" }
+              ? { height: combinedMap ? "min(70vh, 40rem)" : "min(82vh, 52rem)" }
+              : { height: combinedMap ? "32vh" : "min(52vh, 28rem)" }
         }
       >
         {showSetupHint ? (
