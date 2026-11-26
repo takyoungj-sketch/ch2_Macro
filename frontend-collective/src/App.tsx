@@ -676,7 +676,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                         combinedPreview
                           ? (on
                             ? "bg-[color:var(--asset-ink)] text-white border-[color:var(--asset-ink)]"
-                            : "bg-white text-[color:var(--asset-ink)] border-[color:var(--asset-ink)] dark:bg-slate-800")
+                            : "bg-white text-[color:var(--asset-ink)] border-[color:var(--asset-ink)] dark:bg-slate-800 dark:text-[color:var(--asset-glow)] dark:border-[color:var(--asset-glow)]")
                           : (on
                             ? "border-indigo-500 bg-indigo-600 text-white shadow-sm dark:border-indigo-300 dark:bg-indigo-500 dark:text-white"
                             : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-400 dark:hover:bg-slate-700"),
@@ -707,7 +707,7 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                         "rounded-md border px-2.5 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
                         on
                           ? "bg-[color:var(--asset-ink)] text-white border-[color:var(--asset-ink)]"
-                          : "bg-white text-[color:var(--asset-ink)] border-[color:var(--asset-ink)] dark:bg-slate-800",
+                          : "bg-white text-[color:var(--asset-ink)] border-[color:var(--asset-ink)] dark:bg-slate-800 dark:text-[color:var(--asset-glow)] dark:border-[color:var(--asset-glow)]",
                       )}
                       style={assetColorVars(kind)}
                       onClick={() => {
