@@ -1001,8 +1001,14 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
             />
             {combinedPreview && scope && (
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                n은 거래수, m은 평균 거래단가(만원/㎡)입니다. 상가 m은 선택 지역·기간의 도로명별 평균이며,
-                도로선은 위치를 표시합니다.
+                n은 거래수, m은 평균 거래단가(만원/㎡)입니다.
+                {commercialKinds.includes("collective_shop") && commercialKinds.includes("collective_factory")
+                  ? " 상가·공장 m(유형별)은 선택 지역·기간의 도로명별 평균이며, 도로선은 위치를 표시합니다."
+                  : commercialKinds.includes("collective_factory")
+                    ? " 공장 m은 선택 지역·기간의 도로명별 평균이며, 도로선은 위치를 표시합니다."
+                    : commercialKinds.includes("collective_shop")
+                      ? " 상가 m은 선택 지역·기간의 도로명별 평균이며, 도로선은 위치를 표시합니다."
+                      : ""}
                 <span className="mr-1 rounded bg-slate-950 px-1 text-amber-200">주거용</span>
                 <span className="mr-1 rounded bg-cyan-950 px-1 text-cyan-200">비주거용</span>
                 이름 라벨은 유형별 거래수 상위 {MAP_LABEL_LIMIT}개가 표시 대상입니다.
