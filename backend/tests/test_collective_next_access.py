@@ -50,30 +50,56 @@ def test_viewport_lines_query_only_shop_and_factory(monkeypatch):
     from app.collective_commercial.router import roads_in_viewport
     from app.collective_commercial.schemas import CommercialViewportRoadRequest
 
-    captured: dict[str, str] = {}
+    stored = [
+        {"cluster_key": "shop-key", "road_name": "시험로", "emd": "1168010100", "sigungu": "11680", "asset_type": "collective_shop"},
+        {"cluster_key": "factory-key", "road_name": "시험로", "emd": "1168010100", "sigungu": "11680", "asset_type": "collective_factory"},
+        {"cluster_key": "apt-key", "road_name": "시험로", "emd": "1168010100", "sigungu": "11680", "asset_type": "apartment"},
+    ]
+    passed: dict[str, list] = {}
 
     class Rows:
+        def __init__(self, rows):
+            self._rows = rows
+
         def mappings(self):
             return self
 
         def all(self):
-            return []
+            return self._rows
 
     class FakeDB:
-        def execute(self, sql, _params=None):
-            captured["sql"] = str(sql)
-            return Rows()
+        def execute(self, sql, params=None):
+            text = str(sql)
+            rows = list(stored)
+            if "asset_type IN" in text:
+                allowed = [name for name in ("collective_shop", "collective_factory", "apartment") if name in text]
+                rows = [row for row in rows if row["asset_type"] in allowed]
+            keys = set((params or {}).get("keys") or [])
+            if keys:
+                rows = [row for row in rows if row["cluster_key"] in keys]
+            return Rows(rows)
+
+    def fake_lines(*, api_key, domain, bounds, rows):
+        passed["rows"] = list(rows)
+        return {
+            "lines": [
+                {"cluster_key": row["cluster_key"], "geometry": {"type": "FeatureCollection", "features": []}, "label_point": None}
+                for row in rows
+            ],
+            "truncated": False,
+            "unavailable": 0,
+        }
 
     monkeypatch.setattr(settings, "vworld_api_key", "test-key")
+    monkeypatch.setattr("app.collective_commercial.router.fetch_viewport_road_lines", fake_lines)
     body = CommercialViewportRoadRequest(
-        cluster_keys=["shop-key"], bounds=(127.0, 37.4, 127.05, 37.45),
+        cluster_keys=["shop-key", "factory-key", "apt-key"],
+        bounds=(127.0, 37.4, 127.05, 37.45),
     )
     result = roads_in_viewport(body, FakeDB())
-    assert result == {"lines": [], "truncated": False, "unavailable": 0}
-    sql = captured["sql"]
-    assert "collective_shop" in sql
-    assert "collective_factory" in sql
-    assert "apartment" not in sql
+    kinds = {row["asset_type"] for row in passed["rows"]}
+    assert kinds == {"collective_shop", "collective_factory"}
+    assert {line["cluster_key"] for line in result["lines"]} == {"shop-key", "factory-key"}
 
 
 def test_access_route_is_403_then_200(monkeypatch):

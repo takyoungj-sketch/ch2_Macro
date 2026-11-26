@@ -126,6 +126,11 @@ type ContextMenuState = {
 const VWORLD_KEY = (import.meta.env.VITE_VWORLD_API_KEY ?? "").trim();
 export const MAP_LABEL_LIMIT = 100;
 const PRICE_LABEL_ZOOM = 14.5;
+const VIEWPORT_ROAD_LAYER_IDS = [
+  "commercial-viewport-roads",
+  "commercial-viewport-roads-shop",
+  "commercial-viewport-roads-factory",
+];
 const SMALL_SAMPLE_LABEL_ZOOM = 15.5;
 const NAME_ONLY_LABEL_ZOOM = 16.5;
 const BUILDING_LABEL_COLOR = "text-amber-200";
@@ -1254,7 +1259,7 @@ export default function CollectiveRegionMapHub({
 
   const handleMapClick = useCallback(
     (evt: MapLayerMouseEvent) => {
-      const road = evt.features?.find((feature) => feature.layer.id === "commercial-viewport-roads");
+      const road = evt.features?.find((feature) => VIEWPORT_ROAD_LAYER_IDS.includes(feature.layer.id));
       if (onOpenRoad && road?.properties?.cluster_key) {
         onOpenRoad(String(road.properties.cluster_key));
         return;
@@ -1389,7 +1394,11 @@ export default function CollectiveRegionMapHub({
             onMoveEnd={updateRoadViewport}
             interactiveLayerIds={[
               ...(fillGeoJson ? ["region-fill", "region-outline"] : []),
-              ...(viewportRoadsFc ? ["commercial-viewport-roads"] : []),
+              ...(viewportRoadsFc
+                ? (combinedMap
+                  ? ["commercial-viewport-roads-shop", "commercial-viewport-roads-factory"]
+                  : ["commercial-viewport-roads"])
+                : []),
             ]}
           >
             <NavigationControl position="top-right" showCompass={false} />
@@ -1459,22 +1468,35 @@ export default function CollectiveRegionMapHub({
             ) : null}
             {viewportRoadsFc && (
               <Source id="commercial-viewport-roads" type="geojson" data={viewportRoadsFc}>
-                {combinedMap ? (
-                  <>
-                    <Layer id="commercial-viewport-roads-shop" type="line"
-                      filter={["==", ["get", "asset_type"], "collective_shop"]}
-                      paint={{ "line-color": ASSET_APPEARANCE.collective_shop.glow, "line-width": 4, "line-opacity": 0.9 }} />
-                    <Layer id="commercial-viewport-roads-factory" type="line"
-                      filter={["==", ["get", "asset_type"], "collective_factory"]}
-                      layout={{ "line-cap": "round", "line-join": "round" }}
-                      paint={{
-                        "line-color": ASSET_APPEARANCE.collective_factory.glow,
-                        "line-width": 4,
-                        "line-opacity": 0.9,
-                        "line-dasharray": [2, 1.5],
-                      }} />
-                  </>
-                ) : (
+                {combinedMap && (
+                  <Layer id="commercial-viewport-roads-halo" type="line"
+                    layout={{ "line-cap": "round", "line-join": "round" }}
+                    paint={{ "line-color": "#0c4a6e", "line-width": 8, "line-opacity": 0.9 }} />
+                )}
+                {combinedMap && (
+                  <Layer id="commercial-viewport-roads-shop" type="line"
+                    filter={["==", ["get", "asset_type"], "collective_shop"]}
+                    layout={{ "line-cap": "round", "line-join": "round" }}
+                    paint={{
+                      "line-color": ASSET_APPEARANCE.collective_shop.glow,
+                      "line-width": 4,
+                      "line-opacity": 0.9,
+                      "line-offset": -3,
+                    }} />
+                )}
+                {combinedMap && (
+                  <Layer id="commercial-viewport-roads-factory" type="line"
+                    filter={["==", ["get", "asset_type"], "collective_factory"]}
+                    layout={{ "line-cap": "round", "line-join": "round" }}
+                    paint={{
+                      "line-color": ASSET_APPEARANCE.collective_factory.glow,
+                      "line-width": 4,
+                      "line-opacity": 0.9,
+                      "line-dasharray": [2, 1.5],
+                      "line-offset": 3,
+                    }} />
+                )}
+                {!combinedMap && (
                   <Layer id="commercial-viewport-roads" type="line"
                     paint={{ "line-color": "#38bdf8", "line-width": 4, "line-opacity": 0.8 }} />
                 )}

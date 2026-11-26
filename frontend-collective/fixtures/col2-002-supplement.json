@@ -1,0 +1,98 @@
+{
+  "addr1": ["시험시"],
+  "addr2": {
+    "시험시": ["같은구", "공장구"]
+  },
+  "residential_structure": {
+    "같은구": {"has_intermediate": false, "intermediate_label": null, "leaf_level": "eupmyeondong"},
+    "공장구": {"has_intermediate": true, "intermediate_label": "구", "leaf_level": "eupmyeondong"}
+  },
+  "commercial_structure": {
+    "같은구": {"has_intermediate": false, "intermediate_label": null, "leaf_level": "eupmyeondong", "tx_count": 3},
+    "공장구": {"has_intermediate": false, "intermediate_label": null, "leaf_level": "eupmyeondong", "tx_count": 1}
+  },
+  "residential_regions": {
+    "같은구": [{"name": "같은동", "count": 1}],
+    "공장구": [{"name": "주거동", "count": 1}]
+  },
+  "commercial_regions": {
+    "같은구": [{"name": "같은동", "count": 2}],
+    "공장구": [{"name": "공장동", "count": 1}]
+  },
+  "buildings": [
+    {
+      "building_key": "apt-1",
+      "display_name": "시험아파트",
+      "address": "시험시 같은구 같은동 1",
+      "jibun_address": "시험시 같은구 같은동 1",
+      "road_address": "시험로 1",
+      "asset_type": "apartment",
+      "count": 3,
+      "mean": 1200,
+      "is_reliable": true
+    }
+  ],
+  "clusters": [
+    {
+      "cluster_key": "shop-same",
+      "display_label": "시험로 (같은동)",
+      "asset_type": "collective_shop",
+      "road_name": "시험로",
+      "addr2": "같은구",
+      "addr3": "같은동",
+      "count": 4,
+      "mean": 900,
+      "is_reliable": true
+    },
+    {
+      "cluster_key": "factory-same",
+      "display_label": "시험로 (같은동)",
+      "asset_type": "collective_factory",
+      "road_name": "시험로",
+      "addr2": "같은구",
+      "addr3": "같은동",
+      "count": 2,
+      "mean": 700,
+      "is_reliable": true
+    },
+    {
+      "cluster_key": "factory-noline",
+      "display_label": "도로 없는 공장",
+      "asset_type": "collective_factory",
+      "road_name": null,
+      "addr2": "같은구",
+      "addr3": "같은동",
+      "count": 1,
+      "mean": 500,
+      "is_reliable": false
+    },
+    {
+      "cluster_key": "factory-only",
+      "display_label": "공장로 (공장동)",
+      "asset_type": "collective_factory",
+      "road_name": "공장로",
+      "addr2": "공장구",
+      "addr3": "공장동",
+      "count": 6,
+      "mean": 400,
+      "is_reliable": true
+    }
+  ],
+  "viewport_lines": [
+    {
+      "cluster_key": "shop-same",
+      "asset_type": "collective_shop",
+      "coordinates": [[127.79, 36.2012], [127.81, 36.2012]]
+    },
+    {
+      "cluster_key": "factory-same",
+      "asset_type": "collective_factory",
+      "coordinates": [[127.79, 36.1988], [127.81, 36.1988]]
+    },
+    {
+      "cluster_key": "factory-only",
+      "asset_type": "collective_factory",
+      "coordinates": [[127.79, 36.2], [127.81, 36.2]]
+    }
+  ]
+}

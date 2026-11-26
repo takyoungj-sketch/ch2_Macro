@@ -16,7 +16,7 @@ import {
 } from "./api/client";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
-import { fetchAllCommercialClusters, fetchCommercialAddr2, fetchCommercialAddr3, fetchCommercialLeafRegions } from "./api/commercialClient";
+import { fetchAllCommercialClusters, fetchCommercialAddr2, fetchCommercialAddr3, fetchCommercialLeafRegions, fetchCommercialRegionStructure } from "./api/commercialClient";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
 import { clusterMatchesQuery } from "./components/CommercialClusterTable";
 import BuildingStatsTable, { buildingMatchesQuery } from "./components/BuildingStatsTable";
@@ -260,10 +260,15 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
       setAddr2(opts[0]!);
     }
   }, [addr1, addr2, addr2Q.data]);
+  const commercialStructureOnly = combinedPreview && assetKinds.length === 0 && includeShops;
   const structureQ = useQuery({
-    queryKey: ["coll-structure", addr1, addr2, assetType],
-    queryFn: () => fetchRegionStructure(addr1, addr2, assetType),
-    enabled: !!addr1 && !!addr2,
+    queryKey: commercialStructureOnly
+      ? ["coll-structure", "commercial", addr1, addr2, commercialType]
+      : ["coll-structure", addr1, addr2, assetType],
+    queryFn: () => commercialStructureOnly
+      ? fetchCommercialRegionStructure(addr1, addr2, commercialType)
+      : fetchRegionStructure(addr1, addr2, assetType),
+    enabled: !!addr1 && !!addr2 && (!combinedPreview || assetKinds.length > 0 || includeShops),
     staleTime: REGION_LIST_STALE_MS,
   });
   const hasIntermediate = structureQ.data?.has_intermediate ?? false;
@@ -1026,7 +1031,11 @@ export default function App({ combinedPreview = false }: { combinedPreview?: boo
                 <p className="text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-[12rem]">
                   {scope.addr1}
                   {!isFlatSidoAddr2(scope.addr2) && scope.addr2 ? ` ${scope.addr2}` : ""} · 건물 {buildingsQ.data?.total ?? "—"}개
-                  {scope.includeShops && ` · 비주거 도로 ${shopsQ.data?.total ?? "—"}개`}
+                  {scope.includeShops && combinedPreview && shopsQ.data && (
+                    ` · 집합상가 ${shopsQ.data.items.filter((row) => row.asset_type === "collective_shop").length}개`
+                    + ` · 집합공장 ${shopsQ.data.items.filter((row) => row.asset_type === "collective_factory").length}개`
+                  )}
+                  {combinedPreview && buildingSearchQ && ` · 검색 일치 ${buildingMatchCount}개`}
                   {buildingsQ.data?.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
                     <span className="ml-2 text-indigo-600 dark:text-indigo-400">
                       · {buildingsQ.data.stats_as_of_label}
