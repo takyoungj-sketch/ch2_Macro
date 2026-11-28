@@ -44,6 +44,7 @@ safe_rm_tree() {
 
 ROOT=$(mktemp -d /tmp/pay003a-local.XXXXXX)
 chmod 700 "$ROOT"
+printf 'pay003a-local-temp\n' > "$ROOT/pay003a-temp-root"
 ROOT_CANON=$(CDPATH= cd -P -- "$ROOT" && pwd)
 case "$(basename -- "$ROOT")" in
   pay003a-local.*) ;;
@@ -140,6 +141,18 @@ else
   note "PASS db-refuse"
   PASS=$((PASS + 1))
 fi
+mkdir -p "$SENTINEL/pgdata"
+set +e
+python "$SCRIPT_DIR/local_db.py" create "$PSQL" "$DB_NAME" "$(cygpath -w "$SENTINEL/pgdata")" "$PORT" >/dev/null 2>&1
+marker_ec=$?
+set -e
+if [ "$marker_ec" -eq 0 ]; then
+  note "FAIL db-marker"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS db-marker"
+  PASS=$((PASS + 1))
+fi
 "$PSQL" -h 127.0.0.1 -p "$PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE pay003a_dummy" >/dev/null
 "$PSQL" -h 127.0.0.1 -p "$PORT" -U postgres -d pay003a_dummy -v ON_ERROR_STOP=1 -c "CREATE TABLE marker (id integer); INSERT INTO marker VALUES (1);" >/dev/null
 set +e
@@ -160,7 +173,7 @@ python "$SCRIPT_DIR/local_db.py" create "$PSQL" "$DB_NAME" "$WINDATA" "$PORT" >/
 run_backup() {
   env \
     PAY003_CONF="$SCRIPT_DIR/platform_backup.conf" \
-    PAY003_SINK=dir \
+    PAY003_SINK="${CASE_SINK_MODE:-dir}" \
     PAY003_ALLOW_NONTMPFS=1 \
     PAY003_ASSUME_NO_SWAP=1 \
     PAY003_LOCK_FALLBACK="${CASE_LOCK_FALLBACK-perl}" \
@@ -185,6 +198,9 @@ run_backup() {
     PAY003_FORCE_SET_ID="${CASE_SET_ID:-}" \
     PAY003_SERVER_COPY_FAIL="${CASE_SERVER_COPY_FAIL:-}" \
     PAY003_COMPLETE_READ_FAIL="${CASE_COMPLETE_READ_FAIL:-}" \
+    PAY003_HANG_CHILDFILE="${CASE_HANG_CHILD:-}" \
+    PAY003_AWS_STUB="${CASE_AWS_STUB:-}" \
+    PAY003_SAME_GROUP="${CASE_SAME_GROUP:-}" \
     PATH="$ROOT/bin:${PATH}" \
     GNUPGHOME="$GNUPGHOME" \
     bash "$SCRIPT_DIR/platform_backup.sh" ${CASE_ARG:-} >"${CASE_DIR}/stdout" 2>"${CASE_DIR}/stderr"
@@ -273,6 +289,7 @@ elif ! grep -q "MANUAL_OK " "$CASE_LOG"; then note "FAIL ok-manual log"; FAILS=$
     "$PG_RESTORE" -l "$CASE_DIR/dump.bin" > "$CASE_DIR/toc.txt"
     missing=0
     while IFS= read -r table; do
+      table=${table%$'\r'}
       schema=${table%%.*}
       name=${table#*.}
       if ! grep -E "[[:space:]]TABLE[[:space:]]+${schema}[[:space:]]+${name}[[:space:]]" "$CASE_DIR/toc.txt" >/dev/null; then
@@ -767,6 +784,115 @@ else
     note "PASS bad-symlink"
     PASS=$((PASS + 1))
   fi
+fi
+
+new_case hang-group
+CASE_TIMEOUT=3
+CASE_HANG=group
+CASE_HANG_PID=$CASE_DIR/hang.pid
+CASE_HANG_CHILD=$CASE_DIR/child.pid
+set +e
+run_backup
+group_ec=$?
+set -e
+unset CASE_HANG CASE_HANG_PID CASE_HANG_CHILD
+CASE_TIMEOUT=
+group_child=""
+if [ -s "$CASE_DIR/child.pid" ]; then
+  group_child=$(cat "$CASE_DIR/child.pid")
+fi
+if [ "$group_ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=timeout" "$CASE_LOG"; then
+  note "FAIL hang-group exit=$group_ec"
+  sed -n '1,20p' "$CASE_LOG" >&2 || true
+  FAILS=$((FAILS + 1))
+elif [ -z "$group_child" ] || kill -0 "$group_child" 2>/dev/null; then
+  note "FAIL hang-group child"
+  [ -n "$group_child" ] && kill -KILL "$group_child" 2>/dev/null || true
+  FAILS=$((FAILS + 1))
+elif grep -q "children-alive" "$CASE_LOG"; then
+  note "FAIL hang-group lock"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS hang-group"
+  PASS=$((PASS + 1))
+fi
+
+new_case own-group
+CASE_TIMEOUT=3
+CASE_HANG=same
+CASE_HANG_PID=$CASE_DIR/hang.pid
+set +e
+run_backup
+own_ec=$?
+set -e
+unset CASE_HANG CASE_HANG_PID
+CASE_TIMEOUT=
+own_pid=""
+if [ -s "$CASE_DIR/hang.pid" ]; then
+  own_pid=$(cat "$CASE_DIR/hang.pid")
+fi
+if [ "$own_ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=own-group" "$CASE_LOG"; then
+  note "FAIL own-group exit=$own_ec"
+  sed -n '1,20p' "$CASE_LOG" >&2 || true
+  FAILS=$((FAILS + 1))
+elif [ -z "$own_pid" ] || ! kill -0 "$own_pid" 2>/dev/null; then
+  note "FAIL own-group signaled"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS own-group"
+  PASS=$((PASS + 1))
+fi
+if [ -n "$own_pid" ]; then
+  kill -KILL "$own_pid" 2>/dev/null || true
+fi
+
+new_case bad-set-id
+printf 'keep\n' > "$CASE_DIR/keep-outside"
+CASE_SET_ID='../outside'
+set +e
+run_backup
+id_ec=$?
+set -e
+unset CASE_SET_ID
+if [ "$id_ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=set-id" "$CASE_LOG"; then
+  note "FAIL bad-set-id"
+  FAILS=$((FAILS + 1))
+elif [ "$(cat "$CASE_DIR/keep-outside")" != "keep" ]; then
+  note "FAIL bad-set-id escaped"
+  FAILS=$((FAILS + 1))
+elif [ -n "$(find "$CASE_SINK" -name COMPLETE -print 2>/dev/null)" ]; then
+  note "FAIL bad-set-id complete"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS bad-set-id"
+  PASS=$((PASS + 1))
+fi
+
+new_case s3-error
+CASE_SINK_MODE=aws
+CASE_AWS_STUB=1
+cat > "$ROOT/bin/aws" <<'EOF'
+#!/bin/bash
+echo "An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied" >&2
+exit 1
+EOF
+chmod 700 "$ROOT/bin/aws"
+set +e
+run_backup
+s3_ec=$?
+set -e
+rm -f -- "$ROOT/bin/aws"
+unset CASE_SINK_MODE CASE_AWS_STUB
+if [ "$s3_ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=s3" "$CASE_LOG"; then
+  note "FAIL s3-error"
+  sed -n '1,20p' "$CASE_LOG" >&2 || true
+  FAILS=$((FAILS + 1))
+elif [ -n "$(find "$CASE_SINK" -name COMPLETE -print 2>/dev/null)" ]; then
+  note "FAIL s3-error complete"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS s3-error"
+  PASS=$((PASS + 1))
 fi
 
 if [ ! -f "$SENTINEL/keep" ] || [ "$ROOT" = "$SENTINEL" ]; then

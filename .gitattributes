@@ -1,1 +1,2 @@
 *.sh text eol=lf
+deploy/scripts/platform_backup/* text eol=lf

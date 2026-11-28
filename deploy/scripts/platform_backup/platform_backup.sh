@@ -110,6 +110,8 @@ CHILD_PID=""
 CHILD_PGID=""
 CHILDREN_REAPED=1
 CHILDREN_LIVE=0
+KEEP_LOCK=0
+OWN_GROUP=0
 TIMED_OUT=0
 
 log_line() {
@@ -123,26 +125,77 @@ fail() {
   exit 1
 }
 
+query_pgid() {
+  local out col
+  out=$(ps -o pgid= -p "$1" 2>/dev/null | tr -d '[:space:]')
+  if [ -n "$out" ]; then
+    printf '%s\n' "$out"
+    return 0
+  fi
+  ps -p "$1" 2>/dev/null | awk 'NR==1 { for (i=1; i<=NF; i++) if ($i=="PGID") col=i } NR>1 && col { print $col; exit }'
+}
+
+group_state() {
+  local pgid="$1" err ec
+  set +e
+  err=$(kill -0 -- -"$pgid" 2>&1)
+  ec=$?
+  set -e
+  if [ "$ec" -eq 0 ]; then
+    printf 'alive\n'
+    return 0
+  fi
+  case "$err" in
+    *[Nn]o\ such\ process*) printf 'dead\n' ;;
+    *) printf 'unclear\n' ;;
+  esac
+}
+
+hold_lock() {
+  while true; do
+    sleep 30
+  done
+}
+
 reap_children() {
-  local i=0 pgid
+  local i=0 pgid own leader state
   if [ "$CHILDREN_REAPED" = 1 ] || [ -z "$CHILD_PGID" ]; then
     CHILDREN_REAPED=1
     return 0
   fi
   pgid=$CHILD_PGID
-  kill -TERM -"$pgid" 2>/dev/null || kill -TERM "$pgid" 2>/dev/null || true
-  while kill -0 "$pgid" 2>/dev/null && [ "$i" -lt 20 ]; do
+  own=$(query_pgid $$ || true)
+  leader=$(query_pgid "$pgid" || true)
+  if [ -z "$own" ] || [ "$pgid" = "$own" ] || { [ -n "$leader" ] && [ "$leader" = "$own" ]; }; then
+    OWN_GROUP=1
+    CHILDREN_REAPED=1
+    CHILD_PID=""
+    CHILD_PGID=""
+    return 0
+  fi
+  if [ -n "$leader" ] && [ "$leader" != "$pgid" ]; then
+    KEEP_LOCK=1
+    CHILDREN_LIVE=1
+    return 0
+  fi
+  kill -TERM -- -"$pgid" 2>/dev/null || true
+  while [ "$(group_state "$pgid")" = alive ] && [ "$i" -lt 20 ]; do
     sleep 1
     i=$((i + 1))
   done
-  if kill -0 "$pgid" 2>/dev/null; then
-    kill -KILL -"$pgid" 2>/dev/null || kill -KILL "$pgid" 2>/dev/null || true
+  state=$(group_state "$pgid")
+  if [ "$state" = alive ]; then
+    kill -KILL -- -"$pgid" 2>/dev/null || true
     wait "$pgid" 2>/dev/null || true
+    state=$(group_state "$pgid")
   else
     wait "$pgid" 2>/dev/null || true
+    state=$(group_state "$pgid")
   fi
-  if kill -0 "$pgid" 2>/dev/null; then
+  if [ "$state" != dead ]; then
+    KEEP_LOCK=1
     CHILDREN_LIVE=1
+    return 0
   fi
   CHILD_PID=""
   CHILD_PGID=""
@@ -152,6 +205,10 @@ reap_children() {
 on_exit() {
   local ec=$?
   reap_children
+  if [ "$KEEP_LOCK" = 1 ]; then
+    log_line BACKUP_FAIL "reason=children-alive"
+    hold_lock
+  fi
   if [ -n "$WATCHDOG_PID" ]; then
     kill "$WATCHDOG_PID" 2>/dev/null || true
     wait "$WATCHDOG_PID" 2>/dev/null || true
@@ -172,29 +229,48 @@ trap on_exit EXIT
 on_term() {
   TIMED_OUT=1
   reap_children
+  if [ "$OWN_GROUP" = 1 ]; then
+    log_line BACKUP_FAIL "reason=own-group"
+    exit 1
+  fi
+  if [ "$KEEP_LOCK" = 1 ]; then
+    log_line BACKUP_FAIL "reason=children-alive"
+    hold_lock
+  fi
   log_line BACKUP_FAIL "reason=timeout"
   exit 124
 }
 trap on_term TERM
 
 run_group() {
-  local ec=0
-  if command -v setsid >/dev/null 2>&1; then
+  local ec=0 had_e=0
+  case $- in
+    *e*) had_e=1 ;;
+  esac
+  if [ "${PAY003_SAME_GROUP:-}" = 1 ]; then
+    "$@" &
+  elif command -v setsid >/dev/null 2>&1; then
     setsid "$@" &
   else
     set -m
     "$@" &
   fi
   CHILD_PID=$!
-  CHILD_PGID=$CHILD_PID
+  if [ "${PAY003_SAME_GROUP:-}" = 1 ]; then
+    CHILD_PGID=$(query_pgid "$CHILD_PID" || true)
+  else
+    CHILD_PGID=$CHILD_PID
+  fi
   CHILDREN_REAPED=0
   set +e
   wait "$CHILD_PID"
   ec=$?
-  set -e
   CHILD_PID=""
   CHILD_PGID=""
   CHILDREN_REAPED=1
+  if [ "$had_e" -eq 1 ]; then
+    set -e
+  fi
   return "$ec"
 }
 
@@ -205,6 +281,19 @@ run_child() {
 hang_stage() {
   local stage="$1"
   [ -n "${PAY003_HANG_PIDFILE:-}" ] || return 1
+  if [ "$stage" = group ]; then
+    [ -n "${PAY003_HANG_CHILDFILE:-}" ] || return 1
+    run_group bash -c '
+      printf "%s\n" "$$" > "$1"
+      bash -c "trap \"\" TERM HUP; printf \"%s\n\" \"\$\$\" > \"\$1\"; while true; do sleep 30; done" _ "$2" &
+      wait
+    ' _ "$PAY003_HANG_PIDFILE" "$PAY003_HANG_CHILDFILE"
+    return $?
+  fi
+  if [ "$stage" = same ]; then
+    PAY003_SAME_GROUP=1 run_group bash -c 'trap "" TERM HUP; printf "%s\n" "$$" > "$1"; while true; do sleep 30; done' _ "$PAY003_HANG_PIDFILE"
+    return $?
+  fi
   run_group bash -c 'printf "%s\n" "$$" > "$1"; exec sleep 300' _ "$PAY003_HANG_PIDFILE"
 }
 
@@ -229,7 +318,11 @@ acquire_lock() {
     fi
     return 1
   fi
-  if [ "${PAY003_LOCK_FALLBACK:-}" != perl ] || ! sink_is_local; then
+  if [ "${PAY003_LOCK_FALLBACK:-}" != perl ]; then
+    log_line BACKUP_FAIL "reason=flock-missing"
+    exit 1
+  fi
+  if ! sink_is_local && [ "${PAY003_AWS_STUB:-}" != 1 ]; then
     log_line BACKUP_FAIL "reason=flock-missing"
     exit 1
   fi
@@ -269,7 +362,11 @@ safe_rm_run_dir() {
 }
 
 test_work_allowed() {
-  sink_is_local && [ "${PAY003_ALLOW_NONTMPFS:-}" = 1 ]
+  [ "${PAY003_ALLOW_NONTMPFS:-}" = 1 ] || return 1
+  if sink_is_local; then
+    return 0
+  fi
+  [ "${PAY003_AWS_STUB:-}" = 1 ]
 }
 
 validate_work_parent() {
@@ -345,7 +442,7 @@ check_memory() {
   if [ "${PAY003_FORCE_LOW_SPACE:-}" = 1 ]; then
     fail space
   fi
-  if [ "${PAY003_ASSUME_NO_SWAP:-}" = 1 ] && sink_is_local; then
+  if [ "${PAY003_ASSUME_NO_SWAP:-}" = 1 ] && test_work_allowed; then
     :
   elif [ -f /proc/swaps ]; then
     swaps=$(awk 'NR>1 { n++ } END { print n+0 }' /proc/swaps)
@@ -483,11 +580,20 @@ put_object() {
     fi
     return 0
   fi
-  if run_group aws s3api head-object --bucket "$BUCKET" --key "$key" --region "$REGION" >/dev/null 2>&1; then
+  local head_ec=0
+  set +e
+  run_group aws s3api head-object --bucket "$BUCKET" --key "$key" --region "$REGION" >"$RUN_DIR/head.out" 2>"$RUN_DIR/head.err"
+  head_ec=$?
+  if [ "$head_ec" -eq 0 ]; then
     return 1
   fi
+  if ! grep -Eiq 'NoSuchKey|Not Found|404' "$RUN_DIR/head.err" "$RUN_DIR/head.out"; then
+    return 2
+  fi
+  set -e
   run_group aws s3 cp --only-show-errors --region "$REGION" -- "$src" "s3://${BUCKET}/${key}" || return 1
   if [ "$uncertain" -eq 1 ]; then
+    set +e
     return 1
   fi
   return 0
@@ -591,7 +697,7 @@ check_tables() {
   local found="$RUN_DIR/tables.found" expected="$RUN_DIR/tables.expected"
   "$PG_RESTORE" -l "$RUN_DIR/plain.dump" > "$RUN_DIR/toc.txt"
   collect_tables "$RUN_DIR/toc.txt" "$found"
-  sort "$TABLES_FILE" > "$expected"
+  tr -d '\r' < "$TABLES_FILE" | sort > "$expected"
   cmp -s "$found" "$expected"
 }
 
@@ -675,13 +781,13 @@ case "$(basename -- "$ENV_FILE")" in
 esac
 
 validate_work_parent
-check_memory
 
 if ! acquire_lock; then
   log_line OVERLAP "mode=$MODE"
   exit 0
 fi
 
+check_memory
 remove_dead_run_dirs
 RUN_TAG="$$_$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
 RUN_DIR="${WORK_PARENT}/run_${RUN_TAG}"
@@ -690,6 +796,10 @@ mkdir -p "$RUN_DIR"
 chmod 700 "$RUN_DIR"
 RUN_CREATED=1
 start_watchdog
+
+case "${PAY003_HANG:-}" in
+  group|same) hang_stage "$PAY003_HANG" || fail hang ;;
+esac
 
 if [ -n "${PAY003_HOLD_SEC:-}" ]; then
   sleep "$PAY003_HOLD_SEC"
@@ -729,15 +839,23 @@ if ! space_ok $((dump_bytes + dump_gpg_bytes + env_bytes + cron_bytes)); then
   fail memory
 fi
 
+set_id_format_ok() {
+  printf '%s' "$1" | grep -Eq '^[0-9]{8}T[0-9]{6}Z_[0-9a-f]{32}$'
+}
+
 make_set_id() {
   local created rand
   created=$(date -u +%Y%m%dT%H%M%SZ)
-  rand=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+  rand=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n' | tr 'A-F' 'a-f')
   printf '%s_%s\n' "$created" "$rand"
 }
 
+s3_explicit_miss() {
+  grep -Eiq 'NoSuchKey|Not Found|404' "$@"
+}
+
 set_id_taken() {
-  local id="$1"
+  local id="$1" ec=0
   [ -e "${SERVER_SET_ROOT}/${id}" ] && return 0
   if sink_is_local; then
     [ -e "$SINK_DIR/$S3_PREFIX/$id" ] && return 0
@@ -745,23 +863,44 @@ set_id_taken() {
   fi
   set +e
   run_group aws s3 ls "s3://${BUCKET}/${S3_PREFIX}/${id}/" --region "$REGION" > "$RUN_DIR/s3.ls" 2>"$RUN_DIR/s3.err"
-  set -e
+  ec=$?
   if [ -s "$RUN_DIR/s3.ls" ]; then
     return 0
   fi
-  return 1
+  if [ "$ec" -eq 0 ]; then
+    return 1
+  fi
+  if s3_explicit_miss "$RUN_DIR/s3.err" "$RUN_DIR/s3.ls"; then
+    return 1
+  fi
+  return 2
 }
 
 choose_set_id() {
-  local id="" i=0
+  local id="" i=0 st=0
   if [ -n "${PAY003_FORCE_SET_ID:-}" ]; then
+    if ! set_id_format_ok "$PAY003_FORCE_SET_ID"; then
+      set +e
+      return 3
+    fi
     id=$PAY003_FORCE_SET_ID
   fi
   while [ "$i" -lt 5 ]; do
     if [ -z "$id" ]; then
       id=$(make_set_id)
     fi
-    if set_id_taken "$id"; then
+    if ! set_id_format_ok "$id"; then
+      set +e
+      return 3
+    fi
+    set +e
+    set_id_taken "$id"
+    st=$?
+    if [ "$st" -eq 2 ]; then
+      return 2
+    fi
+    set -e
+    if [ "$st" -eq 0 ]; then
       id=""
       i=$((i + 1))
       continue
@@ -769,14 +908,41 @@ choose_set_id() {
     SET_ID=$id
     return 0
   done
+  set +e
   return 1
 }
 
-choose_set_id || fail collision
+set +e
+choose_set_id
+set_ec=$?
+set -e
+if [ "$set_ec" -eq 3 ]; then
+  fail set-id
+fi
+if [ "$set_ec" -eq 2 ]; then
+  fail s3
+fi
+if [ "$set_ec" -ne 0 ]; then
+  fail collision
+fi
 created=${SET_ID%%_*}
 
-put_object "$RUN_DIR/dump.gpg" "${S3_PREFIX}/${SET_ID}/dump.gpg" || fail upload
-put_object "$RUN_DIR/config.gpg" "${S3_PREFIX}/${SET_ID}/config.gpg" || fail upload
+put_or_stop() {
+  local st=0
+  set +e
+  put_object "$1" "$2"
+  st=$?
+  set -e
+  if [ "$st" -eq 2 ]; then
+    fail s3
+  fi
+  if [ "$st" -ne 0 ]; then
+    fail upload
+  fi
+}
+
+put_or_stop "$RUN_DIR/dump.gpg" "${S3_PREFIX}/${SET_ID}/dump.gpg"
+put_or_stop "$RUN_DIR/config.gpg" "${S3_PREFIX}/${SET_ID}/config.gpg"
 remote_dump=$(remote_sha "${S3_PREFIX}/${SET_ID}/dump.gpg") || fail transfer
 remote_config=$(remote_sha "${S3_PREFIX}/${SET_ID}/config.gpg") || fail transfer
 [ "$remote_dump" = "$dump_sha" ] || fail hash
@@ -809,7 +975,13 @@ chmod 600 "${SERVER_SET_ROOT}/${SET_ID}/dump.gpg" "${SERVER_SET_ROOT}/${SET_ID}/
 cmp -s "$RUN_DIR/COMPLETE" "${SERVER_SET_ROOT}/${SET_ID}/COMPLETE" || fail server-copy
 
 complete_sha=$(sha_file "$RUN_DIR/COMPLETE")
-put_object "$RUN_DIR/COMPLETE" "${S3_PREFIX}/${SET_ID}/COMPLETE" || true
+set +e
+put_object "$RUN_DIR/COMPLETE" "${S3_PREFIX}/${SET_ID}/COMPLETE"
+complete_put=$?
+set -e
+if [ "$complete_put" -eq 2 ]; then
+  fail s3
+fi
 remote_complete=$(remote_sha "${S3_PREFIX}/${SET_ID}/COMPLETE") || fail complete
 [ "$remote_complete" = "$complete_sha" ] || fail complete
 

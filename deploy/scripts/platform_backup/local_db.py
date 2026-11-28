@@ -56,12 +56,30 @@ def psql(psql_bin, port, database, sql):
     return result.stdout.strip()
 
 
+def temp_root_marked(pgdata):
+    path = os.path.abspath(pgdata)
+    for _ in range(8):
+        parent = os.path.dirname(path)
+        if parent == path:
+            break
+        marker = os.path.join(parent, "pay003a-temp-root")
+        base = os.path.basename(parent)
+        if base.startswith("pay003a-local.") and os.path.isfile(marker) and not os.path.islink(marker):
+            with open(marker, encoding="utf-8") as handle:
+                if handle.read() == "pay003a-local-temp\n":
+                    return True
+        path = parent
+    return False
+
+
 def check_cluster(psql_bin, pgdata, port):
     if not re.fullmatch(r"[0-9]+", str(port)):
         raise SystemExit("refused-port")
     port_n = int(port)
     if port_n == 5432 or port_n < 1024 or port_n > 65535:
         raise SystemExit("refused-port")
+    if not temp_root_marked(pgdata):
+        raise SystemExit("refused-cluster")
     if not os.path.isdir(pgdata) or os.path.islink(pgdata):
         raise SystemExit("refused-cluster")
     if not os.path.isfile(os.path.join(pgdata, "PG_VERSION")):
