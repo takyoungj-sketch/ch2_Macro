@@ -147,6 +147,13 @@
       let me = null;
       let tossEnabled = false;
       let subInfo = null;
+      let statusLoaded = false;
+      let pauseFieldPresent = false;
+
+      function newSubscriptionClosed() {
+        if (!statusLoaded || !pauseFieldPresent) return true;
+        return subInfo.billing_paused === true;
+      }
 
       function formatServerDate(iso) {
         if (!iso) return "";
@@ -187,18 +194,27 @@
 
       async function loadSubscription() {
         subInfo = null;
+        statusLoaded = false;
+        pauseFieldPresent = false;
         const box = document.getElementById("sub-status");
-        const res = await fetch(`${BILLING}/status`, { credentials: "include" });
-        const data = await res.json();
-        subInfo = data;
-        box.hidden = false;
-        document.getElementById("sub-status-text").textContent = billingPhrase(data);
-        const open = data.billing === "scheduled" || data.billing === "active";
-        const canceled = data.billing === "scheduled_canceled" || data.billing === "active_canceled";
-        const cancelBtn = document.getElementById("cancel-sub-btn");
-        cancelBtn.hidden = !open;
-        cancelBtn.textContent = data.billing === "scheduled" ? "첫 결제 전에 해지" : "다음 결제일부터 해지";
-        document.getElementById("resume-sub-btn").hidden = !canceled;
+        try {
+          const res = await fetch(`${BILLING}/status`, { credentials: "include" });
+          if (!res.ok) throw new Error("status");
+          const data = await res.json();
+          subInfo = data;
+          statusLoaded = true;
+          pauseFieldPresent = Object.prototype.hasOwnProperty.call(data, "billing_paused");
+          box.hidden = false;
+          document.getElementById("sub-status-text").textContent = billingPhrase(data);
+          const open = data.billing === "scheduled" || data.billing === "active";
+          const canceled = data.billing === "scheduled_canceled" || data.billing === "active_canceled";
+          const cancelBtn = document.getElementById("cancel-sub-btn");
+          cancelBtn.hidden = !open;
+          cancelBtn.textContent = data.billing === "scheduled" ? "첫 결제 전에 해지" : "다음 결제일부터 해지";
+          document.getElementById("resume-sub-btn").hidden = !canceled;
+        } catch (err) {
+          box.hidden = true;
+        }
         applyPayNote();
       }
 
@@ -206,6 +222,7 @@
         const billing = status && status.billing;
         const state = status && status.state;
         const reason = status && status.reason;
+        if (newSubscriptionClosed()) return "지금은 새 구독을 받지 않습니다.";
         if (state === "admin") return "관리자 계정은 결제 없이 이용합니다.";
         if (!tossEnabled) return "토스 테스트 키가 서버에 설정되면 구독 버튼이 활성화됩니다.";
         if (reason === "payment_processing") return "결제 결과를 확인하는 중입니다.";
@@ -248,8 +265,9 @@
           const cardBtn = document.createElement("button");
           cardBtn.type = "button";
           cardBtn.className = "btn-pay btn-pay--card";
-          cardBtn.textContent = tossEnabled ? "카드로 구독하기" : "카드 구독 준비 중";
-          cardBtn.disabled = !tossEnabled || !me;
+          const closed = newSubscriptionClosed();
+          cardBtn.textContent = closed || !tossEnabled ? "카드 구독 준비 중" : "카드로 구독하기";
+          cardBtn.disabled = closed || !tossEnabled || !me;
           cardBtn.addEventListener("click", () => startBilling(plan));
           actions.append(cardBtn);
           card.appendChild(actions);
@@ -258,6 +276,7 @@
       }
 
       async function startBilling(plan) {
+        if (newSubscriptionClosed()) return;
         if (!me) {
           alert("로그인 후 진행해 주세요.");
           return;
