@@ -1,0 +1,13 @@
+public.ai_allowance_accounts
+public.ai_allowance_adjustments
+public.ai_allowance_requests
+public.ai_allowance_results
+public.ai_allowances
+public.ai_provider_calls
+public.comments
+public.device_ai_usage
+public.entitlements
+public.ops_events
+public.posts
+public.subscriptions
+public.users
