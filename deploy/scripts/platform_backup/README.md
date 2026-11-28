@@ -10,22 +10,44 @@
 | --- | --- |
 | `platform_backup.sh` | 백업 스크립트 |
 | `platform_backup.conf` | 버킷 이름, 지문, 경로. 비밀 없음 |
-| `expected_tables.txt` | 스키마를 포함한 표 이름. 표가 바뀌면 이 파일만 고친다 |
+| `expected_tables.txt` | 스키마를 포함한 표 이름. 표가 바뀌면 이 파일만 고친다. `local_db.py`도 이 파일을 읽는다 |
 | `local_test.sh` | 로컬 시험. 운영 서버와 운영 키는 쓰지 않는다 |
-| `local_db.py` | 시험용 빈 데이터베이스를 localhost에만 만든다 |
+| `local_db.py` | 시험용 빈 데이터베이스를 임시 클러스터에만 만든다 |
 
 설정 묶음은 `backend/.env`와 현재 사용자의 crontab 텍스트뿐이다. 허용 이름은 스크립트 상단의 `CONFIG_BUNDLE_ENV`와 `CONFIG_BUNDLE_CRON`이다.
 
-하트비트 주소는 `HEARTBEAT` 파일에 둔다. 그 파일은 저장소에 없다. 없거나 권한이 600이 아니면 백업 성공 기록은 남기고 핑만 생략하거나 실패로 적는다. 수동 실행은 핑을 보내지 않는다.
+하트비트 주소는 `HEARTBEAT` 파일에 둔다. 그 파일은 저장소에 없다. 없거나 권한이 600이 아니면 백업 성공 기록은 남기고 핑만 생략하거나 실패로 적는다. 수동 실행은 핑을 보내지 않는다. 핑의 표준 출력과 표준 오류는 실행 폴더 안 임시 파일로만 가고, 로그에는 `PING_FAIL reason=curl code=<n>`만 남긴다.
 
-평문은 `WORK_PARENT` 안의 이번 실행 디렉터리에만 둔다. 운영 설정은 이 경로가 tmpfs일 때만 진행한다. 업로드 전에 평문을 지운다.
+평문은 `/dev/shm/ch2pay003` 안의 `run_<pid>_<hex>` 디렉터리에만 둔다. 이 경로가 아니면 지우지 않는다. 경로 자신과 `/dev/shm`이 symlink이면 진행하지 않는다. 지우는 대상은 그 디렉터리의 직접 자식이면서 이름이 형식에 맞는 것만이다. 운영 설정은 이 경로가 tmpfs일 때만 진행한다. 공간 검사는 평문 상한, 같은 크기의 암호문, 설정 묶음을 더한 값으로 한다. 업로드 전에 평문을 지운다.
+
+잠금 파일은 없을 때만 만들어 이어 쓴다. 이미 있는 잠금 파일을 비우지는 않는다. 잠금을 얻지 못하면 `OVERLAP`만 남기고, 백업 세트와 실행 폴더는 지우지 않는다. 잠금 파일이 새로 생길 수는 있다.
+
+세트 ID는 시각과 16바이트 난수다. 서버 경로나 버킷 경로가 이미 있으면 다른 ID를 고르고, 있는 파일은 덮어쓰지 않는다.
+
+`COMPLETE`는 서버 사본을 만들고 권한과 해시를 확인한 뒤에 버킷에 마지막으로 올린다. 업로드 명령의 결과가 불확실하면 다시 읽은 sha256으로 판정한다. 다시 읽기가 실패하거나 해시가 다르면 실패로 기록한다. 그 경우에도 버킷에 올라간 파일은 지우지 않는다.
+
+나중에 cron에 넣을 때의 예시다. 이 줄을 지금 등록하지는 않는다. 표준 출력과 표준 오류를 버려서 cron 메일로 주소나 응답이 나가지 않게 한다. `MAILTO`는 바꾸지 않는다.
+
+```cron
+10 18 * * * /opt/ch2_Macro/deploy/scripts/platform_backup/platform_backup.sh --scheduled >/dev/null 2>&1
+```
+
+## 첫 실행 때 서버에서 볼 것
+
+이 저장소 수정은 서버에서 스크립트를 실행하지 않는다. 서버에 올린 뒤 첫 수동 실행에서 확인할 항목이다.
+
+- gpg 2.2.27에서 전용 키링의 공개키 하나로 `END_ENCRYPTION`까지 비대화 암호화가 되는지
+- 실제 `flock`
+- `/dev/shm`이 tmpfs인지, swap이 없는지
+- 이 스크립트의 버킷 업로드와 원격 sha256
+- ubuntu가 로그 파일을 만들고 이어 쓰는지
 
 ## 로컬 시험
 
-Git bash에서 실행한다. `PAY003_TEST_ENV`는 localhost의 `DATABASE_URL_PLATFORM`이 있는 파일이어야 한다.
+Git bash에서 실행한다. 스크립트가 `mktemp`로 만든 폴더와, 그 안의 임시 PostgreSQL만 쓴다. 포트 5432와 기존 데이터 디렉터리는 거부한다. 같은 이름의 데이터베이스가 이미 있으면 지우지 않고 실패한다.
 
 ```bash
-PAY003_TEST_ENV=/path/to/local.env bash deploy/scripts/platform_backup/local_test.sh
+bash deploy/scripts/platform_backup/local_test.sh
 ```
 
-시험이 끝나면 가짜 데이터베이스, 시험용 gpg 키, 임시 폴더를 지운다. Git bash에는 `flock`이 없으므로 로컬 동시 실행 시험만 Perl 잠금을 쓴다. 그 변수는 로컬 폴더 흉내(`PAY003_SINK=dir`)에서만 동작한다. 운영 경로의 잠금은 `flock`이다.
+시험이 끝나면 임시 클러스터와 시험용 gpg 키, 임시 폴더를 지운다. Git bash에는 `setsid`와 `flock`이 없다. 로컬 시험의 제한 시간은 프로세스 그룹으로 끝내고, 동시 실행 시험만 Perl 잠금을 쓴다. 그 잠금은 로컬 폴더 흉내(`PAY003_SINK=dir`)에서만 동작한다. 운영 경로의 잠금은 `flock`이고, 하위 프로세스는 `setsid`가 있으면 그 세션에서 실행한다.

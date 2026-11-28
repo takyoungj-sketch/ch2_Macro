@@ -4,10 +4,6 @@ set -euo pipefail
 umask 077
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-if [ -z "${PAY003_TEST_ENV:-}" ]; then
-  echo "FAIL missing PAY003_TEST_ENV" >&2
-  exit 2
-fi
 
 PG_DUMP=${PAY003_TEST_PG_DUMP:-/c/Program\ Files/PostgreSQL/18/bin/pg_dump.exe}
 PG_RESTORE=${PAY003_TEST_PG_RESTORE:-/c/Program\ Files/PostgreSQL/18/bin/pg_restore.exe}
@@ -19,35 +15,93 @@ if [ ! -x "$PG_DUMP" ] && [ -x "/c/Program Files/PostgreSQL/18/bin/pg_dump.exe" 
   PG_RESTORE="/c/Program Files/PostgreSQL/18/bin/pg_restore.exe"
   PSQL="/c/Program Files/PostgreSQL/18/bin/psql.exe"
 fi
+INITDB=$(dirname -- "$PSQL")/initdb.exe
+PG_CTL=$(dirname -- "$PSQL")/pg_ctl.exe
+PG_ISREADY=$(dirname -- "$PSQL")/pg_isready.exe
 
-ROOT=${PAY003_TEST_ROOT:-/tmp/pay003a-local-$$}
-DB_NAME=pay003a_dummy
-mkdir -p "$ROOT"
+safe_rm_tree() {
+  local target="$1" prefix="$2" base canon logical
+  [ -n "${target:-}" ] || return 0
+  [ -d "$target" ] || return 0
+  [ ! -L "$target" ] || return 0
+  base=$(basename -- "$target")
+  case "$base" in
+    ${prefix}.*) ;;
+    *) return 0 ;;
+  esac
+  logical=$(CDPATH= cd -- "$target" && pwd)
+  canon=$(CDPATH= cd -P -- "$target" && pwd)
+  [ "$logical" = "$canon" ] || return 0
+  case "$canon" in
+    /|/tmp|/dev|/dev/shm) return 0 ;;
+  esac
+  case "$canon" in
+    /tmp/${prefix}.*) ;;
+    *) return 0 ;;
+  esac
+  rm -rf -- "$canon"
+}
+
+ROOT=$(mktemp -d /tmp/pay003a-local.XXXXXX)
 chmod 700 "$ROOT"
-PASSFILE=$ROOT/pgpass
+ROOT_CANON=$(CDPATH= cd -P -- "$ROOT" && pwd)
+case "$(basename -- "$ROOT")" in
+  pay003a-local.*) ;;
+  *) echo "FAIL test-root" >&2; exit 2 ;;
+esac
+[ ! -L "$ROOT" ]
+[ "$ROOT_CANON" = "$(CDPATH= cd -- "$ROOT" && pwd)" ]
+
+SENTINEL=$(mktemp -d /tmp/pay003a-sentinel.XXXXXX)
+printf 'keep\n' > "$SENTINEL/keep"
+export PAY003_TEST_ROOT=$SENTINEL
+
+DB_NAME=pay003a_dummy
+PGDATA=$ROOT/pgdata
+PORT=55432
+while [ "$PORT" -le 55532 ]; do
+  set +e
+  "$PG_ISREADY" -h 127.0.0.1 -p "$PORT" >/dev/null 2>&1
+  ready=$?
+  set -e
+  [ "$ready" -eq 2 ] && break
+  PORT=$((PORT + 1))
+done
+[ "$PORT" -ne 5432 ]
+[ "$PORT" -le 55532 ]
+
 GNUPGHOME=$ROOT/gnupg
 export GNUPGHOME
 mkdir -p "$GNUPGHOME"
 chmod 700 "$GNUPGHOME"
 
+CLUSTER_STARTED=0
 cleanup() {
   if [ -n "${LIVE_PID:-}" ]; then
     kill "$LIVE_PID" 2>/dev/null || true
     wait "$LIVE_PID" 2>/dev/null || true
   fi
-  python "$SCRIPT_DIR/local_db.py" drop "$PAY003_TEST_ENV" "$PSQL" "$DB_NAME" "$PASSFILE" >/dev/null 2>&1 || true
-  rm -rf -- "$ROOT"
+  if [ "$CLUSTER_STARTED" = 1 ]; then
+    python "$SCRIPT_DIR/local_db.py" drop "$PSQL" "$DB_NAME" "$(cygpath -w "$PGDATA")" "$PORT" >/dev/null 2>&1 || true
+    "$PG_CTL" -D "$(cygpath -w "$PGDATA")" -m fast -w stop >/dev/null 2>&1 || true
+  fi
+  safe_rm_tree "$ROOT" pay003a-local
+  safe_rm_tree "${SENTINEL:-}" pay003a-sentinel
 }
 trap cleanup EXIT
 
-python "$SCRIPT_DIR/local_db.py" create "$PAY003_TEST_ENV" "$PSQL" "$DB_NAME" "$PASSFILE"
-PASSFILE_WIN=$(cygpath -w "$PASSFILE")
-export PGPASSFILE=$PASSFILE_WIN
-export PGHOST=localhost
-export PGPORT=5432
+WINDATA=$(cygpath -w "$PGDATA")
+"$INITDB" -D "$WINDATA" -U postgres -A trust --encoding=UTF8 --no-locale --auth-local=trust --auth-host=trust > "$ROOT/initdb.log"
+printf '%s\n' "host all all 127.0.0.1/32 trust" "host all all ::1/128 trust" >> "$PGDATA/pg_hba.conf"
+"$PG_CTL" -D "$WINDATA" -l "$ROOT/pg.log" -w start -o "-p $PORT -h 127.0.0.1" > "$ROOT/pgctl.log"
+CLUSTER_STARTED=1
+
+export PGHOST=127.0.0.1
+export PGPORT=$PORT
 export PGUSER=postgres
 export PGCONNECT_TIMEOUT=15
 unset PGPASSWORD || true
+unset PGPASSFILE || true
 
 gpg --batch --pinentry-mode loopback --passphrase '' \
   --quick-gen-key "PAY003A local test <pay003a-test@invalid>" rsa4096 encr 2d >/dev/null
@@ -72,6 +126,37 @@ FAILS=0
 
 note() { printf '%s\n' "$1"; }
 
+WINDATA=$(cygpath -w "$PGDATA")
+set +e
+python "$SCRIPT_DIR/local_db.py" drop "$PSQL" ch2_platform "$WINDATA" "$PORT" >/dev/null 2>&1
+name_ec=$?
+python "$SCRIPT_DIR/local_db.py" drop "$PSQL" "$DB_NAME" "$WINDATA" 5432 >/dev/null 2>&1
+port_ec=$?
+set -e
+if [ "$name_ec" -eq 0 ] || [ "$port_ec" -eq 0 ]; then
+  note "FAIL db-refuse"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS db-refuse"
+  PASS=$((PASS + 1))
+fi
+"$PSQL" -h 127.0.0.1 -p "$PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE pay003a_dummy" >/dev/null
+"$PSQL" -h 127.0.0.1 -p "$PORT" -U postgres -d pay003a_dummy -v ON_ERROR_STOP=1 -c "CREATE TABLE marker (id integer); INSERT INTO marker VALUES (1);" >/dev/null
+set +e
+python "$SCRIPT_DIR/local_db.py" create "$PSQL" "$DB_NAME" "$WINDATA" "$PORT" >/dev/null 2>&1
+exists_ec=$?
+set -e
+marker=$("$PSQL" -h 127.0.0.1 -p "$PORT" -U postgres -d pay003a_dummy -tAc "SELECT count(*) FROM marker")
+if [ "$exists_ec" -eq 0 ] || [ "$marker" != 1 ]; then
+  note "FAIL db-protect"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS db-protect"
+  PASS=$((PASS + 1))
+fi
+python "$SCRIPT_DIR/local_db.py" drop "$PSQL" "$DB_NAME" "$WINDATA" "$PORT" >/dev/null
+python "$SCRIPT_DIR/local_db.py" create "$PSQL" "$DB_NAME" "$WINDATA" "$PORT" >/dev/null
+
 run_backup() {
   env \
     PAY003_CONF="$SCRIPT_DIR/platform_backup.conf" \
@@ -95,8 +180,12 @@ run_backup() {
     PAY003_LOG="$CASE_LOG" \
     PAY003_HEARTBEAT="$CASE_HEART" \
     PAY003_TIMEOUT_SEC="${CASE_TIMEOUT:-120}" \
+    PAY003_HANG="${CASE_HANG:-}" \
+    PAY003_HANG_PIDFILE="${CASE_HANG_PID:-}" \
+    PAY003_FORCE_SET_ID="${CASE_SET_ID:-}" \
+    PAY003_SERVER_COPY_FAIL="${CASE_SERVER_COPY_FAIL:-}" \
+    PAY003_COMPLETE_READ_FAIL="${CASE_COMPLETE_READ_FAIL:-}" \
     PATH="$ROOT/bin:${PATH}" \
-    PGPASSFILE="$PASSFILE_WIN" \
     GNUPGHOME="$GNUPGHOME" \
     bash "$SCRIPT_DIR/platform_backup.sh" ${CASE_ARG:-} >"${CASE_DIR}/stdout" 2>"${CASE_DIR}/stderr"
 }
@@ -141,7 +230,7 @@ expect_fail() {
     FAILS=$((FAILS + 1))
     return
   fi
-  if [ -n "$(find "$CASE_WORK" -name 'plain.dump' -o -name 'crontab.txt' -print 2>/dev/null)" ]; then
+  if [ -n "$(find "$CASE_WORK" \( -name 'plain.dump' -o -name 'crontab.txt' \) -print 2>/dev/null)" ]; then
     note "FAIL $name plaintext"
     FAILS=$((FAILS + 1))
     return
@@ -162,8 +251,8 @@ fi
 new_case ok-manual
 sleep 120 &
 LIVE_PID=$!
-mkdir -p "$CASE_WORK/run_${LIVE_PID}_keep" "$CASE_WORK/run_999999_stale"
-printf 'x\n' > "$CASE_WORK/run_999999_stale/plain.dump"
+mkdir -p "$CASE_WORK/run_${LIVE_PID}_ab12" "$CASE_WORK/run_999999_dead"
+printf 'x\n' > "$CASE_WORK/run_999999_dead/plain.dump"
 set +e
 run_backup --manual
 ok_ec=$?
@@ -174,8 +263,8 @@ if [ "$ok_ec" -ne 0 ]; then
   FAILS=$((FAILS + 1))
 elif ! grep -q "MANUAL_OK " "$CASE_LOG"; then note "FAIL ok-manual log"; FAILS=$((FAILS + 1)); else
   if grep -q "SCHEDULED_OK\|PING_" "$CASE_LOG"; then note "FAIL ok-manual ping"; FAILS=$((FAILS + 1));
-  elif [ ! -d "$CASE_WORK/run_${LIVE_PID}_keep" ]; then note "FAIL ok-manual live-dir"; FAILS=$((FAILS + 1));
-  elif [ -d "$CASE_WORK/run_999999_stale" ]; then note "FAIL ok-manual stale"; FAILS=$((FAILS + 1));
+  elif [ ! -d "$CASE_WORK/run_${LIVE_PID}_ab12" ]; then note "FAIL ok-manual live-dir"; FAILS=$((FAILS + 1));
+  elif [ -d "$CASE_WORK/run_999999_dead" ]; then note "FAIL ok-manual stale"; FAILS=$((FAILS + 1));
   elif [ -n "$(find "$CASE_WORK" -name 'plain.dump' -print)" ]; then note "FAIL ok-manual plaintext"; FAILS=$((FAILS + 1));
   elif [ "$(find "$CASE_SINK" -name COMPLETE | wc -l | tr -d ' ')" != 1 ]; then note "FAIL ok-manual complete"; FAILS=$((FAILS + 1));
   else
@@ -323,12 +412,11 @@ env PAY003_HOLD_SEC=6 bash -c 'exec "$@"' _ \
   PAY003_LOG="$CASE_LOG" \
   PAY003_HEARTBEAT="$CASE_HEART" \
   PAY003_TIMEOUT_SEC=30 \
-  PGPASSFILE="$PASSFILE_WIN" \
   bash "$SCRIPT_DIR/platform_backup.sh" --manual > "$CASE_DIR/first.out" 2> "$CASE_DIR/first.err" &
 first_pid=$!
 sleep 1
-mkdir -p "$CASE_WORK/run_999998_stale"
-printf 'x\n' > "$CASE_WORK/run_999998_stale/plain.dump"
+mkdir -p "$CASE_WORK/run_999998_deadbeef"
+printf 'x\n' > "$CASE_WORK/run_999998_deadbeef/plain.dump"
 SECOND_LOG=$CASE_DIR/second.log
 : > "$SECOND_LOG"
 env \
@@ -352,7 +440,6 @@ env \
   PAY003_LOCK_FILE="$CASE_LOCK" \
   PAY003_LOG="$SECOND_LOG" \
   PAY003_HEARTBEAT="$CASE_HEART" \
-  PGPASSFILE="$PASSFILE_WIN" \
   bash "$SCRIPT_DIR/platform_backup.sh" --manual
 second_ec=$?
 wait "$first_pid"
@@ -361,7 +448,7 @@ set -e
 if [ "$second_ec" -ne 0 ] || ! grep -q "OVERLAP " "$SECOND_LOG"; then
   note "FAIL overlap"
   FAILS=$((FAILS + 1))
-elif [ ! -d "$CASE_WORK/run_999998_stale" ]; then
+elif [ ! -d "$CASE_WORK/run_999998_deadbeef" ]; then
   note "FAIL overlap stale-removed"
   FAILS=$((FAILS + 1))
 elif grep -q "MANUAL_OK\|SCHEDULED_OK" "$SECOND_LOG"; then
@@ -429,7 +516,6 @@ env PAY003_SLEEP_BEFORE_DUMP=20 PAY003_TIMEOUT_SEC=1 bash -c 'exec "$@"' _ \
   PAY003_LOCK_FILE="$CASE_LOCK" \
   PAY003_LOG="$CASE_LOG" \
   PAY003_HEARTBEAT="$CASE_HEART" \
-  PGPASSFILE="$PASSFILE_WIN" \
   bash "$SCRIPT_DIR/platform_backup.sh" --manual
 ec=$?
 set -e
@@ -444,6 +530,250 @@ elif [ -n "$(find "$CASE_WORK" -name 'plain.dump' -print 2>/dev/null)" ]; then
   FAILS=$((FAILS + 1))
 else
   note "PASS timeout"
+  PASS=$((PASS + 1))
+fi
+
+hang_case() {
+  local stage="$1" ec=0 pid=""
+  new_case "hang-$stage"
+  CASE_TIMEOUT=3
+  CASE_HANG=$stage
+  CASE_HANG_PID=$CASE_DIR/hang.pid
+  set +e
+  run_backup
+  ec=$?
+  set -e
+  unset CASE_HANG CASE_HANG_PID
+  CASE_TIMEOUT=
+  if [ -s "$CASE_DIR/hang.pid" ]; then
+    pid=$(cat "$CASE_DIR/hang.pid")
+  fi
+  if [ "$ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=timeout" "$CASE_LOG"; then
+    note "FAIL hang-$stage exit=$ec"
+    sed -n '1,20p' "$CASE_LOG" "$CASE_DIR/stderr" >&2 || true
+    FAILS=$((FAILS + 1))
+  elif [ -n "$(find "$CASE_SINK" -name COMPLETE -print 2>/dev/null)" ]; then
+    note "FAIL hang-$stage complete"
+    FAILS=$((FAILS + 1))
+  elif [ -n "$(find "$CASE_WORK" \( -name 'plain.dump' -o -name 'crontab.txt' \) -print 2>/dev/null)" ]; then
+    note "FAIL hang-$stage plaintext"
+    FAILS=$((FAILS + 1))
+  elif [ -z "$pid" ] || kill -0 "$pid" 2>/dev/null; then
+    note "FAIL hang-$stage alive"
+    [ -n "$pid" ] && kill -KILL "$pid" 2>/dev/null || true
+    FAILS=$((FAILS + 1))
+  else
+    note "PASS hang-$stage"
+    PASS=$((PASS + 1))
+  fi
+}
+
+hang_case gpg
+hang_case tar
+hang_case aws
+
+new_case server-copy
+CASE_SERVER_COPY_FAIL=1
+set +e
+run_backup
+ec=$?
+set -e
+unset CASE_SERVER_COPY_FAIL
+if [ "$ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=server-copy" "$CASE_LOG"; then
+  note "FAIL server-copy"
+  FAILS=$((FAILS + 1))
+elif [ -n "$(find "$CASE_SINK" -name COMPLETE -print 2>/dev/null)" ]; then
+  note "FAIL server-copy complete"
+  FAILS=$((FAILS + 1))
+elif [ -z "$(find "$CASE_SINK" -name 'dump.gpg' -print 2>/dev/null)" ]; then
+  note "FAIL server-copy deleted"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS server-copy"
+  PASS=$((PASS + 1))
+fi
+
+new_case complete-read
+CASE_COMPLETE_READ_FAIL=1
+set +e
+run_backup
+ec=$?
+set -e
+unset CASE_COMPLETE_READ_FAIL
+if [ "$ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=complete" "$CASE_LOG"; then
+  note "FAIL complete-read"
+  FAILS=$((FAILS + 1))
+elif [ -z "$(find "$CASE_SINK" -name COMPLETE -print 2>/dev/null)" ]; then
+  note "FAIL complete-read missing"
+  FAILS=$((FAILS + 1))
+elif grep -q "MANUAL_OK\|SCHEDULED_OK" "$CASE_LOG"; then
+  note "FAIL complete-read success"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS complete-read"
+  PASS=$((PASS + 1))
+fi
+
+new_case collision
+COLLIDE=20260101T000000Z_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+mkdir -p "$CASE_SERVER/$COLLIDE" "$CASE_SINK/platform/$COLLIDE"
+printf 'KEEP\n' > "$CASE_SERVER/$COLLIDE/marker"
+printf 'KEEP\n' > "$CASE_SINK/platform/$COLLIDE/marker"
+CASE_SET_ID=$COLLIDE
+set +e
+run_backup
+ec=$?
+set -e
+unset CASE_SET_ID
+got=$(sed -n 's/.*MANUAL_OK set=\([^ ]*\).*/\1/p' "$CASE_LOG" | head -n 1)
+if [ "$ec" -ne 0 ] || [ -z "$got" ] || [ "$got" = "$COLLIDE" ]; then
+  note "FAIL collision id"
+  FAILS=$((FAILS + 1))
+elif [ "$(cat "$CASE_SERVER/$COLLIDE/marker")" != "KEEP" ]; then
+  note "FAIL collision marker"
+  FAILS=$((FAILS + 1))
+elif [ "$(cat "$CASE_SINK/platform/$COLLIDE/marker")" != "KEEP" ]; then
+  note "FAIL collision bucket"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS collision"
+  PASS=$((PASS + 1))
+fi
+
+new_case ping-leak
+CASE_ARG=--scheduled
+CASE_HEART=$CASE_DIR/heartbeat.curl
+PAY003_CURL_TRACE=$CASE_DIR/curl.trace
+export PAY003_CURL_TRACE
+cat > "$CASE_HEART" <<'EOF'
+silent
+url = "http://127.0.0.1/pay003a-heartbeat-test"
+EOF
+chmod 600 "$CASE_HEART"
+cat > "$ROOT/bin/curl" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >> "${PAY003_CURL_TRACE:?}"
+printf '%s\n' "http://127.0.0.1/pay003a-heartbeat-test"
+printf '%s\n' "BODY-SECRET-MARKER" >&2
+exit 7
+EOF
+chmod 700 "$ROOT/bin/curl"
+set +e
+run_backup
+ec=$?
+set -e
+cat > "$ROOT/bin/curl" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >> "${PAY003_CURL_TRACE:?}"
+exit 0
+EOF
+chmod 700 "$ROOT/bin/curl"
+unset CASE_ARG PAY003_CURL_TRACE
+if ! grep -q "PING_FAIL reason=curl code=7" "$CASE_LOG"; then
+  note "FAIL ping-leak log"
+  sed -n '1,20p' "$CASE_LOG" >&2 || true
+  FAILS=$((FAILS + 1))
+elif grep -q "pay003a-heartbeat-test\|BODY-SECRET-MARKER" "$CASE_LOG" "$CASE_DIR/stdout" "$CASE_DIR/stderr"; then
+  note "FAIL ping-leak exposed"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS ping-leak"
+  PASS=$((PASS + 1))
+fi
+
+new_case bad-parent
+mkdir -p "$CASE_DIR/outside/run_1_aa"
+printf 'keep\n' > "$CASE_DIR/outside/run_1_aa/plain.dump"
+set +e
+env \
+  PAY003_CONF="$SCRIPT_DIR/platform_backup.conf" \
+  PAY003_SINK=dir \
+  PAY003_ASSUME_NO_SWAP=1 \
+  PAY003_LOCK_FALLBACK=perl \
+  PAY003_PG_DUMP="$PG_DUMP" \
+  PAY003_PG_RESTORE="$PG_RESTORE" \
+  PAY003_PG_SUDO_USER= \
+  PAY003_DATABASE="$DB_NAME" \
+  PAY003_ENV_FILE="$ROOT/backend/.env" \
+  PAY003_CRONTAB_FILE="$ROOT/crontab.txt" \
+  PAY003_GNUPGHOME="$GNUPGHOME" \
+  PAY003_PUBKEY="$ROOT/pub.asc" \
+  PAY003_FINGERPRINT="$FPR" \
+  PAY003_WORK_PARENT="$CASE_DIR/outside" \
+  PAY003_SINK_DIR="$CASE_SINK" \
+  PAY003_SERVER_SET_ROOT="$CASE_SERVER" \
+  PAY003_LOCK_FILE="$CASE_LOCK" \
+  PAY003_LOG="$CASE_LOG" \
+  PAY003_HEARTBEAT="$CASE_HEART" \
+  bash "$SCRIPT_DIR/platform_backup.sh" --manual >"$CASE_DIR/stdout" 2>"$CASE_DIR/stderr"
+ec=$?
+set -e
+if [ "$ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=work-parent" "$CASE_LOG"; then
+  note "FAIL bad-parent"
+  FAILS=$((FAILS + 1))
+elif [ ! -f "$CASE_DIR/outside/run_1_aa/plain.dump" ]; then
+  note "FAIL bad-parent deleted"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS bad-parent"
+  PASS=$((PASS + 1))
+fi
+
+new_case bad-symlink
+mkdir -p "$CASE_DIR/real"
+printf 'keep\n' > "$CASE_DIR/real/keep"
+ln -s "$CASE_DIR/real" "$CASE_DIR/link" 2>/dev/null || true
+if [ ! -L "$CASE_DIR/link" ]; then
+  if grep -F -q '[ ! -L "$WORK_PARENT" ] || fail work-parent' "$SCRIPT_DIR/platform_backup.sh" \
+    && grep -F -q '[ ! -L /dev/shm ] || fail work-parent' "$SCRIPT_DIR/platform_backup.sh"; then
+    note "SKIP bad-symlink no-privilege"
+  else
+    note "FAIL bad-symlink check-missing"
+    FAILS=$((FAILS + 1))
+  fi
+else
+  set +e
+  env \
+    PAY003_CONF="$SCRIPT_DIR/platform_backup.conf" \
+    PAY003_SINK=dir \
+    PAY003_ALLOW_NONTMPFS=1 \
+    PAY003_ASSUME_NO_SWAP=1 \
+    PAY003_LOCK_FALLBACK=perl \
+    PAY003_PG_DUMP="$PG_DUMP" \
+    PAY003_PG_RESTORE="$PG_RESTORE" \
+    PAY003_PG_SUDO_USER= \
+    PAY003_DATABASE="$DB_NAME" \
+    PAY003_ENV_FILE="$ROOT/backend/.env" \
+    PAY003_CRONTAB_FILE="$ROOT/crontab.txt" \
+    PAY003_GNUPGHOME="$GNUPGHOME" \
+    PAY003_PUBKEY="$ROOT/pub.asc" \
+    PAY003_FINGERPRINT="$FPR" \
+    PAY003_WORK_PARENT="$CASE_DIR/link" \
+    PAY003_SINK_DIR="$CASE_SINK" \
+    PAY003_SERVER_SET_ROOT="$CASE_SERVER" \
+    PAY003_LOCK_FILE="$CASE_LOCK" \
+    PAY003_LOG="$CASE_LOG" \
+    PAY003_HEARTBEAT="$CASE_HEART" \
+    bash "$SCRIPT_DIR/platform_backup.sh" --manual >"$CASE_DIR/stdout" 2>"$CASE_DIR/stderr"
+  ec=$?
+  set -e
+  if [ "$ec" -eq 0 ] || ! grep -q "BACKUP_FAIL reason=work-parent" "$CASE_LOG"; then
+    note "FAIL bad-symlink"
+    FAILS=$((FAILS + 1))
+  elif [ ! -f "$CASE_DIR/real/keep" ]; then
+    note "FAIL bad-symlink deleted"
+    FAILS=$((FAILS + 1))
+  else
+    note "PASS bad-symlink"
+    PASS=$((PASS + 1))
+  fi
+fi
+
+if [ ! -f "$SENTINEL/keep" ] || [ "$ROOT" = "$SENTINEL" ]; then
+  note "FAIL test-root"
+  FAILS=$((FAILS + 1))
+else
+  note "PASS test-root"
   PASS=$((PASS + 1))
 fi
 
